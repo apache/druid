@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -32,6 +33,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
+import org.apache.druid.server.http.HistoricalLoadingCapabilities;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -79,12 +81,16 @@ public class TestSegmentLoadingHttpClient implements HttpClient
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <Intermediate, Final> ListenableFuture<Final> go(
       Request request,
       HttpResponseHandler<Intermediate, Final> handler,
       Duration readTimeout
   )
   {
+    if (request.getUrl().toString().contains("/segmentLoadingCapabilities")) {
+      return getCapabilities(handler);
+    }
     return executorService.submit(() -> processRequest(request, handler));
   }
 
@@ -141,6 +147,27 @@ public class TestSegmentLoadingHttpClient implements HttpClient
         .stream()
         .map(changeRequest -> processRequest(changeRequest, changeHandler))
         .collect(Collectors.toList());
+  }
+
+  private <Intermediate, Final> ListenableFuture<Final> getCapabilities(HttpResponseHandler<Intermediate, Final> handler)
+  {
+    try {
+      // Set response content and status
+      final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+      response.setContent(ChannelBuffers.EMPTY_BUFFER);
+      handler.handleResponse(response, NOOP_TRAFFIC_COP);
+
+      // Serialize
+      SettableFuture future = SettableFuture.create();
+      try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        objectMapper.writeValue(baos, new HistoricalLoadingCapabilities(1, 1));
+        future.set(new ByteArrayInputStream(baos.toByteArray()));
+      }
+      return future;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
