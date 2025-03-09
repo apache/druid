@@ -154,7 +154,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         "nonExistentParent"
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
-    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+    getStorageCoordinator().markSegmentsWithinIntervalAsUnused(DATA_SOURCE, Intervals.ETERNITY, null);
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
@@ -192,7 +192,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         "nonExistentParent"
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
-    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+    getStorageCoordinator().markSegmentsWithinIntervalAsUnused(DATA_SOURCE, Intervals.ETERNITY, null);
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()

@@ -561,7 +561,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @return the number of segments actually modified.
    */
-  public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
+  public int markSegments(final Collection<SegmentId> segmentIds, final boolean used, DateTime updateTime)
   {
     final String dataSource;
 
@@ -583,7 +583,7 @@ public class SqlSegmentsMetadataQuery
         );
 
     for (SegmentId segmentId : segmentIds) {
-      batch.add(used, DateTimes.nowUtc().toString(), dataSource, segmentId.toString());
+      batch.add(used, updateTime.toString(), dataSource, segmentId.toString());
     }
 
     final int[] segmentChanges = batch.execute();
@@ -705,52 +705,42 @@ public class SqlSegmentsMetadataQuery
               DataSegment::getId
           )
       );
-      return markSegments(segments, false);
+      return markSegments(segments, false, updateTime);
     }
   }
 
   /**
    * Retrieve the used segment for a given id if it exists in the metadata store and null otherwise
    */
-  public DataSegment retrieveUsedSegmentForId(String id)
+  @Nullable
+  public DataSegment retrieveUsedSegmentForId(SegmentId segmentId)
   {
     final String query = "SELECT payload FROM %s WHERE used = true AND id = :id";
 
-    final Query<Map<String, Object>> sql = handle
+    final List<DataSegment> segments = handle
         .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
-        .bind("id", id);
+        .bind("id", segmentId.toString())
+        .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+        .list();
 
-    final ResultIterator<DataSegment> resultIterator =
-        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-           .iterator();
-
-    if (resultIterator.hasNext()) {
-      return resultIterator.next();
-    }
-
-    return null;
+    return segments.isEmpty() ? null : segments.get(0);
   }
 
   /**
    * Retrieve the segment for a given id if it exists in the metadata store and null otherwise
    */
-  public DataSegment retrieveSegmentForId(String id)
+  @Nullable
+  public DataSegment retrieveSegmentForId(SegmentId segmentId)
   {
     final String query = "SELECT payload FROM %s WHERE id = :id";
 
-    final Query<Map<String, Object>> sql = handle
+    final List<DataSegment> segments = handle
         .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
-        .bind("id", id);
+        .bind("id", segmentId.toString())
+        .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+        .list();
 
-    final ResultIterator<DataSegment> resultIterator =
-        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-           .iterator();
-
-    if (resultIterator.hasNext()) {
-      return resultIterator.next();
-    }
-
-    return null;
+    return segments.isEmpty() ? null : segments.get(0);
   }
 
   public List<SegmentIdWithShardSpec> retrievePendingSegmentIds(

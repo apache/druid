@@ -244,18 +244,43 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
+  public int markSegmentsWithinIntervalAsUnused(
+      String dataSource,
+      Interval interval,
+      @Nullable List<String> versions
+  )
   {
-    final Integer numSegmentsMarkedUnused = inReadWriteDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
-        transaction -> transaction.markSegmentsWithinIntervalAsUnused(interval, DateTimes.nowUtc())
+        transaction -> transaction.markSegmentsWithinIntervalAsUnused(interval, versions, DateTimes.nowUtc())
     );
+  }
 
-    log.info(
-        "Marked [%,d] segments unused for datasource[%s], interval[%s].",
-        numSegmentsMarkedUnused, dataSource, interval
+  @Override
+  public boolean markSegmentAsUnused(SegmentId segmentId)
+  {
+    return inReadWriteDatasourceTransaction(
+        segmentId.getDataSource(),
+        transaction -> transaction.markSegmentAsUnused(segmentId, DateTimes.nowUtc())
     );
-    return numSegmentsMarkedUnused;
+  }
+
+  @Override
+  public int markSegmentsAsUnused(String dataSource, Set<SegmentId> segmentIds)
+  {
+    return inReadWriteDatasourceTransaction(
+        dataSource,
+        transaction -> transaction.markSegmentsAsUnused(segmentIds, DateTimes.nowUtc())
+    );
+  }
+
+  @Override
+  public int markAllSegmentsAsUnused(String dataSource)
+  {
+    return inReadWriteDatasourceTransaction(
+        dataSource,
+        transaction -> transaction.markAllSegmentsAsUnused(DateTimes.nowUtc())
+    );
   }
 
   private SegmentTimeline getTimelineForIntervals(
@@ -596,7 +621,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * those versions.</li>
    * </ul>
    *
-   * @param replaceSegments Segments being committed by a REPLACE task
+   * @param replaceSegments Segments being committed by a "REPLACE" task
    * @return List of inserted pending segment records
    */
   private List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
@@ -1194,7 +1219,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyMap();
     }
 
-    // Shard spec of any of the requests (as they are all compatible) can be used to
+    // Shard spec of one of the requests (as they are all compatible) can be used to
     // identify existing shard specs that share partition space with the requested ones.
     final PartialShardSpec partialShardSpec = requests.get(0).getPartialShardSpec();
 
@@ -1659,7 +1684,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Creates new versions of segments appended while a REPLACE task was in progress.
+   * Creates new versions of segments appended while a "REPLACE" task was in progress.
    */
   private Set<DataSegmentPlus> createNewIdsOfAppendSegmentsAfterReplace(
       final SegmentMetadataTransaction transaction,
@@ -1667,7 +1692,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Set<ReplaceTaskLock> locksHeldByReplaceTask
   )
   {
-    // If a REPLACE task has locked an interval, it would commit some segments
+    // If a "REPLACE" task has locked an interval, it would commit some segments
     // (or at least tombstones) in that interval (except in LEGACY_REPLACE ingestion mode)
     if (replaceSegments.isEmpty() || locksHeldByReplaceTask.isEmpty()) {
       return Collections.emptySet();

@@ -21,6 +21,8 @@ package org.apache.druid.metadata.segment;
 
 import org.skife.jdbi.v2.Handle;
 
+import javax.annotation.Nullable;
+
 /**
  * Represents a single transaction involving read/write of segment metadata into
  * the metadata store. A transaction is associated with a single instance of a
@@ -40,6 +42,7 @@ public interface SegmentMetadataTransaction
   @FunctionalInterface
   interface Callback<T>
   {
+    @Nullable
     T inTransaction(SegmentMetadataTransaction transaction) throws Exception;
   }
 }

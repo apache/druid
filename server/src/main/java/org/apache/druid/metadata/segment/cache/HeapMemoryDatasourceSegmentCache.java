@@ -501,12 +501,50 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   @Override
-  public int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime)
+  public boolean markSegmentAsUnused(SegmentId segmentId, DateTime updateTime)
+  {
+    return addUnusedSegmentId(segmentId, updateTime);
+  }
+
+  @Override
+  public int markSegmentsAsUnused(Set<SegmentId> segmentIds, DateTime updateTime)
   {
     int updatedCount = 0;
-    for (DataSegment segment : findUsedSegmentsOverlappingAnyOf(List.of(interval))) {
-      boolean updated = addUnusedSegmentId(segment.getId(), updateTime);
-      if (updated) {
+    for (SegmentId segmentId : segmentIds) {
+      if (addUnusedSegmentId(segmentId, updateTime)) {
+        ++updatedCount;
+      }
+    }
+    return updatedCount;
+  }
+
+  @Override
+  public int markSegmentsWithinIntervalAsUnused(
+      Interval interval,
+      @Nullable List<String> versions,
+      DateTime updateTime
+  )
+  {
+    final Set<String> eligibleVersions = versions == null ? null : Set.copyOf(versions);
+
+    int updatedCount = 0;
+    for (DataSegmentPlus segment : findUsedSegmentsPlusOverlappingAnyOf(List.of(interval))) {
+      // Update segments with eligible versions or all versions (if eligibleVersions is null)
+      if ((eligibleVersions == null || eligibleVersions.contains(segment.getDataSegment().getVersion()))
+          && addUnusedSegmentId(segment.getDataSegment().getId(), updateTime)) {
+        ++updatedCount;
+      }
+    }
+
+    return updatedCount;
+  }
+
+  @Override
+  public int markAllSegmentsAsUnused(DateTime updateTime)
+  {
+    int updatedCount = 0;
+    for (DataSegmentPlus segment : findUsedSegmentsPlusOverlappingAnyOf(List.of())) {
+      if (addUnusedSegmentId(segment.getDataSegment().getId(), updateTime)) {
         ++updatedCount;
       }
     }
