@@ -1,3 +1,4 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
 !use druidtest://?componentSupplier=DartComponentSupplier
 !set outputformat mysql
 

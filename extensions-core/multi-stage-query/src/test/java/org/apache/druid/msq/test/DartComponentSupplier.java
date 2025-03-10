@@ -69,22 +69,24 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
   }
 
   @Override
-  public DruidModule getOverrideModule()
+  public DruidModule getCoreModule()
   {
-    return DruidModuleCollection.of(super.getOverrideModule(),
-          new LocalDartModule()
-        );
+    return DruidModuleCollection.of(
+        super.getCoreModule(),
+        new DartControllerModule(),
+        new DartWorkerModule(),
+        new DartWorkerMemoryManagementModule(),
+        new DartTestCoreModule()
+    );
   }
 
   @Override
-  public DruidModule getCoreModule()
+  public DruidModule getOverrideModule()
   {
-    return DruidModuleCollection.of(super.getCoreModule(),
-          new DartControllerModule(),
-          new DartWorkerModule(),
-          new DartWorkerMemoryManagementModule(),
-          new L1()
-        );
+    return DruidModuleCollection.of(
+        super.getOverrideModule(),
+        new DartTestOverrideModule()
+    );
   }
 
   @Override
@@ -96,29 +98,30 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     return injector.getInstance(DartSqlEngine.class);
   }
 
-
-
-  static class L1 implements DruidModule{
-
+  static class DartTestCoreModule implements DruidModule
+  {
     @Provides
     @EscalatedGlobal
-    final ServiceClientFactory getServiceClientFactory(HttpClient ht) {
+    final ServiceClientFactory getServiceClientFactory(HttpClient ht)
+    {
       return ServiceClientModule.makeServiceClientFactory(ht);
 
     }
 
     @Provides
-    final DruidNodeDiscoveryProvider getDiscoveryProvider() {
+    final DruidNodeDiscoveryProvider getDiscoveryProvider()
+    {
       return null;
     }
-
 
     @Override
     public void configure(Binder binder)
     {
     }
   }
-  static class LocalDartModule implements DruidModule{
+
+  static class DartTestOverrideModule implements DruidModule
+  {
 
     @Provides
     @LazySingleton
@@ -149,30 +152,5 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     {
       return new HashMap<String, Worker>();
     }
-
-//    @Provides
-//    @LazySingleton
-//    public MSQTaskSqlEngine createEngine(
-//        ObjectMapper queryJsonMapper,
-//        MSQTestOverlordServiceClient2 indexingServiceClient)
-//    {
-//      return new DartSqlEngine(indexingServiceClient, queryJsonMapper, new SegmentGenerationTerminalStageSpecFactory());
-//    }
-//
-//    @Provides
-//    @LazySingleton
-//    public DartSqlEngine makeSqlEngine(
-//        DartControllerContextFactory controllerContextFactory,
-//        DartControllerRegistry controllerRegistry,
-//        DartControllerConfig controllerConfig
-//    )
-//    {
-//      return new DartSqlEngine(
-//          controllerContextFactory,
-//          controllerRegistry,
-//          controllerConfig,
-//          Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
-//      );
-//    }
   }
 }

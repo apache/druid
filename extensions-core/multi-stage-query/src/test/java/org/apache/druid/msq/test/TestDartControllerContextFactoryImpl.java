@@ -52,7 +52,7 @@ import java.util.concurrent.Executors;
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
   private Map<String, Worker> workerMap;
-  public Controller theController1;
+  public Controller controller;
 
   @Inject
   public TestDartControllerContextFactoryImpl(
@@ -83,11 +83,11 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         emitter
     )
     {
-      public void registerController(Controller controller, Closer closer)
+      public void registerController(Controller currentController, Closer closer)
       {
-        super.registerController(controller, closer);
-        theController1 = controller;
-      };
+        super.registerController(currentController, closer);
+        controller = currentController;
+      }
     };
   }
 
@@ -113,7 +113,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
           new MSQTestWorkerContext(
               queryId,
               inMemoryWorkers,
-              theController1,
+              controller,
               jsonMapper,
               injector,
               MSQTestBase.makeTestWorkerMemoryParameters(),
@@ -155,7 +155,6 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     public ListenableFuture<?> stopWorker(String workerId)
     {
       return null;
-
     }
   }
 }
