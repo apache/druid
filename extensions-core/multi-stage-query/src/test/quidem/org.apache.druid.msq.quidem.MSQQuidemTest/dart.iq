@@ -1,0 +1,46 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!use druidtest://?componentSupplier=DartComponentSupplier
+!set outputformat mysql
+
+select dim1 from foo ;
++------+
+| dim1 |
++------+
+|      |
+| 1    |
+| 10.1 |
+| 2    |
+| abc  |
+| def  |
++------+
+(6 rows)
+
+!ok
+
+select dim1 from foo ;
++------+
+| dim1 |
++------+
+|      |
+| 1    |
+| 10.1 |
+| 2    |
+| abc  |
+| def  |
++------+
+(6 rows)
+
+!ok
+
+select dim2,count(dim3) from foo group by dim2;
++------+--------+
+| dim2 | EXPR$1 |
++------+--------+
+|      |      1 |
+| a    |      2 |
+| abc  |      0 |
+|      |      1 |
++------+--------+
+(4 rows)
+
+!ok
