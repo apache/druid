@@ -26,7 +26,6 @@ import com.google.inject.Injector;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.InternalQueryConfig;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -126,32 +125,7 @@ public class QueryFrameworkUtils
       @Nullable final ViewManager viewManager,
       final DruidSchemaManager druidSchemaManager,
       final AuthorizerMapper authorizerMapper,
-      final CatalogResolver catalogResolver)
-  {
-    TimelineServerView timelineServerView = new TestTimelineServerView(walker.getSegments());
-    return createMockRootSchema(
-        injector,
-        conglomerate,
-        walker,
-        plannerConfig,
-        viewManager,
-        druidSchemaManager,
-        authorizerMapper,
-        catalogResolver,
-        timelineServerView
-    );
-  }
-
-  public static DruidSchemaCatalog createMockRootSchema(
-      final Injector injector,
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
-      @Nullable final ViewManager viewManager,
-      final DruidSchemaManager druidSchemaManager,
-      final AuthorizerMapper authorizerMapper,
-      final CatalogResolver catalogResolver,
-      final TimelineServerView timelineServerView
+      final CatalogResolver catalogResolver
   )
   {
     DruidSchema druidSchema = createMockSchema(
@@ -159,11 +133,10 @@ public class QueryFrameworkUtils
         conglomerate,
         walker,
         druidSchemaManager,
-        catalogResolver,
-        timelineServerView
+        catalogResolver
     );
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
+        CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
     DruidOperatorTable createOperatorTable = createOperatorTable(injector);
@@ -248,13 +221,12 @@ public class QueryFrameworkUtils
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final DruidSchemaManager druidSchemaManager,
-      final CatalogResolver catalog,
-      final TimelineServerView timelineServerView
+      final CatalogResolver catalog
   )
   {
     final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
         createMockQueryLifecycleFactory(walker, conglomerate),
-        timelineServerView,
+        new TestTimelineServerView(walker.getSegments()),
         BrokerSegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
         new InternalQueryConfig(),

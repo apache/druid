@@ -29,11 +29,8 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
-import org.apache.druid.client.TestHttpClient;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -47,14 +44,12 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -83,7 +78,6 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.LocalQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -678,8 +672,7 @@ public class SqlTestFramework
           viewManager,
           componentSupplier.createSchemaManager(),
           framework.authorizerMapper,
-          framework.builder.catalogResolver,
-          framework.injector.getInstance(TimelineServerView.class)
+          framework.builder.catalogResolver
       );
 
       this.plannerFactory = new PlannerFactory(
@@ -778,20 +771,8 @@ public class SqlTestFramework
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
 
-      binder.bind(new TypeLiteral<BlockingPool<ByteBuffer>>(){})
-            .annotatedWith(Merging.class)
-            .to(TestBufferPool.class);
-
       TestRequestLogger testRequestLogger = new TestRequestLogger();
       binder.bind(RequestLogger.class).toInstance(testRequestLogger);
-    }
-
-    @Provides
-    @Self
-    @LazySingleton
-    public DruidNode makeSelfDruidNode()
-    {
-      return new DruidNode("test", "test-host", true, 80, 443, false, true);
     }
 
     @Provides
@@ -942,35 +923,25 @@ public class SqlTestFramework
         final Injector injector,
         QueryRunnerFactoryConglomerate conglomerate,
         QuerySegmentWalker walker,
-        Builder builder,
-        TimelineServerView timelineServerView)
+        Builder builder)
     {
       return QueryFrameworkUtils.createMockSchema(
           injector,
           conglomerate,
           (SpecificSegmentsQuerySegmentWalker) walker,
           builder.componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
-          builder.catalogResolver,
-          timelineServerView
+          builder.catalogResolver
       );
     }
 
     @Provides
     @LazySingleton
-    private SystemSchema makeSystemSchema(AuthorizerMapper authorizerMapper, DruidSchema druidSchema,
-        TimelineServerView timelineServerView)
+    private SystemSchema makeSystemSchema(QuerySegmentWalker walker, AuthorizerMapper authorizerMapper,
+        DruidSchema druidSchema)
     {
-      return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
+      return CalciteTests
+          .createMockSystemSchema(druidSchema, (SpecificSegmentsQuerySegmentWalker) walker, authorizerMapper);
     }
-
-
-    @Provides
-    @LazySingleton
-    private TimelineServerView makeTimelineServerView(SpecificSegmentsQuerySegmentWalker walker)
-    {
-      return new TestTimelineServerView(walker.getSegments());
-    }
-
 
     @Provides
     @LazySingleton
@@ -1066,13 +1037,6 @@ public class SqlTestFramework
     public TestSegmentsBroker makeTimelines()
     {
       return new TestSegmentsBroker();
-    }
-
-    @Provides
-    @LazySingleton
-    private HttpClient makeHttpClient(ObjectMapper objectMapper)
-    {
-      return new TestHttpClient(objectMapper);
     }
 
     @Provides
