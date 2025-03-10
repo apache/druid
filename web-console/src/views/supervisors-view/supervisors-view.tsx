@@ -138,7 +138,7 @@ export interface SupervisorsViewProps {
   goToDatasource(datasource: string): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToStreamingDataLoader(supervisorId: string): void;
-  goToTasks(supervisorId: string, type: string): void;
+  goToTasks(supervisorId: string, type: string | undefined): void;
   capabilities: Capabilities;
 }
 
@@ -825,10 +825,16 @@ export class SupervisorsView extends React.PureComponent<
               } else {
                 label = '';
               }
+
               return (
                 <TableClickableCell
                   tooltip="Go to tasks"
-                  onClick={() => goToTasks(original.supervisor_id, `index_${original.type}`)}
+                  onClick={() => {
+                    const taskType = oneOf(original.type, 'kafka', 'kinesis')
+                      ? `index_${original.type}`
+                      : undefined;
+                    goToTasks(original.supervisor_id, taskType);
+                  }}
                   hoverIcon={IconNames.ARROW_TOP_RIGHT}
                 >
                   {label}
