@@ -791,7 +791,7 @@ public class SqlTestFramework
     @LazySingleton
     public DruidNode makeSelfDruidNode()
     {
-      return new DruidNode("test", "test-host", true, 80, 443, false, true);
+      return new DruidNode("druid/broker", "local-test-host", false, 12345, 443, true, false);
     }
 
     @Provides

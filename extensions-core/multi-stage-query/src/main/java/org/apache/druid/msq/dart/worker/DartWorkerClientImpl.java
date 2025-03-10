@@ -113,6 +113,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   /**
    * {@inheritDoc}
    */
+  @Override
   public void closeClient(final String workerHost)
   {
     synchronized (clientMap) {
@@ -144,6 +145,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   /**
    * {@inheritDoc}
    */
+  @Override
   public ListenableFuture<?> stopWorker(String workerId)
   {
     return getClient(workerId).asyncRequest(

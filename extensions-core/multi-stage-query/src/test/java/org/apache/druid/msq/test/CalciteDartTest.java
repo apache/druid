@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
-public class SimpleDartTest extends BaseCalciteQueryTest
+public class CalciteDartTest extends BaseCalciteQueryTest
 {
   @Override
   protected QueryTestBuilder testBuilder()
