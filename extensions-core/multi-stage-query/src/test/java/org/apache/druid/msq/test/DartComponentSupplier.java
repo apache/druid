@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -117,12 +116,7 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     @Override
     public void configure(Binder binder)
     {
-//      binder.bind(new TypeLiteral<BlockingPool<ByteBuffer>>(){})
-//      .annotatedWith(Merging.class)
-//      .to(TestBufferPool.class);
-
     }
-
   }
   static class LocalDartModule implements DruidModule{
 
@@ -136,20 +130,16 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     @Override
     public void configure(Binder binder)
     {
-      binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
-      .annotatedWith(Merging.class)
-      .to(TestBufferPool.class);
-
-      if(true) {
       binder.bind(DartControllerContextFactory.class)
           .to(TestDartControllerContextFactoryImpl.class)
           .in(LazySingleton.class);
-      }else {
-        binder.bind(DartControllerContextFactory.class)
-        .to(MSQTestControllerContext.class)
-        .in(LazySingleton.class);
+    }
 
-      }
+    @Provides
+    @Merging
+    NonBlockingPool<ByteBuffer> makeMergingBuffer(TestBufferPool bufferPool)
+    {
+      return bufferPool;
     }
 
     @Provides

@@ -21,6 +21,7 @@ package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -36,7 +37,11 @@ public class SimpleDartTest extends BaseCalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
-        .queryContext(ImmutableMap.<String, Object>builder().put("asd", UUID.randomUUID().toString()).build())
+        .queryContext(
+            ImmutableMap.<String, Object>builder()
+                .put(DartSqlEngine.CTX_DART_QUERY_ID, UUID.randomUUID().toString())
+                .build()
+        )
         .skipVectorize(true)
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }

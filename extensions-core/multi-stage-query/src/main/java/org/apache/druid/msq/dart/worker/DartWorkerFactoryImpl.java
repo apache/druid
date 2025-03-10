@@ -35,7 +35,6 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -114,12 +113,6 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
         queryContext
     );
 
-    return new WorkerImpl(null, workerContext)
-    {
-      protected StageOutputHolder makeStageOutputHolder()
-      {
-        return new StageOutputHolder();
-      };
-    };
+    return new WorkerImpl(null, workerContext);
   }
 }

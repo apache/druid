@@ -99,22 +99,22 @@ public class TestTimelineServerView implements TimelineServerView
   @Override
   public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource table)
   {
-    for (DataSegment s : segments) {
-      if (!s.getDataSource().equals(table.getName())) {
+    for (DataSegment segment : segments) {
+      if (!segment.getDataSource().equals(table.getName())) {
         continue;
       }
-      VersionedIntervalTimeline<String, ServerSelector> a = new VersionedIntervalTimeline<String, ServerSelector>(Comparator.naturalOrder());
-    TierSelectorStrategy st = new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy());
-    ServerSelector sss = new ServerSelector(s, st );
 
-    PartitionChunk<ServerSelector> aa = new SingleElementPartitionChunk(sss);
-    a.add(        s.getInterval(), s.getVersion(), aa);
-    return Optional.of(a);
-//      return Optional.of();
+      VersionedIntervalTimeline<String, ServerSelector> timelineLookup = new VersionedIntervalTimeline<String, ServerSelector>(
+          Comparator.naturalOrder()
+      );
+      TierSelectorStrategy st = new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy());
+      ServerSelector sss = new ServerSelector(segment, st);
 
+      PartitionChunk<ServerSelector> partitionChunk = new SingleElementPartitionChunk(sss);
+      timelineLookup.add(segment.getInterval(), segment.getVersion(), partitionChunk);
+      return Optional.of(timelineLookup);
     }
-  return Optional.empty();
-//    throw new UnsupportedOperationException();
+    return Optional.empty();
   }
 
   @Override
