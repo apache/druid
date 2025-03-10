@@ -20,13 +20,20 @@
 package org.apache.druid.msq.dart.worker;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.msq.dart.controller.DartWorkerManager;
 import org.apache.druid.msq.exec.WorkerClient;
 
 public interface DartWorkerClient extends WorkerClient
 {
+  /**
+   * Close a single worker's clients. Used when that worker fails, so we stop trying to contact it.
+   *
+   * @param workerHost worker host:port
+   */
   void closeClient(String hostAndPort);
 
+  /**
+   * Stops a worker. Dart-only API, used by the {@link DartWorkerManager}.
+   */
   ListenableFuture<?> stopWorker(String workerId);
-
-
 }

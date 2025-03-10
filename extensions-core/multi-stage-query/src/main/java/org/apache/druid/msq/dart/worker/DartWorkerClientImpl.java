@@ -27,7 +27,6 @@ import it.unimi.dsi.fastutil.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.apache.druid.msq.dart.controller.DartWorkerManager;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -112,9 +111,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   }
 
   /**
-   * Close a single worker's clients. Used when that worker fails, so we stop trying to contact it.
-   *
-   * @param workerHost worker host:port
+   * {@inheritDoc}
    */
   public void closeClient(final String workerHost)
   {
@@ -145,7 +142,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   }
 
   /**
-   * Stops a worker. Dart-only API, used by the {@link DartWorkerManager}.
+   * {@inheritDoc}
    */
   public ListenableFuture<?> stopWorker(String workerId)
   {
