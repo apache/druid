@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
 import java.util.UUID;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
@@ -65,6 +67,22 @@ public class SimpleDartTest extends BaseCalciteQueryTest
         )
         .run();
   }
+
+  @Test
+  @Disabled("this case currently stalls")
+  public void testSelectFromFooLimit2()
+  {
+    testBuilder()
+        .sql("SELECT 2 from foo limit 2")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {2},
+                new Object[] {2}
+            )
+        )
+        .run();
+  }
+
 
   @Test
   public void testSelectDim1FromFoo11()
