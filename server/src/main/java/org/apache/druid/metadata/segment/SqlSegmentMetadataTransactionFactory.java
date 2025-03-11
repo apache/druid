@@ -89,7 +89,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
 
             return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
           } else {
-            return executeReadAndClose(createSqlTransaction(dataSource, handle, status), callback);
+            return executeReadAndClose(sqlTransaction, callback);
           }
         },
         QUIET_RETRIES,

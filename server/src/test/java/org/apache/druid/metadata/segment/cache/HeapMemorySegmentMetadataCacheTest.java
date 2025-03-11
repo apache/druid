@@ -50,6 +50,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -376,9 +377,10 @@ public class HeapMemorySegmentMetadataCacheTest
                                                              .updatedNow().markUsed().asPlus();
     insertSegmentsInMetadataStore(Set.of(validSegment, invalidSegment));
 
-    // Update the second segment to have an invalid payload
+    // Update the second segment to have an invalid id and payload
     derbyConnectorRule.segments().update(
-        "UPDATE %1$s SET id = 'invalid' WHERE id = ?",
+        "UPDATE %1$s SET id = 'invalid', payload = ? WHERE id = ?",
+        "invalid".getBytes(StandardCharsets.UTF_8),
         invalidSegment.getDataSegment().getId().toString()
     );
 
@@ -526,7 +528,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     syncCache();
     serviceEmitter.verifyValue(Metric.DELETED_SEGMENTS, 1L);
-    serviceEmitter.verifyValue(Metric.PERSISTED_USED_SEGMENTS, 0L);
+    serviceEmitter.verifyNotEmitted(Metric.PERSISTED_USED_SEGMENTS);
 
     Assert.assertNull(
         wikiCache.findUsedSegment(unpersistedSegment.getId())
@@ -554,7 +556,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     syncCache();
     serviceEmitter.verifyValue(Metric.DELETED_SEGMENTS, 1L);
-    serviceEmitter.verifyValue(Metric.PERSISTED_USED_SEGMENTS, 0L);
+    serviceEmitter.verifyNotEmitted(Metric.PERSISTED_USED_SEGMENTS);
 
     Assert.assertNull(
         wikiCache.findHighestUnusedSegmentId(

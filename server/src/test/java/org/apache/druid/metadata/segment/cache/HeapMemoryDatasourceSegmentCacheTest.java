@@ -320,35 +320,59 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
-  public void testMarkCacheSynced_isNeededAfterUpdateOrRemove()
+  public void testSyncSegmentIds_updatesHighestUnusedId()
   {
     final DataSegmentPlus unusedSegmentPlus = createUnusedSegment().asPlus();
-    final DataSegment segment = unusedSegmentPlus.getDataSegment();
-    final SegmentId segmentId = segment.getId();
+    final SegmentId segmentId = unusedSegmentPlus.getDataSegment().getId();
 
     cache.addSegment(unusedSegmentPlus);
-    Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
+    cache.syncSegmentIds(List.of(), DateTimes.nowUtc());
 
-    // Verify that marking the segment as used does not update the highest ID
-    final DataSegmentPlus usedSegmentPlus = new DataSegmentPlus(
-        segment,
-        null,
-        DateTimes.EPOCH,
-        true,
-        null,
-        null,
-        null
+    Assert.assertNull(cache.findHighestUnusedSegmentId(segmentId.getInterval(), segmentId.getVersion()));
+  }
+
+  @Test
+  public void testAddSegment_updatesHighestUnusedId()
+  {
+    final DataSegmentPlus unusedSegmentPlus = createUnusedSegment().asPlus();
+    cache.addSegment(unusedSegmentPlus);
+
+    final SegmentId segmentId = unusedSegmentPlus.getDataSegment().getId();
+    Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segmentId.getInterval(), segmentId.getVersion()));
+  }
+
+  @Test
+  public void testDeleteSegment_doesNotUpdateHighestUnusedId()
+  {
+    final DataSegmentPlus unusedSegmentPlus = createUnusedSegment().asPlus();
+    final SegmentId segmentId = unusedSegmentPlus.getDataSegment().getId();
+
+    cache.addSegment(unusedSegmentPlus);
+    cache.deleteSegments(Set.of(segmentId));
+    Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segmentId.getInterval(), segmentId.getVersion()));
+  }
+
+  @Test
+  public void testMarkingSegmentAsUsed_doesNotUpdateHighestUnusedId()
+  {
+    final DataSegmentPlus unusedSegmentPlus = createUnusedSegment().asPlus();
+    final SegmentId segmentId = unusedSegmentPlus.getDataSegment().getId();
+    cache.addSegment(unusedSegmentPlus);
+
+    // Mark the segment as used
+    cache.addSegment(
+        new DataSegmentPlus(
+            unusedSegmentPlus.getDataSegment(),
+            null,
+            DateTimes.EPOCH,
+            true,
+            null,
+            null,
+            null
+        )
     );
-    cache.addSegment(usedSegmentPlus);
-    Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
 
-    // Verify that removing segment does not update the highest ID
-    cache.removeSegmentsForIds(Set.of(segmentId));
-    Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
-
-    // Verify that only reset updates the highest ID
-    cache.markCacheSynced();
-    Assert.assertNull(cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
+    Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segmentId.getInterval(), segmentId.getVersion()));
   }
 
   @Test

@@ -52,10 +52,36 @@ public class Metric
    */
   public static final String TRANSACTION_COUNT = "transactions";
 
+
+  // CACHE SYNC TIME METRICS
+
   /**
    * Time taken in milliseconds for the latest sync with metadata store.
    */
   public static final String SYNC_DURATION_MILLIS = METRIC_NAME_PREFIX + "sync/time";
+
+  /**
+   * Time taken in milliseconds to update all segment IDs in the cache.
+   */
+  public static final String UPDATE_IDS_DURATION_MILLIS = METRIC_NAME_PREFIX + "updateIds/time";
+
+  /**
+   * Time taken in milliseconds to fetch payloads of used segments from the metadata store.
+   */
+  public static final String RETRIEVE_SEGMENT_PAYLOADS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchPayloads/time";
+
+  /**
+   * Time taken in milliseconds to fetch all segment IDs from the metadata store.
+   */
+  public static final String RETRIEVE_SEGMENT_IDS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchIds/time";
+
+  /**
+   * Time taken in milliseconds to fetch all pending segments from the metadata store.
+   */
+  public static final String RETRIEVE_PENDING_SEGMENTS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchPending/time";
+
+
+  // CACHE UPDATE METRICS
 
   /**
    * Number of segments which are now stale in the cache and need to be refreshed.
