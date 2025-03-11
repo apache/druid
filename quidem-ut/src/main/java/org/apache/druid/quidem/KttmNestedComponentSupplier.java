@@ -93,8 +93,8 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     final List<DimensionSchema> dimensions = Arrays.asList(
         new StringDimensionSchema("session"),
         new StringDimensionSchema("number"),
-        new AutoTypeColumnSchema("event", null),
-        new AutoTypeColumnSchema("agent", null),
+        AutoTypeColumnSchema.of("event"),
+        AutoTypeColumnSchema.of("agent"),
         new StringDimensionSchema("client_ip"),
         new StringDimensionSchema("geo_ip"),
         new StringDimensionSchema("language"),

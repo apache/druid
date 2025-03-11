@@ -26,6 +26,8 @@ import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -88,6 +90,9 @@ public class BuiltInTypesModuleTest
     DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
     Properties props = new Properties();
     props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "sorted_array");
+    props.setProperty("druid.indexing.formats.nestedColumnFormatSpec.stringDictionaryEncoding.type", StringEncodingStrategy.FRONT_CODED);
+    props.setProperty("druid.indexing.formats.nestedColumnFormatSpec.stringDictionaryEncoding.bucketSize", "16");
+    props.setProperty("druid.indexing.formats.nestedColumnFormatSpec.stringDictionaryEncoding.formatVersion", "1");
     Injector gadget = makeInjector(props);
 
     // side effects
@@ -100,6 +105,10 @@ public class BuiltInTypesModuleTest
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         BuiltInTypesModule.getStringMultiValueHandlingMode()
+    );
+    Assert.assertEquals(
+        new NestedCommonFormatColumnFormatSpec(null, null, null, new StringEncodingStrategy.FrontCoded(16, (byte) 1), null, null, null, null, null),
+        BuiltInTypesModule.getDefaultNestedCommonFormatSpec()
     );
   }
 

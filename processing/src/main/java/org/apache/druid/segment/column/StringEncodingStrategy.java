@@ -36,7 +36,9 @@ import java.util.Objects;
 })
 public interface StringEncodingStrategy
 {
-  Utf8 DEFAULT = new Utf8();
+  Utf8 UTF8_STRATEGY = new Utf8();
+  Utf8 DEFAULT = UTF8_STRATEGY;
+
   String UTF8 = "utf8";
   String FRONT_CODED = "frontCoded";
 
