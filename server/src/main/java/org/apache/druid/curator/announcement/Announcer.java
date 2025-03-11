@@ -350,8 +350,7 @@ public class Announcer
   {
     synchronized (toAnnounce) {
       if (!started) {
-        // removeParentsIfCreated is not relevant for updates; use dummy value "false".
-        toUpdate.add(new Announceable(path, bytes, false));
+        toUpdate.add(new Announceable(path, bytes));
         return;
       }
     }

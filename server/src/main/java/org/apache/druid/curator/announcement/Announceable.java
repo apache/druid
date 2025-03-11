@@ -46,4 +46,11 @@ class Announceable
     this.bytes = bytes;
     this.removeParentsIfCreated = removeParentsIfCreated;
   }
+
+  // This should be used for updates only, where removeParentsIfCreated is not relevant.
+  public Announceable(String path, byte[] bytes)
+  {
+    // removeParentsIfCreated is irrelevant, so we can use dummy value "false".
+    this(path, bytes, false);
+  }
 }

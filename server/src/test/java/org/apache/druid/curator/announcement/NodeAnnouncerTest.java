@@ -19,10 +19,7 @@
 
 package org.apache.druid.curator.announcement;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
-import org.apache.curator.framework.api.CuratorListener;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.test.KillSession;
@@ -32,7 +29,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
 import org.junit.jupiter.api.AfterEach;
@@ -48,7 +44,6 @@ import java.util.concurrent.ExecutorService;
 
 public class NodeAnnouncerTest extends CuratorTestBase
 {
-  private static final Logger log = new Logger(NodeAnnouncerTest.class);
   private ExecutorService exec;
 
   @BeforeEach
@@ -277,7 +272,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
     NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
-    final String testPath = "/somewhere/test2";
+    final String testPath = "/somewhere/test";
     final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 
     announcer.start();
@@ -361,14 +356,9 @@ public class NodeAnnouncerTest extends CuratorTestBase
   private CountDownLatch createCountdownLatchForPaths(String... paths)
   {
     final CountDownLatch latch = new CountDownLatch(paths.length);
-    curator.getCuratorListenable().addListener(new CuratorListener()
-    {
-      @Override
-      public void eventReceived(CuratorFramework client, CuratorEvent event)
-      {
-        if (event.getType() == CuratorEventType.CREATE && Arrays.asList(paths).contains(event.getPath())) {
-          latch.countDown();
-        }
+    curator.getCuratorListenable().addListener((client, event) -> {
+      if (event.getType() == CuratorEventType.CREATE && Arrays.asList(paths).contains(event.getPath())) {
+        latch.countDown();
       }
     });
 
