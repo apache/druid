@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
+import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
@@ -460,52 +461,27 @@ public class StringUtils
   }
 
   /**
-   * Removes all occurrences of the given char from the given string. This method is an optimal version of
-   * {@link String#replace(CharSequence, CharSequence) s.replace("c", "")}.
+   * Removes all occurrences of the given char from the given string.
    */
+  @SuppressForbidden(reason = "String#replace")
   public static String removeChar(String s, char c)
   {
-    int pos = s.indexOf(c);
-    if (pos < 0) {
-      return s;
-    }
-    StringBuilder sb = new StringBuilder(s.length() - 1);
-    int prevPos = 0;
-    do {
-      sb.append(s, prevPos, pos);
-      prevPos = pos + 1;
-      pos = s.indexOf(c, pos + 1);
-    } while (pos > 0);
-    sb.append(s, prevPos, s.length());
-    return sb.toString();
+    return s.replace(String.valueOf(c), "");
   }
 
   /**
-   * Replaces all occurrences of the given char in the given string with the given replacement string. This method is an
-   * optimal version of {@link String#replace(CharSequence, CharSequence) s.replace("c", replacement)}.
+   * Replaces all occurrences of the given char in the given string with the given replacement string.
    */
+  @SuppressForbidden(reason = "String#replace")
   public static String replaceChar(String s, char c, String replacement)
   {
-    int pos = s.indexOf(c);
-    if (pos < 0) {
-      return s;
-    }
-    StringBuilder sb = new StringBuilder(s.length() - 1 + replacement.length());
-    int prevPos = 0;
-    do {
-      sb.append(s, prevPos, pos);
-      sb.append(replacement);
-      prevPos = pos + 1;
-      pos = s.indexOf(c, pos + 1);
-    } while (pos > 0);
-    sb.append(s, prevPos, s.length());
-    return sb.toString();
+    return s.replace(String.valueOf(c), replacement);
   }
 
   /**
-   * Replaces all occurrences of the given target substring in the given string with the given replacement string. This
-   * method is an optimal version of {@link String#replace(CharSequence, CharSequence) s.replace(target, replacement)}.
+   * Replaces all occurrences of the given target substring in the given string with the given replacement string.
    */
+  @SuppressForbidden(reason = "String#replace")
   public static String replace(String s, String target, String replacement)
   {
     return s.replace(target, replacement);
