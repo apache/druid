@@ -83,6 +83,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         emitter
     )
     {
+      @Override
       public void registerController(Controller currentController, Closer closer)
       {
         super.registerController(currentController, closer);
