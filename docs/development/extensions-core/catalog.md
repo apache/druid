@@ -68,7 +68,7 @@ A tableSpec defines a table
 |--------------|---------------------|------------------------------------------------------------------------------------------------------------------------|----------|---------|
 | `name`       | String              | The name of the column                                                                                                 | yes      | null    |
 | `dataType`   | String              | The type of the column. Can be any column data type that is available to Druid. Depends on what extensions are loaded. | no       | null    |
-| `properties` | Map&lt;String, Object\> | the column's defined properties. Non properties defined at this time.                                                  | no       | null    |
+| `properties` | Map&lt;String, Object> | the column's defined properties. Non properties defined at this time.                                                  | no       | null    |
 
 ### APIs
 

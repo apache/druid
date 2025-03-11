@@ -173,7 +173,7 @@ Now, excess requests will instead be queued with a timeout equal to `MIN(Integer
 
 #### Changed how empty or null array columns are stored
 
-Columns ingested with the auto column indexer that contain only empty or null arrays are now stored as `ARRAY\<LONG\>` instead of `COMPLEX<json\>`.
+Columns ingested with the auto column indexer that contain only empty or null arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
 
 [#15505](https://github.com/apache/druid/pull/15505)
 
