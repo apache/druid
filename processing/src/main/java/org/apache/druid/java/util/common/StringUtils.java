@@ -508,33 +508,7 @@ public class StringUtils
    */
   public static String replace(String s, String target, String replacement)
   {
-    // String.replace() is suboptimal in JDK8, but is fixed in JDK9+. When the minimal JDK version supported by Druid is
-    // JDK9+, the implementation of this method should be replaced with simple delegation to String.replace(). However,
-    // the method should still be prohibited to use in all other places except this method body, because it's easy to
-    // suboptimally call String.replace("a", "b"), String.replace("a", ""), String.replace("a", "abc"), which have
-    // better alternatives String.replace('a', 'b'), removeChar() and replaceChar() respectively.
-    int pos = s.indexOf(target);
-    if (pos < 0) {
-      return s;
-    }
-    int sLength = s.length();
-    int targetLength = target.length();
-    // This is needed to work correctly with empty target string and mimic String.replace() behavior
-    int searchSkip = Math.max(targetLength, 1);
-    StringBuilder sb = new StringBuilder(sLength - targetLength + replacement.length());
-    int prevPos = 0;
-    do {
-      sb.append(s, prevPos, pos);
-      sb.append(replacement);
-      prevPos = pos + targetLength;
-      // Break from the loop if the target is empty
-      if (pos == sLength) {
-        break;
-      }
-      pos = s.indexOf(target, pos + searchSkip);
-    } while (pos > 0);
-    sb.append(s, prevPos, sLength);
-    return sb.toString();
+    return s.replace(target, replacement);
   }
 
   /**
