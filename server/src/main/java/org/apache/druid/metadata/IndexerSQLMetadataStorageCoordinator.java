@@ -1261,7 +1261,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         if (createdSegment != null) {
           pendingSegments.add(createdSegment.getId());
           uniqueRequestToSegment.put(uniqueRequest, createdSegment);
-          log.info("Created new segment[%s]", createdSegment.getId());
+          log.debug("Created new segment[%s]", createdSegment.getId());
         }
       }
 
@@ -1270,7 +1270,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
-    log.info("Created [%d] new segments for [%d] allocate requests.", uniqueRequestToSegment.size(), requests.size());
     return createdSegments;
   }
 
