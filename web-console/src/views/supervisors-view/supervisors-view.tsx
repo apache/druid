@@ -830,10 +830,15 @@ export class SupervisorsView extends React.PureComponent<
                 <TableClickableCell
                   tooltip="Go to tasks"
                   onClick={() => {
-                    const taskType = oneOf(original.type, 'kafka', 'kinesis')
-                      ? `index_${original.type}`
-                      : undefined;
-                    goToTasks(original.supervisor_id, taskType);
+                    let datasource: string = original.supervisor_id;
+                    let taskType: string | undefined;
+                    if (oneOf(original.type, 'kafka', 'kinesis')) {
+                      taskType = `index_${original.type}`;
+                    } else if (original.type === 'autocompact') {
+                      datasource = original.supervisor_id.replace('autocompact__', '');
+                      taskType = 'compact';
+                    }
+                    goToTasks(datasource, taskType);
                   }}
                   hoverIcon={IconNames.ARROW_TOP_RIGHT}
                 >
