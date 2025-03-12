@@ -463,19 +463,17 @@ public class StringUtils
   /**
    * Removes all occurrences of the given char from the given string.
    */
-  @SuppressForbidden(reason = "String#replace")
   public static String removeChar(String s, char c)
   {
-    return s.replace(String.valueOf(c), "");
+    return StringUtils.replace(s, String.valueOf(c), "");
   }
 
   /**
    * Replaces all occurrences of the given char in the given string with the given replacement string.
    */
-  @SuppressForbidden(reason = "String#replace")
   public static String replaceChar(String s, char c, String replacement)
   {
-    return s.replace(String.valueOf(c), replacement);
+    return StringUtils.replace(s, String.valueOf(c), replacement);
   }
 
   /**
