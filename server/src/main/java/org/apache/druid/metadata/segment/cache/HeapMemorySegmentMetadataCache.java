@@ -67,6 +67,9 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * In-memory implementation of {@link SegmentMetadataCache}.
  * <p>
+ * Non-leader Overlords also keep polling the metadata store to keep the cache
+ * up-to-date in case leadership changes.
+ * <p>
  * The map {@link #datasourceToSegmentCache} contains the cache for each datasource.
  * Items are only added to this map and never removed. This is to avoid handling
  * race conditions where a thread has invoked {@link #getDatasource} but hasn't
@@ -606,9 +609,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   /**
-   * Retrieves all pending segments from metadata store and updates the cache if
-   * {@link HeapMemoryDatasourceSegmentCache#shouldRefreshPendingSegment} is
-   * true for it.
+   * Retrieves all pending segments from metadata store and populates them in
+   * the respective {@link DatasourceSegmentSummary}.
    */
   private void retrieveAllPendingSegments(
       Map<String, DatasourceSegmentSummary> datasourceToSummary

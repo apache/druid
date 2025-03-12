@@ -524,7 +524,7 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated"
+              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated, created_date"
               + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
@@ -538,7 +538,7 @@ public class SqlSegmentsMetadataQuery
           .map(
               (index, r, ctx) -> new DataSegmentPlus(
                   JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-                  null,
+                  DateTimes.of(r.getString(5)),
                   DateTimes.of(r.getString(4)),
                   r.getBoolean(2),
                   null,

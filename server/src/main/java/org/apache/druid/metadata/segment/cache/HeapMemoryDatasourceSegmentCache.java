@@ -96,24 +96,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    */
   boolean shouldRefreshUsedSegment(SegmentId segmentId, @Nullable DateTime persistedUpdateTime)
   {
-    return withReadLock(() -> {
-      final DataSegmentPlus cachedState = readSegmentsFor(segmentId.getInterval())
-          .idToUsedSegment.get(segmentId);
-      return cachedState == null
-             || shouldUpdateCache(cachedState.getUsedStatusLastUpdatedDate(), persistedUpdateTime);
-    });
-  }
-
-  /**
-   * Checks if a pending segment needs to be refreshed in the cache.
-   */
-  boolean shouldRefreshPendingSegment(PendingSegmentRecord record)
-  {
-    final SegmentIdWithShardSpec segmentId = record.getId();
     return withReadLock(
-        () -> !readSegmentsFor(segmentId.getInterval())
-            .idToPendingSegment
-            .containsKey(segmentId.toString())
+        () -> readSegmentsFor(segmentId.getInterval())
+            .shouldRefreshUsedSegment(segmentId, persistedUpdateTime)
     );
   }
 
@@ -137,60 +122,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
       // Update cache as entry is older than that persisted in metadata store
       return cachedUpdateTime == null || cachedUpdateTime.isBefore(newUpdateTime);
     }
-  }
-
-  /**
-   * Adds or updates the given segment in the cache.
-   *
-   * @return true if the segment was updated in the cache, false if the segment
-   * was left unchanged in the cache.
-   */
-  boolean addSegment(DataSegmentPlus segmentPlus)
-  {
-    if (Boolean.TRUE.equals(segmentPlus.getUsed())) {
-      return addUsedSegment(segmentPlus);
-    } else {
-      return addUnusedSegmentId(
-          segmentPlus.getDataSegment().getId(),
-          segmentPlus.getUsedStatusLastUpdatedDate()
-      );
-    }
-  }
-
-  /**
-   * Adds or updates a used segment in the cache.
-   */
-  private boolean addUsedSegment(DataSegmentPlus segmentPlus)
-  {
-    final DataSegment segment = segmentPlus.getDataSegment();
-    final SegmentId segmentId = segment.getId();
-
-    return withWriteLock(() -> {
-      if (!shouldRefreshUsedSegment(segmentId, segmentPlus.getUsedStatusLastUpdatedDate())) {
-        return false;
-      }
-
-      final SegmentsInInterval segments = writeSegmentsFor(segmentId.getInterval());
-      segments.idToUsedSegment.put(segmentId, segmentPlus);
-      segments.unusedSegmentIdToUpdatedTime.remove(segment.getId());
-      return true;
-    });
-  }
-
-  /**
-   * Adds or updates an unused segment in the cache.
-   *
-   * @param updatedTime Last updated time of this segment as persisted in the
-   *                    metadata store. This value can be null for segments
-   *                    persisted to the metadata store before the column
-   *                    used_status_last_updated was added to the segments table.
-   */
-  boolean addUnusedSegmentId(SegmentId segmentId, @Nullable DateTime updatedTime)
-  {
-    return withWriteLock(
-        () -> writeSegmentsFor(segmentId.getInterval())
-            .addUnusedSegmentId(segmentId, updatedTime)
-    );
   }
 
   /**
@@ -219,9 +150,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
 
         if (record.isUsed()) {
           // Refresh this used segment if it has been updated in the metadata store
-          final DataSegmentPlus cachedState = intervalSegments.idToUsedSegment.get(segmentId);
-          if (cachedState == null
-              || shouldUpdateCache(cachedState.getUsedStatusLastUpdatedDate(), record.getLastUpdatedTime())) {
+          if (intervalSegments.shouldRefreshUsedSegment(segmentId, record.getLastUpdatedTime())) {
             usedSegmentIdsToRefresh.add(segmentId.toString());
           }
         } else {
@@ -241,14 +170,23 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     });
   }
 
-  SegmentSyncResult syncPendingSegments(List<PendingSegmentRecord> persistedPendingSegments, DateTime syncStartTime)
+  /**
+   * Atomically updates pending segments in the cache based on the segments
+   * currently present in the metadata store.
+   *
+   * @param persistedPendingSegments All pending segments present in the metadata store.
+   * @param syncStartTime            Start time of the current sync
+   * @return Summary of updates made to the cache.
+   */
+  SegmentSyncResult syncPendingSegments(
+      List<PendingSegmentRecord> persistedPendingSegments,
+      DateTime syncStartTime
+  )
   {
     return withWriteLock(() -> {
       int numSegmentsUpdated = 0;
       for (PendingSegmentRecord record : persistedPendingSegments) {
-        final boolean updated = shouldRefreshPendingSegment(record)
-                                && insertPendingSegment(record, false);
-        if (updated) {
+        if (insertPendingSegment(record, false)) {
           ++numSegmentsUpdated;
         }
       }
@@ -264,7 +202,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    * Removes all pending segments which are present in the cache but not present
    * in the metadata store.
    */
-  int removeUnpersistedPendingSegments(Set<String> persistedPendingSegmentIds, DateTime pollStartTime)
+  private int removeUnpersistedPendingSegments(Set<String> persistedPendingSegmentIds, DateTime pollStartTime)
   {
     return withWriteLock(() -> {
       final Set<String> unpersistedSegmentIds =
@@ -284,7 +222,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    * @param syncStartTime       Start time of the current sync
    * @return Number of unpersisted segments removed from cache.
    */
-  int removeUnpersistedSegments(Set<SegmentId> persistedSegmentIds, DateTime syncStartTime)
+  private int removeUnpersistedSegments(Set<SegmentId> persistedSegmentIds, DateTime syncStartTime)
   {
     return withWriteLock(() -> {
       final Set<SegmentId> unpersistedSegmentIds = new HashSet<>();
@@ -350,11 +288,17 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     });
   }
 
+  /**
+   * Must be accessed within a {@link #withReadLock} method.
+   */
   private SegmentsInInterval readSegmentsFor(Interval interval)
   {
     return intervalToSegments.getOrDefault(interval, SegmentsInInterval.EMPTY);
   }
 
+  /**
+   * Must be accessed within a {@link #withWriteLock} method.
+   */
   private SegmentsInInterval writeSegmentsFor(Interval interval)
   {
     return intervalToSegments.computeIfAbsent(interval, i -> new SegmentsInInterval());
@@ -535,7 +479,8 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     return withWriteLock(() -> {
       int numInsertedSegments = 0;
       for (DataSegmentPlus segmentPlus : segments) {
-        if (addSegment(segmentPlus)) {
+        final Interval interval = segmentPlus.getDataSegment().getInterval();
+        if (writeSegmentsFor(interval).addSegment(segmentPlus)) {
           ++numInsertedSegments;
         }
       }
@@ -553,19 +498,22 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   @Override
   public boolean markSegmentAsUnused(SegmentId segmentId, DateTime updateTime)
   {
-    return addUnusedSegmentId(segmentId, updateTime);
+    return writeSegmentsFor(segmentId.getInterval()).addUnusedSegmentId(segmentId, updateTime);
   }
 
   @Override
   public int markSegmentsAsUnused(Set<SegmentId> segmentIds, DateTime updateTime)
   {
-    int updatedCount = 0;
-    for (SegmentId segmentId : segmentIds) {
-      if (addUnusedSegmentId(segmentId, updateTime)) {
-        ++updatedCount;
+    return withWriteLock(() -> {
+      int updatedCount = 0;
+      for (SegmentId segmentId : segmentIds) {
+        final Interval interval = segmentId.getInterval();
+        if (writeSegmentsFor(interval).addUnusedSegmentId(segmentId, updateTime)) {
+          ++updatedCount;
+        }
       }
-    }
-    return updatedCount;
+      return updatedCount;
+    });
   }
 
   @Override
@@ -577,29 +525,38 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   {
     final Set<String> eligibleVersions = versions == null ? null : Set.copyOf(versions);
 
-    int updatedCount = 0;
-    for (DataSegmentPlus segment : findUsedSegmentsPlusOverlappingAnyOf(List.of(interval))) {
-      // Update segments with eligible versions or all versions (if eligibleVersions is null)
-      if ((eligibleVersions == null || eligibleVersions.contains(segment.getDataSegment().getVersion()))
-          && addUnusedSegmentId(segment.getDataSegment().getId(), updateTime)) {
-        ++updatedCount;
+    return withWriteLock(() -> {
+      int updatedCount = 0;
+      for (DataSegmentPlus segmentPlus : findUsedSegmentsPlusOverlappingAnyOf(List.of(interval))) {
+        // Update segments with eligible versions or all versions (if eligibleVersions is null)
+        final DataSegment segment = segmentPlus.getDataSegment();
+        final boolean isEligibleVersion = eligibleVersions == null
+                                          || eligibleVersions.contains(segment.getVersion());
+        if (isEligibleVersion
+            && writeSegmentsFor(segment.getInterval()).addUnusedSegmentId(segment.getId(), updateTime)) {
+          ++updatedCount;
+        }
       }
-    }
 
-    return updatedCount;
+      return updatedCount;
+    });
   }
 
   @Override
   public int markAllSegmentsAsUnused(DateTime updateTime)
   {
-    int updatedCount = 0;
-    for (DataSegmentPlus segment : findUsedSegmentsPlusOverlappingAnyOf(List.of())) {
-      if (addUnusedSegmentId(segment.getDataSegment().getId(), updateTime)) {
-        ++updatedCount;
+    return withWriteLock(() -> {
+      int updatedCount = 0;
+      for (DataSegmentPlus segmentPlus : findUsedSegmentsPlusOverlappingAnyOf(List.of())) {
+        final DataSegment segment = segmentPlus.getDataSegment();
+        if (writeSegmentsFor(segment.getInterval())
+            .addUnusedSegmentId(segment.getId(), updateTime)) {
+          ++updatedCount;
+        }
       }
-    }
 
-    return updatedCount;
+      return updatedCount;
+    });
   }
 
   @Override
@@ -786,6 +743,49 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
           .merge(segmentId.getVersion(), segmentId.getPartitionNum(), Math::max);
     }
 
+    /**
+     * Adds or updates the given segment in the cache.
+     *
+     * @return true if the segment was updated in the cache, false if the segment
+     * was left unchanged in the cache.
+     */
+    boolean addSegment(DataSegmentPlus segmentPlus)
+    {
+      if (Boolean.TRUE.equals(segmentPlus.getUsed())) {
+        return addUsedSegment(segmentPlus);
+      } else {
+        return addUnusedSegmentId(
+            segmentPlus.getDataSegment().getId(),
+            segmentPlus.getUsedStatusLastUpdatedDate()
+        );
+      }
+    }
+
+    /**
+     * Adds or updates a used segment in the cache.
+     */
+    private boolean addUsedSegment(DataSegmentPlus segmentPlus)
+    {
+      final DataSegment segment = segmentPlus.getDataSegment();
+      final SegmentId segmentId = segment.getId();
+
+      if (!shouldRefreshUsedSegment(segmentId, segmentPlus.getUsedStatusLastUpdatedDate())) {
+        return false;
+      }
+
+      idToUsedSegment.put(segmentId, segmentPlus);
+      unusedSegmentIdToUpdatedTime.remove(segment.getId());
+      return true;
+    }
+
+    /**
+     * Adds or updates an unused segment in the cache.
+     *
+     * @param updatedTime Last updated time of this segment as persisted in the
+     *                    metadata store. This value can be null for segments
+     *                    persisted to the metadata store before the column
+     *                    used_status_last_updated was added to the segments table.
+     */
     private boolean addUnusedSegmentId(SegmentId segmentId, @Nullable DateTime updatedTime)
     {
       idToUsedSegment.remove(segmentId);
@@ -797,6 +797,25 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
         return true;
       } else {
         return false;
+      }
+    }
+
+    private boolean shouldRefreshUnusedSegment(SegmentId segmentId, DateTime newUpdateTime)
+    {
+      return !unusedSegmentIdToUpdatedTime.containsKey(segmentId)
+             || shouldUpdateCache(unusedSegmentIdToUpdatedTime.get(segmentId), newUpdateTime);
+    }
+
+    private boolean shouldRefreshUsedSegment(SegmentId segmentId, DateTime newUpdateTime)
+    {
+      final DataSegmentPlus usedSegment = idToUsedSegment.get(segmentId);
+
+      if (usedSegment == null) {
+        // Do not refresh the segment if it has recently been marked as unused in the cache
+        return shouldRefreshUnusedSegment(segmentId, newUpdateTime);
+      } else {
+        // Refresh the used segment if the entry in the cache is stale
+        return shouldUpdateCache(usedSegment.getUsedStatusLastUpdatedDate(), newUpdateTime);
       }
     }
   }

@@ -50,7 +50,7 @@ public class Metric
   /**
    * Number of transactions performed on the cache for a datasource.
    */
-  public static final String TRANSACTION_COUNT = "transactions";
+  public static final String TRANSACTION_COUNT = METRIC_NAME_PREFIX + "transactions";
 
 
   // CACHE SYNC TIME METRICS

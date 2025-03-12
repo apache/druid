@@ -469,7 +469,7 @@ public class HeapMemorySegmentMetadataCacheTest
     // Add a newer version of segment to metadata store
     final DataSegmentPlus updatedSegment = new DataSegmentPlus(
         usedSegmentPlus.getDataSegment(),
-        null,
+        usedSegmentPlus.getCreatedDate(),
         updateTime.plus(1),
         true,
         null,
@@ -622,7 +622,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     // Verify that sync removes the pending segment from the cache
     syncCache();
-    serviceEmitter.verifyValue(Metric.PERSISTED_PENDING_SEGMENTS, 0L);
+    serviceEmitter.verifyNotEmitted(Metric.PERSISTED_PENDING_SEGMENTS);
     serviceEmitter.verifyValue(Metric.DELETED_PENDING_SEGMENTS, 1L);
 
     Assert.assertTrue(
