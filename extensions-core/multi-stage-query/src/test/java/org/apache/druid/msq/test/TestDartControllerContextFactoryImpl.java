@@ -77,7 +77,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         injector,
         jsonMapper,
         selfNode,
-        new DartTestWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse(), workerMap),
+        new DartTestWorkerClient(),
         memoryIntrospector,
         serverView,
         emitter
@@ -96,11 +96,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   {
     private final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
 
-    public DartTestWorkerClient(
-        String queryId,
-        ServiceClientFactory clientFactory,
-        ObjectMapper smileMapper,
-        String controllerHost, Map<String, Worker> workerMap)
+    public DartTestWorkerClient()
     {
       super(workerMap);
     }
