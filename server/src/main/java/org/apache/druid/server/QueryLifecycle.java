@@ -423,7 +423,7 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-        if (baseQuery.context().isDebug() || e.getMessage() == null) {
+        if (shouldLogStackTrace(e, baseQuery.context())) {
           log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
           log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
@@ -518,4 +518,25 @@ public class QueryLifecycle
     DONE
   }
 
+  /**
+   * Returns whether stack traces should be logged for a particular exception thrown with a particular query context.
+   * Stack traces are logged if {@link QueryContext#isDebug()}, or if the {@link DruidException.Persona} is
+   * {@link DruidException.Persona#DEVELOPER} or {@link DruidException.Persona#OPERATOR}. The idea is that other
+   * personas are meant to interact with the API, not with code or logs, so logging stack traces by default adds
+   * clutter that is not very helpful.
+   *
+   * @param e            exception
+   * @param queryContext query context
+   */
+  public static boolean shouldLogStackTrace(final Throwable e, final QueryContext queryContext)
+  {
+    if (queryContext.isDebug() || e.getMessage() == null) {
+      return true;
+    } else if (e instanceof DruidException) {
+      final DruidException.Persona persona = ((DruidException) e).getTargetPersona();
+      return persona == DruidException.Persona.OPERATOR || persona == DruidException.Persona.DEVELOPER;
+    } else {
+      return false;
+    }
+  }
 }
