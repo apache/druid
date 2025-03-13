@@ -175,6 +175,7 @@ function detailedStateToColor(detailedState: string): string {
     case 'UNHEALTHY_TASKS':
     case 'UNABLE_TO_CONNECT_TO_STREAM':
     case 'LOST_CONTACT_WITH_STREAM':
+    case 'INVALID_SPEC':
       return '#d5100a';
 
     case 'PENDING':
@@ -773,6 +774,7 @@ export class SupervisorsView extends React.PureComponent<
               'CREATING_TASKS',
               'DISCOVERING_INITIAL_TASKS',
               'IDLE',
+              'INVALID_SPEC',
               'LOST_CONTACT_WITH_STREAM',
               'PENDING',
               'RUNNING',
