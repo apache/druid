@@ -43,7 +43,7 @@ This expression language supports the following operators (listed in decreasing 
 |^|Binary power op|
 |*, /, %|Binary multiplicative|
 |+, -|Binary additive|
-|&lt;, &le;, &gt;, &ge;, ==, &ne;|Binary Comparison|
+|&lt;, &le;, &gt;, &ge;, ==, !=|Binary Comparison|
 |&&, &#124;&#124;|Binary Logical AND, OR|
 
 Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
