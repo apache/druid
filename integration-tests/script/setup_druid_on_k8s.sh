@@ -26,7 +26,7 @@ cp -r client_tls docker/client_tls
 cd ..
 
 # Build Docker images for pods
-mvn -B -ff -q dependency:go-offline \
+mvn -B -ff -q \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
