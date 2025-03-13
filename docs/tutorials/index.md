@@ -53,7 +53,7 @@ dedicated user account for running Druid.
 
 ## Install Druid
 
-Download the [\{{DRUIDVERSION}} release](https://druid.apache.org/downloads/) from Apache Druid. 
+Download the [\{\{DRUIDVERSION}} release](https://druid.apache.org/downloads/) from Apache Druid. 
 
 In your terminal, extract the file and change directories to the distribution directory:
 
