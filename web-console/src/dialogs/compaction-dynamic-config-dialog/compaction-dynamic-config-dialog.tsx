@@ -25,16 +25,33 @@ import { AutoForm, ExternalLink, Loader } from '../../components';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { getDruidErrorMessage } from '../../utils';
+import { deleteKeys, getDruidErrorMessage } from '../../utils';
 
 interface CompactionDynamicConfig {
   compactionTaskSlotRatio: number;
   maxCompactionTaskSlots: number;
+  compactionPolicy: { type: 'newestSegmentFirst'; priorityDatasource?: string | null };
+  useSupervisors: boolean;
+  engine: 'native' | 'msq';
 }
 
 const DEFAULT_RATIO = 0.1;
 const DEFAULT_MAX = 2147483647;
 const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] = [
+  {
+    name: 'useSupervisors',
+    type: 'boolean',
+    defaultValue: false,
+    info: 'Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.',
+  },
+  {
+    name: 'engine',
+    type: 'string',
+    defined: config => Boolean(config.useSupervisors),
+    defaultValue: 'native',
+    suggestions: ['native', 'msq'],
+    info: 'Engine to use for running compaction tasks, native or MSQ.',
+  },
   {
     name: 'compactionTaskSlotRatio',
     type: 'ratio',
@@ -69,10 +86,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
         const c = (
           await Api.instance.get('/druid/coordinator/v1/config/compaction', { cancelToken })
         ).data;
-        setDynamicConfig({
-          compactionTaskSlotRatio: c.compactionTaskSlotRatio ?? DEFAULT_RATIO,
-          maxCompactionTaskSlots: c.maxCompactionTaskSlots ?? DEFAULT_MAX,
-        });
+        setDynamicConfig(deleteKeys(c, ['compactionConfigs']));
       } catch (e) {
         AppToaster.show({
           icon: IconNames.ERROR,
@@ -88,13 +102,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
   async function saveConfig() {
     if (!dynamicConfig) return;
     try {
-      // This API is terrible. https://druid.apache.org/docs/latest/operations/api-reference#automatic-compaction-configuration
-      await Api.instance.post(
-        `/druid/coordinator/v1/config/compaction/taskslots?ratio=${
-          dynamicConfig.compactionTaskSlotRatio ?? DEFAULT_RATIO
-        }&max=${dynamicConfig.maxCompactionTaskSlots ?? DEFAULT_MAX}`,
-        {},
-      );
+      await Api.instance.post(`/druid/coordinator/v1/config/compaction/cluster`, dynamicConfig);
     } catch (e) {
       AppToaster.show({
         icon: IconNames.ERROR,
