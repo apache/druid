@@ -1701,7 +1701,8 @@ public class ControllerImpl implements Controller
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        dataSchema.getProjections()
     );
   }
 

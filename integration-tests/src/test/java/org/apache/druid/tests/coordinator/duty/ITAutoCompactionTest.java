@@ -61,6 +61,7 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
@@ -1899,41 +1900,43 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       CompactionEngine engine
   ) throws Exception
   {
-    DataSourceCompactionConfig dataSourceCompactionConfig = new DataSourceCompactionConfig(
-        fullDatasourceName,
-        null,
-        null,
-        null,
-        skipOffsetFromLatest,
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            new MaxSizeSplitHintSpec(null, 1),
-            partitionsSpec,
-            null,
-            null,
-            null,
-            null,
-            null,
-            maxNumConcurrentSubTasks,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1,
-            null
-        ),
-        granularitySpec,
-        dimensionsSpec,
-        metricsSpec,
-        transformSpec,
-        !dropExisting ? null : new UserCompactionTaskIOConfig(true),
-        engine,
-        ImmutableMap.of("maxNumTasks", 2)
-    );
+    DataSourceCompactionConfig dataSourceCompactionConfig =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(fullDatasourceName)
+                                              .withSkipOffsetFromLatest(skipOffsetFromLatest)
+                                              .withTuningConfig(
+                                            new UserCompactionTaskQueryTuningConfig(
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                new MaxSizeSplitHintSpec(null, 1),
+                                                partitionsSpec,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                maxNumConcurrentSubTasks,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                1,
+                                                null
+                                            )
+                                        )
+                                              .withGranularitySpec(granularitySpec)
+                                              .withDimensionsSpec(dimensionsSpec)
+                                              .withMetricsSpec(metricsSpec)
+                                              .withTransformSpec(transformSpec)
+                                              .withIoConfig(
+                                      !dropExisting ? null : new UserCompactionTaskIOConfig(true)
+                                  )
+                                              .withEngine(engine)
+                                              .withTaskContext(ImmutableMap.of("maxNumTasks", 2))
+                                              .build();
     compactionResource.submitCompactionConfig(dataSourceCompactionConfig);
 
     // Wait for compaction config to persist

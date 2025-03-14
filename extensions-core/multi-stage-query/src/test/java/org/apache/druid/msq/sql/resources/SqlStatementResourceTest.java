@@ -200,6 +200,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                  null,
                  null,
                  null,
+                 null,
                  null
              ))
              .tuningConfig(

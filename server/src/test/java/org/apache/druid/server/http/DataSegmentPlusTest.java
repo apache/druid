@@ -96,7 +96,8 @@ public class DataSegmentPlusTest
                 ImmutableList.of(new CountAggregatorFactory("cnt")),
                 new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
                 MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)
+                MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                null
             ),
             TEST_VERSION,
             1
@@ -131,7 +132,7 @@ public class DataSegmentPlusTest
     Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), segmentObjectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, segmentObjectMap.get("binaryVersion"));
     Assert.assertEquals(1, segmentObjectMap.get("size"));
-    Assert.assertEquals(6, ((Map) segmentObjectMap.get("lastCompactionState")).size());
+    Assert.assertEquals(7, ((Map) segmentObjectMap.get("lastCompactionState")).size());
 
     // verify extra metadata
     Assert.assertEquals(createdDateStr, objectMap.get("createdDate"));

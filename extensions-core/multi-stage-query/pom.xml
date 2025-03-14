@@ -328,6 +328,12 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>org.apache.druid.extensions</groupId>
+        <artifactId>druid-catalog</artifactId>
+          <version>${project.parent.version}</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>
