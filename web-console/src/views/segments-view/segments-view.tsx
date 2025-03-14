@@ -516,18 +516,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   ) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-        enableComparisons={enableComparisons}
-      >
-        {valueFn(row.value)}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          enableComparisons={enableComparisons}
+        >
+          {valueFn(row.value)}
+        </TableFilterableCell>
+      );
+    };
   }
 
   renderSegmentsTable() {

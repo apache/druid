@@ -246,8 +246,8 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   }
 
   private trigger() {
-    if (this.currentRunCancelFn) {
-      // Currently loading
+    if (this.currentRunCancelFn && !this.state.auxiliaryLoading) {
+      // Currently loading main query
       void this.runWhenLoading();
     } else {
       this.setState(
