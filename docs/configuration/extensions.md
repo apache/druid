@@ -101,7 +101,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
-|prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (<https://prometheus.io/>)|[link](../development/extensions-contrib/prometheus.md)|
+|prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for [Prometheus](https://prometheus.io/)|[link](../development/extensions-contrib/prometheus.md)|
 |druid-spectator-histogram|Support for efficient approximate percentile queries|[link](../development/extensions-contrib/spectator-histogram.md)|
 |druid-rabbit-indexing-service|Support for creating and managing [RabbitMQ](https://www.rabbitmq.com/) indexing tasks|[link](../development/extensions-contrib/rabbit-stream-ingestion.md)|
 |druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-contrib/druid-ranger-security.md)|
