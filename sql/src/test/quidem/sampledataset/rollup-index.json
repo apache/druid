@@ -30,7 +30,7 @@
       "type" : "index_parallel",
       "inputSource" : {
         "type" : "local",
-        "baseDir" : "quickstart/tutorial",
+        "baseDir" : "examples/quickstart/tutorial",
         "filter" : "rollup-data.json"
       },
       "inputFormat" : {
