@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyConfig;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -115,11 +116,18 @@ public class TableDataSource implements DataSource
   public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
   {
     Optional<Policy> policy = policyMap.getOrDefault(name, Optional.empty());
-    if (!policy.isPresent()) {
+    if (policy.isEmpty()) {
       // Skip adding restriction on table if there's no policy restriction found.
       return this;
     }
     return RestrictedDataSource.create(this, policy.get());
+  }
+
+  @Override
+  public boolean validate(PolicyConfig tableSecurityPolicyConfig)
+  {
+    // If it reaches here, this table is not wrapped with a RestrictedDataSource (which should overwrite this method).
+    return !tableSecurityPolicyConfig.policyMustBeCheckedAndExistOnAllTables();
   }
 
   @Override
