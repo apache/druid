@@ -45,7 +45,7 @@ public class MonitorsTest
   {
     String feed = "testFeed";
     StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
-    Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of(), feed);
+    Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of(), feed, new JvmMonitorConfig(false));
     m.start();
     m.monitor(emitter);
     m.stop();
@@ -56,7 +56,7 @@ public class MonitorsTest
   public void testDefaultFeed()
   {
     StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
-    Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of());
+    Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of(), new JvmMonitorConfig(false));
     m.start();
     m.monitor(emitter);
     m.stop();
