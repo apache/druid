@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
+import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
@@ -460,81 +461,28 @@ public class StringUtils
   }
 
   /**
-   * Removes all occurrences of the given char from the given string. This method is an optimal version of
-   * {@link String#replace(CharSequence, CharSequence) s.replace("c", "")}.
+   * Removes all occurrences of the given char from the given string.
    */
   public static String removeChar(String s, char c)
   {
-    int pos = s.indexOf(c);
-    if (pos < 0) {
-      return s;
-    }
-    StringBuilder sb = new StringBuilder(s.length() - 1);
-    int prevPos = 0;
-    do {
-      sb.append(s, prevPos, pos);
-      prevPos = pos + 1;
-      pos = s.indexOf(c, pos + 1);
-    } while (pos > 0);
-    sb.append(s, prevPos, s.length());
-    return sb.toString();
+    return StringUtils.replace(s, String.valueOf(c), "");
   }
 
   /**
-   * Replaces all occurrences of the given char in the given string with the given replacement string. This method is an
-   * optimal version of {@link String#replace(CharSequence, CharSequence) s.replace("c", replacement)}.
+   * Replaces all occurrences of the given char in the given string with the given replacement string.
    */
   public static String replaceChar(String s, char c, String replacement)
   {
-    int pos = s.indexOf(c);
-    if (pos < 0) {
-      return s;
-    }
-    StringBuilder sb = new StringBuilder(s.length() - 1 + replacement.length());
-    int prevPos = 0;
-    do {
-      sb.append(s, prevPos, pos);
-      sb.append(replacement);
-      prevPos = pos + 1;
-      pos = s.indexOf(c, pos + 1);
-    } while (pos > 0);
-    sb.append(s, prevPos, s.length());
-    return sb.toString();
+    return StringUtils.replace(s, String.valueOf(c), replacement);
   }
 
   /**
-   * Replaces all occurrences of the given target substring in the given string with the given replacement string. This
-   * method is an optimal version of {@link String#replace(CharSequence, CharSequence) s.replace(target, replacement)}.
+   * Replaces all occurrences of the given target substring in the given string with the given replacement string.
    */
+  @SuppressForbidden(reason = "String#replace")
   public static String replace(String s, String target, String replacement)
   {
-    // String.replace() is suboptimal in JDK8, but is fixed in JDK9+. When the minimal JDK version supported by Druid is
-    // JDK9+, the implementation of this method should be replaced with simple delegation to String.replace(). However,
-    // the method should still be prohibited to use in all other places except this method body, because it's easy to
-    // suboptimally call String.replace("a", "b"), String.replace("a", ""), String.replace("a", "abc"), which have
-    // better alternatives String.replace('a', 'b'), removeChar() and replaceChar() respectively.
-    int pos = s.indexOf(target);
-    if (pos < 0) {
-      return s;
-    }
-    int sLength = s.length();
-    int targetLength = target.length();
-    // This is needed to work correctly with empty target string and mimic String.replace() behavior
-    int searchSkip = Math.max(targetLength, 1);
-    StringBuilder sb = new StringBuilder(sLength - targetLength + replacement.length());
-    int prevPos = 0;
-    do {
-      sb.append(s, prevPos, pos);
-      sb.append(replacement);
-      prevPos = pos + targetLength;
-      // Break from the loop if the target is empty
-      if (pos == sLength) {
-        break;
-      }
-      pos = s.indexOf(target, pos + searchSkip);
-    } while (pos > 0);
-    sb.append(s, prevPos, sLength);
-    return sb.toString();
+    return s.replace(target, replacement);
   }
 
   /**
