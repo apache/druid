@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -31,7 +32,6 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.metadata.RetryTransactionException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.assertj.core.api.Assertions;
@@ -151,7 +151,7 @@ public class SegmentTransactionalInsertActionTest
 
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            new RetryTransactionException(
+            InvalidInput.exception(
                 "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
                 + " ahead of the last committed end state[null]. Try resetting the supervisor."
             ).toString()
