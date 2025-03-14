@@ -20,16 +20,16 @@
 package org.apache.druid.catalog.guice;
 
 import com.google.inject.Binder;
+import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.http.CatalogListenerResource;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistryImpl;
 import org.apache.druid.catalog.sql.LiveCatalogResolver;
 import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.CatalogClient;
+import org.apache.druid.catalog.sync.CatalogSource;
 import org.apache.druid.catalog.sync.CatalogUpdateListener;
 import org.apache.druid.catalog.sync.CatalogUpdateReceiver;
-import org.apache.druid.catalog.sync.MetadataCatalog;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogSource;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
@@ -43,7 +43,7 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
  * Configures the metadata catalog on the Broker to use a cache
  * and network communications for pull and push updates.
  */
-@LoadScope(roles = NodeRole.BROKER_JSON_NAME)
+@LoadScope(roles = {NodeRole.BROKER_JSON_NAME,NodeRole.OVERLORD_JSON_NAME})
 public class CatalogBrokerModule implements DruidModule
 {
   @Override
@@ -54,15 +54,13 @@ public class CatalogBrokerModule implements DruidModule
         .bind(CachedMetadataCatalog.class)
         .in(LazySingleton.class);
 
-    // Broker code accesses he catalog through the
-    // MetadataCatalog interface.
+    // Broker code accesses the catalog through the MetadataCatalog interface.
     binder
         .bind(MetadataCatalog.class)
         .to(CachedMetadataCatalog.class)
         .in(LazySingleton.class);
 
-    // The cached metadata catalog needs a "pull" source,
-    // which is the network client.
+    // The cached metadata catalog needs a "pull" source, which is the network client.
     binder
         .bind(CatalogSource.class)
         .to(CatalogClient.class)

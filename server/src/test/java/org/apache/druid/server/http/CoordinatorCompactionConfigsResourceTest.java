@@ -43,6 +43,7 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -160,12 +161,12 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testAddDatasourceConfig()
   {
     final DataSourceCompactionConfig newDatasourceConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
     Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     final DataSourceCompactionConfig fetchedDatasourceConfig
-        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), DataSourceCompactionConfig.class);
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
     Assert.assertEquals(newDatasourceConfig, fetchedDatasourceConfig);
 
     final DruidCompactionConfig fullCompactionConfig
@@ -178,10 +179,10 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testAddDatasourceConfigWithMSQEngineIsInvalid()
   {
     final DataSourceCompactionConfig newDatasourceConfig
-        = DataSourceCompactionConfig.builder()
-                                    .forDataSource(TestDataSource.WIKI)
-                                    .withEngine(CompactionEngine.MSQ)
-                                    .build();
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(TestDataSource.WIKI)
+                                                .withEngine(CompactionEngine.MSQ)
+                                                .build();
     Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
@@ -194,7 +195,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testUpdateDatasourceConfig()
   {
-    final DataSourceCompactionConfig originalDatasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig originalDatasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withInputSegmentSizeBytes(500L)
@@ -211,7 +212,7 @@ public class CoordinatorCompactionConfigsResourceTest
     );
     verifyStatus(Response.Status.OK, response);
 
-    final DataSourceCompactionConfig updatedDatasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig updatedDatasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withInputSegmentSizeBytes(1000L)
@@ -226,7 +227,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.BAD_REQUEST, response);
 
     final DataSourceCompactionConfig latestDatasourceConfig
-        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), DataSourceCompactionConfig.class);
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
     Assert.assertEquals(originalDatasourceConfig, latestDatasourceConfig);
 
     final DruidCompactionConfig fullCompactionConfig
@@ -239,7 +240,7 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testDeleteDatasourceConfig()
   {
     final DataSourceCompactionConfig datasourceConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
     Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
@@ -263,7 +264,7 @@ public class CoordinatorCompactionConfigsResourceTest
     configManager.configUpdateResult
         = ConfigManager.SetResult.retryableFailure(new Exception("retryable"));
     resource.addOrUpdateDatasourceCompactionConfig(
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         mockHttpServletRequest
     );
 
@@ -279,7 +280,7 @@ public class CoordinatorCompactionConfigsResourceTest
     configManager.configUpdateResult
         = ConfigManager.SetResult.failure(new Exception("not retryable"));
     resource.addOrUpdateDatasourceCompactionConfig(
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         mockHttpServletRequest
     );
 
@@ -289,8 +290,8 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testGetDatasourceConfigHistory()
   {
-    final DataSourceCompactionConfig.Builder builder
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI);
+    final InlineSchemaDataSourceCompactionConfig.Builder builder
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI);
 
     final DataSourceCompactionConfig configV1 = builder.build();
     resource.addOrUpdateDatasourceCompactionConfig(configV1, mockHttpServletRequest);
@@ -326,7 +327,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testAddInvalidDatasourceConfigThrowsBadRequest()
   {
-    final DataSourceCompactionConfig datasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig datasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))

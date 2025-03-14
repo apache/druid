@@ -137,7 +137,8 @@ public class DataSegmentTest
             ImmutableList.of(new CountAggregatorFactory("count")),
             new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
             MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-            MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)
+            MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+            null
         ),
         TEST_VERSION,
         1
@@ -158,7 +159,7 @@ public class DataSegmentTest
     Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
-    Assert.assertEquals(6, ((Map) objectMap.get("lastCompactionState")).size());
+    Assert.assertEquals(7, ((Map) objectMap.get("lastCompactionState")).size());
 
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
 
@@ -202,7 +203,8 @@ public class DataSegmentTest
             null,
             null,
             MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-            MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)
+            MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+            null
         ),
         TEST_VERSION,
         1
@@ -353,7 +355,8 @@ public class DataSegmentTest
         ImmutableList.of(new CountAggregatorFactory("count")),
         new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class),
-        MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class)
+        MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class),
+        null
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")
@@ -394,7 +397,8 @@ public class DataSegmentTest
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        null
     );
 
     final Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFunction =
@@ -404,7 +408,8 @@ public class DataSegmentTest
             metricsSpec,
             transformSpec,
             indexSpec,
-            granularitySpec
+            granularitySpec,
+            null
         );
 
     final DataSegment segment1 = DataSegment.builder()

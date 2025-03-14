@@ -36,6 +36,7 @@ import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -577,6 +578,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           dimensionsSpec,
           config.getMetricsSpec(),
           config.getTransformSpec(),
+          config.getProjections(),
           dropExisting,
           autoCompactionContext,
           new ClientCompactionRunnerInfo(compactionEngine)
@@ -680,6 +682,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable CompactionTransformSpec transformSpec,
+      @Nullable List<AggregateProjectionSpec> projectionSpecs,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context,
       ClientCompactionRunnerInfo compactionRunner
@@ -699,6 +702,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
+
     final ClientCompactionTaskQuery taskPayload = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
@@ -711,6 +715,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         dimensionsSpec,
         metricsSpec,
         transformSpec,
+        projectionSpecs,
         context,
         compactionRunner
     );
