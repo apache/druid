@@ -22,9 +22,11 @@ package org.apache.druid.server.coordinator.loading;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +47,8 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.HistoricalLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -69,6 +73,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  *
@@ -114,13 +119,14 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  private final URL changeRequestURL;
   private final String serverId;
 
   private final AtomicBoolean mainLoopInProgress = new AtomicBoolean(false);
   private final ExecutorService callBackExecutor;
+  private final Supplier<SegmentLoadingMode> loadingModeSupplier;
 
   private final ObjectWriter requestBodyWriter;
+  private final HistoricalLoadingCapabilities serverCapabilities;
 
   public HttpLoadQueuePeon(
       String baseUrl,
@@ -128,7 +134,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       HttpClient httpClient,
       HttpLoadQueuePeonConfig config,
       ScheduledExecutorService processingExecutor,
-      ExecutorService callBackExecutor
+      ExecutorService callBackExecutor,
+      Supplier<SegmentLoadingMode> loadingModeSupplier
   )
   {
     this.jsonMapper = jsonMapper;
@@ -139,17 +146,64 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.callBackExecutor = callBackExecutor;
 
     this.serverId = baseUrl;
+    this.loadingModeSupplier = loadingModeSupplier;
+    this.serverCapabilities = fetchSegmentLoadingCapabilities();
+  }
+
+  @VisibleForTesting
+  HttpLoadQueuePeon(
+      String baseUrl,
+      ObjectMapper jsonMapper,
+      HttpClient httpClient,
+      HttpLoadQueuePeonConfig config,
+      ScheduledExecutorService processingExecutor,
+      ExecutorService callBackExecutor,
+      Supplier<SegmentLoadingMode> loadingModeSupplier,
+      HistoricalLoadingCapabilities serverCapabilities
+  )
+  {
+    this.jsonMapper = jsonMapper;
+    this.requestBodyWriter = jsonMapper.writerFor(REQUEST_ENTITY_TYPE_REF);
+    this.httpClient = httpClient;
+    this.config = config;
+    this.processingExecutor = processingExecutor;
+    this.callBackExecutor = callBackExecutor;
+
+    this.serverId = baseUrl;
+    this.loadingModeSupplier = loadingModeSupplier;
+    this.serverCapabilities = serverCapabilities;
+  }
+
+  private HistoricalLoadingCapabilities fetchSegmentLoadingCapabilities()
+  {
     try {
-      this.changeRequestURL = new URL(
-          new URL(baseUrl),
-          StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/changeRequests?timeout=%d",
-              config.getHostTimeout().getMillis()
-          )
+      log.trace("Fetching historical capabilities from Server[%s].", new URL(serverId));
+      final URL segmentLoadingCapabilitiesURL = new URL(
+          new URL(serverId),
+          "druid-internal/v1/segments/segmentLoadingCapabilities"
+      );
+
+      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
+      ListenableFuture<InputStream> future = httpClient.go(
+          new Request(HttpMethod.GET, segmentLoadingCapabilitiesURL)
+              .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
+          responseHandler,
+          new Duration(10000)
+      );
+
+      if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
+        throw new RuntimeException();
+      }
+
+      return jsonMapper.readValue(
+          future.get(),
+          HistoricalLoadingCapabilities.class
       );
     }
-    catch (MalformedURLException ex) {
-      throw new RuntimeException(ex);
+    catch (Throwable th) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
     }
   }
 
@@ -160,7 +214,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
-    final int batchSize = config.getBatchSize();
+    final SegmentLoadingMode loadingMode = loadingModeSupplier.get();
+    int batchSize = calculateBatchSize(loadingMode);
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
@@ -194,18 +249,27 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     if (newRequests.isEmpty()) {
       log.trace(
           "[%s]Found no load/drop requests. SegmentsToLoad[%d], SegmentsToDrop[%d], batchSize[%d].",
-          serverId, segmentsToLoad.size(), segmentsToDrop.size(), config.getBatchSize()
+          serverId, segmentsToLoad.size(), segmentsToDrop.size(), batchSize
       );
       mainLoopInProgress.set(false);
       return;
     }
 
     try {
-      log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
+      log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode [%s].", newRequests.size(), serverId, loadingMode);
       final boolean hasLoadRequests = newRequests.stream().anyMatch(r -> r instanceof SegmentChangeRequestLoad);
       if (hasLoadRequests && !loadingRateTracker.isLoadingBatch()) {
         loadingRateTracker.markBatchLoadingStarted();
       }
+
+      final URL changeRequestURL = new URL(
+          new URL(serverId),
+          StringUtils.nonStrictFormat(
+              "druid-internal/v1/segments/changeRequests?timeout=%d&loadingMode=%s",
+              config.getHostTimeout().getMillis(),
+              loadingMode
+          )
+      );
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(
@@ -308,9 +372,26 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           processingExecutor
       );
     }
+    catch (MalformedURLException ex) {
+      throw new RuntimeException(ex);
+    }
     catch (Throwable th) {
       log.error(th, "Error sending load/drop request to [%s].", serverId);
       mainLoopInProgress.set(false);
+    }
+  }
+
+  @VisibleForTesting
+  int calculateBatchSize(SegmentLoadingMode loadingMode)
+  {
+    if (config.getBatchSize() != null) {
+      return config.getBatchSize();
+    } else if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
+      return serverCapabilities.getNumTurboLoadingThreads();
+    } else if (SegmentLoadingMode.NORMAL.equals(loadingMode)) {
+      return serverCapabilities.getNumLoadingThreads();
+    } else {
+      throw DruidException.defensive().build("unsupported loading mode");
     }
   }
 

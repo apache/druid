@@ -105,7 +105,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "maxNonPrimaryReplicantsToLoad": 2147483647,
     "useRoundRobinSegmentAssignment": true,
     "smartSegmentLoading": true,
-    "debugDimensions": null
+    "debugDimensions": null,
+    "turboLoadingNodes": []
 }
 ```
 
@@ -172,7 +173,8 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config" \
   "pauseCoordination": false,
   "replicateAfterLoadTimeout": false,
   "maxNonPrimaryReplicantsToLoad": 2147483647,
-  "useRoundRobinSegmentAssignment": true
+  "useRoundRobinSegmentAssignment": true,
+  "turboLoadingNodes": []
 }'
 ```
 
@@ -203,7 +205,8 @@ Content-Length: 683
   "pauseCoordination": false,
   "replicateAfterLoadTimeout": false,
   "maxNonPrimaryReplicantsToLoad": 2147483647,
-  "useRoundRobinSegmentAssignment": true
+  "useRoundRobinSegmentAssignment": true,
+  "turboLoadingNodes": []
 }
 ```
 
@@ -289,7 +292,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "comment": "",
             "ip": "127.0.0.1"
         },
-        "payload": "{\"millisToWaitBeforeDeleting\":900000,\"maxSegmentsToMove\":5,\"replicantLifetime\":15,\"replicationThrottleLimit\":10,\"balancerComputeThreads\":1,\"killDataSourceWhitelist\":[],\"killPendingSegmentsSkipList\":[],\"maxSegmentsInNodeLoadingQueue\":100,\"decommissioningNodes\":[],\"decommissioningMaxPercentOfMaxSegmentsToMove\":70,\"pauseCoordination\":false,\"replicateAfterLoadTimeout\":false,\"maxNonPrimaryReplicantsToLoad\":2147483647,\"useRoundRobinSegmentAssignment\":true,\"smartSegmentLoading\":true,\"debugDimensions\":null}",
+        "payload": "{\"millisToWaitBeforeDeleting\":900000,\"maxSegmentsToMove\":5,\"replicantLifetime\":15,\"replicationThrottleLimit\":10,\"balancerComputeThreads\":1,\"killDataSourceWhitelist\":[],\"killPendingSegmentsSkipList\":[],\"maxSegmentsInNodeLoadingQueue\":100,\"decommissioningNodes\":[],\"decommissioningMaxPercentOfMaxSegmentsToMove\":70,\"pauseCoordination\":false,\"replicateAfterLoadTimeout\":false,\"maxNonPrimaryReplicantsToLoad\":2147483647,\"useRoundRobinSegmentAssignment\":true,\"smartSegmentLoading\":true,\"debugDimensions\":null,\"decommissioningNodes\":[]}",
         "auditTime": "2023-10-03T20:59:51.622Z"
     }
 ]

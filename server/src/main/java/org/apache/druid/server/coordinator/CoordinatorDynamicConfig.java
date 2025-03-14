@@ -27,6 +27,7 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -69,6 +70,8 @@ public class CoordinatorDynamicConfig
 
   private final Map<String, String> debugDimensions;
   private final Map<Dimension, String> validDebugDimensions;
+
+  private final Set<String> turboLoadingNodes;
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
@@ -118,7 +121,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
       @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
-      @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
+      @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
+      @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes
   )
   {
     this.markSegmentAsUnusedDelayMillis =
@@ -162,6 +166,7 @@ public class CoordinatorDynamicConfig
     );
     this.debugDimensions = debugDimensions;
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
+    this.turboLoadingNodes = parseJsonStringOrArray(turboLoadingNodes);
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -198,6 +203,13 @@ public class CoordinatorDynamicConfig
     } else {
       return ImmutableSet.of();
     }
+  }
+
+  public SegmentLoadingMode getLoadingModeForServer(String serverName)
+  {
+    return turboLoadingNodes.contains(serverName) ?
+           SegmentLoadingMode.TURBO :
+           SegmentLoadingMode.NORMAL;
   }
 
   @JsonProperty("millisToWaitBeforeDeleting")
@@ -308,6 +320,19 @@ public class CoordinatorDynamicConfig
     return replicateAfterLoadTimeout;
   }
 
+  /**
+   * List of historical servers to put into turboloading mode. These historicals will use a larger thread pool to load
+   * segments. This causes decreases the average time taken to load segments. However, this also means less resources
+   * given to query threads which causes a drop in query performance.
+   *
+   * @return Set of host:port entries
+   */
+  @JsonProperty
+  public Set<String> getTurboLoadingNodes()
+  {
+    return turboLoadingNodes;
+  }
+
   @Override
   public String toString()
   {
@@ -326,6 +351,7 @@ public class CoordinatorDynamicConfig
            ", decommissioningNodes=" + decommissioningNodes +
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
+           ", turboLoadingNodes=" + turboLoadingNodes +
            '}';
   }
 
@@ -359,6 +385,7 @@ public class CoordinatorDynamicConfig
                dataSourcesToNotKillStalePendingSegmentsIn,
                that.dataSourcesToNotKillStalePendingSegmentsIn)
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
+           && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions);
   }
 
@@ -378,7 +405,8 @@ public class CoordinatorDynamicConfig
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
         pauseCoordination,
-        debugDimensions
+        debugDimensions,
+        turboLoadingNodes
     );
   }
 
@@ -430,6 +458,7 @@ public class CoordinatorDynamicConfig
     private Boolean replicateAfterLoadTimeout;
     private Boolean useRoundRobinSegmentAssignment;
     private Boolean smartSegmentLoading;
+    private Set<String> turboLoadingNodes;
 
     public Builder()
     {
@@ -452,7 +481,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
         @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
-        @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
+        @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
+        @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
@@ -471,6 +501,7 @@ public class CoordinatorDynamicConfig
       this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
       this.smartSegmentLoading = smartSegmentLoading;
       this.debugDimensions = debugDimensions;
+      this.turboLoadingNodes = turboLoadingNodes;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -488,6 +519,12 @@ public class CoordinatorDynamicConfig
     public Builder withSmartSegmentLoading(boolean smartSegmentLoading)
     {
       this.smartSegmentLoading = smartSegmentLoading;
+      return this;
+    }
+
+    public Builder withTurboLoadingNodes(Set<String> turboLoadingNodes)
+    {
+      this.turboLoadingNodes = turboLoadingNodes;
       return this;
     }
 
@@ -582,7 +619,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicateAfterLoadTimeout, Defaults.REPLICATE_AFTER_LOAD_TIMEOUT),
           valueOrDefault(useRoundRobinSegmentAssignment, Defaults.USE_ROUND_ROBIN_ASSIGNMENT),
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
-          debugDimensions
+          debugDimensions,
+          turboLoadingNodes
       );
     }
 
@@ -612,7 +650,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicateAfterLoadTimeout, defaults.getReplicateAfterLoadTimeout()),
           valueOrDefault(useRoundRobinSegmentAssignment, defaults.isUseRoundRobinSegmentAssignment()),
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
-          valueOrDefault(debugDimensions, defaults.getDebugDimensions())
+          valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
+          valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes())
       );
     }
   }

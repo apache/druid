@@ -17,17 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordination;
-
-import org.apache.druid.timeline.DataSegment;
-
-import javax.annotation.Nullable;
+package org.apache.druid.server.http;
 
 /**
+ * Determines the threadpool used by the historical to load segments.
  */
-public interface DataSegmentChangeHandler
+public enum SegmentLoadingMode
 {
-  void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
-
-  void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
+  NORMAL,
+  TURBO
 }
