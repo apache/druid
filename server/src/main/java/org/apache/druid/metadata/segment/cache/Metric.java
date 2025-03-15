@@ -52,6 +52,26 @@ public class Metric
    */
   public static final String TRANSACTION_COUNT = METRIC_NAME_PREFIX + "transactions";
 
+  /**
+   * Total number of distinct intervals currently present in the cache.
+   */
+  public static final String CACHED_INTERVALS = METRIC_NAME_PREFIX + "interval/count";
+
+  /**
+   * Total number of segments currently present in the cache.
+   */
+  public static final String CACHED_USED_SEGMENTS = METRIC_NAME_PREFIX + "used/count";
+
+  /**
+   * Total number of segments currently present in the cache.
+   */
+  public static final String CACHED_UNUSED_SEGMENTS = METRIC_NAME_PREFIX + "unused/count";
+
+  /**
+   * Total number of pending segments currently present in the cache.
+   */
+  public static final String CACHED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "pending/count";
+
 
   // CACHE SYNC TIME METRICS
 

@@ -227,11 +227,13 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
 
   /**
    * Indicates to the cache that it has now been synced with the metadata store.
-   * Removes empty intervals from the cache.
+   * Removes empty intervals from the cache and returns the summary of the current
+   * contents of the cache.
    */
-  void markCacheSynced()
+  CacheStats markCacheSynced()
   {
-    withWriteLock(() -> {
+    return withWriteLock(() -> {
+      // Remove empty intervals
       final Set<Interval> emptyIntervals =
           intervalToSegments.entrySet()
                             .stream()
@@ -239,6 +241,19 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
                             .map(Map.Entry::getKey)
                             .collect(Collectors.toSet());
       emptyIntervals.forEach(intervalToSegments::remove);
+
+      int numUsedSegments = 0;
+      int numUnusedSegments = 0;
+      int numPendingSegments = 0;
+      int numIntervals = 0;
+      for (SegmentsInInterval segments : intervalToSegments.values()) {
+        ++numIntervals;
+        numUsedSegments += segments.idToUsedSegment.size();
+        numUnusedSegments += segments.unusedSegmentIdToUpdatedTime.size();
+        numPendingSegments += segments.idToPendingSegment.size();
+      }
+
+      return new CacheStats(numIntervals, numUsedSegments, numUnusedSegments, numPendingSegments);
     });
   }
 

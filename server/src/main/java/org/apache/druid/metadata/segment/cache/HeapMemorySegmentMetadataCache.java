@@ -398,13 +398,27 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     updateUsedSegmentPayloadsInCache(datasourceToSummary);
     retrieveAllPendingSegments(datasourceToSummary);
     updatePendingSegmentsInCache(datasourceToSummary, syncStartTime);
-
-    datasourceToSegmentCache.values().forEach(
-        HeapMemoryDatasourceSegmentCache::markCacheSynced
-    );
+    markCacheSynced();
 
     syncFinishTime.set(DateTimes.nowUtc());
     return totalSyncDuration.millisElapsed();
+  }
+
+  /**
+   * Marks the cache for all datasources as synced and emit total stats.
+   */
+  private void markCacheSynced()
+  {
+    datasourceToSegmentCache.forEach((dataSource, cache) -> {
+      final CacheStats stats = cache.markCacheSynced();
+
+      if (!cache.isEmpty()) {
+        emitMetric(dataSource, Metric.CACHED_INTERVALS, stats.getNumIntervals());
+        emitMetric(dataSource, Metric.CACHED_USED_SEGMENTS, stats.getNumUsedSegments());
+        emitMetric(dataSource, Metric.CACHED_UNUSED_SEGMENTS, stats.getNumUnusedSegments());
+        emitMetric(dataSource, Metric.CACHED_PENDING_SEGMENTS, stats.getNumPendingSegments());
+      }
+    });
   }
 
   /**
