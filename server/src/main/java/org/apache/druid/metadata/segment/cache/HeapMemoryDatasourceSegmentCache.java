@@ -117,12 +117,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   SegmentSyncResult syncSegmentIds(List<SegmentRecord> persistedSegments, DateTime syncStartTime)
   {
     return withWriteLock(() -> {
-      // Clear the highest partition numbers for each interval so that
-      // they can be updated with the newly polled records
-      intervalToSegments.values().forEach(
-          interval -> interval.versionToHighestUnusedPartitionNumber.clear()
-      );
-
       final Set<String> usedSegmentIdsToRefresh = new HashSet<>();
       int numUnusedSegmentsUpdated = 0;
 
@@ -147,6 +141,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
       final Set<SegmentId> persistedSegmentIds
           = persistedSegments.stream().map(SegmentRecord::getSegmentId).collect(Collectors.toSet());
       final int numSegmentsRemoved = removeUnpersistedSegments(persistedSegmentIds, syncStartTime);
+
+      // Recompute the highest partition number across unused segments in each interval
+      intervalToSegments.values().forEach(SegmentsInInterval::recomputeHighestUnusedPartitions);
 
       return new SegmentSyncResult(numSegmentsRemoved, numUnusedSegmentsUpdated, usedSegmentIdsToRefresh);
     });
@@ -242,6 +239,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
                             .collect(Collectors.toSet());
       emptyIntervals.forEach(intervalToSegments::remove);
 
+      // Compute and return cache stats
       int numUsedSegments = 0;
       int numUnusedSegments = 0;
       int numPendingSegments = 0;
@@ -699,6 +697,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     {
       idToPendingSegment.clear();
       idToUsedSegment.clear();
+      unusedSegmentIdToUpdatedTime.clear();
       versionToHighestUnusedPartitionNumber.clear();
     }
 
@@ -706,13 +705,19 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     {
       return idToPendingSegment.isEmpty()
              && idToUsedSegment.isEmpty()
-             && versionToHighestUnusedPartitionNumber.isEmpty();
+             && unusedSegmentIdToUpdatedTime.isEmpty();
     }
 
     private boolean isSegmentIdCached(SegmentId id)
     {
       return idToUsedSegment.containsKey(id)
              || unusedSegmentIdToUpdatedTime.containsKey(id);
+    }
+
+    private void updateMaxUnusedId(SegmentId segmentId)
+    {
+      versionToHighestUnusedPartitionNumber
+          .merge(segmentId.getVersion(), segmentId.getPartitionNum(), Math::max);
     }
 
     /**
@@ -766,8 +771,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
       if (shouldRefreshSegment(segmentId, updatedTime)) {
         idToUsedSegment.remove(segmentId);
         unusedSegmentIdToUpdatedTime.put(segmentId, updatedTime);
-        versionToHighestUnusedPartitionNumber
-            .merge(segmentId.getVersion(), segmentId.getPartitionNum(), Math::max);
+        updateMaxUnusedId(segmentId);
         return true;
       } else {
         return false;
@@ -783,6 +787,12 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
         return usedSegment == null
             || shouldUpdateCache(usedSegment.getUsedStatusLastUpdatedDate(), newUpdateTime);
       }
+    }
+
+    private void recomputeHighestUnusedPartitions()
+    {
+      versionToHighestUnusedPartitionNumber.clear();
+      unusedSegmentIdToUpdatedTime.keySet().forEach(this::updateMaxUnusedId);
     }
   }
 }

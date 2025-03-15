@@ -567,6 +567,29 @@ public class HeapMemorySegmentMetadataCacheTest
   }
 
   @Test
+  public void testSync_doesNotRemoveIntervalWithOnlyUnusedSegments()
+  {
+    setupAndSyncCache();
+
+    final DataSegmentPlus unusedSegment =
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI).updatedNow().markUnused().asPlus();
+    insertSegmentsInMetadataStore(Set.of(unusedSegment));
+
+    syncCache();
+    serviceEmitter.verifyValue(Metric.PERSISTED_UNUSED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.UPDATED_UNUSED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.CACHED_UNUSED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.CACHED_INTERVALS, 1L);
+
+    // Perform another sync
+    serviceEmitter.flush();
+    syncCache();
+    serviceEmitter.verifyNotEmitted(Metric.UPDATED_UNUSED_SEGMENTS);
+    serviceEmitter.verifyValue(Metric.CACHED_UNUSED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.CACHED_INTERVALS, 1L);
+  }
+
+  @Test
   public void testSync_addsPendingSegment_ifNotPresentInCache()
   {
     setupAndSyncCache();
