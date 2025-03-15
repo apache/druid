@@ -23,14 +23,14 @@ import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 
 import java.util.Map;
 
 /**
- * Compaction scheduler that runs on the Overlord if {@link CompactionSupervisorConfig}
- * is enabled.
+ * Compaction scheduler that runs on the Overlord if
+ * {@link DruidCompactionConfig#isUseSupervisors()} is true.
  * <p>
  * Usage:
  * <ul>
@@ -47,6 +47,8 @@ public interface CompactionScheduler
   void start();
 
   void stop();
+
+  boolean isEnabled();
 
   boolean isRunning();
 
