@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.overlord.http;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
@@ -63,17 +63,21 @@ public class OverlordDataSourcesResourceTest
   public void setup()
   {
     AuditManager auditManager = EasyMock.createStrictMock(AuditManager.class);
-    segmentsMetadataManager = new TestSegmentsMetadataManager();
+    final TestIndexerMetadataStorageCoordinator metadataStorageCoordinator
+        = new TestIndexerMetadataStorageCoordinator();
+    segmentsMetadataManager = metadataStorageCoordinator.getSegmentsMetadataManager();
 
     TaskMaster taskMaster = new TaskMaster(null, null);
     dataSourcesResource = new OverlordDataSourcesResource(
         taskMaster,
         segmentsMetadataManager,
+        metadataStorageCoordinator,
         auditManager
     );
     taskMaster.becomeFullLeader();
 
     WIKI_SEGMENTS_10X1D.forEach(segmentsMetadataManager::addSegment);
+    metadataStorageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_10X1D), null);
   }
 
   @Test
@@ -113,7 +117,7 @@ public class OverlordDataSourcesResourceTest
   @Test
   public void testMarkSegmentsAsUnused_bySegmentIds()
   {
-    final Set<String> segmentIdsToUpdate = ImmutableSet.of(
+    final Set<String> segmentIdsToUpdate = Set.of(
         WIKI_SEGMENTS_10X1D.get(0).getId().toString(),
         WIKI_SEGMENTS_10X1D.get(8).getId().toString()
     );
@@ -279,7 +283,7 @@ public class OverlordDataSourcesResourceTest
   {
     dataSourcesResource.markAllSegmentsAsUnused(TestDataSource.WIKI, createHttpServletRequest());
 
-    final Set<String> segmentIdsToUpdate = ImmutableSet.of(
+    final Set<String> segmentIdsToUpdate = Set.of(
         WIKI_SEGMENTS_10X1D.get(0).getId().toString(),
         WIKI_SEGMENTS_10X1D.get(1).getId().toString()
     );

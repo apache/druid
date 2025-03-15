@@ -823,7 +823,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, true)
+                                    .markSegments(segmentIds, true, DateTimes.nowUtc())
     );
   }
 
@@ -854,7 +854,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final int numSegments = connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegments(Collections.singletonList(segmentId), false)
+                                      .markSegments(List.of(segmentId), false, DateTimes.nowUtc())
       );
 
       return numSegments > 0;
@@ -871,7 +871,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, false)
+                                    .markSegments(segmentIds, false, DateTimes.nowUtc())
     );
   }
 
