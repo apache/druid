@@ -1224,8 +1224,8 @@ public class SqlSegmentsMetadataQuery
 
   private ResultIterator<DataSegment> getDataSegmentResultIterator(Query<Map<String, Object>> sql)
   {
-    return sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-        .iterator();
+    return sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(2), DataSegment.class))
+              .iterator();
   }
 
   private ResultIterator<DataSegmentPlus> getDataSegmentPlusResultIterator(
