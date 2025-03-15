@@ -267,9 +267,10 @@ This includes the following fields:
 |------|-----------|-------------|
 |`compactionTaskSlotRatio`|Ratio of number of slots taken up by compaction tasks to the number of total task slots across all workers.|0.1|
 |`maxCompactionTaskSlots`|Maximum number of task slots that can be taken up by compaction tasks.|2147483647 (i.e. total task slots)|
-|`compactionPolicy`|Policy to prioritize intervals for compaction|`newestSegmentFirst`|
+|`compactionPolicy.type`|Policy to choose intervals for compaction. Currently, the only supported policy in `newestSegmentFirst`.|`newestSegmentFirst`|
+|`compactionPolicy.priorityDatasource`|Datasource to prioritize for compaction. The intervals of this datasource are chosen for compaction before the intervals of any other datasource. Within this datasource, the intervals are prioritized based on the chosen compaction policy.|None|
 |`useSupervisors`|Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.|false|
-|`engine`|Engine to use for running compaction tasks, native or MSQ.|Native|
+|`engine`|Engine used for running compaction tasks. Possible values are `native` and `msq`. `msq` engine can be used for compaction only if `useSupervisors` is `true`.|`native`|
 
 #### URL
 
@@ -308,9 +309,12 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/co
 --data '{
     "compactionTaskSlotRatio": 0.5,
     "maxCompactionTaskSlots": 1500,
-    "compactionPolicy": "newestSegmentFirst",
+    "compactionPolicy": {
+        "type": "newestSegmentFirst",
+        "priorityDatasource": "wikipedia"
+    },
     "useSupervisors": true,
-    "engine": "MSQ"
+    "engine": "msq"
 }'
 
 ```
@@ -320,16 +324,19 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/co
 
 
 ```HTTP
-POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
+POST /druid/coordinator/v1/config/compaction/cluster HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 
 {
     "compactionTaskSlotRatio": 0.5,
     "maxCompactionTaskSlots": 1500,
-    "compactionPolicy": "newestSegmentFirst",
+    "compactionPolicy": {
+        "type": "newestSegmentFirst",
+        "priorityDatasource": "wikipedia"
+    },
     "useSupervisors": true,
-    "engine": "MSQ"
+    "engine": "msq"
 }
 ```
 
@@ -488,7 +495,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     ],
     "compactionTaskSlotRatio": 0.1,
     "maxCompactionTaskSlots": 2147483647,
-    "useAutoScaleSlots": false
+
 }
 ```
 </details>
@@ -675,7 +682,12 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "globalConfig": {
             "compactionTaskSlotRatio": 0.1,
             "maxCompactionTaskSlots": 2147483647,
-            "useAutoScaleSlots": false
+            "compactionPolicy": {
+                "type": "newestSegmentFirst",
+                "priorityDatasource": "wikipedia"
+            },
+            "useSupervisors": true,
+            "engine": "native"
         },
         "compactionConfig": {
             "dataSource": "wikipedia_hour",
@@ -706,7 +718,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "globalConfig": {
             "compactionTaskSlotRatio": 0.1,
             "maxCompactionTaskSlots": 2147483647,
-            "useAutoScaleSlots": false
+            "compactionPolicy": {
+                "type": "newestSegmentFirst"
+            },
+            "useSupervisors": false,
+            "engine": "native"
         },
         "compactionConfig": {
             "dataSource": "wikipedia_hour",
