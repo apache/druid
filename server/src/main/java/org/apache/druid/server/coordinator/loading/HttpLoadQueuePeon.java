@@ -184,19 +184,27 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       );
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
-      ListenableFuture<InputStream> future = httpClient.go(
+      InputStream stream = httpClient.go(
           new Request(HttpMethod.GET, segmentLoadingCapabilitiesURL)
               .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
           responseHandler,
           new Duration(10000)
-      );
+      ).get();
+
+      if (HttpServletResponse.SC_NOT_FOUND == responseHandler.getStatus()) {
+        log.info(
+            "Historical capabilities endpoint not found at server[%s]. Using default values.",
+            new URL(serverId)
+        );
+        return new HistoricalLoadingCapabilities(1, 1);
+      }
 
       if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
-        throw new RuntimeException();
+        throw new RE("Error when fetching capabilities from server[%s]. Received [%s]", new URL(serverId), responseHandler.getStatus());
       }
 
       return jsonMapper.readValue(
-          future.get(),
+          stream,
           HistoricalLoadingCapabilities.class
       );
     }
