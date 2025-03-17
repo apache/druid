@@ -38,7 +38,7 @@ import java.util.Objects;
 @SuppressWarnings("NullableProblems")
 public abstract class Bitmap64ExactCountAggregatorFactory extends AggregatorFactory
 {
-  static final int MAX_INTERMEDIATE_SIZE = 5 * 1024 * 1024; // 5 MB
+  static final int MAX_INTERMEDIATE_SIZE = 1024; // 1 KiB
   static final Comparator<Bitmap64Counter> COMPARATOR =
       Comparator.nullsFirst(Comparator.comparingLong(Bitmap64Counter::getCardinality));
 
