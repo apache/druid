@@ -245,9 +245,20 @@ public class NodeAnnouncer
       }
     }
 
-    final boolean readyToCreateAnnouncement = updateAnnouncedPaths(path, bytes);
+    boolean created = false;
+    synchronized (toAnnounce) {
+      if (started) {
+        byte[] oldBytes = announcedPaths.putIfAbsent(path, bytes);
 
-    if (readyToCreateAnnouncement) {
+        if (oldBytes == null) {
+          created = true;
+        } else if (!Arrays.equals(oldBytes, bytes)) {
+          throw new IAE("Cannot reannounce different values under the same path.");
+        }
+      }
+    }
+
+    if (created) {
       try {
         createAnnouncement(path, bytes);
       }
@@ -280,27 +291,6 @@ public class NodeAnnouncer
     );
 
     return cache;
-  }
-
-  private boolean updateAnnouncedPaths(String path, byte[] bytes)
-  {
-    synchronized (toAnnounce) {
-      if (!started) {
-        return false; // Do nothing if not started
-      }
-    }
-
-    final byte[] updatedAnnouncementData = announcedPaths.compute(path, (key, oldBytes) -> {
-      if (oldBytes == null) {
-        return bytes; // Insert the new value
-      } else if (!Arrays.equals(oldBytes, bytes)) {
-        throw new IAE("Cannot reannounce different values under the same path.");
-      }
-      return oldBytes; // No change if values are equal
-    });
-
-    // Return true if we have updated the paths.
-    return Arrays.equals(updatedAnnouncementData, bytes);
   }
 
   public void update(final String path, final byte[] bytes)
