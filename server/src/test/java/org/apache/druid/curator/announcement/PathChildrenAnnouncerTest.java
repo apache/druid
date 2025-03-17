@@ -46,9 +46,9 @@ import java.util.concurrent.ExecutorService;
 /**
  *
  */
-public class AnnouncerTest extends CuratorTestBase
+public class PathChildrenAnnouncerTest extends CuratorTestBase
 {
-  private static final Logger log = new Logger(AnnouncerTest.class);
+  private static final Logger log = new Logger(PathChildrenAnnouncerTest.class);
   private ExecutorService exec;
 
   @Before
@@ -69,7 +69,7 @@ public class AnnouncerTest extends CuratorTestBase
   @Test(timeout = 60_000L)
   public void testSanity() throws Exception
   {
-    Announcer announcer = new Announcer(curator, exec);
+    PathChildrenAnnouncer announcer = new PathChildrenAnnouncer(curator, exec);
     announcer.initializeAddedChildren();
 
     final byte[] billy = StringUtils.toUtf8("billy");
@@ -138,7 +138,7 @@ public class AnnouncerTest extends CuratorTestBase
   @Test(timeout = 60_000L)
   public void testSessionKilled() throws Exception
   {
-    Announcer announcer = new Announcer(curator, exec);
+    PathChildrenAnnouncer announcer = new PathChildrenAnnouncer(curator, exec);
     try {
       CuratorOp createOp = curator.transactionOp().create().forPath("/somewhere");
       curator.transaction().forOperations(createOp);
@@ -180,7 +180,7 @@ public class AnnouncerTest extends CuratorTestBase
   @Test
   public void testRemovesParentIfCreated() throws Exception
   {
-    Announcer announcer = new Announcer(curator, exec);
+    PathChildrenAnnouncer announcer = new PathChildrenAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
@@ -204,7 +204,7 @@ public class AnnouncerTest extends CuratorTestBase
   @Test
   public void testLeavesBehindParentPathIfAlreadyExists() throws Exception
   {
-    Announcer announcer = new Announcer(curator, exec);
+    PathChildrenAnnouncer announcer = new PathChildrenAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test";
@@ -231,7 +231,7 @@ public class AnnouncerTest extends CuratorTestBase
   @Test
   public void testLeavesParentPathsUntouchedWhenInstructed() throws Exception
   {
-    Announcer announcer = new Announcer(curator, exec);
+    PathChildrenAnnouncer announcer = new PathChildrenAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test";
@@ -253,7 +253,7 @@ public class AnnouncerTest extends CuratorTestBase
   }
 
   private void awaitAnnounce(
-      final Announcer announcer,
+      final PathChildrenAnnouncer announcer,
       final String path,
       final byte[] bytes,
       boolean removeParentsIfCreated

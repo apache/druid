@@ -53,11 +53,11 @@ import java.util.concurrent.ExecutorService;
  *
  * <p>
  * This class uses Apache Curator's NodeCache recipe under the hood to track a single
- * node, along with all of its parent's status. See {@link Announcer} for an announcer that
+ * node, along with all of its parent's status. See {@link PathChildrenAnnouncer} for an announcer that
  * uses the PathChildrenCache recipe instead.
  * </p>
  */
-public class NodeAnnouncer
+public class NodeAnnouncer implements Announcer
 {
   private static final Logger log = new Logger(NodeAnnouncer.class);
 
@@ -107,12 +107,13 @@ public class NodeAnnouncer
   }
 
   @LifecycleStart
+  @Override
   public void start()
   {
-    log.debug("Starting NodeAnnouncer");
+    log.debug("Starting Announcer");
     synchronized (toAnnounce) {
       if (started) {
-        log.debug("NodeAnnouncer has already been started by another thread, ignoring start request.");
+        log.debug("Announcer has already been started by another thread, ignoring start request.");
         return;
       }
 
@@ -131,12 +132,13 @@ public class NodeAnnouncer
   }
 
   @LifecycleStop
+  @Override
   public void stop()
   {
-    log.debug("Stopping NodeAnnouncer");
+    log.debug("Stopping Announcer");
     synchronized (toAnnounce) {
       if (!started) {
-        log.debug("NodeAnnouncer has already been stopped by another thread, ignoring stop request.");
+        log.debug("Announcer has already been stopped by another thread, ignoring stop request.");
         return;
       }
 
@@ -172,7 +174,7 @@ public class NodeAnnouncer
           operations.add(curator.transactionOp().delete().forPath(parent));
         }
         catch (Exception e) {
-          log.info(e, "Unable to delete parent[%s] when closing NodeAnnouncer.", parent);
+          log.info(e, "Unable to delete parent[%s] when closing Announcer.", parent);
         }
       }
 
@@ -180,7 +182,7 @@ public class NodeAnnouncer
         transaction.forOperations(operations);
       }
       catch (Exception e) {
-        log.info(e, "Unable to commit transaction when closing NodeAnnouncer.");
+        log.info(e, "Unable to commit transaction when closing Announcer.");
       }
     }
   }
@@ -188,6 +190,7 @@ public class NodeAnnouncer
   /**
    * Overload of {@link #announce(String, byte[], boolean)}, but removes parent node of path after announcement.
    */
+  @Override
   public void announce(String path, byte[] bytes)
   {
     announce(path, bytes, true);
@@ -205,11 +208,12 @@ public class NodeAnnouncer
    * @param bytes                 The payload to announce
    * @param removeParentIfCreated remove parent of "path" if we had created that parent during announcement
    */
+  @Override
   public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
   {
     synchronized (toAnnounce) {
       if (!started) {
-        log.debug("NodeAnnouncer has not started yet, queuing announcement for later processing...");
+        log.debug("Announcer has not started yet, queuing announcement for later processing...");
         toAnnounce.add(new Announceable(path, bytes, removeParentIfCreated));
         return;
       }
@@ -293,11 +297,12 @@ public class NodeAnnouncer
     return cache;
   }
 
+  @Override
   public void update(final String path, final byte[] bytes)
   {
     synchronized (toAnnounce) {
       if (!started) {
-        log.debug("NodeAnnouncer has not started yet, queuing updates for later processing...");
+        log.debug("Announcer has not started yet, queuing updates for later processing...");
         toUpdate.add(new Announceable(path, bytes));
         return;
       }
@@ -338,6 +343,7 @@ public class NodeAnnouncer
    *
    * @param path the path to unannounce
    */
+  @Override
   public void unannounce(String path)
   {
     synchronized (toAnnounce) {
