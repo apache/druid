@@ -226,7 +226,7 @@ public class NodeAnnouncer
         buildParentPath = curator.checkExists().forPath(parentPath) == null;
       }
       catch (Exception e) {
-        log.warn(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
+        log.debug(e, "Problem checking if the parent existed, ignoring.");
       }
 
       // Synchronize to make sure that I only create a listener once.

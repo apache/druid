@@ -233,7 +233,7 @@ public class Announcer
         }
       }
       catch (Exception e) {
-        log.warn(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
+        log.debug(e, "Problem checking if the parent existed, ignoring.");
       }
 
       final ConcurrentHashMap<String, byte[]> finalSubPaths = announcements.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
