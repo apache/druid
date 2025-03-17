@@ -101,7 +101,7 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
         selfNode,
         jsonMapper,
         injector,
-        new DartWorkerClient(queryId, serviceClientFactory, smileMapper, null),
+        new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, null),
         processingConfig,
         segmentWrangler,
         groupingEngine,
