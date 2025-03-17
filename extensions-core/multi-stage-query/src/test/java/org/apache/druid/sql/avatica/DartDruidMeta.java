@@ -17,23 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.worker;
+package org.apache.druid.sql.avatica;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.msq.dart.controller.DartWorkerManager;
-import org.apache.druid.msq.exec.WorkerClient;
+import com.google.inject.Inject;
+import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.sql.SqlStatementFactory;
 
-public interface DartWorkerClient extends WorkerClient
+public class DartDruidMeta extends DruidMeta
 {
-  /**
-   * Close a single worker's clients. Used when that worker fails, so we stop trying to contact it.
-   *
-   * @param workerHost worker host:port
-   */
-  void closeClient(String hostAndPort);
-
-  /**
-   * Stops a worker. Dart-only API, used by the {@link DartWorkerManager}.
-   */
-  ListenableFuture<?> stopWorker(String workerId);
+  @Inject
+  public DartDruidMeta(
+      final @Dart SqlStatementFactory sqlStatementFactory,
+      final AvaticaServerConfig config,
+      final ErrorHandler errorHandler,
+      final AuthenticatorMapper authMapper)
+  {
+    super(sqlStatementFactory, config, errorHandler, authMapper);
+  }
 }
