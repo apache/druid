@@ -237,7 +237,7 @@ public class CliPeon extends GuiceRunnable
             ServerRunnable.validateCentralizedDatasourceSchemaConfig(getProperties());
             Preconditions.checkArgument(
                 taskAndStatusFile.size() >= 2,
-                "taskAndStatusFile array[%s]: should contain 2 or more elements.",
+                "taskAndStatusFile array should contain 2 or more elements. Current array elements: [%s]",
                 taskAndStatusFile.toString()
             );
 
