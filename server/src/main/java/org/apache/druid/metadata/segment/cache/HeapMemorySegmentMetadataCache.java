@@ -73,8 +73,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 {
   private static final EmittingLogger log = new EmittingLogger(HeapMemorySegmentMetadataCache.class);
 
-  private static final int SQL_MAX_RETRIES = 10;
-  private static final int SQL_QUIET_RETRIES = 3;
+  private static final int SQL_MAX_RETRIES = 3;
+  private static final int SQL_QUIET_RETRIES = 2;
 
   /**
    * Maximum time to wait for cache to be ready.

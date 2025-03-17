@@ -40,8 +40,8 @@ import org.skife.jdbi.v2.TransactionStatus;
  */
 public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTransactionFactory
 {
-  private static final int QUIET_RETRIES = 3;
-  private static final int MAX_RETRIES = 10;
+  private static final int QUIET_RETRIES = 2;
+  private static final int MAX_RETRIES = 3;
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig tablesConfig;
