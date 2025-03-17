@@ -377,7 +377,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           }
           return tasks;
         },
-        3,
+        SQLMetadataConnector.QUIET_RETRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
@@ -436,7 +436,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           }
           return taskMetadataInfos;
         },
-        3,
+        SQLMetadataConnector.QUIET_RETRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
@@ -840,7 +840,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
           return addLock(handle, entryId, newLock);
         },
-        3,
+        SQLMetadataConnector.QUIET_RETRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
@@ -849,16 +849,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public void removeLock(final long lockId)
   {
     connector.retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            removeLock(handle, lockId);
-
-            return null;
-          }
-        }
+        handle -> removeLock(handle, lockId)
     );
   }
 
