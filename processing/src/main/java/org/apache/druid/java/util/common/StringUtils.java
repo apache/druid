@@ -262,7 +262,7 @@ public class StringUtils
   }
 
   /**
-   * If buffer is Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * If buffer is not null, decodes a UTF-8 string from the remaining bytes of a buffer.
    * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
    *
    * If the value is null, this method returns null. If the buffer will never be null, use {@link #fromUtf8(ByteBuffer)}
@@ -422,12 +422,7 @@ public class StringUtils
       return null;
     }
 
-    try {
-      return StringUtils.replace(URLEncoder.encode(s, "UTF-8"), "+", "%20");
-    }
-    catch (UnsupportedEncodingException e) {
-      throw new RuntimeException(e);
-    }
+    return StringUtils.replace(URLEncoder.encode(s, StandardCharsets.UTF_8), "+", "%20");
   }
 
   @Nullable
@@ -437,12 +432,7 @@ public class StringUtils
       return null;
     }
 
-    try {
-      return URLDecoder.decode(s, "UTF-8");
-    }
-    catch (UnsupportedEncodingException e) {
-      throw new RuntimeException(e);
-    }
+    return URLDecoder.decode(s, StandardCharsets.UTF_8);
   }
 
   public static String maybeRemoveLeadingSlash(String s)
