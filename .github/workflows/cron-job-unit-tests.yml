@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '11', '21' ]
+        jdk: [ '11', '21.0.4' ]
         Dtest: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
     uses: ./.github/workflows/worker.yml
     with:
@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '11', '21' ]
+        jdk: [ '11', '21.0.4' ]
     steps:
       - name: Download reports for all unit test jobs
         uses: actions/download-artifact@v4
@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '11', '21' ]
+        jdk: [ '11', '21.0.4' ]
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-${{ matrix.jdk }}-*"
