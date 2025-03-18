@@ -48,13 +48,16 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
   const previewQuery = useMemo(() => {
     const expression = SqlExpression.maybeParse(formula);
     if (!expression) return;
+
+    const expressionToPreview = F.cast(expression, 'VARCHAR');
     return querySource
       .getInitBaseQuery()
-      .addSelect(F.cast(expression, 'VARCHAR').as('v'), { addToGroupBy: 'end' })
+      .addSelect(expressionToPreview.as('v'))
+      .addWhere(expressionToPreview.isNotNull())
       .applyIf(querySource.hasBaseTimeColumn(), q =>
-        q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
+        q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '1' DAY <= __time`),
       )
-      .changeLimitValue(100)
+      .changeLimitValue(200)
       .toString();
   }, [querySource, formula]);
 
@@ -90,7 +93,7 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
             />
           </FormGroup>
         </div>
-        <PreviewPane previewQuery={previewQuery} runSqlQuery={runSqlQuery} />
+        <PreviewPane previewQuery={previewQuery} runSqlQuery={runSqlQuery} deduplicate />
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

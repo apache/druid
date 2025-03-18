@@ -39,6 +39,7 @@ export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
     cancelToken: CancelToken,
   ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
   onStateChange?: (queryResolve: QueryState<R, E, I>) => void;
+  debounceInit?: number;
   debounceIdle?: number;
   debounceLoading?: number;
   backgroundStatusCheckInitDelay?: number;
@@ -78,6 +79,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private state: QueryState<R, E, I>;
   private currentQueryId = 0;
 
+  private readonly runWhenInit: () => void | Promise<void>;
   private readonly runWhenIdle: () => void | Promise<void>;
   private readonly runWhenLoading: () => void | Promise<void>;
 
@@ -88,6 +90,11 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     this.backgroundStatusCheckInitDelay = options.backgroundStatusCheckInitDelay || 500;
     this.backgroundStatusCheckDelay = options.backgroundStatusCheckDelay || 1000;
     this.swallowBackgroundError = options.swallowBackgroundError;
+    if (options.debounceInit !== 0) {
+      this.runWhenInit = debounce(this.run, options.debounceInit || 50);
+    } else {
+      this.runWhenInit = this.run;
+    }
     if (options.debounceIdle !== 0) {
       this.runWhenIdle = debounce(this.run, options.debounceIdle || 100);
     } else {
@@ -257,7 +264,11 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
         }),
       );
 
-      void this.runWhenIdle();
+      if (this.lastQuery) {
+        void this.runWhenIdle();
+      } else {
+        void this.runWhenInit();
+      }
     }
   }
 
