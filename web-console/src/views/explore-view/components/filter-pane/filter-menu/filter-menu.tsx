@@ -136,7 +136,17 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
     initPattern?.type === 'custom' ? filterPatternToExpression(initPattern).toString() : '',
   );
   const [pattern, setPattern] = useState<FilterPattern | undefined>(initPattern);
+  const [issue, setIssue] = useState<string | undefined>();
   const { columns } = querySource;
+
+  function setFilterPatternOrIssue(pattern: FilterPattern | undefined, issue: string | undefined) {
+    if (pattern) {
+      setPattern(pattern);
+      setIssue(undefined);
+    } else {
+      setIssue(issue || 'Issue');
+    }
+  }
 
   function onAcceptPattern(pattern: FilterPattern) {
     onPatternChange(pattern);
@@ -198,7 +208,8 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
         <TimeIntervalFilterControl
           querySource={querySource}
           filterPattern={pattern}
-          setFilterPattern={setPattern}
+          setFilterPatternOrIssue={setFilterPatternOrIssue}
+          onIssue={setIssue}
         />
       );
       break;
@@ -281,6 +292,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
             active={tab === 'sql'}
             onClick={() => {
               setFormula(pattern ? filterPatternToExpression(pattern).toString() : '');
+              setIssue(undefined);
               setTab('sql');
             }}
           />
@@ -416,8 +428,17 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
             intent={Intent.PRIMARY}
             text="Apply"
             disabled={tab === 'sql' && formula === ''}
+            data-tooltip={issue ? `Issue: ${issue}` : undefined}
             onClick={() => {
               if (tab === 'compose') {
+                if (issue) {
+                  AppToaster.show({
+                    message: issue,
+                    intent: Intent.DANGER,
+                  });
+                  return;
+                }
+
                 if (pattern) {
                   onAcceptPattern(pattern);
                 }

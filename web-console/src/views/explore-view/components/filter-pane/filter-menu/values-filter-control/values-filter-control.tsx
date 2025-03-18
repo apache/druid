@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { ContextMenu, FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { CancelToken } from 'axios';
 import type { QueryResult, SqlQuery, ValuesFilterPattern } from 'druid-query-toolkit';
-import { C, F, SqlExpression } from 'druid-query-toolkit';
+import { C, F, L, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo, useState } from 'react';
 
 import { ClearableInput } from '../../../../../../components';
 import { useQueryManager } from '../../../../../../hooks';
-import { caseInsensitiveContains, filterMap, toggle } from '../../../../../../utils';
+import { caseInsensitiveContains, copyAndAlert, filterMap, toggle } from '../../../../../../utils';
 import type { QuerySource } from '../../../../models';
 import { ColumnValue } from '../../../column-value/column-value';
 
@@ -90,24 +90,39 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
         {filterMap(valuesToShow, (v, i) => {
           if (!caseInsensitiveContains(v, searchString)) return;
           return (
-            <MenuItem
-              key={i}
-              icon={
-                selectedValues.includes(v)
-                  ? negated
-                    ? IconNames.DELETE
-                    : IconNames.TICK_CIRCLE
-                  : IconNames.CIRCLE
+            <ContextMenu
+              content={
+                <Menu>
+                  <MenuItem
+                    text="Copy"
+                    onClick={() => copyAndAlert(String(v), `Copied to clipboard`)}
+                  />
+                  <MenuItem
+                    text="Copy as SQL value"
+                    onClick={() => copyAndAlert(String(L(v)), `Copied to clipboard`)}
+                  />
+                </Menu>
               }
-              text={<ColumnValue value={v} />}
-              shouldDismissPopover={false}
-              onClick={e => {
-                setFilterPattern({
-                  ...filterPattern,
-                  values: e.altKey ? [v] : toggle(selectedValues, v),
-                });
-              }}
-            />
+            >
+              <MenuItem
+                key={i}
+                icon={
+                  selectedValues.includes(v)
+                    ? negated
+                      ? IconNames.DELETE
+                      : IconNames.TICK_CIRCLE
+                    : IconNames.CIRCLE
+                }
+                text={<ColumnValue value={v} />}
+                shouldDismissPopover={false}
+                onClick={e => {
+                  setFilterPattern({
+                    ...filterPattern,
+                    values: e.altKey ? [v] : toggle(selectedValues, v),
+                  });
+                }}
+              />
+            </ContextMenu>
           );
         })}
         {valuesState.loading && <MenuItem icon={IconNames.BLANK} text="Loading..." disabled />}
