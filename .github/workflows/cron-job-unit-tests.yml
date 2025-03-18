@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '11', '21' ]
+        jdk: [ '11', '21.0.4' ]
     steps:
       - name: Download reports for all unit test jobs
         uses: actions/download-artifact@v4
@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '11', '21' ]
+        jdk: [ '11', '21.0.4' ]
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-${{ matrix.jdk }}-*"
