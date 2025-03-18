@@ -29,6 +29,8 @@ import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.curator.announcement.PathChildrenAnnouncer;
+import org.apache.druid.guice.annotations.DirectExecutorAnnouncer;
+import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
@@ -67,14 +69,28 @@ public class AnnouncerModule implements Module
   }
 
   @Provides
+  @SingleThreadedAnnouncer
   @ManageLifecycleAnnouncements
-  public Announcer getAnnouncer(CuratorFramework curator, CuratorConfig config)
+  public Announcer getAnnouncerWithSingleThreadedExecutorService(CuratorFramework curator, CuratorConfig config)
   {
     boolean usingPathChildrenCacheAnnouncer = config.getPathChildrenCacheStrategy();
     if (usingPathChildrenCacheAnnouncer) {
       return new PathChildrenAnnouncer(curator, Execs.singleThreaded("Announcer-%s"));
     } else {
       return new NodeAnnouncer(curator, Execs.singleThreaded("Announcer-%s"));
+    }
+  }
+
+  @Provides
+  @DirectExecutorAnnouncer
+  @ManageLifecycleAnnouncements
+  public Announcer getAnnouncerWithDirectExecutorService(CuratorFramework curator, CuratorConfig config)
+  {
+    boolean usingPathChildrenCacheAnnouncer = config.getPathChildrenCacheStrategy();
+    if (usingPathChildrenCacheAnnouncer) {
+      return new PathChildrenAnnouncer(curator, Execs.directExecutor());
+    } else {
+      return new NodeAnnouncer(curator, Execs.directExecutor());
     }
   }
 }

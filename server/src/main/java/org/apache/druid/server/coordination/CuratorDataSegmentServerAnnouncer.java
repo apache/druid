@@ -23,7 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.curator.utils.ZKPaths;
-import org.apache.druid.curator.announcement.NodeAnnouncer;
+import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
@@ -37,7 +38,7 @@ public class CuratorDataSegmentServerAnnouncer implements DataSegmentServerAnnou
 
   private final DruidServerMetadata server;
   private final ZkPathsConfig config;
-  private final NodeAnnouncer announcer;
+  private final Announcer announcer;
   private final ObjectMapper jsonMapper;
 
   private final Object lock = new Object();
@@ -48,7 +49,7 @@ public class CuratorDataSegmentServerAnnouncer implements DataSegmentServerAnnou
   public CuratorDataSegmentServerAnnouncer(
       DruidServerMetadata server,
       ZkPathsConfig config,
-      NodeAnnouncer announcer,
+      @SingleThreadedAnnouncer Announcer announcer,
       ObjectMapper jsonMapper
   )
   {
