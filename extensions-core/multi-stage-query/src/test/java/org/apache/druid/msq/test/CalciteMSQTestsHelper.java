@@ -171,7 +171,7 @@ public class CalciteMSQTestsHelper
           ChannelCounters channelCounters,
           boolean isReindex)
       {
-        CompleteSegment a = walker.getSegment(segmentId.getDataSource());
+        CompleteSegment a = walker.getSegment(segmentId);
         return () -> new ReferenceCountingResourceHolder<>(a, Closer.create());
       }
 

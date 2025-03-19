@@ -54,6 +54,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
@@ -263,18 +264,19 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     );
   }
 
-  public CompleteSegment getSegment(String dataSourceName)
+  public CompleteSegment getSegment(SegmentId segmentId)
   {
     List<CompleteSegment> matches = new ArrayList<>(1);
     for (CompleteSegment s : segments) {
-      String dataSource = s.getDataSegment().getDataSource();
-      if (dataSource.equals(dataSourceName)) {
+      SegmentId id = s.getDataSegment().getId();
+      if (id.equals(segmentId)) {
         matches.add(s);
       }
     }
     if (matches.size() != 1) {
       throw DruidException.defensive(
-          "Datasource [%s] has either no segments or more than one - neither is supported right now [%s].", dataSourceName,
+          "SegmentId [%s] has unexpected number of matches! [%s]",
+          segmentId,
           matches
       );
     }
