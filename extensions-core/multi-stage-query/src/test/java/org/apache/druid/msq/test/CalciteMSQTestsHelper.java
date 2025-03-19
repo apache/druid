@@ -30,6 +30,8 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.ResourceInputSource;
@@ -45,6 +47,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -58,6 +61,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
@@ -73,6 +77,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -84,6 +89,8 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.TestClusterQuerySegmentWalker.TestSegmentsBroker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest;
@@ -92,7 +99,14 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentIdTest;
+import org.apache.druid.timeline.TimelineLookup;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.mockito.Mockito;
@@ -202,18 +216,52 @@ public class CalciteMSQTestsHelper
     {
       private TempDirProducer tempDirProducer;
       private LoadingCache<SegmentId, CompleteSegment> cache;
+      private SpecificSegmentsQuerySegmentWalker walker;
+      private TestSegmentsBroker testSegmentsBroker;
 
       @Inject
-      public LocalDataSegmentProvider(TempDirProducer tempDirProducer)
+      public LocalDataSegmentProvider(TempDirProducer tempDirProducer, SpecificSegmentsQuerySegmentWalker walker,
+          TestSegmentsBroker testSegmentsBroker,
+          TimelineServerView timelineServerView)
       {
         this.tempDirProducer = tempDirProducer;
+        this.walker = walker;
+        this.testSegmentsBroker = testSegmentsBroker;
+        TimelineLookup<String, ServerSelector> a = timelineServerView.getTimeline(new TableDataSource("rollup-tutorial")).get();
+        List<TimelineObjectHolder<String, ServerSelector>> s = a.lookup(Intervals.ETERNITY);
+        TimelineObjectHolder<String, ServerSelector> aa = s.get(0);
+        PartitionHolder<ServerSelector> ph = aa.getObject();
+        PartitionChunk<ServerSelector> c = ph.getChunk(0);
+
+        SingleElementPartitionChunk<ServerSelector> aas=(SingleElementPartitionChunk<ServerSelector>) c;
+        ServerSelector o = aas.getObject();
+        DataSegment seg = o.getSegment();
+
+        extracted();
+
+
+//        VersionedIntervalTimeline<String, ReferenceCountingSegment> d1 = testSegmentsBrokerm.timelines.get("rollup-tutorial");
+
+
+        CompleteSegment segment = walker.getSegment("rollup-tutorial");
         this.cache = CacheBuilder.newBuilder().build(this);
+      }
+
+      private Segment extracted()
+      {
+        VersionedIntervalTimeline<String, ReferenceCountingSegment> versionedIntervalTimeline = testSegmentsBroker.timelines.get("rollup-tutorial");
+        TimelineObjectHolder<String, ReferenceCountingSegment> first = versionedIntervalTimeline.first();
+        PartitionHolder<ReferenceCountingSegment> object = first.getObject();
+        PartitionChunk<ReferenceCountingSegment> chunk = object.getChunk(0);
+        ReferenceCountingSegment object2 = chunk.getObject();
+        return object2;
       }
 
       @Override
       public CompleteSegment load(SegmentId segmentId) throws Exception
       {
-        return getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
+        return walker.getSegment(segmentId.getDataSource());
+//        return getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
       }
 
       @Override

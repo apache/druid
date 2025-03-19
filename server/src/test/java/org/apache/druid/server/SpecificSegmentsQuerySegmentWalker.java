@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import com.google.inject.Injector;
+import org.apache.curator.shaded.com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -34,6 +36,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.InlineSegmentWrangler;
@@ -76,8 +79,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 {
   private final QuerySegmentWalker walker;
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
-  private final List<Closeable> closeables = new ArrayList<>();
-  private final List<DataSegment> segments = new ArrayList<>();
+  private final List<CompleteSegment> segments = new ArrayList<>();
   private static final LookupExtractorFactoryContainerProvider LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER =
       new LookupExtractorFactoryContainerProvider()
       {
@@ -185,6 +187,14 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final Segment segment)
   {
+    return add(new CompleteSegment(descriptor, segment));
+  }
+
+  private SpecificSegmentsQuerySegmentWalker add(CompleteSegment completeSegment)
+  {
+    DataSegment descriptor = completeSegment.getDataSegment();
+    Segment segment = completeSegment.getSegment();
+
     final ReferenceCountingSegment referenceCountingSegment =
         ReferenceCountingSegment.wrapSegment(
             segment,
@@ -199,8 +209,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         descriptor.getVersion(),
         descriptor.getShardSpec().createChunk(referenceCountingSegment)
     );
-    segments.add(descriptor);
-    closeables.add(referenceCountingSegment);
+    segments.add(completeSegment);
     return this;
   }
 
@@ -216,7 +225,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   public List<DataSegment> getSegments()
   {
-    return segments;
+    return Lists.transform(segments, CompleteSegment::getDataSegment);
   }
 
   @Override
@@ -234,7 +243,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   @Override
   public void close() throws IOException
   {
-    for (Closeable closeable : closeables) {
+    for (Closeable closeable : segments) {
       Closeables.close(closeable, true);
     }
   }
@@ -252,5 +261,23 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
             .build(),
         indexNumericDims
     );
+  }
+
+  public CompleteSegment getSegment(String dataSourceName)
+  {
+    List<CompleteSegment> matches = new ArrayList<>(1);
+    for (CompleteSegment s : segments) {
+      String dataSource = s.getDataSegment().getDataSource();
+      if (dataSource.equals(dataSourceName)) {
+        matches.add(s);
+      }
+    }
+    if (matches.size() != 1) {
+      throw DruidException.defensive(
+          "Datasource [%s] has either no segments or more than one - neither is supported right now [%s].", dataSourceName,
+          matches
+      );
+    }
+    return matches.get(0);
   }
 }
