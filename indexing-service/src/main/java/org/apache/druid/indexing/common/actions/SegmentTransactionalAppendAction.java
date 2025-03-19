@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
@@ -58,7 +59,7 @@ import java.util.stream.Collectors;
  *     }
  * </pre>
  */
-public class SegmentTransactionalAppendAction implements TaskAction<SegmentPublishResult>
+public class SegmentTransactionalAppendAction extends SegmentPublishAction
 {
   private final Set<DataSegment> segments;
   @Nullable
@@ -136,7 +137,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   }
 
   @Override
-  public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
+  protected SegmentPublishResult tryPublishSegments(Task task, TaskActionToolbox toolbox)
   {
     if (!(task instanceof PendingSegmentAllocatingTask)) {
       throw DruidException.defensive(
@@ -199,10 +200,10 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       );
     }
     catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
 
-    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
     return retVal;
   }
 

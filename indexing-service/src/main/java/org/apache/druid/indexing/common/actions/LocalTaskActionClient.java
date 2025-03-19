@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -69,6 +70,7 @@ public class LocalTaskActionClient implements TaskActionClient
       return result;
     }
     catch (Throwable t) {
+      Throwables.throwIfUnchecked(t);
       throw new RuntimeException(t);
     }
   }

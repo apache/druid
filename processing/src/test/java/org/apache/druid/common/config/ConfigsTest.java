@@ -19,6 +19,9 @@
 
 package org.apache.druid.common.config;
 
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,6 +41,27 @@ public class ConfigsTest
 
     Assert.assertEquals("abc", Configs.valueOrDefault("abc", "def"));
     Assert.assertEquals("def", Configs.valueOrDefault(null, "def"));
+  }
+
+  @Test
+  public void testEnsureNotNull()
+  {
+    Assert.assertEquals(
+        "abc",
+        Configs.ensureNotNull("abc", "Config should not be null")
+    );
+  }
+
+  @Test
+  public void testEnsureNotNull_throwsException_ifValueIsNull()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> Configs.ensureNotNull(null, "Config[%s] should not be null", "abc")
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs("Config[abc] should not be null")
+    );
   }
 
 }

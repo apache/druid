@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
  */
-public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
+public class SegmentTransactionalInsertAction extends SegmentPublishAction
 {
   /**
    * Set of segments that was fully overshadowed by new segments, {@link SegmentTransactionalInsertAction#segments}
@@ -172,11 +172,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     return new TypeReference<>() {};
   }
 
-  /**
-   * Performs some sanity checks and publishes the given segments.
-   */
   @Override
-  public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
+  protected SegmentPublishResult tryPublishSegments(Task task, TaskActionToolbox toolbox)
   {
     final SegmentPublishResult retVal;
 
@@ -234,10 +231,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       );
     }
     catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
 
-    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
     return retVal;
   }
 

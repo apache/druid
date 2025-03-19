@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
  *    The supervisor relays the payloads to all the tasks with the corresponding group_id to serve realtime queries
  * </pre>
  */
-public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
+public class SegmentTransactionalReplaceAction extends SegmentPublishAction
 {
   private static final Logger log = new Logger(SegmentTransactionalReplaceAction.class);
 
@@ -108,11 +108,8 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     return new TypeReference<>() {};
   }
 
-  /**
-   * Performs some sanity checks and publishes the given segments.
-   */
   @Override
-  public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
+  protected SegmentPublishResult tryPublishSegments(Task task, TaskActionToolbox toolbox)
   {
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
@@ -140,10 +137,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       );
     }
     catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
-
-    IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
 
     // Upgrade any overlapping pending segments
     // Do not perform upgrade in the same transaction as replace commit so that

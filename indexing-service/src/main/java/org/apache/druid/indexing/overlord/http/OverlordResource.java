@@ -41,7 +41,6 @@ import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DruidOverlord;
@@ -97,7 +96,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.InputStream;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -509,30 +507,25 @@ public class OverlordResource
   @ResourceFilters(StateResourceFilter.class)
   public Response doAction(final TaskActionHolder holder)
   {
+    final Task task = holder.getTask();
     return asLeaderWith(
-        taskMaster.getTaskActionClient(holder.getTask()),
-        new Function<>()
-        {
-          @Override
-          public Response apply(TaskActionClient taskActionClient)
-          {
-            final Map<String, Object> retMap;
-
-            // It would be great to verify that this worker is actually supposed to be running the task before
-            // actually doing the action.  Some ideas for how that could be done would be using some sort of attempt_id
-            // or token that gets passed around.
-
-            try {
-              final Object ret = taskActionClient.submit(holder.getAction());
-              retMap = new HashMap<>();
-              retMap.put("result", ret);
-            }
-            catch (Exception e) {
-              log.warn(e, "Failed to perform task action");
-              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
-            }
-
-            return Response.ok().entity(retMap).build();
+        taskMaster.getTaskActionClient(task),
+        taskActionClient -> {
+          try {
+            final Object result = taskActionClient.submit(holder.getAction());
+            return Response.ok().entity(Map.of("result", result)).build();
+          }
+          catch (DruidException e) {
+            log.noStackTrace().warn(
+                e,
+                "Exception while performing action[%s] for task[%s]",
+                holder.getAction(), task.getId()
+            );
+            return ServletResourceUtils.buildErrorResponseFrom(e);
+          }
+          catch (Throwable e) {
+            log.warn(e, "Failed to perform action[%s] for task[%s]", holder.getAction(), task.getId());
+            return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
           }
         }
     );
