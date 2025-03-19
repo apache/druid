@@ -92,12 +92,12 @@ function getRangeInExpression(
 }
 
 interface TimeChartParameterValues {
+  markType: ContinuousChartMarkType;
   granularity: string;
   splitColumn?: ExpressionMeta;
   numberToStack: number;
   showOthers: boolean;
   measure: ExpressionMeta;
-  markType: ContinuousChartMarkType;
   curveType: ContinuousChartCurveType;
 }
 
@@ -106,6 +106,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
   title: 'Time chart',
   icon: IconNames.TIMELINE_LINE_CHART,
   parameters: {
+    markType: {
+      type: 'option',
+      options: ['line', 'area', 'bar'],
+      defaultValue: 'line',
+      optionLabels: capitalizeFirst,
+    },
     granularity: {
       type: 'option',
       options: ({ querySource, where }) => {
@@ -142,7 +148,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       type: 'number',
       label: 'Max stacks',
       defaultValue: 7,
-      min: 2,
+      min: 1,
       required: true,
       visible: ({ parameterValues }) => Boolean(parameterValues.splitColumn),
     },
@@ -158,12 +164,6 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       important: true,
       defaultValue: ({ querySource }) => querySource?.getFirstAggregateMeasure(),
       required: true,
-    },
-    markType: {
-      type: 'option',
-      options: ['area', 'bar', 'line'],
-      defaultValue: 'area',
-      optionLabels: capitalizeFirst,
     },
     curveType: {
       type: 'option',
@@ -262,14 +262,15 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           };
         }
 
-        const queryForOthers = Boolean(showOthers && vs && numberToStack < vs.length);
-        const effectiveVs = queryForOthers ? vs!.slice(0, numberToStack).concat(OTHER_VALUE) : vs;
+        const queryVs =
+          showOthers && vs && numberToStack < vs.length ? vs.slice(0, numberToStack) : undefined;
+        const effectiveVs = queryVs ? queryVs.concat(OTHER_VALUE) : vs;
 
         const result = await runSqlQuery(
           {
             query: querySource
               .getInitQuery(overqueryWhere(where, timeColumnName, granularity, oneExtra))
-              .applyIf(splitExpression && vs && !queryForOthers, q =>
+              .applyIf(splitExpression && vs && !queryVs, q =>
                 q.addWhere(splitExpression!.cast('VARCHAR').in(vs!)),
               )
               .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
@@ -278,10 +279,14 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
                 direction: 'DESC',
               })
               .applyIf(splitExpression, q => {
-                if (!splitExpression || !vs) return q; // Should never get here, doing this to make peace between eslint and TS
+                if (!splitExpression) return q; // Should never get here, doing this to make peace between eslint and TS
                 return q.addSelect(
-                  (queryForOthers
-                    ? SqlCase.ifThenElse(splitExpression.in(vs), splitExpression, L(OTHER_VALUE))
+                  (queryVs
+                    ? SqlCase.ifThenElse(
+                        splitExpression.in(queryVs),
+                        splitExpression,
+                        L(OTHER_VALUE),
+                      )
                     : splitExpression
                   )
                     .cast('VARCHAR')
