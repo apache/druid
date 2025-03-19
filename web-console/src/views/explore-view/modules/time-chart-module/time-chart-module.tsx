@@ -234,7 +234,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
 
         const granularity = new Duration(timeGranularity);
 
-        const vs = splitExpression
+        const vs: string[] | undefined = splitExpression
           ? (
               await runSqlQuery(
                 {
@@ -242,7 +242,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
                     .getInitQuery(where)
                     .addSelect(splitExpression.cast('VARCHAR').as('v'), { addToGroupBy: 'end' })
                     .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
-                    .changeLimitValue(numberToStack),
+                    .changeLimitValue(numberToStack + (showOthers ? 1 : 0)), // If we want to show others add 1 to check if we need to query for them
                   timezone,
                 },
                 cancelToken,
@@ -262,13 +262,14 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           };
         }
 
-        const effectiveVs = vs && showOthers ? vs.concat(OTHER_VALUE) : vs;
+        const queryForOthers = Boolean(showOthers && vs && numberToStack < vs.length);
+        const effectiveVs = queryForOthers ? vs!.slice(0, numberToStack).concat(OTHER_VALUE) : vs;
 
         const result = await runSqlQuery(
           {
             query: querySource
               .getInitQuery(overqueryWhere(where, timeColumnName, granularity, oneExtra))
-              .applyIf(splitExpression && vs && !showOthers, q =>
+              .applyIf(splitExpression && vs && !queryForOthers, q =>
                 q.addWhere(splitExpression!.cast('VARCHAR').in(vs!)),
               )
               .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
@@ -279,7 +280,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
               .applyIf(splitExpression, q => {
                 if (!splitExpression || !vs) return q; // Should never get here, doing this to make peace between eslint and TS
                 return q.addSelect(
-                  (showOthers
+                  (queryForOthers
                     ? SqlCase.ifThenElse(splitExpression.in(vs), splitExpression, L(OTHER_VALUE))
                     : splitExpression
                   )

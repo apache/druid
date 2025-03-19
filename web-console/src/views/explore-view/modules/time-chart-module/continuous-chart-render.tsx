@@ -391,6 +391,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
 
   const byStack = useMemo(() => {
     if (markType === 'bar' || !stackedData.length) return [];
+    const isStacked = markType !== 'line';
 
     const effectiveStacks = stacks || ['undefined'];
     const numStacks = effectiveStacks.length;
@@ -408,12 +409,14 @@ export const ContinuousChartRender = function ContinuousChartRender(
               ...dataForStart[0],
               stack,
               measure: 0,
-              offset: Math.max(
-                0,
-                ...filterMap(effectiveStacks.slice(0, stackIndex), s => stackToDatum[s]).map(
-                  d => d.offset + d.measure,
-                ),
-              ),
+              offset: isStacked
+                ? Math.max(
+                    0,
+                    ...filterMap(effectiveStacks.slice(0, stackIndex), s => stackToDatum[s]).map(
+                      d => d.offset + d.measure,
+                    ),
+                  )
+                : 0,
             },
         );
       },
@@ -565,6 +568,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
     shiftStartBack,
     shiftEndForward < nowDayCeil.valueOf() ? shiftEndForward : nowDayCeil.valueOf(),
   ];
+
+  console.log(byStack);
 
   const nowX = timeScale(now);
   return (
