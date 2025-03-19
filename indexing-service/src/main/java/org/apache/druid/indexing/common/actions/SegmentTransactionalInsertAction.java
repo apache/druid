@@ -175,22 +175,20 @@ public class SegmentTransactionalInsertAction extends SegmentPublishAction
   @Override
   protected SegmentPublishResult tryPublishSegments(Task task, TaskActionToolbox toolbox)
   {
-    final SegmentPublishResult retVal;
-
     if (segments.isEmpty()) {
       // A stream ingestion task didn't ingest any rows and created no segments (e.g., all records were unparseable),
       // but still needs to update metadata with the progress that the task made.
       try {
-        retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
+        return toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
             dataSource,
             startMetadata,
             endMetadata
         );
       }
       catch (Exception e) {
+        Throwables.throwIfUnchecked(e);
         throw new RuntimeException(e);
       }
-      return retVal;
     }
 
     final Set<DataSegment> allSegments = new HashSet<>(segments);
@@ -209,7 +207,7 @@ public class SegmentTransactionalInsertAction extends SegmentPublishAction
     }
 
     try {
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+      return toolbox.getTaskLockbox().doInCriticalSection(
           task,
           allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
@@ -234,8 +232,6 @@ public class SegmentTransactionalInsertAction extends SegmentPublishAction
       Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
-
-    return retVal;
   }
 
   private void checkWithSegmentLock()

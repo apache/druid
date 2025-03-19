@@ -27,7 +27,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -183,9 +182,8 @@ public class SegmentTransactionalAppendAction extends SegmentPublishAction
       );
     }
 
-    final SegmentPublishResult retVal;
     try {
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+      return toolbox.getTaskLockbox().doInCriticalSection(
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
@@ -203,8 +201,6 @@ public class SegmentTransactionalAppendAction extends SegmentPublishAction
       Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
-
-    return retVal;
   }
 
   @Override

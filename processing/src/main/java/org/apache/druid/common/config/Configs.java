@@ -21,8 +21,6 @@ package org.apache.druid.common.config;
 
 import org.apache.druid.error.InvalidInput;
 
-import javax.annotation.Nullable;
-
 /**
  * Utility class for common config operations.
  */
