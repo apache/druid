@@ -72,6 +72,7 @@ export const ColumnPickerMenu = function ColumnPickerMenu(props: ColumnPickerMen
           const iconName = rightIconForColumn?.(c);
           return (
             <ContextMenu
+              key={i}
               content={
                 <Menu>
                   <MenuItem
@@ -86,7 +87,6 @@ export const ColumnPickerMenu = function ColumnPickerMenu(props: ColumnPickerMen
               }
             >
               <MenuItem
-                key={i}
                 icon={columnToIcon(c) || IconNames.BLANK}
                 text={columnName}
                 labelElement={iconName && <Icon icon={iconName} />}

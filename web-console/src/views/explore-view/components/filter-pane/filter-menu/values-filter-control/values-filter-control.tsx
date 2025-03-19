@@ -91,6 +91,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
           if (!caseInsensitiveContains(v, searchString)) return;
           return (
             <ContextMenu
+              key={i}
               content={
                 <Menu>
                   <MenuItem
@@ -105,7 +106,6 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
               }
             >
               <MenuItem
-                key={i}
                 icon={
                   selectedValues.includes(v)
                     ? negated

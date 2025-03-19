@@ -18,7 +18,7 @@
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent, Tag } from '@blueprintjs/core';
 import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
-import { F, sql, SqlExpression } from 'druid-query-toolkit';
+import { F, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo, useState } from 'react';
 
 import { AppToaster } from '../../../../../singletons';
@@ -35,12 +35,14 @@ export interface ColumnDialogProps {
   columnToDuplicate?: string;
   onApply(newQuery: SqlQuery, rename: Rename | undefined): void;
   querySource: QuerySource;
+  where: SqlExpression;
   runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
   onClose(): void;
 }
 
 export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialogProps) {
-  const { initExpression, columnToDuplicate, onApply, querySource, runSqlQuery, onClose } = props;
+  const { initExpression, columnToDuplicate, onApply, querySource, where, runSqlQuery, onClose } =
+    props;
 
   const [outputName, setOutputName] = useState(initExpression?.getOutputName() || '');
   const [formula, setFormula] = useState(String(initExpression?.getUnderlyingExpression() || ''));
@@ -54,12 +56,10 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
       .getInitBaseQuery()
       .addSelect(expressionToPreview.as('v'))
       .addWhere(expressionToPreview.isNotNull())
-      .applyIf(querySource.hasBaseTimeColumn(), q =>
-        q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '1' DAY <= __time`),
-      )
+      .addWhere(querySource.transformExpressionToBaseColumns(where))
       .changeLimitValue(200)
       .toString();
-  }, [querySource, formula]);
+  }, [querySource, formula, where]);
 
   return (
     <Dialog

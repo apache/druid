@@ -329,7 +329,9 @@ export const ExploreView = React.memo(function ExploreView() {
                   if (!querySource) return;
                   setExploreState(
                     effectiveExploreState.changeSource(
-                      querySource.addColumn(querySource.transformToBaseColumns(expression)),
+                      querySource.addColumn(
+                        querySource.transformExpressionToBaseColumns(expression),
+                      ),
                       undefined,
                     ),
                   );
@@ -340,7 +342,9 @@ export const ExploreView = React.memo(function ExploreView() {
                     effectiveExploreState
                       .change({ where: changeWhere })
                       .changeSource(
-                        querySource.addWhereClause(querySource.transformToBaseColumns(expression)),
+                        querySource.addWhereClause(
+                          querySource.transformExpressionToBaseColumns(expression),
+                        ),
                         undefined,
                       ),
                   );
@@ -461,6 +465,7 @@ export const ExploreView = React.memo(function ExploreView() {
                     <ResourcePane
                       querySource={querySource}
                       onQueryChange={setSource}
+                      where={where}
                       onFilter={c => {
                         filterPane.current?.filterOn(c);
                       }}
@@ -502,7 +507,7 @@ export const ExploreView = React.memo(function ExploreView() {
                             setExploreState(
                               effectiveExploreState.changeSource(
                                 querySource.addColumn(
-                                  querySource.transformToBaseColumns(expression),
+                                  querySource.transformExpressionToBaseColumns(expression),
                                 ),
                                 undefined,
                               ),
@@ -514,7 +519,9 @@ export const ExploreView = React.memo(function ExploreView() {
                               effectiveExploreState.changeSource(
                                 querySource.addMeasure(
                                   measure.changeExpression(
-                                    querySource.transformToBaseColumns(measure.expression),
+                                    querySource.transformExpressionToBaseColumns(
+                                      measure.expression,
+                                    ),
                                   ),
                                 ),
                                 undefined,
