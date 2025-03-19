@@ -190,7 +190,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     return add(new CompleteSegment(descriptor, segment));
   }
 
-  private SpecificSegmentsQuerySegmentWalker add(CompleteSegment completeSegment)
+  public SpecificSegmentsQuerySegmentWalker add(CompleteSegment completeSegment)
   {
     DataSegment descriptor = completeSegment.getDataSegment();
     Segment segment = completeSegment.getSegment();
