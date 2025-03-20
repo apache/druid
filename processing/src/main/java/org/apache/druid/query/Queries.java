@@ -28,7 +28,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -164,12 +164,12 @@ public class Queries
       retVal = query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(descriptors));
 
       // Verify preconditions and invariants, just in case.
-      final DataSourceAnalysis analysis = retVal.getDataSourceAnalysis();
+      ExecutionVertex ev = ExecutionVertex.of(retVal);
 
       // Sanity check: query must be based on a single table.
-      analysis.getBaseTableDataSource();
+      ev.getBaseTableDataSource();
 
-      if (!analysis.getEffectiveQuerySegmentSpec().equals(new MultipleSpecificSegmentSpec(descriptors))) {
+      if (!ev.getEffectiveQuerySegmentSpec().equals(new MultipleSpecificSegmentSpec(descriptors))) {
         // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
         throw DruidException
             .defensive("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
@@ -184,9 +184,13 @@ public class Queries
    * Unlike the seemingly-similar {@link Query#withDataSource}, this will walk down the datasource tree and replace
    * only the base datasource (in the sense defined in {@link DataSourceAnalysis}).
    */
-  public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
+  public static Query withBaseDataSource(final Query query, final DataSource newBaseDataSource)
   {
-    return query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
+    ExecutionVertex ev = ExecutionVertex.of(query);
+    if (!ev.isProcessable()) {
+      throw DruidException.defensive("Its unsafe to replace the BaseDataSource of a non-processable query [%s]", query);
+    }
+    return ev.buildQueryWithBaseDataSource(newBaseDataSource);
   }
 
   /**
