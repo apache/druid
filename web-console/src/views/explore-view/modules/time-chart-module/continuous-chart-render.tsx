@@ -42,6 +42,7 @@ import {
   formatStartDuration,
   groupBy,
   lookupBy,
+  minBy,
   tickFormatWithTimezone,
   timezoneAwareTicks,
 } from '../../../../utils';
@@ -245,8 +246,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
         dataInRange[dataInRange.length - 1]
       );
     } else {
-      // ToDo: min
-      return undefined;
+      return minBy(dataInRange, r => Math.abs(r.measure - measure));
     }
   }
 
@@ -351,7 +351,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
         setSelectionIfNeeded({
           start: start.valueOf(),
           end: end.valueOf(),
-          selectedDatum: findStackedDatum(time, measure),
+          selectedDatum: findStackedDatum(time, measure, markType !== 'line'),
         });
       } else {
         setSelection(undefined);
