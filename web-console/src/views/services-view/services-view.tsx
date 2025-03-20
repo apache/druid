@@ -354,14 +354,18 @@ ORDER BY
   }
 
   componentDidMount(): void {
-    const { capabilities } = this.props;
-    const { visibleColumns } = this.state;
-    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+    this.fetchData();
   }
 
   componentWillUnmount(): void {
     this.serviceQueryManager.terminate();
   }
+
+  private readonly fetchData = () => {
+    const { capabilities } = this.props;
+    const { visibleColumns } = this.state;
+    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+  };
 
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
@@ -838,6 +842,7 @@ ORDER BY
                 visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
+            onClose={this.fetchData}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
