@@ -52,6 +52,12 @@ public class NoopSegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
+  public boolean isReady()
+  {
+    return false;
+  }
+
+  @Override
   public DatasourceSegmentCache getDatasource(String dataSource)
   {
     throw new UnsupportedOperationException();

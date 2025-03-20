@@ -50,6 +50,11 @@ public interface SegmentMetadataCache
   boolean isEnabled();
 
   /**
+   * @return true if the cache is enabled and ready to serve requests.
+   */
+  boolean isReady();
+
+  /**
    * Returns the cache for the given datasource.
    */
   DatasourceSegmentCache getDatasource(String dataSource);

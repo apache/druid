@@ -81,7 +81,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
-          if (segmentMetadataCache.isEnabled()) {
+          if (segmentMetadataCache.isReady()) {
             final DatasourceSegmentCache datasourceCache
                 = segmentMetadataCache.getDatasource(dataSource);
             final SegmentMetadataReadTransaction cachedTransaction
@@ -108,7 +108,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
-          if (segmentMetadataCache.isEnabled()) {
+          if (segmentMetadataCache.isReady()) {
             final DatasourceSegmentCache datasourceCache
                 = segmentMetadataCache.getDatasource(dataSource);
             final SegmentMetadataTransaction cachedTransaction

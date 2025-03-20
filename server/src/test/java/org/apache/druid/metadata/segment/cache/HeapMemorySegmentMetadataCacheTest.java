@@ -50,7 +50,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -230,50 +229,40 @@ public class HeapMemorySegmentMetadataCacheTest
     );
   }
 
-  @Test(timeout = 60_000)
-  public void testGetDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
+  @Test
+  public void testGetDataSource_throwsException_ifCacheIsNotSynced()
   {
     setupTargetWithCaching(true);
     cache.start();
     cache.becomeLeader();
 
-    final List<String> observedEventOrder = new ArrayList<>();
-
-    // Invoke getDatasource in Thread 1
-    final Thread getDatasourceThread = new Thread(() -> {
-      cache.getDatasource(TestDataSource.WIKI);
-      observedEventOrder.add("getDatasource completed");
-    });
-    getDatasourceThread.start();
-
-    // Invoke syncCache in Thread 2 after a wait period
-    Thread.sleep(100);
-    final Thread syncCompleteThread = new Thread(() -> {
-      observedEventOrder.add("before first sync");
-      syncCacheAfterBecomingLeader();
-    });
-    syncCompleteThread.start();
-
-    // Verify that the getDatasource call finishes only after the first sync
-    getDatasourceThread.join();
-    syncCompleteThread.join();
-    Assert.assertEquals(
-        List.of("before first sync", "getDatasource completed"),
-        observedEventOrder
+    DruidExceptionMatcher.internalServerError().expectMessageIs(
+        "Segment metadata cache is not synced yet."
+    ).assertThrowsAndMatches(
+        () -> cache.getDatasource(TestDataSource.WIKI)
     );
+  }
 
-    // Verify that subsequent calls to getDatasource do not wait
-    final Thread getDatasourceThread2 = new Thread(() -> {
-      cache.getDatasource(TestDataSource.WIKI);
-      observedEventOrder.add("getDatasource 2 completed");
-    });
-    getDatasourceThread2.start();
-    getDatasourceThread2.join();
+  @Test
+  public void testIsReady_returnsTrue_whenCacheIsLeaderAndSynced()
+  {
+    setupTargetWithCaching(true);
+    Assert.assertFalse(cache.isReady());
 
-    Assert.assertEquals(
-        List.of("before first sync", "getDatasource completed", "getDatasource 2 completed"),
-        observedEventOrder
-    );
+    cache.start();
+    Assert.assertFalse(cache.isReady());
+
+    syncCache();
+    Assert.assertFalse(cache.isReady());
+
+    cache.becomeLeader();
+    Assert.assertFalse(cache.isReady());
+
+    syncCache();
+    syncCache();
+    Assert.assertTrue(cache.isReady());
+
+    Assert.assertNotNull(cache.getDatasource(TestDataSource.WIKI));
   }
 
   @Test
