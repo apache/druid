@@ -186,11 +186,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                    .add(new DoubleDimensionSchema("d0"))
                    .add(new FloatDimensionSchema("f0"))
                    .add(new LongDimensionSchema("l0"))
-                   .add(new AutoTypeColumnSchema("arrayString", ColumnType.STRING_ARRAY))
-                   .add(new AutoTypeColumnSchema("arrayLong", ColumnType.LONG_ARRAY))
-                   .add(new AutoTypeColumnSchema("arrayDouble", ColumnType.DOUBLE_ARRAY))
-                   .add(new AutoTypeColumnSchema("variant", null))
-                   .add(new AutoTypeColumnSchema("nested", null))
+                   .add(new AutoTypeColumnSchema("arrayString", ColumnType.STRING_ARRAY, null))
+                   .add(new AutoTypeColumnSchema("arrayLong", ColumnType.LONG_ARRAY, null))
+                   .add(new AutoTypeColumnSchema("arrayDouble", ColumnType.DOUBLE_ARRAY, null))
+                   .add(AutoTypeColumnSchema.of("variant"))
+                   .add(AutoTypeColumnSchema.of("nested"))
                    .build()
   );
 
@@ -527,7 +527,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null, null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -556,7 +556,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null, null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -586,7 +586,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .getDimensions()
                                                         .stream()
                                                         .map(
-                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
+                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null, null)
                                                         )
                                                         .collect(Collectors.toList())
                                               ),
