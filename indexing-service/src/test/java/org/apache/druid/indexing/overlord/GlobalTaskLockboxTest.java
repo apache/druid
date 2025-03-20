@@ -2283,12 +2283,5 @@ public class GlobalTaskLockboxTest
     {
       super(taskStorage, metadataStorageCoordinator);
     }
-
-    @Override
-    protected TaskLockbox.TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
-    {
-      return task.getGroupId().contains("FailingLockAcquisition")
-             ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
-    }
   }
 }

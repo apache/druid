@@ -98,8 +98,8 @@ public class TaskLockbox
   private final String dataSource;
   private final TaskStorage taskStorage;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final ReentrantLock giant;
-  private final Condition lockReleaseCondition;
+  private final ReentrantLock giant = new ReentrantLock();
+  private final Condition lockReleaseCondition = giant.newCondition();
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
@@ -114,17 +114,15 @@ public class TaskLockbox
    * Used to clean up pending segments for a taskAllocatorId as soon as the set
    * of corresponding active taskIds becomes empty.
    */
+  @GuardedBy("giant")
   private final Map<String, Set<String>> activeAllocatorIdToTaskIds = new HashMap<>();
 
   public TaskLockbox(
       String dataSource,
-      ReentrantLock giant,
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator
   )
   {
-    this.giant = giant;
-    this.lockReleaseCondition = giant.newCondition();
     this.dataSource = dataSource;
     this.taskStorage = taskStorage;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
@@ -142,8 +140,8 @@ public class TaskLockbox
       final List<Pair<Task, TaskLock>> storedLocks
   )
   {
-    // No locks need to be acquired here since the GlobalTaskLockbox has already
-    // acquired the required locks
+    giant.lock();
+
     try {
       // Sort locks by version, so we add them back in the order they were acquired.
       final Ordering<Pair<Task, TaskLock>> byVersionOrdering = new Ordering<>()
@@ -240,6 +238,9 @@ public class TaskLockbox
       log.noStackTrace().error(t, "Error while resetting state of datasource[%s]", dataSource);
       throw t;
     }
+    finally {
+      giant.unlock();
+    }
   }
 
   /**
@@ -247,8 +248,8 @@ public class TaskLockbox
    *
    * @return null if the lock could not be reacquired.
    */
-  @VisibleForTesting
   @Nullable
+  @VisibleForTesting
   protected TaskLockPosse reacquireLockOnStartup(Task task, TaskLock taskLock)
   {
     if (!taskMatchesLock(task, taskLock)) {
@@ -308,10 +309,10 @@ public class TaskLockbox
   }
 
   /**
-   * Returns true if the datasource, groupId and priority of the given Task
+   * @return true if the datasource, groupId and priority of the given Task
    * match that of the TaskLock.
    */
-  private boolean taskMatchesLock(Task task, TaskLock taskLock)
+  private static boolean taskMatchesLock(Task task, TaskLock taskLock)
   {
     return task.getGroupId().equals(taskLock.getGroupId())
         && task.getDataSource().equals(taskLock.getDataSource())
@@ -1185,6 +1186,7 @@ public class TaskLockbox
     }
   }
 
+  @GuardedBy("giant")
   private void trackAppendingTask(Task task)
   {
     if (task instanceof PendingSegmentAllocatingTask) {
@@ -1411,8 +1413,8 @@ public class TaskLockbox
   }
 
   /**
-   * Check if a REPLACE lock can coexist with a given set of conflicting posses.
-   * A REPLACE lock can coexist with any number of other APPEND locks and revoked locks
+   * Check if a REPLACE-lock can coexist with a given set of conflicting posses.
+   * A REPLACE-lock can coexist with any number of other APPEND locks and revoked locks
    * @param conflictPosses conflicting lock posses
    * @param replaceLock replace lock request
    * @return true iff replace lock can coexist with all its conflicting locks
@@ -1546,7 +1548,7 @@ public class TaskLockbox
   /**
    * Task locks for tasks of the same groupId
    */
-  static class TaskLockPosse
+  protected static class TaskLockPosse
   {
     private final TaskLock taskLock;
     private final Set<String> taskIds;

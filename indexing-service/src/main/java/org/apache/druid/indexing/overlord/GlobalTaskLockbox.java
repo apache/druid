@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
@@ -34,7 +35,6 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,20 +45,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Remembers which activeTasks have locked which intervals or which segments. Tasks are permitted to lock an interval
- * or a segment if no other task outside their group has locked an overlapping interval for the same datasource or
- * the same segments. Note that TaskLockbox is also responsible for allocating segmentIds when a task requests to lock
- * a new segment. Task lock might involve version assignment.
- *
- * - When a task locks an interval or a new segment, it is assigned a new version string that it can use to publish
- *   segments.
- * - When a task locks a existing segment, it doesn't need to be assigned a new version.
- *
- * Note that tasks of higher priorities can revoke locks of tasks of lower priorities.
+ * Maintains a {@link TaskLockbox} for each datasource.
  */
 public class GlobalTaskLockbox
 {
@@ -66,8 +56,9 @@ public class GlobalTaskLockbox
 
   private final TaskStorage taskStorage;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final ReentrantReadWriteLock globalLock = new ReentrantReadWriteLock(true);
   private final ConcurrentHashMap<String, TaskLockbox> datasourceLocks = new ConcurrentHashMap<>();
+
+  private final AtomicBoolean syncComplete = new AtomicBoolean(false);
 
   @Inject
   public GlobalTaskLockbox(
@@ -86,42 +77,20 @@ public class GlobalTaskLockbox
 
   private TaskLockbox getDatasourceLockbox(String datasource)
   {
-    globalLock.readLock().lock();
-    try {
-      return datasourceLocks.computeIfAbsent(
-          datasource,
-          ds -> new TaskLockbox(ds, new DatasourceLock(), taskStorage, metadataStorageCoordinator)
-      );
+    // Verify that sync is complete
+    if (!syncComplete.get()) {
+      throw new ISE("Cannot get TaskLockbox for datasource[%s]. Sync with storage is not complete yet", datasource);
     }
-    finally {
-      globalLock.readLock().unlock();
-    }
+
+    return datasourceLocks.computeIfAbsent(
+        datasource,
+        ds -> new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
+    );
   }
 
-  private class DatasourceLock extends ReentrantLock
-  {
-    @Override
-    public void lock()
-    {
-      globalLock.readLock().lock();
-      super.lock();
-    }
-
-    @Override
-    public void lockInterruptibly() throws InterruptedException
-    {
-      globalLock.readLock().lock();
-      super.lockInterruptibly();
-    }
-
-    @Override
-    public void unlock()
-    {
-      super.unlock();
-      globalLock.readLock().unlock();
-    }
-  }
-
+  /**
+   * Result of metadata store sync for a single datasource.
+   */
   private static class DatasourceSync
   {
     final Set<Task> storedActiveTasks = new HashSet<>();
@@ -129,65 +98,51 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
+   * Syncs the current in-memory state with the {@link TaskStorage}.
+   * This method should be called only once when the {@link TaskQueue#start()}
+   * is invoked.
    *
    * @return SyncResult which needs to be processed by the caller
    */
   public TaskLockboxSyncResult syncFromStorage()
   {
-    globalLock.writeLock().lock();
-
-    try {
-      // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-      final Map<String, DatasourceSync> datasourceSyncs = new HashMap<>();
-      int activeTaskCount = 0;
-      int totalLockCount = 0;
-      for (final Task task : taskStorage.getActiveTasks()) {
-        ++activeTaskCount;
-        final DatasourceSync sync = datasourceSyncs.computeIfAbsent(task.getDataSource(), ds -> new DatasourceSync());
-        sync.storedActiveTasks.add(task);
-        for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
-          ++totalLockCount;
-          sync.storedLocks.add(Pair.of(task, taskLock));
-        }
+    // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
+    final Map<String, DatasourceSync> datasourceSyncs = new HashMap<>();
+    int activeTaskCount = 0;
+    int totalLockCount = 0;
+    for (final Task task : taskStorage.getActiveTasks()) {
+      ++activeTaskCount;
+      final DatasourceSync sync = datasourceSyncs
+          .computeIfAbsent(task.getDataSource(), ds -> new DatasourceSync());
+      sync.storedActiveTasks.add(task);
+      for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
+        ++totalLockCount;
+        sync.storedLocks.add(Pair.of(task, taskLock));
       }
-
-      // Set of task groups in which at least one task failed to re-acquire a lock
-      final Set<Task> tasksToFail = new HashSet<>();
-      int taskLockCount = 0;
-
-      datasourceLocks.clear();
-      for (String dataSource : datasourceSyncs.keySet()) {
-        final DatasourceSync sync = datasourceSyncs.get(dataSource);
-        final TaskLockboxSyncResult result = getDatasourceLockbox(dataSource)
-            .resetState(sync.storedActiveTasks, sync.storedLocks);
-        tasksToFail.addAll(result.getTasksToFail());
-        taskLockCount += result.getTaskLockCount();
-      }
-
-      log.info(
-          "Synced [%,d] locks for [%,d] activeTasks from storage ([%,d] locks ignored).",
-          taskLockCount,
-          activeTaskCount,
-          totalLockCount - taskLockCount
-      );
-
-      return new TaskLockboxSyncResult(tasksToFail, taskLockCount);
     }
-    finally {
-      globalLock.writeLock().unlock();
-    }
-  }
 
-  /**
-   * This method is called only in {@link #syncFromStorage()} and verifies the given task and the taskLock have the same
-   * groupId, dataSource, and priority.
-   */
-  @VisibleForTesting
-  @Nullable
-  TaskLockbox.TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
-  {
-    return getDatasourceLockbox(task).verifyAndCreateOrFindLockPosse(task, taskLock);
+    // Set of task groups in which at least one task failed to re-acquire a lock
+    final Set<Task> tasksToFail = new HashSet<>();
+    int taskLockCount = 0;
+
+    datasourceLocks.clear();
+    for (String dataSource : datasourceSyncs.keySet()) {
+      final DatasourceSync sync = datasourceSyncs.get(dataSource);
+      final TaskLockboxSyncResult result = getDatasourceLockbox(dataSource)
+          .resetState(sync.storedActiveTasks, sync.storedLocks);
+      tasksToFail.addAll(result.getTasksToFail());
+      taskLockCount += result.getTaskLockCount();
+    }
+
+    log.info(
+        "Synced [%,d] locks for [%,d] activeTasks from storage ([%,d] locks ignored).",
+        taskLockCount,
+        activeTaskCount,
+        totalLockCount - taskLockCount
+    );
+
+    syncComplete.set(true);
+    return new TaskLockboxSyncResult(tasksToFail, taskLockCount);
   }
 
   /**
@@ -195,7 +150,6 @@ public class GlobalTaskLockbox
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
-   *
    * @throws InterruptedException if the current thread is interrupted
    */
   public LockResult lock(final Task task, final LockRequest request) throws InterruptedException
@@ -208,7 +162,6 @@ public class GlobalTaskLockbox
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
-   *
    * @throws InterruptedException if the current thread is interrupted
    */
   public LockResult lock(final Task task, final LockRequest request, long timeoutMs) throws InterruptedException
@@ -222,7 +175,6 @@ public class GlobalTaskLockbox
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
-   *
    * @throws IllegalStateException if the task is not a valid active task
    */
   public LockResult tryLock(final Task task, final LockRequest request)
@@ -274,7 +226,7 @@ public class GlobalTaskLockbox
    *
    * @param task      task performing a critical action
    * @param intervals intervals
-   * @param action    action to be performed inside of the critical section
+   * @param action    action to be performed inside the critical section
    */
   public <T> T doInCriticalSection(Task task, Set<Interval> intervals, CriticalAction<T> action) throws Exception
   {
