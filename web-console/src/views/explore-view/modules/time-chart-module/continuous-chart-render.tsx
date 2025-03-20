@@ -232,13 +232,22 @@ export const ContinuousChartRender = function ContinuousChartRender(
     }
   }, [data, facets, markType]);
 
-  function findStackedDatum(time: number, measure: number): StackedRangeDatum | undefined {
+  function findStackedDatum(
+    time: number,
+    measure: number,
+    isStacked: boolean,
+  ): StackedRangeDatum | undefined {
     const dataInRange = stackedData.filter(d => d.start <= time && time < d.end);
     if (!dataInRange.length) return;
-    return (
-      dataInRange.find(r => r.offset <= measure && measure < r.measure + r.offset) ||
-      dataInRange[dataInRange.length - 1]
-    );
+    if (isStacked) {
+      return (
+        dataInRange.find(r => r.offset <= measure && measure < r.measure + r.offset) ||
+        dataInRange[dataInRange.length - 1]
+      );
+    } else {
+      // ToDo: min
+      return undefined;
+    }
   }
 
   const facetColorizer = useMemo(() => {
