@@ -144,9 +144,7 @@ export const ExploreView = React.memo(function ExploreView() {
     '#explore/v/',
     LocalStorageKeys.EXPLORE_STATE,
     ExploreState.DEFAULT_STATE,
-    s => {
-      return ExploreState.fromJS(s);
-    },
+    s => ExploreState.fromJS(s),
   );
 
   // -------------------------------------------------------
