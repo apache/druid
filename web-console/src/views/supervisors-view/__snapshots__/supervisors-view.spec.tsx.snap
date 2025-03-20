@@ -15,7 +15,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
       <Memo(MoreButton)>
         <Blueprint5.MenuItem
           active={false}
-          disabled={false}
+          disabled={true}
           icon="application"
           multiline={false}
           onClick={[Function]}
@@ -172,7 +172,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "Header": "Type",
           "accessor": "type",
           "show": true,
-          "width": 80,
+          "width": 120,
         },
         {
           "Cell": [Function],
@@ -183,11 +183,12 @@ exports[`SupervisorsView matches snapshot 1`] = `
         },
         {
           "Cell": [Function],
+          "Filter": [Function],
           "Header": "Status",
           "accessor": "detailed_state",
           "id": "detailed_state",
           "show": true,
-          "width": 150,
+          "width": 170,
         },
         {
           "Cell": [Function],
@@ -326,7 +327,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     defaultFilterMethod={[Function]}
     defaultFiltered={[]}
     defaultPage={0}
-    defaultPageSize={25}
+    defaultPageSize={20}
     defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
@@ -366,7 +367,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     getTrProps={[Function]}
     groupedByPivotKey="_groupedByPivot"
     indexKey="_index"
-    loading={false}
+    loading={true}
     loadingText="Loading..."
     manual={true}
     multiSort={true}
@@ -376,8 +377,13 @@ exports[`SupervisorsView matches snapshot 1`] = `
     ofText=""
     onFetchData={[Function]}
     onFilteredChange={[Function]}
+    onPageChange={[Function]}
+    onPageSizeChange={[Function]}
+    onSortedChange={[Function]}
     originalKey="_original"
+    page={0}
     pageJumpText="jump to page"
+    pageSize={25}
     pageSizeOptions={
       [
         25,
@@ -401,6 +407,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
+    sorted={[]}
     style={{}}
     subRowsKey="_subRows"
   />

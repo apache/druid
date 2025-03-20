@@ -137,4 +137,9 @@
     <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD"/>
     <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     <Bug pattern="URF_UNREAD_FIELD"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    <Bug pattern="SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR"/>
+    <Bug pattern="SING_SINGLETON_INDIRECTLY_IMPLEMENTS_CLONEABLE"/>
+    <Bug pattern="MS_EXPOSE_REP"/>
+    <Bug pattern="SING_SINGLETON_IMPLEMENTS_SERIALIZABLE"/>
 </FindBugsFilter>

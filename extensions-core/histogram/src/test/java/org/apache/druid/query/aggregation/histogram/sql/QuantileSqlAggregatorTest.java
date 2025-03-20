@@ -20,14 +20,11 @@
 package org.apache.druid.query.aggregation.histogram.sql;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -46,7 +43,6 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -55,6 +51,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -74,19 +71,13 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new ApproximateHistogramDruidModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new ApproximateHistogramDruidModule());
     }
 
-
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
       ApproximateHistogramDruidModule.registerSerde();
 
@@ -114,7 +105,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                                                .rows(TestDataBuilder.ROWS1)
                                                .buildMMappedIndex();
 
-      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+      return walker.add(
           DataSegment.builder()
                      .dataSource(CalciteTests.DATASOURCE1)
                      .interval(index.getDataInterval())
@@ -285,12 +276,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testQuantileOnInnerQuery()
   {
-    final List<Object[]> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
-    } else {
-      expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
 
     testQuery(
         "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
@@ -317,8 +303,6 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                            NullHandling.replaceWithDefault() ?
-                            new CountAggregatorFactory("_a0:count") :
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("_a0:count"),
                                 notNull("a0")
@@ -358,25 +342,14 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
-    final List<Object[]> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{"", 0.0d},
-          new Object[]{"a", 0.0d},
-          new Object[]{"b", 0.0d},
-          new Object[]{"c", 10.100000381469727d},
-          new Object[]{"d", 2.0d}
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{null, Double.NaN},
-          new Object[]{"", 1.0d},
-          new Object[]{"a", Double.NaN},
-          new Object[]{"b", 10.100000381469727d},
-          new Object[]{"c", 10.100000381469727d},
-          new Object[]{"d", 2.0d}
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{null, Double.NaN},
+        new Object[]{"", 1.0d},
+        new Object[]{"a", Double.NaN},
+        new Object[]{"b", 10.100000381469727d},
+        new Object[]{"c", 10.100000381469727d},
+        new Object[]{"d", 2.0d}
+    );
     testQuery(
         "SELECT dim3, APPROX_QUANTILE(CAST(dim1 as DOUBLE), 0.5) from foo group by dim3",
         ImmutableList.of(
@@ -429,7 +402,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .filters(equality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
                       ImmutableList.of(
                           new ApproximateHistogramFoldingAggregatorFactory(

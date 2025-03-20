@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
@@ -28,7 +27,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregator;
-import org.apache.druid.query.aggregation.cardinality.types.StringCardinalityAggregatorColumnSelectorStrategy;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 
 import javax.annotation.Nullable;
@@ -163,26 +161,18 @@ public class HyperUniqueExpressions
           ExprEval input = args.get(0).eval(bindings);
           switch (input.type().getType()) {
             case STRING:
-              if (input.value() == null) {
-                if (NullHandling.replaceWithDefault()) {
-                  collector.add(
-                      CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(
-                          StringCardinalityAggregatorColumnSelectorStrategy.CARDINALITY_AGG_NULL_STRING
-                      ).asBytes()
-                  );
-                }
-              } else {
+              if (input.value() != null) {
                 collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(input.asString()).asBytes());
               }
               break;
             case DOUBLE:
-              if (NullHandling.replaceWithDefault() || !input.isNumericNull()) {
+              if (!input.isNumericNull()) {
                 collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(Double.doubleToLongBits(input.asDouble()))
                                                                  .asBytes());
               }
               break;
             case LONG:
-              if (NullHandling.replaceWithDefault() || !input.isNumericNull()) {
+              if (!input.isNumericNull()) {
                 collector.add(CardinalityAggregator.HASH_FUNCTION.hashLong(input.asLong()).asBytes());
               }
               break;

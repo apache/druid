@@ -24,8 +24,8 @@ import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -91,6 +91,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
@@ -134,6 +135,7 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.eclipse.jetty.server.Server;
 
@@ -233,6 +235,12 @@ public class CliPeon extends GuiceRunnable
           public void configure(Binder binder)
           {
             ServerRunnable.validateCentralizedDatasourceSchemaConfig(getProperties());
+            Preconditions.checkArgument(
+                taskAndStatusFile.size() >= 2,
+                "taskAndStatusFile array should contain 2 or more elements. Current array elements: [%s]",
+                taskAndStatusFile.toString()
+            );
+
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 
@@ -303,19 +311,7 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
-            ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-            builder.put(DruidMetrics.TASK_ID, task.getId());
-            builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
-            builder.put(DruidMetrics.TASK_TYPE, task.getType());
-            builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
-            Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
-            if (tags != null && !tags.isEmpty()) {
-              builder.put(DruidMetrics.TAGS, tags);
-            }
-
-            return Suppliers.ofInstance(
-                builder.build()
-            );
+            return () -> CliPeon.heartbeatDimensions(task);
           }
 
           @Provides
@@ -366,6 +362,21 @@ public class CliPeon extends GuiceRunnable
           public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
           {
             return task.getBroadcastDatasourceLoadingSpec();
+          }
+
+          @Provides
+          @LazySingleton
+          public LocalTmpStorageConfig getLocalTmpStorage()
+          {
+            File tmpDir = new File(taskDirPath, "tmp");
+            try {
+              org.apache.druid.java.util.common.FileUtils.mkdirp(tmpDir);
+            }
+            catch (IOException e) {
+              log.error("Failed to create tmp directory for the task");
+              throw new RuntimeException(e);
+            }
+            return () -> tmpDir;
           }
         },
         new QueryablePeonModule(),
@@ -563,6 +574,29 @@ public class CliPeon extends GuiceRunnable
     );
     shuffleClientBiddy.addBinding("local").to(HttpShuffleClient.class).in(LazySingleton.class);
     shuffleClientBiddy.addBinding("deepstore").to(DeepStorageShuffleClient.class).in(LazySingleton.class);
+  }
+
+  static Map<String, Object> heartbeatDimensions(Task task)
+  {
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put(DruidMetrics.TASK_ID, task.getId());
+    builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
+    builder.put(DruidMetrics.TASK_TYPE, task.getType());
+    builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
+    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+    if (tags != null && !tags.isEmpty()) {
+      builder.put(DruidMetrics.TAGS, tags);
+    }
+
+    if (task instanceof SeekableStreamIndexTask) {
+      SeekableStreamIndexTask streamingTask = (SeekableStreamIndexTask) task;
+      String status = streamingTask.getCurrentRunnerStatus();
+      if (status != null) {
+        builder.put(DruidMetrics.STATUS, status);
+      }
+    }
+
+    return builder.build();
   }
 
   public class BroadcastSegmentLoadingModule implements Module

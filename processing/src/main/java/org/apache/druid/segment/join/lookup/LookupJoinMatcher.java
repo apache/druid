@@ -21,7 +21,6 @@ package org.apache.druid.segment.join.lookup;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -57,7 +56,7 @@ import java.util.stream.Collectors;
 public class LookupJoinMatcher implements JoinMatcher
 {
   private static final ColumnProcessorFactory<Supplier<String>> LEFT_KEY_READER =
-      new ColumnProcessorFactory<Supplier<String>>()
+      new ColumnProcessorFactory<>()
       {
         @Override
         public ColumnType defaultType()
@@ -86,31 +85,19 @@ public class LookupJoinMatcher implements JoinMatcher
         @Override
         public Supplier<String> makeFloatProcessor(BaseFloatColumnValueSelector selector)
         {
-          if (NullHandling.replaceWithDefault()) {
-            return () -> DimensionHandlerUtils.convertObjectToString(selector.getFloat());
-          } else {
-            return () -> selector.isNull() ? null : DimensionHandlerUtils.convertObjectToString(selector.getFloat());
-          }
+          return () -> selector.isNull() ? null : DimensionHandlerUtils.convertObjectToString(selector.getFloat());
         }
 
         @Override
         public Supplier<String> makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
         {
-          if (NullHandling.replaceWithDefault()) {
-            return () -> DimensionHandlerUtils.convertObjectToString(selector.getDouble());
-          } else {
-            return () -> selector.isNull() ? null : DimensionHandlerUtils.convertObjectToString(selector.getDouble());
-          }
+          return () -> selector.isNull() ? null : DimensionHandlerUtils.convertObjectToString(selector.getDouble());
         }
 
         @Override
         public Supplier<String> makeLongProcessor(BaseLongColumnValueSelector selector)
         {
-          if (NullHandling.replaceWithDefault()) {
-            return () -> DimensionHandlerUtils.convertObjectToString(selector.getLong());
-          } else {
-            return () -> selector.isNull() ? null : DimensionHandlerUtils.convertObjectToString(selector.getLong());
-          }
+          return () -> selector.isNull() ? null : DimensionHandlerUtils.convertObjectToString(selector.getLong());
         }
 
         @Override

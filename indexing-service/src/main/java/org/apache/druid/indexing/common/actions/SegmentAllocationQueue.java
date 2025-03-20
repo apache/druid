@@ -26,7 +26,6 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -41,6 +40,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -87,6 +87,8 @@ public class SegmentAllocationQueue
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
+  private final boolean reduceMetadataIO;
+
   @Inject
   public SegmentAllocationQueue(
       GlobalTaskLockbox taskLockbox,
@@ -100,6 +102,7 @@ public class SegmentAllocationQueue
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
     this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationWaitTime();
+    this.reduceMetadataIO = taskLockConfig.isBatchAllocationReduceMetadataIO();
 
     this.executor = taskLockConfig.isBatchSegmentAllocation()
                     ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;
@@ -338,7 +341,7 @@ public class SegmentAllocationQueue
     }
 
     log.debug(
-        "Processing [%d] requests for batch [%s], queue time [%s].",
+        "Processing [%d] requests for batch[%s], queue time[%s].",
         requestBatch.size(), requestKey, requestBatch.getQueueTime()
     );
 
@@ -352,21 +355,21 @@ public class SegmentAllocationQueue
 
     emitBatchMetric("task/action/batch/attempts", 1L, requestKey);
     emitBatchMetric("task/action/batch/runTime", (System.currentTimeMillis() - startTimeMillis), requestKey);
-    log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
+    log.debug("Successfully processed [%d / %d] requests in batch[%s].", successCount, batchSize, requestKey);
 
     if (requestBatch.isEmpty()) {
       return true;
     }
 
     // Requeue the batch only if used segments have changed
-    log.debug("There are [%d] failed requests in batch [%s].", requestBatch.size(), requestKey);
+    log.debug("There are [%d] failed requests in batch[%s].", requestBatch.size(), requestKey);
     final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
 
     if (updatedUsedSegments.equals(usedSegments)) {
       log.warn(
-          "Completing [%d] failed requests in batch [%s] with null value as there"
+          "Completing [%d] failed requests in batch[%s] with null value as there"
           + " are conflicting segments. Cannot retry allocation until the set of"
-          + " used segments overlapping the allocation interval [%s] changes.",
+          + " used segments overlapping the allocation interval[%s] changes.",
           size(), requestKey, requestKey.preferredAllocationInterval
       );
 
@@ -380,13 +383,11 @@ public class SegmentAllocationQueue
 
   private Set<DataSegment> retrieveUsedSegments(AllocateRequestKey key)
   {
-    return new HashSet<>(
-        metadataStorage.retrieveUsedSegmentsForInterval(
-            key.dataSource,
-            key.preferredAllocationInterval,
-            Segments.ONLY_VISIBLE
-        )
-    );
+    return metadataStorage.getSegmentTimelineForAllocation(
+        key.dataSource,
+        key.preferredAllocationInterval,
+        (key.lockGranularity == LockGranularity.TIME_CHUNK) && reduceMetadataIO
+    ).findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
   }
 
   private int allocateSegmentsForBatch(AllocateRequestBatch requestBatch, Set<DataSegment> usedSegments)
@@ -451,9 +452,9 @@ public class SegmentAllocationQueue
     }
 
     if (!requestsWithPartialOverlap.isEmpty()) {
-      log.info(
-          "Found [%d] requests in batch [%s] with row intervals that partially overlap existing segments."
-          + " These cannot be processed until the set of used segments changes. Example request: [%s]",
+      log.warn(
+          "Found [%d] requests in batch[%s] with row intervals that partially overlap existing segments."
+          + " These cannot be processed until the set of used segments changes. Example request[%s]",
           requestsWithPartialOverlap.size(), requestBatch.key, requestsWithPartialOverlap.get(0)
       );
     }
@@ -484,7 +485,7 @@ public class SegmentAllocationQueue
 
     final AllocateRequestKey requestKey = requestBatch.key;
     log.debug(
-        "Trying allocation for [%d] requests, interval [%s] in batch [%s]",
+        "Trying allocation for [%d] requests, interval[%s] in batch[%s]",
         requests.size(), tryInterval, requestKey
     );
 
@@ -493,7 +494,8 @@ public class SegmentAllocationQueue
         requestKey.dataSource,
         tryInterval,
         requestKey.skipSegmentLineageCheck,
-        requestKey.lockGranularity
+        requestKey.lockGranularity,
+        reduceMetadataIO
     );
 
     int successfulRequests = 0;
@@ -529,14 +531,14 @@ public class SegmentAllocationQueue
   {
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, request.getTask());
-    metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
+    metricBuilder.setDimension(DruidMetrics.TASK_ACTION_TYPE, SegmentAllocateAction.TYPE);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 
   private void emitBatchMetric(String metric, long value, AllocateRequestKey key)
   {
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-    metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
+    metricBuilder.setDimension(DruidMetrics.TASK_ACTION_TYPE, SegmentAllocateAction.TYPE);
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, key.dataSource);
     metricBuilder.setDimension(DruidMetrics.INTERVAL, key.preferredAllocationInterval.toString());
     emitter.emit(metricBuilder.setMetric(metric, value));
@@ -649,15 +651,15 @@ public class SegmentAllocationQueue
         emitTaskMetric("task/action/success/count", 1L, request);
         requestToFuture.remove(request).complete(result.getSegmentId());
       } else if (request.canRetry()) {
-        log.info(
-            "Allocation failed on attempt [%d] due to error [%s]. Can still retry action [%s].",
+        log.debug(
+            "Allocation failed on attempt [%d] due to error[%s]. Can still retry action[%s].",
             request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
       } else {
         emitTaskMetric("task/action/failed/count", 1L, request);
         log.error(
-            "Exhausted max attempts [%d] for allocation with latest error [%s]."
-            + " Completing action [%s] with a null value.",
+            "Exhausted max attempts[%d] for allocation with latest error[%s]."
+            + " Completing action[%s] with a null value.",
             request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
         requestToFuture.remove(request).complete(null);

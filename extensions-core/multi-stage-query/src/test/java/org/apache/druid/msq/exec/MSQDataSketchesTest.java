@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -84,13 +83,8 @@ public class MSQDataSketchesTest extends MSQTestBase
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of(
+            ImmutableList.of(
                 new Object[]{null, "\"AgEHDAMIAgCOlN8Fp9xhBA==\""},
-                new Object[]{"a", "\"AgEHDAMIAgALpZ0PPgu1BA==\""}
-            )
-            : ImmutableList.of(
-                new Object[]{"", "\"AgEHDAMIAwCOlN8FjkSVCqfcYQQ=\""},
                 new Object[]{"a", "\"AgEHDAMIAgALpZ0PPgu1BA==\""}
             )
         )

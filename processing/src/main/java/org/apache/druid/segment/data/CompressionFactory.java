@@ -25,10 +25,12 @@ import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -270,7 +272,7 @@ public class CompressionFactory
       Function<T, CompressionStrategy> getCompressionStrategy
   )
   {
-    return new MetaSerdeHelper.FieldWriter<T>()
+    return new MetaSerdeHelper.FieldWriter<>()
     {
       @Override
       public void writeTo(ByteBuffer buffer, T x)
@@ -303,17 +305,30 @@ public class CompressionFactory
      */
     LongEncodingReader duplicate();
 
-    @SuppressWarnings("unused")
     LongEncodingStrategy getStrategy();
   }
 
+  /**
+   * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
+   * {@link SmooshedFileMapper}.
+   *
+   * @param totalSize      number of rows in the column
+   * @param sizePer        number of values per compression buffer, for compressed columns
+   * @param fromBuffer     primary buffer to read from
+   * @param order          byte order
+   * @param encodingFormat encoding of each long value
+   * @param strategy       compression strategy, for compressed columns
+   * @param smooshMapper   required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                       a single-file column. Generally, this should only be null in tests, not production code.
+   */
   public static Supplier<ColumnarLongs> getLongSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder order,
       LongEncodingFormat encodingFormat,
-      CompressionStrategy strategy
+      CompressionStrategy strategy,
+      @Nullable SmooshedFileMapper smooshMapper
   )
   {
     if (strategy == CompressionStrategy.NONE) {
@@ -325,7 +340,8 @@ public class CompressionFactory
           fromBuffer,
           order,
           encodingFormat.getReader(fromBuffer, order),
-          strategy
+          strategy,
+          smooshMapper
       );
     }
   }
@@ -364,6 +380,7 @@ public class CompressionFactory
             order,
             new LongsLongEncodingWriter(order),
             compressionStrategy,
+            GenericIndexedWriter.MAX_FILE_SIZE,
             closer
         );
       }
@@ -374,18 +391,31 @@ public class CompressionFactory
 
   // Float currently does not support any encoding types, and stores values as 4 byte float
 
+  /**
+   * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
+   * {@link SmooshedFileMapper}.
+   *
+   * @param totalSize    number of rows in the column
+   * @param sizePer      number of values per compression buffer, for compressed columns
+   * @param fromBuffer   primary buffer to read from
+   * @param order        byte order
+   * @param strategy     compression strategy, for compressed columns
+   * @param smooshMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                     a single-file column. Generally, this should only be null in tests, not production code.
+   */
   public static Supplier<ColumnarFloats> getFloatSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder order,
-      CompressionStrategy strategy
+      CompressionStrategy strategy,
+      @Nullable SmooshedFileMapper smooshMapper
   )
   {
     if (strategy == CompressionStrategy.NONE) {
       return new EntireLayoutColumnarFloatsSupplier(totalSize, fromBuffer, order);
     } else {
-      return new BlockLayoutColumnarFloatsSupplier(totalSize, sizePer, fromBuffer, order, strategy);
+      return new BlockLayoutColumnarFloatsSupplier(totalSize, sizePer, fromBuffer, order, strategy, smooshMapper);
     }
   }
 
@@ -407,26 +437,45 @@ public class CompressionFactory
           filenameBase,
           order,
           compressionStrategy,
+          GenericIndexedWriter.MAX_FILE_SIZE,
           closer
       );
     }
   }
 
+  /**
+   * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
+   * {@link SmooshedFileMapper}.
+   *
+   * @param totalSize    number of rows in the column
+   * @param sizePer      number of values per compression buffer, for compressed columns
+   * @param fromBuffer   primary buffer to read from
+   * @param byteOrder    byte order
+   * @param strategy     compression strategy, for compressed columns
+   * @param smooshMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                     a single-file column. Generally, this should only be null in tests, not production code.
+   */
   public static Supplier<ColumnarDoubles> getDoubleSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder byteOrder,
-      CompressionStrategy strategy
+      CompressionStrategy strategy,
+      SmooshedFileMapper smooshMapper
   )
   {
-    switch (strategy) {
-      case NONE:
-        return new EntireLayoutColumnarDoublesSupplier(totalSize, fromBuffer, byteOrder);
-      default:
-        return new BlockLayoutColumnarDoublesSupplier(totalSize, sizePer, fromBuffer, byteOrder, strategy);
+    if (strategy == CompressionStrategy.NONE) {
+      return new EntireLayoutColumnarDoublesSupplier(totalSize, fromBuffer, byteOrder);
+    } else {
+      return new BlockLayoutColumnarDoublesSupplier(
+          totalSize,
+          sizePer,
+          fromBuffer,
+          byteOrder,
+          strategy,
+          smooshMapper
+      );
     }
-
   }
 
   public static ColumnarDoublesSerializer getDoubleSerializer(
@@ -447,6 +496,7 @@ public class CompressionFactory
           filenameBase,
           byteOrder,
           compression,
+          GenericIndexedWriter.MAX_FILE_SIZE,
           closer
       );
     }

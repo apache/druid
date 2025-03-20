@@ -40,6 +40,7 @@ public class S3OutputConfig
   @JsonProperty
   private String prefix;
 
+  @Nullable
   @JsonProperty
   private File tempDir;
 
@@ -57,7 +58,7 @@ public class S3OutputConfig
   public S3OutputConfig(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
+      @JsonProperty(value = "tempDir") @Nullable File tempDir,
       @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
       @JsonProperty("maxRetry") Integer maxRetry
   )
@@ -69,6 +70,7 @@ public class S3OutputConfig
   protected S3OutputConfig(
       String bucket,
       String prefix,
+      @Nullable
       File tempDir,
       @Nullable
       HumanReadableBytes chunkSize,
@@ -120,6 +122,7 @@ public class S3OutputConfig
     return prefix;
   }
 
+  @Nullable
   public File getTempDir()
   {
     return tempDir;
@@ -133,6 +136,11 @@ public class S3OutputConfig
   public int getMaxRetry()
   {
     return maxRetry;
+  }
+
+  public S3OutputConfig withTempDir(File tempDir)
+  {
+    return new S3OutputConfig(bucket, prefix, tempDir, chunkSize, maxRetry);
   }
 
   private static void validateChunkSize(long chunkSize)

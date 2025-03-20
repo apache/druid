@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -193,35 +192,27 @@ public class SegmentManager
   /**
    * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
    * datasource of a single table.
-   *
-   * @param analysis data source analysis information
-   *
-   * @return timeline, if it exists
-   *
-   * @throws IllegalStateException if 'analysis' does not represent a scan-based datasource of a single table
    */
-  public Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> getTimeline(DataSourceAnalysis analysis)
+  public Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> getTimeline(TableDataSource dataSource)
   {
-    final TableDataSource tableDataSource = getTableDataSource(analysis);
-    return Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTimeline);
+    return Optional.ofNullable(dataSources.get(dataSource.getName())).map(DataSourceState::getTimeline);
   }
 
   /**
    * Returns the collection of {@link IndexedTable} for the entire timeline (since join conditions do not currently
    * consider the queries intervals), if the timeline exists for each of its segments that are joinable.
    */
-  public Optional<Stream<ReferenceCountingIndexedTable>> getIndexedTables(DataSourceAnalysis analysis)
+  public Optional<Stream<ReferenceCountingIndexedTable>> getIndexedTables(TableDataSource dataSource)
   {
-    return getTimeline(analysis).map(timeline -> {
+    return getTimeline(dataSource).map(timeline -> {
       // join doesn't currently consider intervals, so just consider all segments
       final Stream<ReferenceCountingSegment> segments =
           timeline.lookup(Intervals.ETERNITY)
                   .stream()
                   .flatMap(x -> StreamSupport.stream(x.getObject().payloads().spliterator(), false));
-      final TableDataSource tableDataSource = getTableDataSource(analysis);
       ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> tables =
-          Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTablesLookup)
-                  .orElseThrow(() -> new ISE("Datasource %s does not have IndexedTables", tableDataSource.getName()));
+          Optional.ofNullable(dataSources.get(dataSource.getName())).map(DataSourceState::getTablesLookup)
+                  .orElseThrow(() -> new ISE("dataSource[%s] does not have IndexedTables", dataSource.getName()));
       return segments.map(segment -> tables.get(segment.getId())).filter(Objects::nonNull);
     });
   }
@@ -232,12 +223,6 @@ public class SegmentManager
       return dataSources.get(dataSourceName).tablesLookup.size() > 0;
     }
     return false;
-  }
-
-  private TableDataSource getTableDataSource(DataSourceAnalysis analysis)
-  {
-    return analysis.getBaseTableDataSource()
-                   .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
   }
 
   /**
@@ -303,7 +288,7 @@ public class SegmentManager
     loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCache);
   }
 
-  private void loadSegment(
+  public void loadSegment(
       final DataSegment dataSegment,
       final ReferenceCountingSegment segment,
       final Consumer<DataSegment> pageCacheLoadFunction

@@ -23,7 +23,7 @@ import React from 'react';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { deepGet, pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { deepGet, getApiArray, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SegmentCounts {
@@ -62,11 +62,10 @@ WHERE is_active = 1`,
         const loadstatus = loadstatusResp.data;
         const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
-        const datasourcesMetaResp = await Api.instance.get(
+        const datasourcesMeta = await getApiArray(
           '/druid/coordinator/v1/datasources?simple',
-          { cancelToken },
+          cancelToken,
         );
-        const datasourcesMeta = datasourcesMetaResp.data;
         const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>
           deepGet(curr, 'properties.segments.count'),
         );

@@ -36,6 +36,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +46,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+@RunWith(Parameterized.class)
 public class SegmentAllocationQueueTest
 {
   @Rule
@@ -53,6 +56,26 @@ public class SegmentAllocationQueueTest
 
   private StubServiceEmitter emitter;
   private BlockingExecutorService executor;
+
+  private final boolean reduceMetadataIO;
+
+  @Parameterized.Parameters(name = "reduceMetadataIO = {0}, useSegmentCache = {1}")
+  public static Object[][] getTestParameters()
+  {
+    return new Object[][]{
+        {true, true},
+        {true, false},
+        {false, true},
+        {false, false}
+    };
+  }
+
+  public SegmentAllocationQueueTest(boolean reduceMetadataIO, boolean useSegmentMetadataCache)
+  {
+    this.reduceMetadataIO = reduceMetadataIO;
+
+    taskActionTestKit.setUseSegmentMetadataCache(useSegmentMetadataCache);
+  }
 
   @Before
   public void setUp()
@@ -72,6 +95,12 @@ public class SegmentAllocationQueueTest
       public long getBatchAllocationWaitTime()
       {
         return 0;
+      }
+
+      @Override
+      public boolean isBatchAllocationReduceMetadataIO()
+      {
+        return reduceMetadataIO;
       }
     };
 

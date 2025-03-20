@@ -24,34 +24,22 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import com.google.inject.name.Names;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
-import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.server.Server;
@@ -108,31 +96,25 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public DruidSchemaCatalog getLookupNodeService(QueryRunnerFactoryConglomerate conglomerate,
-        SpecificSegmentsQuerySegmentWalker walker, PlannerConfig plannerConfig)
+    public DruidConnectionExtras getConnectionExtras(
+        ObjectMapper objectMapper,
+        DruidHookDispatcher druidHookDispatcher,
+        @Named("isExplainSupported") Boolean isExplainSupported,
+        Injector injector
+    )
     {
-      return CalciteTests.createMockRootSchema(
-          conglomerate,
-          walker,
-          plannerConfig,
-          CalciteTests.TEST_AUTHORIZER_MAPPER
+      return new DruidConnectionExtras.DruidConnectionExtrasImpl(
+          objectMapper,
+          druidHookDispatcher,
+          isExplainSupported,
+          injector
       );
     }
 
     @Provides
     @LazySingleton
-    public DruidConnectionExtras getConnectionExtras(
-        ObjectMapper objectMapper,
-        DruidHookDispatcher druidHookDispatcher,
-        @Named("isExplainSupported") Boolean isExplainSupported
-    )
-    {
-      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher, isExplainSupported);
-    }
-
-    @Provides
-    @LazySingleton
-    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras) throws Exception
+    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras)
+        throws Exception
     {
       AvaticaJettyServer avaticaJettyServer = new AvaticaJettyServer(druidMeta, druidConnectionExtras);
       closer.register(avaticaJettyServer);
@@ -206,91 +188,30 @@ public class DruidAvaticaTestDriver implements Driver
     }
   }
 
-  static class AvaticaBasedTestConnectionSupplier implements QueryComponentSupplier
+  static class AvaticaBasedTestConnectionSupplier extends QueryComponentSupplierDelegate
   {
-    private QueryComponentSupplier delegate;
     private AvaticaBasedConnectionModule connectionModule;
 
     public AvaticaBasedTestConnectionSupplier(QueryComponentSupplier delegate)
     {
-      this.delegate = delegate;
+      super(delegate);
       this.connectionModule = new AvaticaBasedConnectionModule();
     }
 
     @Override
-    public void gatherProperties(Properties properties)
+    public DruidModule getOverrideModule()
     {
-      delegate.gatherProperties(properties);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      delegate.configureGuice(builder);
-      builder.addModule(connectionModule);
-      builder.addModule(
-          binder -> {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-          }
+      return DruidModuleCollection.of(
+          super.getOverrideModule(),
+          connectionModule
       );
-    }
-
-    @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer, ObjectMapper jsonMapper)
-    {
-      return delegate.createCongolmerate(builder, closer, jsonMapper);
-    }
-
-    @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory, Injector injector)
-    {
-      return delegate.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
-    }
-
-    @Override
-    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper objectMapper, Injector injector)
-    {
-      return delegate.createEngine(qlf, objectMapper, injector);
-    }
-
-    @Override
-    public void configureJsonMapper(ObjectMapper mapper)
-    {
-      delegate.configureJsonMapper(mapper);
-    }
-
-    @Override
-    public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
-    {
-      return delegate.createJoinableFactoryWrapper(lookupProvider);
-    }
-
-    @Override
-    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
-    {
-      delegate.finalizeTestFramework(sqlTestFramework);
     }
 
     @Override
     public void close() throws IOException
     {
       connectionModule.close();
-      delegate.close();
-    }
-
-    @Override
-    public PlannerComponentSupplier getPlannerComponentSupplier()
-    {
-      return delegate.getPlannerComponentSupplier();
-    }
-
-    @Override
-    public Boolean isExplainSupported()
-    {
-      return delegate.isExplainSupported();
+      super.close();
     }
   }
 

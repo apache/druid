@@ -142,33 +142,6 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
   public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
       ByteBuffer buffer,
-      ByteOrder order
-  )
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (versionFromBuffer == VERSION) {
-      final int numBytes = buffer.get();
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
-
-      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
-
-      return new CompressedVSizeColumnarIntsSupplier(
-          totalSize,
-          sizePer,
-          numBytes,
-          GenericIndexed.read(buffer, DecompressingByteBufferObjectStrategy.of(order, compression)),
-          compression
-      );
-
-    }
-
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
-      ByteBuffer buffer,
       ByteOrder order,
       SmooshedFileMapper mapper
   )
@@ -219,12 +192,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
         chunkFactor,
         numBytes,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   int position = 0;
                   private final ByteBuffer retVal =
@@ -308,7 +281,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     }
   }
 
-  private class CompressedVSizeColumnarInts implements ColumnarInts
+  public class CompressedVSizeColumnarInts implements ColumnarInts
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedBuffers = baseBuffers.singleThreaded();
 
@@ -327,6 +300,11 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     public int size()
     {
       return totalSize;
+    }
+
+    public CompressionStrategy getCompressionStrategy()
+    {
+      return compression;
     }
 
     /**

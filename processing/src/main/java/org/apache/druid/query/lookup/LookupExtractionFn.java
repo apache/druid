@@ -46,7 +46,7 @@ public class LookupExtractionFn extends FunctionalExtraction
   )
   {
     super(
-        new Function<String, String>()
+        new Function<>()
         {
           @Nullable
           @Override

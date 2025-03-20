@@ -35,11 +35,13 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
@@ -57,6 +59,7 @@ public class DruidOverlord
 
   private final DruidLeaderSelector overlordLeaderSelector;
   private final DruidLeaderSelector.Listener leadershipListener;
+  private final SegmentMetadataCache segmentMetadataCache;
 
   private final ReentrantLock giant = new ReentrantLock(true);
 
@@ -88,12 +91,15 @@ public class DruidOverlord
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
+      final SegmentMetadataCache segmentMetadataCache,
       final CompactionScheduler compactionScheduler,
+      final ScheduledBatchTaskManager scheduledBatchTaskManager,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )
   {
     this.overlordLeaderSelector = overlordLeaderSelector;
+    this.segmentMetadataCache = segmentMetadataCache;
 
     final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
                            selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
@@ -106,7 +112,7 @@ public class DruidOverlord
         giant.lock();
 
         // I AM THE MASTER OF THE UNIVERSE.
-        log.info("By the power of Grayskull, I have the power!");
+        log.info("By the power of Grayskull, I have the power. I am the leader");
 
         try {
           final TaskRunner taskRunner = runnerFactory.build();
@@ -130,8 +136,29 @@ public class DruidOverlord
                .emit();
           }
 
+          // First add "half leader" services: everything required for APIs except the supervisor manager.
+          // Then, become "half leader" so those APIs light up and supervisor initialization can proceed.
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler() {
+                @Override
+                public void start()
+                {
+                  segmentMetadataCache.becomeLeader();
+                  segmentAllocationQueue.becomeLeader();
+                  taskMaster.becomeHalfLeader(taskRunner, taskQueue);
+                }
+
+                @Override
+                public void stop()
+                {
+                  taskMaster.stopBeingLeader();
+                  segmentAllocationQueue.stopBeingLeader();
+                  segmentMetadataCache.stopBeingLeader();
+                }
+              }
+          );
           leaderLifecycle.addManagedInstance(supervisorManager);
           leaderLifecycle.addManagedInstance(overlordDutyExecutor);
           leaderLifecycle.addHandler(
@@ -140,9 +167,9 @@ public class DruidOverlord
                 @Override
                 public void start()
                 {
-                  segmentAllocationQueue.becomeLeader();
-                  taskMaster.becomeLeader(taskRunner, taskQueue);
+                  taskMaster.becomeFullLeader();
                   compactionScheduler.start();
+                  scheduledBatchTaskManager.start();
 
                   // Announce the node only after all the services have been initialized
                   initialized = true;
@@ -153,9 +180,9 @@ public class DruidOverlord
                 public void stop()
                 {
                   serviceAnnouncer.unannounce(node);
+                  scheduledBatchTaskManager.stop();
                   compactionScheduler.stop();
-                  taskMaster.stopBeingLeader();
-                  segmentAllocationQueue.stopBeingLeader();
+                  taskMaster.downgradeToHalfLeader();
                 }
               }
           );
@@ -176,6 +203,7 @@ public class DruidOverlord
         giant.lock();
         try {
           initialized = false;
+          log.info("I am no longer the leader...");
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
 
           if (leaderLifecycle != null) {
@@ -199,6 +227,7 @@ public class DruidOverlord
     giant.lock();
 
     try {
+      segmentMetadataCache.start();
       overlordLeaderSelector.registerListener(leadershipListener);
     }
     finally {
@@ -218,6 +247,7 @@ public class DruidOverlord
     try {
       gracefulStopLeaderLifecycle();
       overlordLeaderSelector.unregisterListener();
+      segmentMetadataCache.stop();
     }
     finally {
       giant.unlock();

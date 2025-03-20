@@ -79,7 +79,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -335,13 +334,13 @@ public class QueryRunnerTestHelper
   // simple cartesian iterable
   public static Iterable<Object[]> cartesian(final Iterable... iterables)
   {
-    return new Iterable<Object[]>()
+    return new Iterable<>()
     {
 
       @Override
       public Iterator<Object[]> iterator()
       {
-        return new Iterator<Object[]>()
+        return new Iterator<>()
         {
           private final Iterator[] iterators = new Iterator[iterables.length];
           private final Object[] cached = new Object[iterables.length];
@@ -399,6 +398,7 @@ public class QueryRunnerTestHelper
   {
     final String runnerName = runner.toString();
     return !("rtIndex".equals(runnerName)
+             || "rtIndexPartialSchemaStringDiscovery".equals(runnerName)
              || "noRollupRtIndex".equals(runnerName)
              || "nonTimeOrderedRtIndex".equals(runnerName)
              || "nonTimeOrderedNoRollupRtIndex".equals(runnerName));
@@ -424,6 +424,10 @@ public class QueryRunnerTestHelper
         Arrays.asList(
             maker.apply(
                 "rtIndex",
+                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "rtIndexPartialSchemaStringDiscovery",
                 new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
             ),
             maker.apply(
@@ -520,20 +524,6 @@ public class QueryRunnerTestHelper
 
   public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String resourceFileName,
-      final String runnerName
-  )
-  {
-    return makeQueryRunner(
-        factory,
-        SEGMENT_ID,
-        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), SEGMENT_ID),
-        runnerName
-    );
-  }
-
-  public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
-      QueryRunnerFactory<T, QueryType> factory,
       Segment adapter,
       final String runnerName
   )
@@ -568,7 +558,7 @@ public class QueryRunnerTestHelper
   {
     final DataSource base = query.getDataSource();
 
-    final SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
+    final SegmentReference segmentReference = base.createSegmentMapFunction(query)
                                                   .apply(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
     return makeQueryRunner(factory, segmentReference, runnerName);
   }

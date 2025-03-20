@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { InputGroupProps2 } from '@blueprintjs/core';
+import type { InputGroupProps } from '@blueprintjs/core';
 import { InputGroup, Intent, TextArea, Tooltip } from '@blueprintjs/core';
 import classNames from 'classnames';
 import React, { useState } from 'react';
@@ -25,7 +25,7 @@ import type { Formatter } from '../../utils';
 
 import './formatted-input.scss';
 
-export interface FormattedInputProps extends InputGroupProps2 {
+export interface FormattedInputProps extends InputGroupProps {
   formatter: Formatter<any>;
   onValueChange: (newValue: undefined | string) => void;
   sanitizer?: (rawValue: string) => string;

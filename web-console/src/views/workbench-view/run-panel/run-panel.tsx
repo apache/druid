@@ -33,7 +33,12 @@ import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { ENABLE_DISABLE_OPTIONS_TEXT, MenuBoolean, MenuCheckbox } from '../../../components';
+import {
+  ENABLED_DISABLED_OPTIONS_TEXT,
+  MenuBoolean,
+  MenuCheckbox,
+  TimezoneMenuItems,
+} from '../../../components';
 import { EditContextDialog, StringInputDialog } from '../../../dialogs';
 import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-dialog';
 import type {
@@ -53,28 +58,6 @@ import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 import { QueryParametersDialog } from '../query-parameters-dialog/query-parameters-dialog';
 
 import './run-panel.scss';
-
-const NAMED_TIMEZONES: string[] = [
-  'America/Juneau', // -9.0
-  'America/Los_Angeles', // -8.0
-  'America/Yellowknife', // -7.0
-  'America/Phoenix', // -7.0
-  'America/Denver', // -7.0
-  'America/Mexico_City', // -6.0
-  'America/Chicago', // -6.0
-  'America/New_York', // -5.0
-  'America/Argentina/Buenos_Aires', // -4.0
-  'Etc/UTC', // +0.0
-  'Europe/London', // +0.0
-  'Europe/Paris', // +1.0
-  'Asia/Jerusalem', // +2.0
-  'Asia/Shanghai', // +8.0
-  'Asia/Hong_Kong', // +8.0
-  'Asia/Seoul', // +9.0
-  'Asia/Tokyo', // +9.0
-  'Pacific/Guam', // +10.0
-  'Australia/Sydney', // +11.0
-];
 
 const ARRAY_INGEST_MODE_LABEL: Record<ArrayIngestMode, string> = {
   array: 'Array',
@@ -314,25 +297,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     onQueryChange(query.changeQueryContext(removeUndefinedValues(queryContext)));
   }
 
-  function offsetOptions(): JSX.Element[] {
-    const items: JSX.Element[] = [];
-
-    for (let i = -12; i <= 14; i++) {
-      const offset = `${i < 0 ? '-' : '+'}${String(Math.abs(i)).padStart(2, '0')}:00`;
-      items.push(
-        <MenuItem
-          key={offset}
-          icon={tickIcon(offset === sqlTimeZone)}
-          text={offset}
-          shouldDismissPopover={false}
-          onClick={() => changeQueryContext({ ...queryContext, sqlTimeZone: offset })}
-        />,
-      );
-    }
-
-    return items;
-  }
-
   const overloadWarning =
     query.unlimited &&
     (queryEngine === 'sql-native' ||
@@ -425,31 +389,13 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     label={sqlTimeZone ?? defaultQueryContext.sqlTimeZone}
                   >
                     <MenuDivider title="Timezone type" />
-                    <MenuItem
-                      icon={tickIcon(!sqlTimeZone)}
-                      text="Default"
-                      label={defaultQueryContext.sqlTimeZone}
-                      shouldDismissPopover={false}
-                      onClick={() =>
-                        changeQueryContext({ ...queryContext, sqlTimeZone: undefined })
+                    <TimezoneMenuItems
+                      sqlTimeZone={sqlTimeZone}
+                      setSqlTimeZone={sqlTimeZone =>
+                        changeQueryContext({ ...queryContext, sqlTimeZone })
                       }
+                      defaultSqlTimeZone={defaultQueryContext.sqlTimeZone}
                     />
-                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes('/'))} text="Named">
-                      {NAMED_TIMEZONES.map(namedTimezone => (
-                        <MenuItem
-                          key={namedTimezone}
-                          icon={tickIcon(namedTimezone === sqlTimeZone)}
-                          text={namedTimezone}
-                          shouldDismissPopover={false}
-                          onClick={() =>
-                            changeQueryContext({ ...queryContext, sqlTimeZone: namedTimezone })
-                          }
-                        />
-                      ))}
-                    </MenuItem>
-                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes(':'))} text="Offset">
-                      {offsetOptions()}
-                    </MenuItem>
                     <MenuItem
                       icon={IconNames.BLANK}
                       text="Custom"
@@ -468,7 +414,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         useApproximateCountDistinct,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('approximate-top-n') && (
@@ -482,7 +428,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         useApproximateTopN,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('join-algorithm') && (
@@ -519,7 +465,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       onValueChange={failOnEmptyInsert =>
                         changeQueryContext({ ...queryContext, failOnEmptyInsert })
                       }
-                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                      optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     />
                     <MenuBoolean
                       text="Wait until segments have loaded"
@@ -529,7 +475,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       onValueChange={waitUntilSegmentsLoad =>
                         changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
                       }
-                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                      optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     />
                     <MenuItem text="Max parse exceptions" label={String(maxParseExceptions)}>
                       {[0, 1, 5, 10, 1000, 10000, -1].map(v => (
@@ -565,7 +511,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     onValueChange={finalizeAggregations =>
                       changeQueryContext({ ...queryContext, finalizeAggregations })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('group-by-enable-multi-value-unnesting') && (
@@ -578,7 +524,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     onValueChange={groupByEnableMultiValueUnnesting =>
                       changeQueryContext({ ...queryContext, groupByEnableMultiValueUnnesting })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
 
@@ -594,7 +540,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         populateCache: useCache,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('limit-inline-results') && (
@@ -622,7 +568,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         durableShuffleStorage,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('select-destination') && (

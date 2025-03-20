@@ -57,6 +57,7 @@ public class BlockLayoutColumnarFloatsSerializer implements ColumnarFloatsSerial
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression,
+      int fileSizeLimit,
       Closer closer
   )
   {
@@ -66,6 +67,7 @@ public class BlockLayoutColumnarFloatsSerializer implements ColumnarFloatsSerial
         filenameBase,
         compression,
         CompressedPools.BUFFER_SIZE,
+        fileSizeLimit,
         closer
     );
     this.compression = compression;

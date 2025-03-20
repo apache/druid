@@ -163,7 +163,7 @@ public class CloseableIteratorTest
 
   private static CloseableIterator<List<Integer>> generateTestIterator(int numIterates)
   {
-    return new CloseableIterator<List<Integer>>()
+    return new CloseableIterator<>()
     {
       private int cnt = 0;
 

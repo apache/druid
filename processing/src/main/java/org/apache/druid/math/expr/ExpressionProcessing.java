@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 
 /**
- * Like {@link org.apache.druid.common.config.NullHandling}, except for expressions processing configs
+ * Expressions processing configs
  */
 public class ExpressionProcessing
 {
@@ -49,12 +49,6 @@ public class ExpressionProcessing
   }
 
   @VisibleForTesting
-  public static void initializeForStrictBooleansTests(boolean useStrict)
-  {
-    INSTANCE = new ExpressionProcessingConfig(useStrict, null, null, null);
-  }
-
-  @VisibleForTesting
   public static void initializeForHomogenizeNullMultiValueStrings()
   {
     INSTANCE = new ExpressionProcessingConfig(null, null, true, null);
@@ -64,15 +58,6 @@ public class ExpressionProcessing
   public static void initializeForFallback()
   {
     INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
-  }
-
-  /**
-   * All boolean expressions are {@link ExpressionType#LONG}
-   */
-  public static boolean useStrictBooleans()
-  {
-    checkInitialized();
-    return INSTANCE.isUseStrictBooleans();
   }
 
   /**

@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -61,7 +62,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskGranularityConfig granularitySpec;
   private final UserCompactionTaskDimensionsConfig dimensionsSpec;
   private final AggregatorFactory[] metricsSpec;
-  private final UserCompactionTaskTransformConfig transformSpec;
+  private final CompactionTransformSpec transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
   private final CompactionEngine engine;
@@ -77,7 +78,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
       @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
-      @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
+      @JsonProperty("transformSpec") @Nullable CompactionTransformSpec transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
@@ -164,7 +165,7 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public UserCompactionTaskTransformConfig getTransformSpec()
+  public CompactionTransformSpec getTransformSpec()
   {
     return transformSpec;
   }
@@ -254,7 +255,7 @@ public class DataSourceCompactionConfig
     private UserCompactionTaskGranularityConfig granularitySpec;
     private UserCompactionTaskDimensionsConfig dimensionsSpec;
     private AggregatorFactory[] metricsSpec;
-    private UserCompactionTaskTransformConfig transformSpec;
+    private CompactionTransformSpec transformSpec;
     private UserCompactionTaskIOConfig ioConfig;
     private CompactionEngine engine;
     private Map<String, Object> taskContext;
@@ -340,7 +341,7 @@ public class DataSourceCompactionConfig
     }
 
     public Builder withTransformSpec(
-        UserCompactionTaskTransformConfig transformSpec
+        CompactionTransformSpec transformSpec
     )
     {
       this.transformSpec = transformSpec;

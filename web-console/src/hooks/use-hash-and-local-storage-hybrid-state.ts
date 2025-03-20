@@ -18,7 +18,7 @@
 
 import * as JSONBig from 'json-bigint-native';
 import type { Dispatch, SetStateAction } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import type { LocalStorageKeys } from '../utils';
 import {
@@ -27,6 +27,8 @@ import {
   localStorageGetJson,
   localStorageSetJson,
 } from '../utils';
+
+import { useGlobalEventListener } from './use-global-event-listener';
 
 function encodeHashState(prefix: string, x: unknown): string {
   return prefix + base64UrlEncode(JSONBig.stringify(x));
@@ -63,22 +65,13 @@ export function useHashAndLocalStorageHybridState<T>(
   };
 
   // Listen for "popstate" event (triggered by browser back/forward navigation)
-  useEffect(() => {
-    const handlePopState = () => {
-      const valueToInflate = decodeHashState(prefix, window.location.hash);
-      if (typeof valueToInflate === 'undefined') return;
-      const value = inflateFn ? inflateFn(valueToInflate) : valueToInflate;
-      setState(value);
-      localStorageSetJson(key, value);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useGlobalEventListener('popstate', () => {
+    const valueToInflate = decodeHashState(prefix, window.location.hash);
+    if (typeof valueToInflate === 'undefined') return;
+    const value = inflateFn ? inflateFn(valueToInflate) : valueToInflate;
+    setState(value);
+    localStorageSetJson(key, value);
+  });
 
   return [state, setValue];
 }

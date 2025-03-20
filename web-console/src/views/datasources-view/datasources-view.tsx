@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { FormGroup, InputGroup, Intent, MenuItem, Switch, Tag } from '@blueprintjs/core';
+import { Button, FormGroup, InputGroup, Intent, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery, T } from '@druid-toolkit/query';
-import classNames from 'classnames';
 import { sum } from 'd3-array';
+import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
@@ -34,6 +33,7 @@ import {
   MoreButton,
   RefreshButton,
   SegmentTimeline,
+  SplitterLayout,
   TableClickableCell,
   TableColumnSelector,
   type TableColumnSelectorColumn,
@@ -51,8 +51,16 @@ import type {
   CompactionInfo,
   CompactionStatus,
   QueryWithContext,
+  Rule,
 } from '../../druid-models';
-import { formatCompactionInfo, zeroCompactionStatus } from '../../druid-models';
+import {
+  END_OF_TIME_DATE,
+  formatCompactionInfo,
+  getDatasourceColor,
+  RuleUtil,
+  START_OF_TIME_DATE,
+  zeroCompactionStatus,
+} from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
@@ -62,13 +70,15 @@ import {
   compact,
   countBy,
   deepGet,
+  findMap,
   formatBytes,
   formatInteger,
   formatMillions,
   formatPercent,
+  getApiArray,
   getDruidErrorMessage,
   groupByAsMap,
-  hasPopoverOpen,
+  hasOverlayOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -82,8 +92,6 @@ import {
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
-import type { Rule } from '../../utils/load-rule';
-import { RuleUtil } from '../../utils/load-rule';
 
 import './datasources-view.scss';
 
@@ -130,8 +138,6 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Replicated size',
   ],
 };
-
-const DEFAULT_RULES_KEY = '_default';
 
 function formatLoadDrop(segmentsToLoad: NumberLike, segmentsToDrop: NumberLike): string {
   const loadDrop: string[] = [];
@@ -240,6 +246,7 @@ interface DatasourcesAndDefaultRules {
 interface RetentionDialogOpenOn {
   readonly datasource: string;
   readonly rules: Rule[];
+  readonly defaultRules: Rule[];
 }
 
 interface CompactionConfigDialogOpenOn {
@@ -299,7 +306,12 @@ export interface DatasourcesViewProps {
   onFiltersChange(filters: Filter[]): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToTasks(datasource?: string): void;
-  goToSegments(datasource: string, onlyUnavailable?: boolean): void;
+  goToSegments(options: {
+    start?: Date;
+    end?: Date;
+    datasource?: string;
+    realtime?: boolean;
+  }): void;
   capabilities: Capabilities;
 }
 
@@ -317,7 +329,7 @@ export interface DatasourcesViewState {
   useUnuseInterval: string;
   showForceCompact: boolean;
   visibleColumns: LocalStorageBackedVisibility;
-  showSegmentTimeline: boolean;
+  showSegmentTimeline?: { capabilities: Capabilities; datasource?: string };
 
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
@@ -362,7 +374,7 @@ export class DatasourcesView extends React.PureComponent<
           `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
           `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
           `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
-          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" = '${START_OF_TIME_DATE}' AND "end" = '${END_OF_TIME_DATE}') AS all_granularity_segments`,
         ],
         visibleColumns.shown('Total rows') &&
           `SUM("num_rows") FILTER (WHERE is_active = 1) AS total_rows`,
@@ -418,7 +430,6 @@ GROUP BY 1, 2`;
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
         ['Segment size', 'Segment granularity'],
       ),
-      showSegmentTimeline: false,
 
       actions: [],
     };
@@ -435,15 +446,15 @@ GROUP BY 1, 2`;
           setIntermediateQuery(query);
           datasources = await queryDruidSql({ query }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
-          const datasourcesResp = await Api.instance.get(
+          const datasourcesResp = await getApiArray(
             '/druid/coordinator/v1/datasources?simple',
-            { cancelToken },
+            cancelToken,
           );
           const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple', {
             cancelToken,
           });
           const loadstatus = loadstatusResp.data;
-          datasources = datasourcesResp.data.map((d: any): DatasourceQueryResultRow => {
+          datasources = datasourcesResp.map((d: any): DatasourceQueryResultRow => {
             const totalDataSize = deepGet(d, 'properties.segments.size') || -1;
             const segmentsToLoad = Number(loadstatus[d.name] || 0);
             const availableSegments = Number(deepGet(d, 'properties.segments.count'));
@@ -521,9 +532,10 @@ GROUP BY 1, 2`;
           if (capabilities.hasOverlordAccess()) {
             auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
               try {
-                const taskList = (
-                  await Api.instance.get(`/druid/indexer/v1/tasks?state=running`, { cancelToken })
-                ).data;
+                const taskList = await getApiArray(
+                  `/druid/indexer/v1/tasks?state=running`,
+                  cancelToken,
+                );
 
                 const runningTasksByDatasource = groupByAsMap(
                   taskList,
@@ -562,10 +574,10 @@ GROUP BY 1, 2`;
           if (showUnused) {
             try {
               unused = (
-                await Api.instance.get<string[]>(
+                await getApiArray<string>(
                   '/druid/coordinator/v1/metadata/datasources?includeUnused',
                 )
-              ).data.filter(d => !seen[d]);
+              ).filter(d => !seen[d]);
             } catch {
               AppToaster.show({
                 icon: IconNames.ERROR,
@@ -578,7 +590,7 @@ GROUP BY 1, 2`;
           // Rules
           auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
             try {
-              const rules: Record<string, Rule[]> = (
+              const rules = (
                 await Api.instance.get<Record<string, Rule[]>>('/druid/coordinator/v1/rules', {
                   cancelToken,
                 })
@@ -589,7 +601,7 @@ GROUP BY 1, 2`;
                   ...ds,
                   rules: rules[ds.datasource] || [],
                 })),
-                defaultRules: rules[DEFAULT_RULES_KEY],
+                defaultRules: rules[RuleUtil.DEFAULT_RULES_KEY],
               };
             } catch {
               AppToaster.show({
@@ -657,8 +669,19 @@ GROUP BY 1, 2`;
   }
 
   private readonly refresh = (auto: boolean): void => {
-    if (auto && hasPopoverOpen()) return;
+    if (auto && hasOverlayOpen()) return;
     this.datasourceQueryManager.rerunLastQuery(auto);
+
+    const { showSegmentTimeline } = this.state;
+    if (showSegmentTimeline) {
+      // Create a new capabilities object to force the segment timeline to re-render
+      this.setState(({ showSegmentTimeline }) => ({
+        showSegmentTimeline: {
+          ...showSegmentTimeline,
+          capabilities: this.props.capabilities.clone(),
+        },
+      }));
+    }
   };
 
   private fetchDatasourceData() {
@@ -846,9 +869,9 @@ GROUP BY 1, 2`;
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            disabled={!lastDatasourcesQuery}
+            disabled={typeof lastDatasourcesQuery !== 'string'}
             onClick={() => {
-              if (!lastDatasourcesQuery) return;
+              if (typeof lastDatasourcesQuery !== 'string') return;
               goToQuery({ queryString: lastDatasourcesQuery });
             }}
           />
@@ -921,6 +944,7 @@ GROUP BY 1, 2`;
           retentionDialogOpenOn: {
             datasource: '_default',
             rules: defaultRules,
+            defaultRules,
           },
         };
       });
@@ -1030,10 +1054,13 @@ GROUP BY 1, 2`;
             icon: IconNames.AUTOMATIC_UPDATES,
             title: 'Edit retention rules',
             onAction: () => {
+              const defaultRules = this.state.datasourcesAndDefaultRulesState.data?.defaultRules;
+              if (!defaultRules) return;
               this.setState({
                 retentionDialogOpenOn: {
                   datasource,
                   rules: rules || [],
+                  defaultRules,
                 },
               });
             },
@@ -1097,9 +1124,8 @@ GROUP BY 1, 2`;
 
   private renderRetentionDialog() {
     const { capabilities } = this.props;
-    const { retentionDialogOpenOn, datasourcesAndDefaultRulesState } = this.state;
-    const defaultRules = datasourcesAndDefaultRulesState.data?.defaultRules;
-    if (!retentionDialogOpenOn || !defaultRules) return;
+    const { retentionDialogOpenOn } = this.state;
+    if (!retentionDialogOpenOn) return;
 
     return (
       <RetentionDialog
@@ -1107,7 +1133,7 @@ GROUP BY 1, 2`;
         rules={retentionDialogOpenOn.rules}
         capabilities={capabilities}
         onEditDefaults={this.editDefaultRules}
-        defaultRules={defaultRules}
+        defaultRules={retentionDialogOpenOn.defaultRules}
         onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}
         onSave={this.saveRules}
       />
@@ -1139,8 +1165,9 @@ GROUP BY 1, 2`;
   }
 
   private renderDatasourcesTable() {
-    const { goToSegments, goToTasks, capabilities, filters, onFiltersChange } = this.props;
-    const { datasourcesAndDefaultRulesState, showUnused, visibleColumns } = this.state;
+    const { goToTasks, capabilities, filters, onFiltersChange } = this.props;
+    const { datasourcesAndDefaultRulesState, showUnused, visibleColumns, showSegmentTimeline } =
+      this.state;
 
     let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data || { datasources: [] };
 
@@ -1194,12 +1221,19 @@ GROUP BY 1, 2`;
             show: visibleColumns.shown('Datasource name'),
             accessor: 'datasource',
             width: 150,
-            Cell: row => (
+            Cell: ({ value, original }) => (
               <TableClickableCell
-                onClick={() => this.onDetail(row.original)}
+                onClick={() => this.onDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
+                tooltip="Show detail"
               >
-                {row.value}
+                {showSegmentTimeline ? (
+                  <>
+                    <span style={{ color: getDatasourceColor(value) }}>&#9632;</span> {value}
+                  </>
+                ) : (
+                  value
+                )}
               </TableClickableCell>
             ),
           },
@@ -1225,7 +1259,12 @@ GROUP BY 1, 2`;
               const hasZeroReplicationRule = RuleUtil.hasZeroReplicaRule(rules, defaultRules);
               const descriptor = hasZeroReplicationRule ? 'pre-cached' : 'available';
               const segmentsEl = (
-                <a onClick={() => goToSegments(datasource)}>
+                <a
+                  onClick={() =>
+                    this.setState({ showSegmentTimeline: { capabilities, datasource } })
+                  }
+                  data-tooltip="Show in segment timeline"
+                >
                   {pluralIfNeeded(num_segments, 'segment')}
                 </a>
               );
@@ -1318,7 +1357,7 @@ GROUP BY 1, 2`;
                 <TableClickableCell
                   onClick={() => goToTasks(original.datasource)}
                   hoverIcon={IconNames.ARROW_TOP_RIGHT}
-                  title="Go to tasks"
+                  tooltip="Go to tasks"
                 >
                   {formatRunningTasks(runningTasks)}
                 </TableClickableCell>
@@ -1498,6 +1537,7 @@ GROUP BY 1, 2`;
               if (!compaction) return;
               return (
                 <TableClickableCell
+                  tooltip="Open compaction configuration"
                   disabled={!compaction}
                   onClick={() => {
                     if (!compaction) return;
@@ -1614,6 +1654,7 @@ GROUP BY 1, 2`;
 
               return (
                 <TableClickableCell
+                  tooltip="Open retention (load rule) configuration"
                   disabled={!defaultRules}
                   onClick={() => {
                     if (!defaultRules) return;
@@ -1621,6 +1662,7 @@ GROUP BY 1, 2`;
                       retentionDialogOpenOn: {
                         datasource,
                         rules,
+                        defaultRules,
                       },
                     });
                   }}
@@ -1668,7 +1710,7 @@ GROUP BY 1, 2`;
   }
 
   render() {
-    const { capabilities } = this.props;
+    const { capabilities, filters, goToSegments } = this.props;
     const {
       showUnused,
       visibleColumns,
@@ -1678,16 +1720,10 @@ GROUP BY 1, 2`;
     } = this.state;
 
     return (
-      <div
-        className={classNames('datasources-view app-view', {
-          'show-segment-timeline': showSegmentTimeline,
-        })}
-      >
+      <div className="datasources-view app-view">
         <ViewControlBar label="Datasources">
           <RefreshButton
-            onRefresh={auto => {
-              this.refresh(auto);
-            }}
+            onRefresh={this.refresh}
             localStorageKey={LocalStorageKeys.DATASOURCES_REFRESH_RATE}
           />
           {this.renderBulkDatasourceActions()}
@@ -1698,9 +1734,22 @@ GROUP BY 1, 2`;
             disabled={!capabilities.hasCoordinatorAccess()}
           />
           <Switch
-            checked={showSegmentTimeline}
+            checked={Boolean(showSegmentTimeline)}
             label="Show segment timeline"
-            onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
+            onChange={() =>
+              this.setState({
+                showSegmentTimeline: showSegmentTimeline
+                  ? undefined
+                  : {
+                      capabilities,
+                      datasource: findMap(filters, filter =>
+                        filter.id === 'datasource' && /^=[^=|]+$/.exec(String(filter.value))
+                          ? filter.value.slice(1)
+                          : undefined,
+                      ),
+                    },
+              })
+            }
             disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
           <TableColumnSelector
@@ -1717,8 +1766,33 @@ GROUP BY 1, 2`;
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
-        {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
-        {this.renderDatasourcesTable()}
+        <SplitterLayout
+          className="timeline-datasources-splitter"
+          vertical
+          percentage
+          secondaryInitialSize={35}
+          primaryIndex={1}
+          primaryMinSize={20}
+          secondaryMinSize={10}
+        >
+          {showSegmentTimeline && (
+            <SegmentTimeline
+              capabilities={showSegmentTimeline.capabilities}
+              datasource={showSegmentTimeline.datasource}
+              getIntervalActionButton={(start, end, datasource, realtime) => {
+                return (
+                  <Button
+                    text="Open in segments view"
+                    small
+                    rightIcon={IconNames.ARROW_TOP_RIGHT}
+                    onClick={() => goToSegments({ start, end, datasource, realtime })}
+                  />
+                );
+              }}
+            />
+          )}
+          {this.renderDatasourcesTable()}
+        </SplitterLayout>
         {datasourceTableActionDialogId && (
           <DatasourceTableActionDialog
             datasource={datasourceTableActionDialogId}

@@ -100,7 +100,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
 
     List<WindowedCursorFactory> adapters = Lists.transform(
         segments,
-        new Function<WindowedDataSegment, WindowedCursorFactory>()
+        new Function<>()
         {
           @Override
           public WindowedCursorFactory apply(WindowedDataSegment segment)
@@ -205,7 +205,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
       Sequence<InputRow> rows = Sequences.concat(
           Iterables.transform(
               cursorFactories,
-              new Function<WindowedCursorFactory, Sequence<InputRow>>()
+              new Function<>()
               {
                 @Nullable
                 @Override
@@ -247,7 +247,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
                         @Override
                         public Iterator<InputRow> iterator()
                         {
-                          return new Iterator<InputRow>()
+                          return new Iterator<>()
                           {
                             @Override
                             public boolean hasNext()

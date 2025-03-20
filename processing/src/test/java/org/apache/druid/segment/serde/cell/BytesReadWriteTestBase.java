@@ -206,7 +206,7 @@ public abstract class BytesReadWriteTestBase implements BytesReadWriteTest
 
     List<ByteBuffer> bufferList = testHelper.generateRaggedPayloadBuffer(100, 1024, 10, 0, 0, 10);
 
-    testHelper.setByteBufferProvider(() -> new ResourceHolder<ByteBuffer>()
+    testHelper.setByteBufferProvider(() -> new ResourceHolder<>()
     {
       @Override
       public ByteBuffer get()

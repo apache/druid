@@ -132,6 +132,7 @@ exports[`ServicesView renders data 1`] = `
         },
         {
           "Cell": [Function],
+          "Filter": [Function],
           "Header": "Type",
           "accessor": "service_type",
           "show": true,

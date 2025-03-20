@@ -19,11 +19,6 @@
 import { nonEmptyArray } from '../../../utils';
 import type { ParameterDefinition } from '../models';
 
-export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean): T[] {
-  const e = eq || ((a, b) => a === b);
-  return xs.find(_ => e(_, x)) ? xs.filter(d => !e(d, x)) : xs.concat([x]);
-}
-
 export function normalizeType(paramType: ParameterDefinition['type']): ParameterDefinition['type'] {
   switch (paramType) {
     case 'expressions':

@@ -130,7 +130,6 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
             return 0L;
           }
         },
-        queryToolChestWarehouse,
         new ServerConfig(),
         new NoopServiceEmitter(),
         conglomerate,

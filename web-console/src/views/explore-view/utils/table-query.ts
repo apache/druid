@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import type { SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable } from '@druid-toolkit/query';
+import { Duration } from 'chronoshift';
+import type { SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -28,14 +29,13 @@ import {
   SqlType,
   SqlWithPart,
   T,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import type { ColumnHint } from '../../../utils';
 import { forceSignInNumberFormatter, formatNumber, formatPercent } from '../../../utils';
 import type { ExpressionMeta } from '../models';
 import { Measure } from '../models';
 
-import { formatDuration } from './duration';
 import { addTableScope } from './general';
 import { KNOWN_AGGREGATIONS } from './known-aggregations';
 import type { Compare } from './time-manipulation';
@@ -103,7 +103,7 @@ function makeBaseColumnHints(
       ).getUnderlyingExpression(),
     };
     if (isTimestamp(splitColumn)) {
-      hint.displayName = `${splitColumn.name} (by ${formatDuration(timeBucket, true)})`;
+      hint.displayName = `${splitColumn.name} (by ${new Duration(timeBucket).getDescription()})`;
     }
     columnHints.set(splitColumn.name, hint);
   }
@@ -179,7 +179,7 @@ function getInnerJoinConditions(groupByExpressions: SqlAlias[]): SqlExpression[]
   return groupByExpressions.map(groupByExpression =>
     groupByExpression
       .getUnderlyingExpression()
-      .isNotDistinctFrom(T(TOP_VALUES_NAME).column(groupByExpression.getOutputName()!)),
+      .isNotDistinctFrom(T(TOP_VALUES_NAME).column(groupByExpression.getOutputName() || '')),
   );
 }
 
@@ -291,7 +291,7 @@ function makeCompareAggregatorsAndAddHints(
   prevMeasure: SqlExpression,
   columnHints: Map<string, ColumnHint>,
 ): SqlExpression[] {
-  const group = `Previous ${formatDuration(compare, true)}`;
+  const group = `Previous ${new Duration(compare).getDescription()}`;
   const diff = mainMeasure.subtract(prevMeasure);
 
   const ret: SqlExpression[] = [];

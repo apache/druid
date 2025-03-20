@@ -77,7 +77,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultSegmentizerPersist() throws IOException
   {
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
+    IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
     File segment = new File(temporaryFolder.newFolder(), "segment");
     File persisted = INDEX_MERGER.persist(
         data,
@@ -96,7 +96,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   @Test
   public void testCustomSegmentizerPersist() throws IOException
   {
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
+    IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
     File segment = new File(temporaryFolder.newFolder(), "segment");
     File persisted = INDEX_MERGER.persist(
         data,

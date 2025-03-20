@@ -163,9 +163,7 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder expectedResults(
-      final List<Object[]> expectedResults
-  )
+  public QueryTestBuilder expectedResults(final List<Object[]> expectedResults)
   {
     return expectedResults(ResultMatchMode.EQUALS, expectedResults);
   }
@@ -311,8 +309,8 @@ public class QueryTestBuilder
 
   public boolean isDecoupledMode()
   {
-    String mode = (String) queryContext.getOrDefault(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
-    return PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
+    String mode = (String) queryContext.getOrDefault(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
+    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
   }
 
 }

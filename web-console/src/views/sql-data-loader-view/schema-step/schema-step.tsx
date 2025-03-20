@@ -31,6 +31,8 @@ import {
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
+import { select, selectAll } from 'd3-selection';
 import {
   C,
   Column,
@@ -40,15 +42,13 @@ import {
   SqlExpression,
   SqlQuery,
   SqlType,
-} from '@druid-toolkit/query';
-import classNames from 'classnames';
-import { select, selectAll } from 'd3-selection';
+} from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   ClearableInput,
-  ENABLE_DISABLE_OPTIONS_TEXT,
+  ENABLED_DISABLED_OPTIONS_TEXT,
   LearnMore,
   Loader,
   MenuBoolean,
@@ -694,7 +694,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     text="Force segment sort by time"
                     value={forceSegmentSortByTime}
                     onValueChange={v => changeForceSegmentSortByTime(Boolean(v))}
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
                   />
                 </Menu>
@@ -833,7 +833,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 className="column-filter-control"
                 value={columnSearch}
                 placeholder="Search columns"
-                onChange={setColumnSearch}
+                onValueChange={setColumnSearch}
               />
             </div>
           )}

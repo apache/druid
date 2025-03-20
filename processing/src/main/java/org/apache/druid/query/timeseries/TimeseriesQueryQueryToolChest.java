@@ -84,13 +84,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 {
   private static final byte TIMESERIES_QUERY = 0x0;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
-      new TypeReference<Object>()
-      {
-      };
+      new TypeReference<>() {};
   private static final TypeReference<Result<TimeseriesResultValue>> TYPE_REFERENCE =
-      new TypeReference<Result<TimeseriesResultValue>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
@@ -111,7 +107,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       QueryRunner<Result<TimeseriesResultValue>> queryRunner
   )
   {
-    final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(
+    final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<>(
         queryRunner,
         this::createResultComparator,
         this::createMergeFn
@@ -164,8 +160,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         // Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus
         // we have only one record.
         final List<Result<TimeseriesResultValue>> val = baseResults.toList();
-        finalSequence = val.isEmpty() ? Sequences.simple(Collections.singletonList(
-            getNullTimeseriesResultValue(query))) : Sequences.simple(val);
+        finalSequence = val.isEmpty()
+                        ? Sequences.simple(Collections.singletonList(getEmptyTimeseriesResultValue(query)))
+                        : Sequences.simple(val);
       } else {
         finalSequence = baseResults;
       }
@@ -231,32 +228,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return ResultGranularTimestampComparator.create(query.getGranularity(), ((TimeseriesQuery) query).isDescending());
   }
 
-  private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
+  /**
+   * Returns a {@link TimeseriesResultValue} that corresponds to an empty-set aggregation, which is used in situations
+   * where we want to return a single result representing "nothing was aggregated".
+   */
+  Result<TimeseriesResultValue> getEmptyTimeseriesResultValue(TimeseriesQuery query)
   {
-    List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-    Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
-    String[] aggregatorNames = new String[aggregatorSpecs.size()];
-    RowSignature aggregatorsSignature =
-        RowSignature.builder().addAggregators(aggregatorSpecs, RowSignature.Finalization.UNKNOWN).build();
-    for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      aggregators[i] =
-          aggregatorSpecs.get(i)
-                         .factorize(
-                             RowBasedColumnSelectorFactory.create(
-                                 RowAdapters.standardRow(),
-                                 () -> new MapBasedRow(null, null),
-                                 aggregatorsSignature,
-                                 false,
-                                 false
-                             )
-                         );
-      aggregatorNames[i] = aggregatorSpecs.get(i).getName();
-    }
+    final Object[] resultArray = getEmptyAggregations(query.getAggregatorSpecs());
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
     TimeseriesResultBuilder bob = new TimeseriesResultBuilder(start);
-    for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      bob.addMetric(aggregatorNames[i], aggregators[i].get());
-      aggregators[i].close();
+    for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
+      bob.addMetric(query.getAggregatorSpecs().get(i).getName(), resultArray[i]);
     }
     return bob.build();
   }
@@ -288,7 +270,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Nullable final ObjectMapper objectMapper
   )
   {
-    return new CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery>()
+    return new CacheStrategy<>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
@@ -363,7 +345,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Override
       public Function<Object, Result<TimeseriesResultValue>> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<Object, Result<TimeseriesResultValue>>()
+        return new Function<>()
         {
           private final Granularity granularity = query.getGranularity();
 
@@ -445,7 +427,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
+    return query.getResultRowSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -486,9 +468,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final RowSignature rowSignature =
-        query.getResultSignature(
-            query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
-        );
+        query.getResultRowSignature(query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
@@ -550,5 +530,37 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           new TimeseriesResultValue(values)
       );
     };
+  }
+
+  /**
+   * Returns a set of values that corresponds to an empty-set aggregation, which is used in situations
+   * where we want to return a single result representing "nothing was aggregated". The returned array has
+   * one element per {@link AggregatorFactory}.
+   */
+  public static Object[] getEmptyAggregations(List<AggregatorFactory> aggregatorSpecs)
+  {
+    final Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
+    final RowSignature aggregatorsSignature =
+        RowSignature.builder().addAggregators(aggregatorSpecs, RowSignature.Finalization.UNKNOWN).build();
+    for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      aggregators[i] =
+          aggregatorSpecs.get(i)
+                         .factorize(
+                             RowBasedColumnSelectorFactory.create(
+                                 RowAdapters.standardRow(),
+                                 () -> new MapBasedRow(null, null),
+                                 aggregatorsSignature,
+                                 false,
+                                 false
+                             )
+                         );
+    }
+
+    final Object[] retVal = new Object[aggregatorSpecs.size()];
+    for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      retVal[i] = aggregators[i].get();
+      aggregators[i].close();
+    }
+    return retVal;
   }
 }

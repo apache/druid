@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -137,7 +137,7 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
     scratch.put((byte) 0);
     byte flags = 0x00;
     if (hasNulls) {
-      flags = (byte) (flags | NullHandling.IS_NULL_BYTE);
+      flags = (byte) (flags | TypeStrategies.IS_NULL_BYTE);
     }
     if (isSorted) {
       flags = (byte) (flags | FixedIndexed.IS_SORTED_MASK);
@@ -174,9 +174,10 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
     final int totalCount = cardinality;
 
     final int startPos = hasNulls ? 1 : 0;
-    return new Iterator<T>()
+    return new Iterator<>()
     {
       int pos = 0;
+
       @Override
       public boolean hasNext()
       {

@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;

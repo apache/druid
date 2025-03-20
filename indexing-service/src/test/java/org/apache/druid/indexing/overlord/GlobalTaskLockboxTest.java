@@ -55,10 +55,13 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
@@ -89,7 +92,6 @@ public class GlobalTaskLockboxTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
-  private ObjectMapper objectMapper;
   private TaskStorage taskStorage;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private GlobalTaskLockbox lockbox;
@@ -103,7 +105,7 @@ public class GlobalTaskLockboxTest
   @Before
   public void setup()
   {
-    objectMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createTaskTables();
@@ -128,6 +130,13 @@ public class GlobalTaskLockboxTest
     EasyMock.replay(emitter);
 
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            objectMapper,
+            tablesConfig,
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            new NoopSegmentMetadataCache()
+        ),
         objectMapper,
         tablesConfig,
         derbyConnector,
@@ -462,6 +471,13 @@ public class GlobalTaskLockboxTest
     );
 
     IndexerMetadataStorageCoordinator loadedMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            loadedMapper,
+            derby.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            new NoopSegmentMetadataCache()
+        ),
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -2199,7 +2215,7 @@ public class GlobalTaskLockboxTest
     }
   }
 
-  private static String TASK_NAME = "myModuleIsntLoadedTask";
+  private static final String TASK_NAME = "myModuleIsntLoadedTask";
 
   private static class TheModule extends SimpleModule
   {
@@ -2211,7 +2227,7 @@ public class GlobalTaskLockboxTest
 
   private static class MyModuleIsntLoadedTask extends AbstractTask
   {
-    private String someProp;
+    private final String someProp;
 
     @JsonCreator
     protected MyModuleIsntLoadedTask(
@@ -2271,8 +2287,8 @@ public class GlobalTaskLockboxTest
     @Override
     protected TaskLockbox.TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
     {
-      return task.getGroupId()
-                 .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
+      return task.getGroupId().contains("FailingLockAcquisition")
+             ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
     }
   }
 }

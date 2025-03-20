@@ -25,13 +25,15 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 @JsonTypeName("table")
@@ -98,10 +100,7 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTime
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     return Function.identity();
   }
@@ -113,6 +112,17 @@ public class TableDataSource implements DataSource
   }
 
   @Override
+  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
+  {
+    Optional<Policy> policy = policyMap.getOrDefault(name, Optional.empty());
+    if (!policy.isPresent()) {
+      // Skip adding restriction on table if there's no policy restriction found.
+      return this;
+    }
+    return RestrictedDataSource.create(this, policy.get());
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     return new byte[0];
@@ -121,7 +131,7 @@ public class TableDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysis()
   {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
   }
 
   @Override

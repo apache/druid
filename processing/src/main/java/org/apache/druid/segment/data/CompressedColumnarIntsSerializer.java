@@ -59,6 +59,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
       final int chunkFactor,
       final ByteOrder byteOrder,
       final CompressionStrategy compression,
+      final int fileSizeLimit,
       final Closer closer
   )
   {
@@ -72,6 +73,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
             filenameBase,
             compression,
             chunkFactor * Integer.BYTES,
+            fileSizeLimit,
             closer
         ),
         closer

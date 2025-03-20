@@ -49,7 +49,7 @@ public class Request
   private final URL url;
   private final Multimap<String, String> headers = Multimaps.newListMultimap(
       new HashMap<>(),
-      new Supplier<List<String>>()
+      new Supplier<>()
       {
         @Override
         public List<String> get()

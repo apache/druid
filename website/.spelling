@@ -117,6 +117,7 @@ Guice
 HDFS
 HLL
 HashSet
+HashSets
 Homebrew
 html
 HyperLogLog
@@ -178,6 +179,7 @@ LRU
 LZ4
 LZO
 LimitSpec
+LISTAGG
 Long.MAX_VALUE
 Long.MAX_VALUE.
 Long.MIN_VALUE
@@ -345,6 +347,7 @@ filterColumn
 filterValue
 firefox
 firehose
+FirehoseFactory
 firehoses
 fromPigAvroStorage
 frontends
@@ -551,6 +554,8 @@ subtasks
 supervisorTaskId
 SVG
 symlink
+sync
+syncs
 syntaxes
 systemFields
 tablePath
@@ -562,6 +567,7 @@ timestamps
 to_json_string
 tradeoffs
 transformSpec
+transactionally
 try_parse_json
 tsv
 ulimit
@@ -2183,9 +2189,7 @@ regionName
 json
 metastore
 UserGroupInformation
-CVE-2019-17571
-CVE-2019-12399
-CVE-2018-17196
+CVE-2024-45384
 bin.tar.gz
 0s
 1T
@@ -2421,3 +2425,10 @@ quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
+
+- ../docs/development/extensions-core/catalog.md
+ColumnSpec
+PropertyKeyName
+PropertyValueType
+tableSpec
+TableSpec

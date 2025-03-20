@@ -25,7 +25,7 @@ import type { IngestionSpec } from '../../druid-models';
 import { cleanSpec } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api } from '../../singletons';
-import { deepSet } from '../../utils';
+import { deepSet, getApiArray } from '../../utils';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
@@ -49,11 +49,12 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
   const [historyState] = useQueryManager<string, SupervisorHistoryEntry[]>({
     initQuery: supervisorId,
     processQuery: async (supervisorId, cancelToken) => {
-      const resp = await Api.instance.get(
-        `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
-        { cancelToken },
-      );
-      return resp.data.map((vs: SupervisorHistoryEntry) => deepSet(vs, 'spec', cleanSpec(vs.spec)));
+      return (
+        await getApiArray<SupervisorHistoryEntry>(
+          `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
+          cancelToken,
+        )
+      ).map(vs => deepSet(vs, 'spec', cleanSpec(vs.spec)));
     },
   });
 
@@ -69,7 +70,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
           <Tab
             id={i}
             key={i}
-            data-tooltip={pastSupervisor.version}
+            title={pastSupervisor.version}
             panelClassName="panel"
             panel={
               <ShowValue

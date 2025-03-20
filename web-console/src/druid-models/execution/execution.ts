@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
+import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from 'druid-query-toolkit';
 
 import { maybeGetClusterCapacity } from '../../helpers';
 import {
@@ -285,6 +285,10 @@ export class Execution {
     });
   }
 
+  static fromDartReport(dartReport: MsqTaskReportResponse): Execution {
+    return Execution.fromTaskReport(dartReport).changeEngine('sql-msq-dart');
+  }
+
   static fromTaskReport(taskReport: MsqTaskReportResponse): Execution {
     // Must have status set for a valid report
     const id = deepGet(taskReport, 'multiStageQuery.taskId');
@@ -327,6 +331,7 @@ export class Execution {
             new Column({ name: sig.name, nativeType: sig.type, sqlType: sqlTypeNames?.[i] }),
         ),
         rows: results,
+        queryDuration: durationMs,
       }).inflateDatesFromSqlTypes();
     }
 

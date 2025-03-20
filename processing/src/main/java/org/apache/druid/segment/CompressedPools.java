@@ -36,7 +36,7 @@ public class CompressedPools
   public static final int BUFFER_SIZE = 0x10000;
   private static final StupidPool<BufferRecycler> BUFFER_RECYCLER_POOL = new StupidPool<>(
       "bufferRecyclerPool",
-      new Supplier<BufferRecycler>()
+      new Supplier<>()
       {
         private final AtomicLong counter = new AtomicLong(0);
 
@@ -54,9 +54,9 @@ public class CompressedPools
     return BUFFER_RECYCLER_POOL.take();
   }
 
-  private static final StupidPool<byte[]> OUTPUT_BYTES_POOL = new StupidPool<byte[]>(
+  private static final StupidPool<byte[]> OUTPUT_BYTES_POOL = new StupidPool<>(
       "outputBytesPool",
-      new Supplier<byte[]>()
+      new Supplier<>()
       {
         private final AtomicLong counter = new AtomicLong(0);
 
@@ -74,9 +74,9 @@ public class CompressedPools
     return OUTPUT_BYTES_POOL.take();
   }
 
-  private static final StupidPool<ByteBuffer> BIG_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
+  private static final StupidPool<ByteBuffer> BIG_ENDIAN_BYTE_BUF_POOL = new StupidPool<>(
       "bigEndByteBufPool",
-      new Supplier<ByteBuffer>()
+      new Supplier<>()
       {
         private final AtomicLong counter = new AtomicLong(0);
 
@@ -91,7 +91,7 @@ public class CompressedPools
 
   private static final StupidPool<ByteBuffer> LITTLE_ENDIAN_BYTE_BUF_POOL = new StupidPool<>(
       "littleEndByteBufPool",
-      new Supplier<ByteBuffer>()
+      new Supplier<>()
       {
         private final AtomicLong counter = new AtomicLong(0);
 

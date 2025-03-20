@@ -251,7 +251,8 @@ public class GlobalTaskLockbox
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      LockGranularity lockGranularity
+      LockGranularity lockGranularity,
+      boolean reduceMetadataIO
   )
   {
     return getDatasourceLockbox(dataSource).allocateSegments(
@@ -259,7 +260,8 @@ public class GlobalTaskLockbox
         dataSource,
         interval,
         skipSegmentLineageCheck,
-        lockGranularity
+        lockGranularity,
+        reduceMetadataIO
     );
   }
 

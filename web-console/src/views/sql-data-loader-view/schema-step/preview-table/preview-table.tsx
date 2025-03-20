@@ -18,9 +18,9 @@
 
 import { Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { SqlAlias, SqlFunction, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { SqlAlias, SqlFunction, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
@@ -77,7 +77,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
   const { queryResult, onQueryAction, columnFilter, selectedColumnIndex, onEditColumn } = props;
   const [showValue, setShowValue] = useState<string>();
 
-  const parsedQuery: SqlQuery = queryResult.sqlQuery!;
+  const parsedQuery = queryResult.sqlQuery;
   if (!parsedQuery) return null;
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {

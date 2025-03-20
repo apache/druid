@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.variance;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -87,11 +86,11 @@ public class VarianceFloatVectorAggregatorTest extends InitializedNullHandlingTe
     target.aggregate(buf, POSITION, START_ROW, VALUES.length);
     VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(buf, POSITION);
     Assert.assertEquals(
-        VALUES.length - START_ROW - (NullHandling.replaceWithDefault() ? 0 : 2),
+        VALUES.length - START_ROW - 2,
         collector.count
     );
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 217.67000007 : 134, collector.sum, EPSILON);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7565.2116703 : 6272, collector.nvariance, EPSILON);
+    Assert.assertEquals(134, collector.sum, EPSILON);
+    Assert.assertEquals(6272, collector.nvariance, EPSILON);
   }
 
   @Test
@@ -145,7 +144,7 @@ public class VarianceFloatVectorAggregatorTest extends InitializedNullHandlingTe
           buf,
           positions[i] + positionOffset
       );
-      boolean isNull = !NullHandling.replaceWithDefault() && NULLS[rows[i]];
+      boolean isNull = NULLS[rows[i]];
       Assert.assertEquals(isNull ? 0 : 1, collector.count);
       Assert.assertEquals(isNull ? 0 : VALUES[rows[i]], collector.sum, EPSILON);
       Assert.assertEquals(0, collector.nvariance, EPSILON);
@@ -169,8 +168,6 @@ public class VarianceFloatVectorAggregatorTest extends InitializedNullHandlingTe
 
   private void mockNullsVector()
   {
-    if (!NullHandling.replaceWithDefault()) {
-      Mockito.doReturn(NULLS).when(selector).getNullVector();
-    }
+    Mockito.doReturn(NULLS).when(selector).getNullVector();
   }
 }

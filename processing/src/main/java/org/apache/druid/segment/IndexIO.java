@@ -357,7 +357,8 @@ public class IndexIO
 
       CompressedColumnarLongsSupplier timestamps = CompressedColumnarLongsSupplier.fromByteBuffer(
           smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()),
-          BYTE_ORDER
+          BYTE_ORDER,
+          smooshedFiles
       );
 
       Map<String, MetricHolder> metrics = Maps.newLinkedHashMap();
@@ -385,7 +386,10 @@ public class IndexIO
             fileDimensionName
         );
 
-        dimValueUtf8Lookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.UTF8_STRATEGY));
+        dimValueUtf8Lookups.put(
+            dimension,
+            GenericIndexed.read(dimBuffer, GenericIndexed.UTF8_STRATEGY, smooshedFiles)
+        );
         dimColumns.put(dimension, VSizeColumnarMultiInts.readFromByteBuffer(dimBuffer));
       }
 
@@ -393,7 +397,7 @@ public class IndexIO
       for (int i = 0; i < availableDimensions.size(); ++i) {
         bitmaps.put(
             SERIALIZER_UTILS.readString(invertedBuffer),
-            GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy())
+            GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy(), smooshedFiles)
         );
       }
 
@@ -456,7 +460,8 @@ public class IndexIO
                 new StringUtf8DictionaryEncodedColumnSupplier<>(
                     index.getDimValueUtf8Lookup(dimension)::singleThreaded,
                     null,
-                    Suppliers.ofInstance(index.getDimColumn(dimension))
+                    Suppliers.ofInstance(index.getDimColumn(dimension)),
+                    LEGACY_FACTORY.getBitmapFactory()
                 )
             );
         GenericIndexed<ImmutableBitmap> bitmaps = index.getBitmapIndexes().get(dimension);
@@ -511,8 +516,7 @@ public class IndexIO
           index.getAvailableDimensions(),
           new ConciseBitmapFactory(),
           columns,
-          index.getFileMapper(),
-          lazy
+          index.getFileMapper()
       )
       {
         @Override
@@ -669,7 +673,6 @@ public class IndexIO
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,
-          lazy,
           metadata,
           projectionsColumns
       )
@@ -719,6 +722,7 @@ public class IndexIO
 
         if (groupingColumn.equals(projectionSpec.getSchema().getTimeColumnName())) {
           projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn));
+          projectionColumns.remove(groupingColumn);
         }
       }
       for (AggregatorFactory aggregator : projectionSpec.getSchema().getAggregators()) {
