@@ -333,7 +333,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         QueryPlus.wrap(query),
         responseContext()
     );
-    final List<Result<TimeseriesResultValue>> results3 = sequence2.toList();
+    final List<Result<TimeseriesResultValue>> results3 = sequence3.toList();
     Assert.assertEquals(results1, results3);
     Assert.assertEquals(2, cache.getStats().getNumHits());
     Assert.assertEquals(1, cache.getStats().getNumEntries());
