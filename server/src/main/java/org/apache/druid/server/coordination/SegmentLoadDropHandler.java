@@ -46,8 +46,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -65,8 +68,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
-  private final ScheduledExecutorService exec;
-  private final ScheduledExecutorService turboExec;
+  private final ScheduledExecutorService scheduledExecutorService;
+  private final ThreadPoolExecutor standardExec;
+  private final ThreadPoolExecutor turboExec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -91,13 +95,21 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         config,
         announcer,
         segmentManager,
-        Executors.newScheduledThreadPool(
-            config.getNumLoadingThreads(),
+        new ThreadPoolExecutor(
+            config.getNumLoadingThreads(), config.getNumLoadingThreads(),
+            60L, TimeUnit.SECONDS,
+            new SynchronousQueue<>(),
             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
         ),
-        Executors.newScheduledThreadPool(
-            config.getNumBootstrapThreads(),
+        new ThreadPoolExecutor(
+            config.getNumBootstrapThreads(), config.getNumBootstrapThreads(),
+            60L, TimeUnit.SECONDS,
+            new SynchronousQueue<>(),
             Execs.makeThreadFactory("TurboDataSegmentChangeHandler-%s")
+        ),
+        Executors.newScheduledThreadPool(
+            config.getNumLoadingThreads(),
+            Execs.makeThreadFactory("ScheduledDataSegmentChangeHandler-%s")
         )
     );
   }
@@ -107,15 +119,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
-      ScheduledExecutorService exec,
-      ScheduledExecutorService turboExec
+      ThreadPoolExecutor standardExec,
+      ThreadPoolExecutor turboExec,
+      ScheduledExecutorService scheduledExecutorService
   )
   {
     this.config = config;
     this.announcer = announcer;
     this.segmentManager = segmentManager;
-    this.exec = exec;
+    this.standardExec = standardExec;
     this.turboExec = turboExec;
+    this.scheduledExecutorService = scheduledExecutorService;
+
+    this.standardExec.allowCoreThreadTimeOut(true);
+    this.turboExec.allowCoreThreadTimeOut(true);
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
@@ -235,7 +252,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
-        getExecutorService(segmentLoadingMode).schedule(
+        scheduledExecutorService.schedule(
             runnable,
             config.getDropSegmentDelayMillis(),
             TimeUnit.MILLISECONDS
@@ -433,13 +450,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  private ScheduledExecutorService getExecutorService(SegmentLoadingMode loadingMode)
+  private ExecutorService getExecutorService(SegmentLoadingMode loadingMode)
   {
     switch (loadingMode) {
       case TURBO:
         return turboExec;
       case NORMAL:
-        return exec;
+        return standardExec;
       default:
         throw DruidException.defensive("Unknown execution mode [%s]", loadingMode);
     }

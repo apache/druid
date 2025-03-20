@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.druid.server.TestSegmentUtils.makeSegment;
@@ -107,7 +108,7 @@ public class SegmentLoadDropHandlerTest
 
     scheduledExecutorFactory = (corePoolSize, nameFormat) -> {
       // Override normal behavior by adding the runnable to a list so that you can make sure
-      // all the shceduled runnables are executed by explicitly calling run() on each item in the list
+      // all the scheduled runnables are executed by explicitly calling run() on each item in the list
       return new ScheduledThreadPoolExecutor(corePoolSize, Execs.makeThreadFactory(nameFormat))
       {
         @Override
@@ -421,8 +422,9 @@ public class SegmentLoadDropHandlerTest
         config,
         segmentAnnouncer,
         segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
-        scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]")
+        (ThreadPoolExecutor) scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        (ThreadPoolExecutor) scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]"),
+        scheduledExecutorFactory.create(5, "ScheduledSegmentLoadDropHandlerTest-[%d]")
     );
   }
 }
