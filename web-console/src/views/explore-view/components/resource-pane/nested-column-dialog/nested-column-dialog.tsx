@@ -33,10 +33,15 @@ import React, { useState } from 'react';
 
 import { ClearableInput, Loader, MenuCheckbox } from '../../../../../components';
 import { useQueryManager } from '../../../../../hooks';
-import { caseInsensitiveContains, filterMap, pluralIfNeeded, wait } from '../../../../../utils';
+import {
+  caseInsensitiveContains,
+  filterMap,
+  pluralIfNeeded,
+  toggle,
+  wait,
+} from '../../../../../utils';
 import type { QuerySource } from '../../../models';
 import { ExpressionMeta } from '../../../models';
-import { toggle } from '../../../utils';
 
 import './nested-column-dialog.scss';
 

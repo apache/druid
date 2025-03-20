@@ -45,7 +45,7 @@ public class StringFieldWriter implements FieldWriter
   public static final byte NULL_ROW = 0x00;
 
   /**
-   * Different from the values in {@link org.apache.druid.common.config.NullHandling}, since we want to be able to
+   * Different from the values in {@link org.apache.druid.segment.column.TypeStrategies}, since we want to be able to
    * sort as bytes, and we want nulls to come before non-nulls.
    */
   public static final byte NULL_BYTE = 0x02;

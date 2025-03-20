@@ -1261,7 +1261,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         if (createdSegment != null) {
           pendingSegments.add(createdSegment.getId());
           uniqueRequestToSegment.put(uniqueRequest, createdSegment);
-          log.info("Created new segment[%s]", createdSegment.getId());
+          log.debug("Created new segment[%s]", createdSegment.getId());
         }
       }
 
@@ -1270,7 +1270,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
-    log.info("Created [%d] new segments for [%d] allocate requests.", uniqueRequestToSegment.size(), requests.size());
     return createdSegments;
   }
 
@@ -2103,9 +2102,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     if (startMetadataGreaterThanExisting && !startMetadataMatchesExisting) {
       // Offsets stored in startMetadata is greater than the last commited metadata.
-      // This can happen because the previous task is still publishing its segments and can resolve once
-      // the previous task finishes publishing.
-      return DataStoreMetadataUpdateResult.retryableFailure(
+      return DataStoreMetadataUpdateResult.failure(
           "The new start metadata state[%s] is ahead of the last committed"
           + " end state[%s]. Try resetting the supervisor.",
           startMetadata, oldCommitMetadataFromDb

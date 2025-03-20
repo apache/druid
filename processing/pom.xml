@@ -66,10 +66,6 @@
       <artifactId>jackson-dataformat-smile</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.skife.config</groupId>
-      <artifactId>config-magic</artifactId>
-    </dependency>
-    <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>

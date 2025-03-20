@@ -27,9 +27,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 
@@ -85,7 +85,7 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendString(dimension)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByte(value == null ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
+        .appendByte(value == null ? TypeStrategies.IS_NULL_BYTE : TypeStrategies.IS_NOT_NULL_BYTE)
         .appendString(value)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())

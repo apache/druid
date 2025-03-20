@@ -1818,7 +1818,7 @@ public class HttpRemoteTaskRunnerTest
         TestHelper.makeJsonMapper(),
         new HttpRemoteTaskRunnerConfig(),
         EasyMock.createNiceMock(HttpClient.class),
-        DSuppliers.of(new AtomicReference<>(new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null), null))),
+        DSuppliers.of(new AtomicReference<>(new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null, null), null))),
         new TestProvisioningStrategy<>(),
         druidNodeDiscoveryProvider,
         EasyMock.createMock(TaskStorage.class),

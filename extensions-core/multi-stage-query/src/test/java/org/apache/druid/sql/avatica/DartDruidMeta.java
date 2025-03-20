@@ -17,31 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.config;
+package org.apache.druid.sql.avatica;
 
-import org.joda.time.Duration;
-import org.joda.time.Period;
-import org.skife.config.Coercer;
-import org.skife.config.Coercible;
+import com.google.inject.Inject;
+import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.sql.SqlStatementFactory;
 
-/**
-*/
-public class DurationCoercible implements Coercible<Duration>
+public class DartDruidMeta extends DruidMeta
 {
-  @Override
-  public Coercer<Duration> accept(Class<?> clazz)
+  @Inject
+  public DartDruidMeta(
+      final @Dart SqlStatementFactory sqlStatementFactory,
+      final AvaticaServerConfig config,
+      final ErrorHandler errorHandler,
+      final AuthenticatorMapper authMapper)
   {
-    if (Duration.class != clazz) {
-      return null;
-    }
-
-    return new Coercer<>()
-    {
-      @Override
-      public Duration coerce(String value)
-      {
-        return new Period(value).toStandardDuration();
-      }
-    };
+    super(sqlStatementFactory, config, errorHandler, authMapper);
   }
 }
