@@ -98,16 +98,17 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       query = query.withOverriddenContext(
           ImmutableMap.of(QueryResource.HEADER_IF_NONE_MATCH, existingResultSetId));
 
-      Sequence<T> resultFromClient = baseRunner.run(
-          QueryPlus.wrap(query),
-          responseContext
-      );
       String newResultSetId = responseContext.getEntityTag();
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
         return deserializeResults(cachedResultSet, strategy, existingResultSetId);
       } else {
+        Sequence<T> resultFromClient = baseRunner.run(
+            QueryPlus.wrap(query),
+            responseContext
+        );
+
         @Nullable
         ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
             cacheKey,
