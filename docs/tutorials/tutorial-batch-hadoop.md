@@ -42,7 +42,7 @@ For this tutorial, we've provided a Dockerfile for a Hadoop 3.3.6 cluster, which
 
 This Dockerfile and related files are located at `quickstart/tutorial/hadoop/docker`.
 
-From the apache-druid-{{DRUIDVERSION}} package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "3.3.6":
+From the `apache-druid-{{DRUIDVERSION}}` package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "3.3.6":
 
 ```bash
 cd quickstart/tutorial/hadoop/docker
@@ -110,7 +110,7 @@ docker exec -it druid-hadoop-demo bash
 
 ### Copy input data to the Hadoop container
 
-From the apache-druid-{{DRUIDVERSION}} package root on the host, copy the `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
+From the `apache-druid-{{DRUIDVERSION}}` package root on the host, copy the `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
 
 ```bash
 cp quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz /tmp/shared/wikiticker-2015-09-12-sampled.json.gz
@@ -148,11 +148,11 @@ From the Hadoop container's shell, run the following command to copy the Hadoop 
 cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml
 ```
 
-From the host machine, run the following, where {PATH_TO_DRUID} is replaced by the path to the Druid package.
+From the host machine, run the following, where `PATH_TO_DRUID` is replaced by the path to the Druid package.
 
 ```bash
-mkdir -p {PATH_TO_DRUID}/conf/druid/single-server/micro-quickstart/_common/hadoop-xml
-cp /tmp/shared/hadoop_xml/*.xml {PATH_TO_DRUID}/conf/druid/single-server/micro-quickstart/_common/hadoop-xml/
+mkdir -p PATH_TO_DRUID/conf/druid/single-server/micro-quickstart/_common/hadoop-xml
+cp /tmp/shared/hadoop_xml/*.xml PATH_TO_DRUID/conf/druid/single-server/micro-quickstart/_common/hadoop-xml/
 ```
 
 ### Update Druid segment and log storage

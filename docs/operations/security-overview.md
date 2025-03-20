@@ -32,7 +32,7 @@ By default, security features in Druid are disabled, which simplifies the initia
 
 The following recommendations apply to the Druid cluster setup:
 * Run Druid as an unprivileged Unix user. Do not run Druid as the root user.
-:::caution
+:::warning
 Druid administrators have the same OS permissions as the Unix user account running Druid. See [Authentication and authorization model](security-user-auth.md#authentication-and-authorization-model). If the Druid process is running under the OS root user account, then Druid administrators can read or write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
 :::
 * Enable authentication to the Druid cluster for production environments and other environments that can be accessed by untrusted networks.
@@ -83,7 +83,7 @@ keytool -import -file public.cert -alias druid -keystore truststore.jks
 Druid uses Jetty as its embedded web server. See [Configuring SSL/TLS KeyStores
 ](https://www.eclipse.org/jetty/documentation/jetty-11/operations-guide/index.html#og-keystore) from the Jetty documentation.
 
-:::caution
+:::warning
 Do not use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
 :::
 

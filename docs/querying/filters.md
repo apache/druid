@@ -235,8 +235,8 @@ greater than, less than, greater than or equal to, less than or equal to, and "b
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `lower` | The lower bound string match value for the filter. | No |
 | `upper`| The upper bound string match value for the filter. | No |
-| `lowerStrict` | Boolean indicating whether to perform strict comparison on the `lower` bound (">" instead of ">="). | No, default: `false` |
-| `upperStrict` | Boolean indicating whether to perform strict comparison on the upper bound ("<" instead of "<="). | No, default: `false`|
+| `lowerStrict` | Boolean indicating whether to perform strict comparison on the `lower` bound (`>` instead of `>=`). | No, default: `false` |
+| `upperStrict` | Boolean indicating whether to perform strict comparison on the upper bound (`<` instead of `<=`). | No, default: `false`|
 | `ordering` | String that specifies the sorting order to use when comparing values against the bound. Can be one of the following values: `"lexicographic"`, `"alphanumeric"`, `"numeric"`, `"strlen"`, `"version"`. See [Sorting Orders](./sorting-orders.md) for more details. | No, default: `"lexicographic"`|
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -319,8 +319,8 @@ Druid's SQL planner uses the range filter by default instead of bound filter unl
 | `matchValueType` | String specifying the type of bounds to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column` and also defines the type of comparison used when matching values. | Yes |
 | `lower` | Lower bound value to match. | No. At least one of `lower` or `upper` must not be null. |
 | `upper` | Upper bound value to match. | No. At least one of `lower` or `upper` must not be null. |
-| `lowerOpen` | Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). | No |
-| `upperOpen` | Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). | No |
+| `lowerOpen` | Boolean indicating if lower bound is open in the interval of values defined by the range (`>` instead of `>=`). | No |
+| `upperOpen` | Boolean indicating if upper bound is open on the interval of values defined by range (`<` instead of `<=`). | No |
 
 **Example**: equivalent to `WHERE 21 <= age <= 31`
 
@@ -496,7 +496,7 @@ The `arrayContainsElement` filter checks if an `ARRAY` contains a specific eleme
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
 
-This filter converts the ISO 8601 intervals to long millisecond start/end ranges and translates to an OR of Bound filters on those millisecond ranges, with numeric comparison. The Bound filters will have left-closed and right-open matching (i.e., start <= time < end).
+This filter converts the ISO 8601 intervals to long millisecond start/end ranges and translates to an OR of Bound filters on those millisecond ranges, with numeric comparison. The Bound filters will have left-closed and right-open matching (i.e., start `<=` time `<` end).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |

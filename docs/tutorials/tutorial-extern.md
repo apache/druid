@@ -176,7 +176,7 @@ Druid supports Amazon S3 or Google Cloud Storage (GCS) as cloud storage destinat
     LIMIT 10
     ```
 
-  </TabItem>
+   </TabItem>
 
    <TabItem value="2" label="GCS">
 

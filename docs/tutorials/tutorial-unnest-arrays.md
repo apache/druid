@@ -271,7 +271,8 @@ You can use a single unnest datasource to unnest multiple columns. Be careful wh
 
 The following native Scan query returns the rows of the datasource and unnests the values in the `dim3` column by using the `unnest` datasource type:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```json
 {
@@ -334,7 +335,8 @@ You can implement filters. For example, you can add the following to the Scan qu
 
 The following query returns an unnested version of the column `dim3` as the column `unnest-dim3` sorted in descending order.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```json
 {
@@ -375,7 +377,8 @@ The following query returns an unnested version of the column `dim3` as the colu
 
 The example topN query unnests `dim3` into the column `unnest-dim3`. The query uses the unnested column as the dimension for the topN query. The results are outputted to a column named `topN-unnest-d3` and are sorted numerically in ascending order based on the column `a0`, an aggregate value representing the minimum of `m1`.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```json
 {
@@ -434,7 +437,8 @@ The example topN query unnests `dim3` into the column `unnest-dim3`. The query u
 
 This query joins the `nested_data` table with itself and outputs the unnested data into a new column called `unnest-dim3`.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```json
 {
@@ -539,7 +543,8 @@ The `unnest` datasource supports unnesting virtual columns, which is a queryable
 
 The following query returns the columns `dim45` and `m1`. The `dim45` column is the unnested version of a virtual column that contains an array of the `dim4` and `dim5` columns.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```json
 {
@@ -585,7 +590,8 @@ The following query returns the columns `dim45` and `m1`. The `dim45` column is 
 
 The following Scan query unnests the column `dim3` into `d3` and a virtual column composed of `dim4` and `dim5` into the column `d45`. It then returns those source columns and their unnested variants.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```json
 {

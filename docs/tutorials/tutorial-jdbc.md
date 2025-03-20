@@ -23,9 +23,12 @@ sidebar_label: JDBC connector tutorial
   ~ under the License.
   -->
 
-Redirecting you to the JDBC driver API...
-<head>
-<script>window.location.replace("https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html")</script>
-</head>
-<a href="https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html">Click here if you are not redirected.</a>
+import BrowserOnly from '@docusaurus/BrowserOnly';
 
+Redirecting you to the JDBC driver API...
+<BrowserOnly>
+      {() => {
+        window.location.replace("https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html");
+        return null;
+      }}
+    </BrowserOnly>
