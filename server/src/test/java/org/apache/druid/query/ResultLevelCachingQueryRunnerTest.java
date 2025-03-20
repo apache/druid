@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.SimpleServerView;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -28,44 +27,24 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
-import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.TestIndex;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
-import static org.apache.druid.query.QueryRunnerTestHelper.SEGMENT_ID;
 import static org.junit.Assert.fail;
 
 public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestBase
