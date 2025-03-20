@@ -963,7 +963,6 @@ public class SqlTestFramework
       return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
     }
 
-
     @Provides
     @LazySingleton
     private TimelineServerView makeTimelineServerView(SpecificSegmentsQuerySegmentWalker walker)
