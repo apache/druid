@@ -188,7 +188,7 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
-        new NoopServiceEmitter()
+        NoopServiceEmitter.instance()
     );
 
     final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
@@ -199,7 +199,8 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector,
         leaderSelector,
-        segmentMetadataCache
+        segmentMetadataCache,
+        NoopServiceEmitter.instance()
     )
     {
       @Override

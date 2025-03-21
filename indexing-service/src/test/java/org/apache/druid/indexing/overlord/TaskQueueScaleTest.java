@@ -111,7 +111,8 @@ public class TaskQueueScaleTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnectorRule.getConnector(),
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

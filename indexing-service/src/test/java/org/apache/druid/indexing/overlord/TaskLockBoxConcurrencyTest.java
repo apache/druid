@@ -38,6 +38,7 @@ import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -88,7 +89,8 @@ public class TaskLockBoxConcurrencyTest
                 derby.metadataTablesConfigSupplier().get(),
                 derbyConnector,
                 new TestDruidLeaderSelector(),
-                new NoopSegmentMetadataCache()
+                NoopSegmentMetadataCache.instance(),
+                NoopServiceEmitter.instance()
             ),
             objectMapper,
             derby.metadataTablesConfigSupplier().get(),

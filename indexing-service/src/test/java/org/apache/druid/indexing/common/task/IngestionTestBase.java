@@ -332,7 +332,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         leaderSelector,
-        segmentMetadataCache
+        segmentMetadataCache,
+        NoopServiceEmitter.instance()
     );
   }
 
