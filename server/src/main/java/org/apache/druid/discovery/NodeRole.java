@@ -59,7 +59,6 @@ public class NodeRole
   public static final String ROUTER_JSON_NAME = "router";
   public static final String MIDDLE_MANAGER_JSON_NAME = "middleManager";
   public static final String INDEXER_JSON_NAME = "indexer";
-  public static final String[] EMPTY_JSON_NODE_ROLES = new String[0];
 
   public static final NodeRole COORDINATOR = new NodeRole("COORDINATOR", COORDINATOR_JSON_NAME);
   public static final NodeRole HISTORICAL = new NodeRole("HISTORICAL", HISTORICAL_JSON_NAME);
