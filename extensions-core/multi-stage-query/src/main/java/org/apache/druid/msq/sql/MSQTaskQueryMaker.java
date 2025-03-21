@@ -24,7 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.catalog.MetadataCatalog;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
+import org.apache.druid.catalog.model.ResolvedTable;
+import org.apache.druid.catalog.model.TableId;
+import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Intervals;
@@ -253,12 +259,29 @@ public class MSQTaskQueryMaker implements QueryMaker
           fieldMapping.stream().map(Entry::getValue).collect(Collectors.toSet())
       );
 
+      final List<AggregateProjectionSpec> projectionSpecs;
+      final MetadataCatalog metadataCatalog = plannerContext.getPlannerToolbox().catalogResolver().getMetadataCatalog();
+      final ResolvedTable tableMetadata = metadataCatalog.resolveTable(
+          TableId.datasource(targetDataSource.getDestinationName())
+      );
+      if (tableMetadata != null) {
+        final List<DatasourceProjectionMetadata> projectionMetadata = tableMetadata.getProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+        if (projectionMetadata != null) {
+          projectionSpecs = projectionMetadata.stream().map(DatasourceProjectionMetadata::getSpec).collect(Collectors.toList());
+        } else {
+          projectionSpecs = null;
+        }
+      } else {
+        projectionSpecs = null;
+      }
+
       final DataSourceMSQDestination dataSourceDestination = new DataSourceMSQDestination(
           targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks,
           null,
+          projectionSpecs,
           terminalStageSpecFactory.createTerminalStageSpec(
               druidQuery,
               plannerContext

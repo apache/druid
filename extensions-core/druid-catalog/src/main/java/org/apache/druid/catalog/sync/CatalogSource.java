@@ -17,24 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.catalog.sync;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.apache.druid.catalog.model.ResolvedTable;
+import org.apache.druid.catalog.model.TableId;
+import org.apache.druid.catalog.model.TableMetadata;
 
-/**
- * An annotation to specify node types that a {@link com.google.inject.Module} can be loaded on.
- * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}.
- * <p>
- * A module not decorated with this annotation or {@link ExcludeScope} will be loaded on every node role.
- *
- * @see ExcludeScope to specify node roles which a module should NOT be loaded on
- */
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface LoadScope
+import java.util.List;
+
+public interface CatalogSource
 {
-  String[] roles();
+  List<TableMetadata> tablesForSchema(String dbSchema);
+
+  TableMetadata table(TableId id);
+
+  ResolvedTable resolveTable(TableId id);
 }

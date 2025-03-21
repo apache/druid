@@ -17,14 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.sync;
+package org.apache.druid.catalog;
 
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Set;
 
@@ -39,17 +38,6 @@ import java.util.Set;
  */
 public interface MetadataCatalog
 {
-  interface CatalogSource
-  {
-    List<TableMetadata> tablesForSchema(String dbSchema);
-    TableMetadata table(TableId id);
-    ResolvedTable resolveTable(TableId id);
-  }
-
-  interface CatalogUpdateProvider
-  {
-    void register(CatalogUpdateListener listener);
-  }
 
   /**
    * Resolves a table given a {@link TableId} with the schema and
@@ -60,8 +48,10 @@ public interface MetadataCatalog
    * metadata. Views and input sources exist <i>only</i> if their
    * metadata exists. System tables never have metadata.
    */
-  @Nullable TableMetadata getTable(TableId tableId);
-  @Nullable ResolvedTable resolveTable(TableId tableId);
+  @Nullable
+  TableMetadata getTable(TableId tableId);
+  @Nullable
+  ResolvedTable resolveTable(TableId tableId);
 
   /**
    * List of tables defined within the given schema. Does not filter the

@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.sql;
 
 import org.apache.druid.catalog.CatalogException;
+import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
@@ -28,7 +29,6 @@ import org.apache.druid.catalog.sql.CatalogInsertTest.CatalogInsertComponentSupp
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.catalog.sync.CachedMetadataCatalog;
-import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule5;
 import org.apache.druid.sql.calcite.CalciteCatalogInsertTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;

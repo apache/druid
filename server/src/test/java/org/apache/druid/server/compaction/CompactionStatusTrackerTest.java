@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -110,7 +111,7 @@ public class CompactionStatusTrackerTest
   public void testComputeCompactionStatusForSuccessfulTask()
   {
     final DataSourceCompactionConfig compactionConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
     final CompactionCandidate candidateSegments
         = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
@@ -146,6 +147,7 @@ public class CompactionStatusTrackerTest
     return new ClientCompactionTaskQuery(
         taskId,
         TestDataSource.WIKI,
+        null,
         null,
         null,
         null,

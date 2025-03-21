@@ -797,6 +797,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         null,
         ARBITRARY_GRANULARITY,
         null,
+        null,
         multiValuedDimensions
     );
     Assert.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedDimensions());
