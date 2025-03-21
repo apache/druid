@@ -175,7 +175,16 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     },
   },
   component: function TimeChartModule(props) {
-    const { querySource, timezone, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const {
+      querySource,
+      timezone,
+      where,
+      setWhere,
+      moduleWhere,
+      parameterValues,
+      stage,
+      runSqlQuery,
+    } = props;
 
     const timeColumnName = querySource.columns.find(column => column.sqlType === 'TIMESTAMP')?.name;
     const timeGranularity =
@@ -194,6 +203,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         querySource,
         timezone,
         where,
+        moduleWhere,
         timeGranularity,
         measure,
         facetExpression: facetColumn?.expression,
@@ -205,6 +215,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       querySource,
       timezone,
       where,
+      moduleWhere,
       timeGranularity,
       measure,
       facetColumn,
@@ -220,6 +231,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           querySource,
           timezone,
           where,
+          moduleWhere,
           timeGranularity,
           measure,
           facetExpression,
@@ -233,6 +245,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           throw new Error(`Must have a column of type TIMESTAMP for the time chart to work`);
         }
 
+        const effectiveWhere = where.and(moduleWhere);
         const granularity = new Duration(timeGranularity);
 
         const detectedFacets: string[] | undefined = facetExpression
@@ -240,7 +253,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
               await runSqlQuery(
                 {
                   query: querySource
-                    .getInitQuery(where)
+                    .getInitQuery(effectiveWhere)
                     .addSelect(facetExpression.cast('VARCHAR').as(FACET_NAME), {
                       addToGroupBy: 'end',
                     })
@@ -274,7 +287,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         const result = await runSqlQuery(
           {
             query: querySource
-              .getInitQuery(overqueryWhere(where, timeColumnName, granularity, oneExtra))
+              .getInitQuery(overqueryWhere(effectiveWhere, timeColumnName, granularity, oneExtra))
               .applyIf(facetExpression && detectedFacets && !facetsToQuery, q =>
                 q.addWhere(facetExpression!.cast('VARCHAR').in(detectedFacets!)),
               )

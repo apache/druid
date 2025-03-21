@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import type { Column, SqlExpression } from 'druid-query-toolkit';
+import type { Column } from 'druid-query-toolkit';
+import { SqlExpression, SqlLiteral } from 'druid-query-toolkit';
 
-import { isEmpty } from '../../../utils';
 import { ModuleRepository } from '../module-repository/module-repository';
 import type { Rename } from '../utils';
 
@@ -30,6 +30,7 @@ import type { QuerySource } from './query-source';
 
 interface ModuleStateValue {
   moduleId: string;
+  moduleWhere?: SqlExpression;
   parameterValues: ParameterValues;
   showControls?: boolean;
 }
@@ -44,16 +45,19 @@ export class ModuleState {
     );
     return new ModuleState({
       ...js,
+      moduleWhere: SqlExpression.maybeParse(js.moduleWhere),
       parameterValues: inflatedParameterValues,
     });
   }
 
   public readonly moduleId: string;
+  public readonly moduleWhere: SqlExpression;
   public readonly parameterValues: ParameterValues;
   public readonly showControls: boolean;
 
   constructor(value: ModuleStateValue) {
     this.moduleId = value.moduleId;
+    this.moduleWhere = value.moduleWhere || SqlLiteral.TRUE;
     this.parameterValues = value.parameterValues;
     this.showControls = Boolean(value.showControls);
   }
@@ -63,6 +67,7 @@ export class ModuleState {
       moduleId: this.moduleId,
       parameterValues: this.parameterValues,
     };
+    if (!SqlLiteral.isTrue(this.moduleWhere)) value.moduleWhere = this.moduleWhere;
     if (this.showControls) value.showControls = true;
     return value;
   }
@@ -92,17 +97,19 @@ export class ModuleState {
   }
 
   public restrictToQuerySource(querySource: QuerySource, where: SqlExpression): ModuleState {
-    const { moduleId, parameterValues } = this;
+    const { moduleId, moduleWhere, parameterValues } = this;
     const module = ModuleRepository.getModule(moduleId);
     if (!module) return this;
+    const newModuleWhere = querySource.restrictWhere(moduleWhere);
     const newParameterValues = querySource.restrictParameterValues(
       parameterValues,
       module.parameters,
       where,
     );
-    if (parameterValues === newParameterValues) return this;
+    if (moduleWhere === newModuleWhere && parameterValues === newParameterValues) return this;
 
     return this.change({
+      moduleWhere: newModuleWhere,
       parameterValues: newParameterValues,
     });
   }
@@ -160,10 +167,6 @@ export class ModuleState {
         measures: [measure],
       },
     });
-  }
-
-  public isInitState(): boolean {
-    return this.moduleId === 'record-table' && isEmpty(this.parameterValues);
   }
 }
 

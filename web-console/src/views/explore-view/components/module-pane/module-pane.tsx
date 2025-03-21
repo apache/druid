@@ -115,7 +115,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
     onAddToSourceQueryAsColumn,
     onAddToSourceQueryAsMeasure,
   } = props;
-  const { moduleId, parameterValues, showControls } = moduleState;
+  const { moduleId, moduleWhere, parameterValues, showControls } = moduleState;
   const [stage, setStage] = useState<Stage | undefined>();
 
   const module = ModuleRepository.getModule(moduleId);
@@ -174,6 +174,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
         timezone,
         where,
         setWhere,
+        moduleWhere,
         parameterValues: parameterValuesWithDefaults,
         setParameterValues: updateParameterValues,
         runSqlQuery,
