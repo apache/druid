@@ -354,29 +354,34 @@ ORDER BY
   }
 
   componentDidMount(): void {
-    const { capabilities } = this.props;
-    const { visibleColumns } = this.state;
-    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+    this.fetchData();
   }
 
   componentWillUnmount(): void {
     this.serviceQueryManager.terminate();
   }
 
+  private readonly fetchData = () => {
+    const { capabilities } = this.props;
+    const { visibleColumns } = this.state;
+    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+  };
+
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      >
-        {row.value}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        >
+          {row.value}
+        </TableFilterableCell>
+      );
+    };
   }
 
   renderServicesTable() {
@@ -837,6 +842,7 @@ ORDER BY
                 visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
+            onClose={this.fetchData}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
