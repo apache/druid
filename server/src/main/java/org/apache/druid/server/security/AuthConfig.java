@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.policy.PolicyConfig;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
@@ -63,7 +64,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false);
+    this(null, null, null, false, false, null, null, false, null);
   }
 
   @JsonProperty
@@ -100,6 +101,9 @@ public class AuthConfig
   @JsonProperty
   private final boolean enableInputSourceSecurity;
 
+  @JsonProperty
+  private final PolicyConfig tableSecurityPolicyConfig;
+
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticatorChain,
@@ -109,7 +113,8 @@ public class AuthConfig
       @JsonProperty("authorizeQueryContextParams") boolean authorizeQueryContextParams,
       @JsonProperty("unsecuredContextKeys") Set<String> unsecuredContextKeys,
       @JsonProperty("securedContextKeys") Set<String> securedContextKeys,
-      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity
+      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity,
+      @JsonProperty("tableSecurityPolicyConfig") PolicyConfig tableSecurityPolicyConfig
   )
   {
     this.authenticatorChain = authenticatorChain;
@@ -122,6 +127,9 @@ public class AuthConfig
                                 : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
     this.enableInputSourceSecurity = enableInputSourceSecurity;
+    this.tableSecurityPolicyConfig = tableSecurityPolicyConfig == null
+                                     ? PolicyConfig.defaultInstance()
+                                     : tableSecurityPolicyConfig;
   }
 
   public List<String> getAuthenticatorChain()
@@ -152,6 +160,11 @@ public class AuthConfig
   public boolean isEnableInputSourceSecurity()
   {
     return enableInputSourceSecurity;
+  }
+
+  public PolicyConfig getTableSecurityPolicyConfig()
+  {
+    return tableSecurityPolicyConfig;
   }
 
   /**
@@ -201,7 +214,8 @@ public class AuthConfig
            && Objects.equals(unsecuredPaths, that.unsecuredPaths)
            && Objects.equals(unsecuredContextKeys, that.unsecuredContextKeys)
            && Objects.equals(securedContextKeys, that.securedContextKeys)
-           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity);
+           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity)
+           && Objects.equals(tableSecurityPolicyConfig, that.tableSecurityPolicyConfig);
   }
 
   @Override
@@ -215,7 +229,8 @@ public class AuthConfig
         authorizeQueryContextParams,
         unsecuredContextKeys,
         securedContextKeys,
-        enableInputSourceSecurity
+        enableInputSourceSecurity,
+        tableSecurityPolicyConfig
     );
   }
 
@@ -231,6 +246,7 @@ public class AuthConfig
            ", unsecuredContextKeys=" + unsecuredContextKeys +
            ", securedContextKeys=" + securedContextKeys +
            ", enableInputSourceSecurity=" + enableInputSourceSecurity +
+           ", tableSecurityPolicyConfig=" + tableSecurityPolicyConfig +
            '}';
   }
 
@@ -252,6 +268,7 @@ public class AuthConfig
     private Set<String> unsecuredContextKeys;
     private Set<String> securedContextKeys;
     private boolean enableInputSourceSecurity;
+    private PolicyConfig tableSecurityPolicyConfig;
 
     public Builder setAuthenticatorChain(List<String> authenticatorChain)
     {
@@ -301,6 +318,12 @@ public class AuthConfig
       return this;
     }
 
+    public Builder setTableSecurityPolicyConfig(PolicyConfig tableSecurityPolicyConfig)
+    {
+      this.tableSecurityPolicyConfig = tableSecurityPolicyConfig;
+      return this;
+    }
+
     public AuthConfig build()
     {
       return new AuthConfig(
@@ -311,7 +334,8 @@ public class AuthConfig
           authorizeQueryContextParams,
           unsecuredContextKeys,
           securedContextKeys,
-          enableInputSourceSecurity
+          enableInputSourceSecurity,
+          tableSecurityPolicyConfig
       );
     }
   }
