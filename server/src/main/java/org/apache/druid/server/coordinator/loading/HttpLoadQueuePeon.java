@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -196,6 +197,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     final SegmentLoadingMode loadingMode = loadingModeSupplier.get();
     final int batchSize = calculateBatchSize(loadingMode);
+
+    if (batchSize < 1) {
+      log.error("Batch size must be greater than 0.");
+      throw new RE("Batch size must be greater than 0.");
+    }
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 

@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.error.DruidException;
 
 /**
  * Contains information related to the capability of a server to load segments, for example the number of threads
@@ -38,11 +37,6 @@ public class SegmentLoadingCapabilities
       @JsonProperty("numTurboLoadingThreads") int numTurboLoadingThreads
   )
   {
-    if (numLoadingThreads < 1 || numTurboLoadingThreads < 1) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("numLoadingThreads and numTurboLoadingThreads must be greater than 0.");
-    }
     this.numLoadingThreads = numLoadingThreads;
     this.numTurboLoadingThreads = numTurboLoadingThreads;
   }
