@@ -43,7 +43,6 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.overlord.TaskLockbox.TaskLockPosse;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -88,14 +87,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class TaskLockboxTest
+public class GlobalTaskLockboxTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
   private TaskStorage taskStorage;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private TaskLockbox lockbox;
+  private GlobalTaskLockbox lockbox;
   private TaskLockboxValidator validator;
   private SegmentSchemaManager segmentSchemaManager;
 
@@ -145,7 +144,7 @@ public class TaskLockboxTest
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     validator = new TaskLockboxValidator(lockbox, taskStorage);
   }
 
@@ -341,7 +340,7 @@ public class TaskLockboxTest
   @Test
   public void testSyncFromStorage()
   {
-    final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final GlobalTaskLockbox originalBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     for (int i = 0; i < 5; i++) {
       final Task task = NoopTask.create();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -363,7 +362,7 @@ public class TaskLockboxTest
                                                            .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox newBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final GlobalTaskLockbox newBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     newBox.syncFromStorage();
 
     Assert.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());
@@ -390,7 +389,7 @@ public class TaskLockboxTest
                                                            .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final GlobalTaskLockbox lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     lockbox.syncFromStorage();
 
     final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
@@ -421,7 +420,7 @@ public class TaskLockboxTest
                                                            .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final GlobalTaskLockbox lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     lockbox.syncFromStorage();
 
     final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
@@ -448,7 +447,7 @@ public class TaskLockboxTest
         )
     );
 
-    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final GlobalTaskLockbox lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     TaskLockboxSyncResult result = lockbox.syncFromStorage();
     Assert.assertEquals(1, result.getTasksToFail().size());
     Assert.assertTrue(result.getTasksToFail().contains(task));
@@ -486,8 +485,8 @@ public class TaskLockboxTest
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    TaskLockbox theBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    TaskLockbox loadedBox = new TaskLockbox(loadedTaskStorage, loadedMetadataStorageCoordinator);
+    GlobalTaskLockbox theBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    GlobalTaskLockbox loadedBox = new GlobalTaskLockbox(loadedTaskStorage, loadedMetadataStorageCoordinator);
 
     Task aTask = NoopTask.create();
     taskStorage.insert(aTask, TaskStatus.running(aTask.getId()));
@@ -512,7 +511,7 @@ public class TaskLockboxTest
   @Test
   public void testRevokedLockSyncFromStorage()
   {
-    final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final GlobalTaskLockbox originalBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
 
     final Task task1 = NoopTask.ofPriority(10);
     taskStorage.insert(task1, TaskStatus.running(task1.getId()));
@@ -538,7 +537,7 @@ public class TaskLockboxTest
     Assert.assertEquals(1, task2Locks.size());
     Assert.assertTrue(task2Locks.get(0).isRevoked());
 
-    final TaskLockbox newBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final GlobalTaskLockbox newBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     newBox.syncFromStorage();
 
     final Set<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
@@ -773,7 +772,7 @@ public class TaskLockboxTest
         ).isOk()
     );
 
-    final Optional<TaskLockPosse> highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockbox.TaskLockPosse> highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         highPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
     );
@@ -782,7 +781,7 @@ public class TaskLockboxTest
     Assert.assertTrue(highLockPosse.get().containsTask(highPriorityTask));
     Assert.assertFalse(highLockPosse.get().getTaskLock().isRevoked());
 
-    final Optional<TaskLockPosse> lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+    final Optional<TaskLockbox.TaskLockPosse> lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         lowPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
     );
@@ -1111,9 +1110,9 @@ public class TaskLockboxTest
         task2.getPriority()
     );
 
-    TaskLockPosse taskLockPosse1 = new TaskLockPosse(taskLock1);
-    TaskLockPosse taskLockPosse2 = new TaskLockPosse(taskLock2);
-    TaskLockPosse taskLockPosse3 = new TaskLockPosse(taskLock1);
+    TaskLockbox.TaskLockPosse taskLockPosse1 = new TaskLockbox.TaskLockPosse(taskLock1);
+    TaskLockbox.TaskLockPosse taskLockPosse2 = new TaskLockbox.TaskLockPosse(taskLock2);
+    TaskLockbox.TaskLockPosse taskLockPosse3 = new TaskLockbox.TaskLockPosse(taskLock1);
 
     Assert.assertNotEquals(taskLockPosse1, null);
     Assert.assertNotEquals(null, taskLockPosse1);
@@ -1144,7 +1143,7 @@ public class TaskLockboxTest
         ).isOk()
     );
 
-    final List<TaskLockPosse> posses = lockbox
+    final List<TaskLockbox.TaskLockPosse> posses = lockbox
         .getAllLocks()
         .get(task1.getDataSource())
         .get(DateTimes.of("2017"))
@@ -1873,7 +1872,7 @@ public class TaskLockboxTest
     taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
     taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
 
-    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
+    GlobalTaskLockbox testLockbox = new NullLockPosseGlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     testLockbox.add(taskWithFailingLockAcquisition0);
     testLockbox.add(taskWithFailingLockAcquisition1);
     testLockbox.add(taskWithSuccessfulLockAcquisition);
@@ -2028,7 +2027,7 @@ public class TaskLockboxTest
             .andReturn(0).once();
     EasyMock.replay(coordinator);
 
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);
+    final GlobalTaskLockbox taskLockbox = new GlobalTaskLockbox(taskStorage, coordinator);
 
     taskLockbox.add(replaceTask);
     taskLockbox.tryLock(
@@ -2052,11 +2051,11 @@ public class TaskLockboxTest
   {
 
     private final Set<Task> tasks;
-    private final TaskLockbox lockbox;
+    private final GlobalTaskLockbox lockbox;
     private final TaskStorage taskStorage;
     private final Map<TaskLock, String> lockToTaskIdMap;
 
-    TaskLockboxValidator(TaskLockbox lockbox, TaskStorage taskStorage)
+    TaskLockboxValidator(GlobalTaskLockbox lockbox, TaskStorage taskStorage)
     {
       lockToTaskIdMap = new HashMap<>();
       tasks = new HashSet<>();
@@ -2216,7 +2215,7 @@ public class TaskLockboxTest
     }
   }
 
-  private static String TASK_NAME = "myModuleIsntLoadedTask";
+  private static final String TASK_NAME = "myModuleIsntLoadedTask";
 
   private static class TheModule extends SimpleModule
   {
@@ -2228,7 +2227,7 @@ public class TaskLockboxTest
 
   private static class MyModuleIsntLoadedTask extends AbstractTask
   {
-    private String someProp;
+    private final String someProp;
 
     @JsonCreator
     protected MyModuleIsntLoadedTask(
@@ -2275,9 +2274,9 @@ public class TaskLockboxTest
   /**
    * Extends TaskLockbox to return a null TaskLockPosse when the task's group name contains "FailingLockAcquisition".
    */
-  private static class NullLockPosseTaskLockbox extends TaskLockbox
+  private static class NullLockPosseGlobalTaskLockbox extends GlobalTaskLockbox
   {
-    public NullLockPosseTaskLockbox(
+    public NullLockPosseGlobalTaskLockbox(
         TaskStorage taskStorage,
         IndexerMetadataStorageCoordinator metadataStorageCoordinator
     )
@@ -2286,10 +2285,10 @@ public class TaskLockboxTest
     }
 
     @Override
-    protected TaskLockPosse reacquireLockOnStartup(Task task, TaskLock taskLock)
+    protected TaskLockbox.TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
     {
-      return task.getGroupId()
-                 .contains("FailingLockAcquisition") ? null : super.reacquireLockOnStartup(task, taskLock);
+      return task.getGroupId().contains("FailingLockAcquisition")
+             ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
     }
   }
 }

@@ -43,8 +43,8 @@ import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DruidOverlord;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -107,7 +107,7 @@ public class OverlordResourceTest
   private DruidOverlord overlord;
   private TaskMaster taskMaster;
   private TaskStorage taskStorage;
-  private TaskLockbox taskLockbox;
+  private GlobalTaskLockbox taskLockbox;
   private JacksonConfigManager configManager;
   private ProvisioningStrategy provisioningStrategy;
   private AuthConfig authConfig;
@@ -133,7 +133,7 @@ public class OverlordResourceTest
     overlord = EasyMock.createStrictMock(DruidOverlord.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
     taskStorage = EasyMock.createStrictMock(TaskStorage.class);
-    taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
+    taskLockbox = EasyMock.createStrictMock(GlobalTaskLockbox.class);
     taskQueryTool = new TaskQueryTool(
         taskStorage,
         taskLockbox,
