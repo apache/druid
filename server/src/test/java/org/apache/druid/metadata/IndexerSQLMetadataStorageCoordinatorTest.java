@@ -3941,7 +3941,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     refreshCache();
     Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
 
-    emitter.verifyEmitted(Metric.READ_WRITE_TRANSACTIONS, 2);
+    emitter.verifyEmitted(Metric.READ_ONLY_TRANSACTIONS, 2);
   }
 
   @Test
