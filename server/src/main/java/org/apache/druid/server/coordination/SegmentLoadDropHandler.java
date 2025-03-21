@@ -27,7 +27,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -69,8 +68,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService scheduledExecutorService;
-  private final ThreadPoolExecutor standardExec;
-  private final ThreadPoolExecutor turboExec;
+  private final ThreadPoolExecutor normalLoadExec;
+  private final ThreadPoolExecutor turboLoadExec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -96,16 +95,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         announcer,
         segmentManager,
         new ThreadPoolExecutor(
-            config.getNumLoadingThreads(), config.getNumLoadingThreads(),
-            60L, TimeUnit.SECONDS,
+            config.getNumLoadingThreads(),
+            config.getNumLoadingThreads(),
+            60L,
+            TimeUnit.SECONDS,
             new SynchronousQueue<>(),
-            Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+            Execs.makeThreadFactory("SegmentLoadDropHandler-normal-%s")
         ),
         new ThreadPoolExecutor(
-            config.getNumBootstrapThreads(), config.getNumBootstrapThreads(),
-            60L, TimeUnit.SECONDS,
+            config.getNumBootstrapThreads(),
+            config.getNumBootstrapThreads(),
+            60L,
+            TimeUnit.SECONDS,
             new SynchronousQueue<>(),
-            Execs.makeThreadFactory("TurboDataSegmentChangeHandler-%s")
+            Execs.makeThreadFactory("SegmentLoadDropHandler-turbo-%s")
         ),
         Executors.newScheduledThreadPool(
             config.getNumLoadingThreads(),
@@ -119,20 +122,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
-      ThreadPoolExecutor standardExec,
-      ThreadPoolExecutor turboExec,
+      ThreadPoolExecutor normalLoadExec,
+      ThreadPoolExecutor turboLoadExec,
       ScheduledExecutorService scheduledExecutorService
   )
   {
     this.config = config;
     this.announcer = announcer;
     this.segmentManager = segmentManager;
-    this.standardExec = standardExec;
-    this.turboExec = turboExec;
+    this.normalLoadExec = normalLoadExec;
+    this.turboLoadExec = turboLoadExec;
     this.scheduledExecutorService = scheduledExecutorService;
 
-    this.standardExec.allowCoreThreadTimeOut(true);
-    this.turboExec.allowCoreThreadTimeOut(true);
+    this.normalLoadExec.allowCoreThreadTimeOut(true);
+    this.turboLoadExec.allowCoreThreadTimeOut(true);
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
@@ -150,11 +153,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   @Override
   public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
-  {
-    addSegment(segment, callback, SegmentLoadingMode.NORMAL);
-  }
-
-  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback, SegmentLoadingMode loadingMode)
   {
     SegmentChangeStatus result = null;
     try {
@@ -180,7 +178,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         segmentManager.loadSegment(segment);
       }
       catch (Exception e) {
-        removeSegment(segment, DataSegmentChangeCallback.NOOP, false, loadingMode);
+        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
       }
       try {
@@ -210,21 +208,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @Override
   public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
-    removeSegment(segment, callback, true, SegmentLoadingMode.NORMAL);
-  }
-
-  @VisibleForTesting
-  void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback, boolean scheduleDrop)
-  {
-    removeSegment(segment, callback, scheduleDrop, SegmentLoadingMode.NORMAL);
+    removeSegment(segment, callback, true);
   }
 
   @VisibleForTesting
   void removeSegment(
       final DataSegment segment,
       @Nullable final DataSegmentChangeCallback callback,
-      final boolean scheduleDrop,
-      final SegmentLoadingMode segmentLoadingMode
+      final boolean scheduleDrop
   )
   {
     SegmentChangeStatus result = null;
@@ -346,8 +337,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                 getExecutorService(segmentLoadingMode).submit(
                     () -> SegmentLoadDropHandler.this.addSegment(
                         ((SegmentChangeRequestLoad) changeRequest).getSegment(),
-                        () -> resolveWaitingFutures(),
-                        segmentLoadingMode
+                        () -> resolveWaitingFutures()
                     )
                 );
               }
@@ -362,8 +352,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                 SegmentLoadDropHandler.this.removeSegment(
                     ((SegmentChangeRequestDrop) changeRequest).getSegment(),
                     () -> resolveWaitingFutures(),
-                    true,
-                    segmentLoadingMode
+                    true
                 );
               }
             },
@@ -452,14 +441,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   private ExecutorService getExecutorService(SegmentLoadingMode loadingMode)
   {
-    switch (loadingMode) {
-      case TURBO:
-        return turboExec;
-      case NORMAL:
-        return standardExec;
-      default:
-        throw DruidException.defensive("Unknown execution mode [%s]", loadingMode);
-    }
+    return loadingMode == SegmentLoadingMode.TURBO ? turboLoadExec : normalLoadExec;
   }
 
   public SegmentLoaderConfig getSegmentLoaderConfig()

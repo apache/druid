@@ -47,7 +47,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.server.http.HistoricalLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -57,7 +57,6 @@ import org.joda.time.Duration;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -126,7 +125,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final Supplier<SegmentLoadingMode> loadingModeSupplier;
 
   private final ObjectWriter requestBodyWriter;
-  private final HistoricalLoadingCapabilities serverCapabilities;
+  private final SegmentLoadingCapabilities serverCapabilities;
 
   public HttpLoadQueuePeon(
       String baseUrl,
@@ -156,10 +155,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       ObjectMapper jsonMapper,
       HttpClient httpClient,
       HttpLoadQueuePeonConfig config,
+      Supplier<SegmentLoadingMode> loadingModeSupplier,
       ScheduledExecutorService processingExecutor,
       ExecutorService callBackExecutor,
-      Supplier<SegmentLoadingMode> loadingModeSupplier,
-      HistoricalLoadingCapabilities serverCapabilities
+      SegmentLoadingCapabilities serverCapabilities
   )
   {
     this.jsonMapper = jsonMapper;
@@ -174,13 +173,12 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.serverCapabilities = serverCapabilities;
   }
 
-  private HistoricalLoadingCapabilities fetchSegmentLoadingCapabilities()
+  private SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
   {
     try {
-      log.trace("Fetching historical capabilities from Server[%s].", new URL(serverId));
       final URL segmentLoadingCapabilitiesURL = new URL(
           new URL(serverId),
-          "druid-internal/v1/segments/segmentLoadingCapabilities"
+          "druid-internal/v1/segments/loadCapabilities"
       );
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
@@ -192,26 +190,23 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       ).get();
 
       if (HttpServletResponse.SC_NOT_FOUND == responseHandler.getStatus()) {
-        log.info(
+        log.warn(
             "Historical capabilities endpoint not found at server[%s]. Using default values.",
             new URL(serverId)
         );
-        return new HistoricalLoadingCapabilities(1, 1);
-      }
-
-      if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
+        return new SegmentLoadingCapabilities(1, 1);
+      } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
+        log.makeAlert("Error when fetching capabilities from server[%s]. Received [%s]", new URL(serverId), responseHandler.getStatus());
         throw new RE("Error when fetching capabilities from server[%s]. Received [%s]", new URL(serverId), responseHandler.getStatus());
       }
 
       return jsonMapper.readValue(
           stream,
-          HistoricalLoadingCapabilities.class
+          SegmentLoadingCapabilities.class
       );
     }
     catch (Throwable th) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
+      throw new RE(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
     }
   }
 
@@ -223,7 +218,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
 
     final SegmentLoadingMode loadingMode = loadingModeSupplier.get();
-    int batchSize = calculateBatchSize(loadingMode);
+    final int batchSize = calculateBatchSize(loadingMode);
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
@@ -264,7 +259,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
 
     try {
-      log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode [%s].", newRequests.size(), serverId, loadingMode);
+      log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode[%s].", newRequests.size(), serverId, loadingMode);
       final boolean hasLoadRequests = newRequests.stream().anyMatch(r -> r instanceof SegmentChangeRequestLoad);
       if (hasLoadRequests && !loadingRateTracker.isLoadingBatch()) {
         loadingRateTracker.markBatchLoadingStarted();
@@ -379,9 +374,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           },
           processingExecutor
       );
-    }
-    catch (MalformedURLException ex) {
-      throw new RuntimeException(ex);
     }
     catch (Throwable th) {
       log.error(th, "Error sending load/drop request to [%s].", serverId);

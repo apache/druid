@@ -457,11 +457,6 @@ public class CoordinatorSimulationBuilder
 
       JacksonConfigManager jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);
-      CoordinatorConfigManager coordinatorConfigManager = new CoordinatorConfigManager(
-          jacksonConfigManager,
-          null,
-          null
-      );
 
       this.loadQueueTaskMaster = new LoadQueueTaskMaster(
           OBJECT_MAPPER,
@@ -469,7 +464,7 @@ public class CoordinatorSimulationBuilder
           executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
           coordinatorConfig.getHttpLoadQueuePeonConfig(),
           httpClient,
-          coordinatorConfigManager::getCurrentDynamicConfig
+          () -> dynamicConfig
       );
 
       this.loadQueueManager =

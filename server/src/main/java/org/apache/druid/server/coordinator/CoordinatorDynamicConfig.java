@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
@@ -166,7 +167,7 @@ public class CoordinatorDynamicConfig
     );
     this.debugDimensions = debugDimensions;
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
-    this.turboLoadingNodes = parseJsonStringOrArray(turboLoadingNodes);
+    this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -321,9 +322,9 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * List of historical servers to put into turboloading mode. These historicals will use a larger thread pool to load
+   * List of servers to put in turbo-loading mode. These servers will use a larger thread pool to load
    * segments. This causes decreases the average time taken to load segments. However, this also means less resources
-   * given to query threads which causes a drop in query performance.
+   * available to query threads which may cause a drop in query performance.
    *
    * @return Set of host:port entries
    */

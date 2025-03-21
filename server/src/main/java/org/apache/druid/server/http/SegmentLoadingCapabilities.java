@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 
-public class HistoricalLoadingCapabilities
+public class SegmentLoadingCapabilities
 {
   private final int numLoadingThreads;
   private final int numTurboLoadingThreads;
 
   @JsonCreator
-  public HistoricalLoadingCapabilities(
+  public SegmentLoadingCapabilities(
       @JsonProperty("numLoadingThreads") int numLoadingThreads,
       @JsonProperty("numTurboLoadingThreads") int numTurboLoadingThreads
   )

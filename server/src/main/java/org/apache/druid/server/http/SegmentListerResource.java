@@ -221,10 +221,10 @@ public class SegmentListerResource
    * This endpoint is used by HttpLoadQueuePeon to assign segment load/drop requests batch. This endpoint makes the
    * client wait till one of the following events occur. Note that this is implemented using async IO so no jetty
    * threads are held while in wait.
-   * <br>
-   * (1) Given timeout elapses.
-   * (2) Some load/drop request completed.
-   * <br>
+   * <ol>
+   *   <li>Given timeout elapses.</li>
+   *   <li>Some load/drop request completed.</li>
+   * </ol>
    * It returns a map of "load/drop request -> SUCCESS/FAILED/PENDING status" for each request in the batch.
    */
   @POST
@@ -331,20 +331,19 @@ public class SegmentListerResource
   }
 
   @GET
-  @Path("/segmentLoadingCapabilities")
+  @Path("/loadCapabilities")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response getSegmentLoadingCapabilities(
       @Context final HttpServletRequest req
-  ) throws IOException
+  )
   {
     if (loadDropRequestHandler == null) {
-      sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "load/drop handler is not available.");
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
 
     SegmentLoaderConfig config = loadDropRequestHandler.getSegmentLoaderConfig();
-    HistoricalLoadingCapabilities capabilitiesResponse =
-        new HistoricalLoadingCapabilities(config.getNumLoadingThreads(), config.getNumBootstrapThreads());
+    SegmentLoadingCapabilities capabilitiesResponse =
+        new SegmentLoadingCapabilities(config.getNumLoadingThreads(), config.getNumBootstrapThreads());
 
     return Response.status(Response.Status.OK).entity(capabilitiesResponse).build();
   }

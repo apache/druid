@@ -29,16 +29,16 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
-public class HistoricalLoadingCapabilitiesTest
+public class SegmentLoadingCapabilitiesTest
 {
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
   public void testSerde() throws Exception
   {
-    HistoricalLoadingCapabilities capabilities = new HistoricalLoadingCapabilities(1, 4);
+    SegmentLoadingCapabilities capabilities = new SegmentLoadingCapabilities(1, 4);
 
-    HistoricalLoadingCapabilities reread = jsonMapper.readValue(jsonMapper.writeValueAsString(capabilities), HistoricalLoadingCapabilities.class);
+    SegmentLoadingCapabilities reread = jsonMapper.readValue(jsonMapper.writeValueAsString(capabilities), SegmentLoadingCapabilities.class);
 
     Assert.assertEquals(capabilities.getNumLoadingThreads(), reread.getNumLoadingThreads());
     Assert.assertEquals(capabilities.getNumTurboLoadingThreads(), reread.getNumTurboLoadingThreads());
@@ -48,7 +48,7 @@ public class HistoricalLoadingCapabilitiesTest
   public void testSerdeFromJson() throws JsonProcessingException
   {
     String json = "{\"numLoadingThreads\":3,\"numTurboLoadingThreads\":5}";
-    HistoricalLoadingCapabilities reread = jsonMapper.readValue(json, HistoricalLoadingCapabilities.class);
+    SegmentLoadingCapabilities reread = jsonMapper.readValue(json, SegmentLoadingCapabilities.class);
 
     Assert.assertEquals(3, reread.getNumLoadingThreads());
     Assert.assertEquals(5, reread.getNumTurboLoadingThreads());
@@ -59,7 +59,7 @@ public class HistoricalLoadingCapabilitiesTest
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(ValueInstantiationException.class, () ->
-            jsonMapper.readValue("{}", HistoricalLoadingCapabilities.class)
+            jsonMapper.readValue("{}", SegmentLoadingCapabilities.class)
         ),
         CoreMatchers.allOf(
             CoreMatchers.instanceOf(ValueInstantiationException.class),
@@ -71,7 +71,7 @@ public class HistoricalLoadingCapabilitiesTest
 
     MatcherAssert.assertThat(
         Assert.assertThrows(ValueInstantiationException.class, () ->
-            jsonMapper.readValue("{\"numLoadingThreads\":3}", HistoricalLoadingCapabilities.class)
+            jsonMapper.readValue("{\"numLoadingThreads\":3}", SegmentLoadingCapabilities.class)
         ),
         CoreMatchers.allOf(
             CoreMatchers.instanceOf(ValueInstantiationException.class),

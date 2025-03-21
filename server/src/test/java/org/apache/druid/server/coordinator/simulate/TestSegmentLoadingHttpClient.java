@@ -33,7 +33,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
-import org.apache.druid.server.http.HistoricalLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -160,7 +160,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       // Serialize
       SettableFuture future = SettableFuture.create();
       try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-        objectMapper.writeValue(baos, new HistoricalLoadingCapabilities(1, 1));
+        objectMapper.writeValue(baos, new SegmentLoadingCapabilities(1, 1));
         future.set(new ByteArrayInputStream(baos.toByteArray()));
       }
       return future;
