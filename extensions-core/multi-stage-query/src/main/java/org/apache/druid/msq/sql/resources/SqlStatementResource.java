@@ -122,6 +122,7 @@ public class SqlStatementResource
 {
 
   public static final String RESULT_FORMAT = "__resultFormat";
+  public static final String CONTENT_DISPOSITION_RESPONSE_HEADER = "Content-Disposition";
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
   private final ObjectMapper jsonMapper;
@@ -277,6 +278,7 @@ public class SqlStatementResource
       @PathParam("id") final String queryId,
       @QueryParam("page") Long page,
       @QueryParam("resultFormat") String resultFormat,
+      @QueryParam("filename") String filename,
       @Context final HttpServletRequest req
   )
   {
@@ -309,10 +311,18 @@ public class SqlStatementResource
       );
       throwIfQueryIsNotSuccessful(queryId, statusPlus);
 
+      final String contentDispositionHeaderValue = filename != null ? String.format("attachment; filename=%s", filename) : null;
+
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
       if (!signature.isPresent() || MSQControllerTask.isIngestion(msqControllerTask.getQuerySpec())) {
         // Since it's not a select query, nothing to return.
-        return Response.ok().build();
+        final Response.ResponseBuilder responseBuilder = Response.ok();
+
+        if (contentDispositionHeaderValue != null) {
+          responseBuilder.header(CONTENT_DISPOSITION_RESPONSE_HEADER, contentDispositionHeaderValue);
+        }
+
+        return responseBuilder.build();
       }
 
       // returning results
@@ -321,18 +331,30 @@ public class SqlStatementResource
       results = getResultYielder(queryId, page, msqControllerTask, closer);
       if (!results.isPresent()) {
         // no results, return empty
-        return Response.ok().build();
+        final Response.ResponseBuilder responseBuilder = Response.ok();
+
+        if (contentDispositionHeaderValue != null) {
+          responseBuilder.header(CONTENT_DISPOSITION_RESPONSE_HEADER, contentDispositionHeaderValue);
+        }
+
+        return responseBuilder.build();
       }
 
       ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec());
-      return Response.ok((StreamingOutput) outputStream -> resultPusher(
+      final Response.ResponseBuilder responseBuilder = Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
           closer,
           results,
           new CountingOutputStream(outputStream),
           preferredFormat
-      )).build();
+      ));
+
+      if (contentDispositionHeaderValue != null) {
+        responseBuilder.header(CONTENT_DISPOSITION_RESPONSE_HEADER, contentDispositionHeaderValue);
+      }
+
+      return responseBuilder.build();
     }
 
 
