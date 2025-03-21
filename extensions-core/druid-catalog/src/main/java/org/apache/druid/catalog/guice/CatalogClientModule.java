@@ -27,11 +27,13 @@ import org.apache.druid.catalog.model.SchemaRegistryImpl;
 import org.apache.druid.catalog.sql.LiveCatalogResolver;
 import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.CatalogClient;
+import org.apache.druid.catalog.sync.CatalogClientConfig;
 import org.apache.druid.catalog.sync.CatalogSource;
 import org.apache.druid.catalog.sync.CatalogUpdateListener;
 import org.apache.druid.catalog.sync.CatalogUpdateReceiver;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
@@ -40,21 +42,23 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 
 /**
- * Configures the metadata catalog on the Broker to use a cache
+ * Configures the metadata catalog on the Broker and overlord to use a cache
  * and network communications for pull and push updates.
  */
-@LoadScope(roles = {NodeRole.BROKER_JSON_NAME,NodeRole.OVERLORD_JSON_NAME})
-public class CatalogBrokerModule implements DruidModule
+@LoadScope(roles = {NodeRole.BROKER_JSON_NAME, NodeRole.OVERLORD_JSON_NAME})
+public class CatalogClientModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
   {
-    // The Broker (catalog client) uses a cached metadata catalog.
+    // config for catalog client
+    JsonConfigProvider.bind(binder, "druid.catalog.client", CatalogClientConfig.class);
+
+    // The catalog client maintains a cached metadata catalog.
     binder
         .bind(CachedMetadataCatalog.class)
         .in(LazySingleton.class);
-
-    // Broker code accesses the catalog through the MetadataCatalog interface.
+    // Catalog metadata for the various purposes. This will override the base binding.
     binder
         .bind(MetadataCatalog.class)
         .to(CachedMetadataCatalog.class)
@@ -66,7 +70,7 @@ public class CatalogBrokerModule implements DruidModule
         .to(CatalogClient.class)
         .in(LazySingleton.class);
 
-    // The cached metadata catalog is the listener for"push" events.
+    // The cached metadata catalog is the listener for "push" events.
     binder
         .bind(CatalogUpdateListener.class)
         .to(CachedMetadataCatalog.class)
@@ -78,21 +82,19 @@ public class CatalogBrokerModule implements DruidModule
         .to(SchemaRegistryImpl.class)
         .in(LazySingleton.class);
 
-    // Lifecycle-managed class to prime the metadata cache
+    // Lifecycle-managed class to periodically the metadata cache
     binder
         .bind(CatalogUpdateReceiver.class)
         .in(ManageLifecycle.class);
     LifecycleModule.register(binder, CatalogUpdateReceiver.class);
 
-    // Catalog resolver for the planner. This will override the
-    // base binding.
+    // Catalog resolver for the planner. This will override the base binding.
     binder
         .bind(CatalogResolver.class)
         .to(LiveCatalogResolver.class)
         .in(LazySingleton.class);
 
-    // The listener resource sends to the catalog
-    // listener (the cached catalog.)
+    // The listener resource sends to the catalog listener (the cached catalog.)
     Jerseys.addResource(binder, CatalogListenerResource.class);
   }
 }

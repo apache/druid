@@ -339,6 +339,8 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
     SchemaEntry schemaEntry = entryFor(event.table.id().schema());
     if (schemaEntry != null) {
       schemaEntry.update(event);
+    } else {
+      resync();
     }
   }
 
@@ -379,7 +381,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
    * Discard any existing cached tables and reload directly from the
    * catalog source. Manages the two schemas which the catalog manages.
    * If the catalog were to manage others, add those here as well.
-   * Done both at Broker startup, and on demand for testing.
+   * Done both at Catalog client startup, and on demand for testing.
    */
   @Override
   public void resync()
