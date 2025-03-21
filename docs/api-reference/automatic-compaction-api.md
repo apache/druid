@@ -267,10 +267,17 @@ This includes the following fields:
 |------|-----------|-------------|
 |`compactionTaskSlotRatio`|Ratio of number of slots taken up by compaction tasks to the number of total task slots across all workers.|0.1|
 |`maxCompactionTaskSlots`|Maximum number of task slots that can be taken up by compaction tasks.|2147483647 (i.e. total task slots)|
-|`compactionPolicy.type`|Policy to choose intervals for compaction. Currently, the only supported policy in `newestSegmentFirst`.|`newestSegmentFirst`|
-|`compactionPolicy.priorityDatasource`|Datasource to prioritize for compaction. The intervals of this datasource are chosen for compaction before the intervals of any other datasource. Within this datasource, the intervals are prioritized based on the chosen compaction policy.|None|
+|`compactionPolicy`|Policy to choose intervals for compaction. Currently, the only supported policy is [Newest segment first](#compaction-policy-newestSegmentFirst).|Newest segment first|
 |`useSupervisors`|Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.|false|
-|`engine`|Engine used for running compaction tasks. Possible values are `native` and `msq`. `msq` engine can be used for compaction only if `useSupervisors` is `true`.|`native`|
+|`engine`|Engine used for running compaction tasks, unless overridden in the datasource-level compaction config. Possible values are `native` and `msq`. `msq` engine can be used for compaction only if `useSupervisors` is `true`.|`native`|
+
+#### Compaction policy `newestSegmentFirst`
+
+|Field|Description|Default value|
+|-----|-----------|-------------|
+|`type`|This must always be `newestSegmentFirst`||
+|`priorityDatasource`|Datasource to prioritize for compaction. The intervals of this datasource are chosen for compaction before the intervals of any other datasource. Within this datasource, the intervals are prioritized based on the chosen compaction policy.|None|
+
 
 #### URL
 
