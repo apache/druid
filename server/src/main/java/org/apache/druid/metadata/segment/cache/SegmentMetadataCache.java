@@ -20,7 +20,12 @@
 package org.apache.druid.metadata.segment.cache;
 
 /**
- * Cache for metadata of pending segments and committed segments.
+ * Cache for metadata of pending segments and committed segments maintained by
+ * the Overlord to improve performance of segment allocation and other task actions.
+ * <p>
+ * Not to be confused with {@link org.apache.druid.segment.metadata.AbstractSegmentMetadataCache}
+ * which is used by Brokers to cache row signature, number of rows, etc. to aid
+ * with Druid query performance.
  */
 public interface SegmentMetadataCache
 {
