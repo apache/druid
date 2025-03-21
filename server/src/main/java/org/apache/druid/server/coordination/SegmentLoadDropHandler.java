@@ -46,8 +46,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -67,8 +67,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
-  private final ScheduledExecutorService scheduledExecutorService;
-  private final ThreadPoolExecutor normalLoadExec;
+  private final ScheduledExecutorService normalLoadExec;
   private final ThreadPoolExecutor turboLoadExec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
@@ -94,12 +93,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         config,
         announcer,
         segmentManager,
-        new ThreadPoolExecutor(
+        new ScheduledThreadPoolExecutor(
             config.getNumLoadingThreads(),
-            config.getNumLoadingThreads(),
-            60L,
-            TimeUnit.SECONDS,
-            new SynchronousQueue<>(),
             Execs.makeThreadFactory("SegmentLoadDropHandler-normal-%s")
         ),
         new ThreadPoolExecutor(
@@ -109,10 +104,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             TimeUnit.SECONDS,
             new SynchronousQueue<>(),
             Execs.makeThreadFactory("SegmentLoadDropHandler-turbo-%s")
-        ),
-        Executors.newScheduledThreadPool(
-            config.getNumLoadingThreads(),
-            Execs.makeThreadFactory("ScheduledDataSegmentChangeHandler-%s")
         )
     );
   }
@@ -122,9 +113,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
-      ThreadPoolExecutor normalLoadExec,
-      ThreadPoolExecutor turboLoadExec,
-      ScheduledExecutorService scheduledExecutorService
+      ScheduledExecutorService normalLoadExec,
+      ThreadPoolExecutor turboLoadExec
   )
   {
     this.config = config;
@@ -132,9 +122,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.segmentManager = segmentManager;
     this.normalLoadExec = normalLoadExec;
     this.turboLoadExec = turboLoadExec;
-    this.scheduledExecutorService = scheduledExecutorService;
 
-    this.normalLoadExec.allowCoreThreadTimeOut(true);
     this.turboLoadExec.allowCoreThreadTimeOut(true);
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
@@ -243,7 +231,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
-        scheduledExecutorService.schedule(
+        normalLoadExec.schedule(
             runnable,
             config.getDropSegmentDelayMillis(),
             TimeUnit.MILLISECONDS

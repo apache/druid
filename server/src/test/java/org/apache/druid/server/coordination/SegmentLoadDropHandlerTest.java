@@ -422,9 +422,8 @@ public class SegmentLoadDropHandlerTest
         config,
         segmentAnnouncer,
         segmentManager,
-        (ThreadPoolExecutor) scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
-        (ThreadPoolExecutor) scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]"),
-        scheduledExecutorFactory.create(5, "ScheduledSegmentLoadDropHandlerTest-[%d]")
+        scheduledExecutorFactory.create(5, "LoadDropHandlerTest-[%d]"),
+        (ThreadPoolExecutor) scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]")
     );
   }
 }

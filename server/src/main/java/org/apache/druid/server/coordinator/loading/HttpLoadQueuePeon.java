@@ -26,7 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -358,17 +358,18 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
   }
 
+  /**
+   * Calculates the number of segments the server is capable of handling at a time. If loading segments in turbo loading
+   * mode, returns the number of turbo loading threads on the server. Otherwise, return the value set by the batch size
+   * runtime parameter, or number of normal threads on the server if the parameter is not set.
+   */
   @VisibleForTesting
   int calculateBatchSize(SegmentLoadingMode loadingMode)
   {
-    if (config.getBatchSize() != null) {
-      return config.getBatchSize();
-    } else if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
+    if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
       return serverCapabilities.getNumTurboLoadingThreads();
-    } else if (SegmentLoadingMode.NORMAL.equals(loadingMode)) {
-      return serverCapabilities.getNumLoadingThreads();
     } else {
-      throw DruidException.defensive().build("unsupported loading mode");
+      return Configs.valueOrDefault(config.getBatchSize(), serverCapabilities.getNumLoadingThreads());
     }
   }
 
