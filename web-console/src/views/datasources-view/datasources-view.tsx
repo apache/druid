@@ -527,9 +527,7 @@ GROUP BY 1, 2`;
                 return datasourcesAndDefaultRules;
               }
             });
-          }
-
-          if (capabilities.hasOverlordAccess()) {
+          } else if (capabilities.hasOverlordAccess()) {
             auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
               try {
                 const taskList = await getApiArray(
@@ -684,14 +682,14 @@ GROUP BY 1, 2`;
     }
   };
 
-  private fetchDatasourceData() {
+  private readonly fetchData = () => {
     const { capabilities } = this.props;
     const { visibleColumns, showUnused } = this.state;
     this.datasourceQueryManager.runQuery({ capabilities, visibleColumns, showUnused });
-  }
+  };
 
   componentDidMount(): void {
-    this.fetchDatasourceData();
+    this.fetchData();
   }
 
   componentWillUnmount(): void {
@@ -730,9 +728,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       >
         <p>
           {`Are you sure you want to mark as unused all segments in '${datasourceToMarkAsUnusedAllSegmentsIn}'?`}
@@ -774,9 +770,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       >
         <p>{`Are you sure you want to mark as used all non-overshadowed segments in '${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}'?`}</p>
       </AsyncActionDialog>
@@ -811,9 +805,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ datasourceToMarkSegmentsByIntervalIn: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       >
         <p>{`Please select the interval in which you want to mark segments as ${usedWord} in '${datasourceToMarkSegmentsByIntervalIn}'?`}</p>
         <FormGroup>
@@ -840,9 +832,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ killDatasource: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       />
     );
   }
@@ -930,7 +920,7 @@ GROUP BY 1, 2`;
       message: 'Retention rules submitted successfully',
       intent: Intent.SUCCESS,
     });
-    this.fetchDatasourceData();
+    this.fetchData();
   };
 
   private readonly editDefaultRules = () => {
@@ -956,7 +946,7 @@ GROUP BY 1, 2`;
     try {
       await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
       this.setState({ compactionDialogOpenOn: undefined });
-      this.fetchDatasourceData();
+      this.fetchData();
     } catch (e) {
       AppToaster.show({
         message: getDruidErrorMessage(e),
@@ -980,7 +970,7 @@ GROUP BY 1, 2`;
             await Api.instance.delete(
               `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}`,
             );
-            this.setState({ compactionDialogOpenOn: undefined }, () => this.fetchDatasourceData());
+            this.setState({ compactionDialogOpenOn: undefined }, () => this.fetchData());
           } catch (e) {
             AppToaster.show({
               message: getDruidErrorMessage(e),
@@ -995,7 +985,7 @@ GROUP BY 1, 2`;
   private toggleUnused(showUnused: boolean) {
     this.setState({ showUnused: !showUnused }, () => {
       if (showUnused) return;
-      this.fetchDatasourceData();
+      this.fetchData();
     });
   }
 
@@ -1759,10 +1749,7 @@ GROUP BY 1, 2`;
                 visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
-            onClose={added => {
-              if (!added) return;
-              this.fetchDatasourceData();
-            }}
+            onClose={this.fetchData}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>

@@ -93,6 +93,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
         ]
       }
       onChange={[Function]}
+      onClose={[Function]}
       tableColumnsHidden={[]}
     />
   </Memo(ViewControlBar)>

@@ -516,18 +516,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   ) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-        enableComparisons={enableComparisons}
-      >
-        {valueFn(row.value)}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          enableComparisons={enableComparisons}
+        >
+          {valueFn(row.value)}
+        </TableFilterableCell>
+      );
+    };
   }
 
   renderSegmentsTable() {
@@ -580,7 +581,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE}
+        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE || page > 0}
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
