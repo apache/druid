@@ -68,6 +68,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * In-memory implementation of {@link SegmentMetadataCache}.
+ * <p>
+ * Reads can be done from the cache only after it has synced with the metadata store.
+ * Writes can happen even when the sync is in progress. This is because the
+ * {@link #syncWithMetadataStore()} is able to reconcile differences based on
+ * the update time of a transaction.
  */
 @ThreadSafe
 public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
@@ -77,10 +82,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private static final int SQL_MAX_RETRIES = 3;
   private static final int SQL_QUIET_RETRIES = 2;
 
-  /**
-   * Maximum time to wait for cache to be ready.
-   */
-  private static final int READY_TIMEOUT_MILLIS = 5 * 60_000;
   private static final int MIN_SYNC_DELAY_MILLIS = 1000;
   private static final int MAX_IMMEDIATE_SYNC_RETRIES = 3;
 
@@ -201,7 +202,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public boolean isReady()
+  public boolean isSyncedForRead()
   {
     return isCacheEnabled && isCacheReady.get();
   }
@@ -210,7 +211,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   public DatasourceSegmentCache getDatasource(String dataSource)
   {
     verifyCacheIsUsable();
-    emitMetric(dataSource, Metric.TRANSACTION_COUNT, 1);
     return getCacheForDatasource(dataSource);
   }
 
@@ -238,9 +238,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           throw InternalServerError.exception("Not leader yet. Segment metadata cache is not usable.");
         case LEADER_FIRST_SYNC_PENDING:
         case LEADER_FIRST_SYNC_STARTED:
-          throw InternalServerError.exception("Segment metadata cache is not synced yet.");
+          // Cache is now ready for writes
         case LEADER_READY:
-          // Cache is now ready for use
+          // Cache is now ready for both reads and writes
       }
     }
   }
@@ -251,12 +251,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       currentCacheState = targetState;
       log.info("%s. Cache is now in state[%s].", message, currentCacheState);
 
-      // Notify threads waiting for cache to be ready
-      if (currentCacheState == CacheState.LEADER_READY) {
-        isCacheReady.set(true);
-      } else {
-        isCacheReady.set(false);
-      }
+      isCacheReady.set(currentCacheState == CacheState.LEADER_READY);
     }
   }
 

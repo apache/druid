@@ -50,9 +50,11 @@ public interface SegmentMetadataCache
   boolean isEnabled();
 
   /**
-   * @return true if the cache is enabled and ready to serve requests.
+   * @return true if the cache is enabled and synced with the metadata store.
+   * Reads can be done from the cache only if it is synced but writes can happen
+   * even before the sync has finished.
    */
-  boolean isReady();
+  boolean isSyncedForRead();
 
   /**
    * Returns the cache for the given datasource.

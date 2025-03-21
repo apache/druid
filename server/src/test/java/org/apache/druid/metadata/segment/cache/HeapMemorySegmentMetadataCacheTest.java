@@ -32,7 +32,6 @@ import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -51,7 +50,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class HeapMemorySegmentMetadataCacheTest
@@ -230,37 +228,23 @@ public class HeapMemorySegmentMetadataCacheTest
   }
 
   @Test
-  public void testGetDataSource_throwsException_ifCacheIsNotSynced()
+  public void testIsSyncedForRead_returnsTrue_whenCacheIsLeaderAndSynced()
   {
     setupTargetWithCaching(true);
-    cache.start();
-    cache.becomeLeader();
-
-    DruidExceptionMatcher.internalServerError().expectMessageIs(
-        "Segment metadata cache is not synced yet."
-    ).assertThrowsAndMatches(
-        () -> cache.getDatasource(TestDataSource.WIKI)
-    );
-  }
-
-  @Test
-  public void testIsReady_returnsTrue_whenCacheIsLeaderAndSynced()
-  {
-    setupTargetWithCaching(true);
-    Assert.assertFalse(cache.isReady());
+    Assert.assertFalse(cache.isSyncedForRead());
 
     cache.start();
-    Assert.assertFalse(cache.isReady());
+    Assert.assertFalse(cache.isSyncedForRead());
 
     syncCache();
-    Assert.assertFalse(cache.isReady());
+    Assert.assertFalse(cache.isSyncedForRead());
 
     cache.becomeLeader();
-    Assert.assertFalse(cache.isReady());
+    Assert.assertFalse(cache.isSyncedForRead());
 
     syncCache();
     syncCache();
-    Assert.assertTrue(cache.isReady());
+    Assert.assertTrue(cache.isSyncedForRead());
 
     Assert.assertNotNull(cache.getDatasource(TestDataSource.WIKI));
   }
@@ -617,19 +601,6 @@ public class HeapMemorySegmentMetadataCacheTest
             pendingSegment.getSequenceName(),
             segmentId.getInterval()
         ).isEmpty()
-    );
-  }
-
-  @Test
-  public void testGetDatasource_increasesTransactionCount()
-  {
-    setupAndSyncCache();
-    cache.getDatasource(TestDataSource.WIKI);
-    cache.getDatasource(TestDataSource.WIKI);
-    serviceEmitter.verifyEmitted(
-        Metric.TRANSACTION_COUNT,
-        Map.of(DruidMetrics.DATASOURCE, TestDataSource.WIKI),
-        2
     );
   }
 

@@ -168,7 +168,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         leaderSelector,
-        segmentMetadataCache
+        segmentMetadataCache,
+        emitter
     )
     {
       @Override
@@ -3917,7 +3918,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         }
     );
 
-    emitter.verifyValue(Metric.TRANSACTION_COUNT, 1L);
+    emitter.verifyValue(Metric.READ_WRITE_TRANSACTIONS, 1L);
   }
 
   @Test
@@ -3925,7 +3926,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     Assume.assumeTrue(useSegmentCache);
 
-    Assert.assertTrue(segmentMetadataCache.isReady());
+    Assert.assertTrue(segmentMetadataCache.isSyncedForRead());
 
     insertUsedSegments(Set.of(defaultSegment), Map.of());
     final Supplier<Set<DataSegment>> retrieveAction =
@@ -3940,16 +3941,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     refreshCache();
     Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
 
-    emitter.verifyEmitted(Metric.TRANSACTION_COUNT, 2);
+    emitter.verifyEmitted(Metric.READ_WRITE_TRANSACTIONS, 2);
   }
 
   @Test
-  public void testCacheIsNotUsed_ifNotReady()
+  public void testReadOperation_doesNotUseCache_ifNotSynced()
   {
     Assume.assumeTrue(useSegmentCache);
 
     segmentMetadataCache.stopBeingLeader();
-    Assert.assertFalse(segmentMetadataCache.isReady());
+    Assert.assertFalse(segmentMetadataCache.isSyncedForRead());
 
     final Supplier<Set<DataSegment>> retrieveAction =
         () -> coordinator.retrieveAllUsedSegments(
@@ -3960,20 +3961,48 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     insertUsedSegments(Set.of(defaultSegment), Map.of());
 
     Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
-    emitter.verifyNotEmitted(Metric.TRANSACTION_COUNT);
+    emitter.verifyNotEmitted(Metric.READ_ONLY_TRANSACTIONS);
 
     // Become leader but cache will still not be used
     segmentMetadataCache.becomeLeader();
-    Assert.assertFalse(segmentMetadataCache.isReady());
+    Assert.assertFalse(segmentMetadataCache.isSyncedForRead());
     Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
-    emitter.verifyNotEmitted(Metric.TRANSACTION_COUNT);
+    emitter.verifyNotEmitted(Metric.READ_ONLY_TRANSACTIONS);
 
     // Sync the cache so that it becomes ready for use
     refreshCache();
     refreshCache();
-    Assert.assertTrue(segmentMetadataCache.isReady());
+    Assert.assertTrue(segmentMetadataCache.isSyncedForRead());
     Assert.assertEquals(Set.of(defaultSegment), retrieveAction.get());
-    emitter.verifyValue(Metric.TRANSACTION_COUNT, 1L);
+    emitter.verifyValue(Metric.READ_ONLY_TRANSACTIONS, 1L);
+  }
+
+  @Test
+  public void testWriteOperation_usesCache_ifNotSynced()
+  {
+    Assume.assumeTrue(useSegmentCache);
+
+    // Lose and regain leadership
+    segmentMetadataCache.stopBeingLeader();
+    segmentMetadataCache.becomeLeader();
+
+    Assert.assertTrue(segmentMetadataCache.isEnabled());
+    Assert.assertFalse(segmentMetadataCache.isSyncedForRead());
+
+    final Supplier<Set<DataSegment>> writeAction =
+        () -> coordinator.commitSegments(Set.of(defaultSegment), null);
+
+    // Cache is not synced yet and will be used only for write operations
+    Assert.assertEquals(Set.of(defaultSegment), writeAction.get());
+    emitter.verifyValue(Metric.WRITE_ONLY_TRANSACTIONS, 1L);
+
+    // Sync the cache to use it for both read and write operations
+    refreshCache();
+    refreshCache();
+    Assert.assertTrue(segmentMetadataCache.isSyncedForRead());
+
+    Assert.assertTrue(writeAction.get().isEmpty());
+    emitter.verifyValue(Metric.READ_WRITE_TRANSACTIONS, 1L);
   }
 
   private SegmentIdWithShardSpec allocatePendingSegment(

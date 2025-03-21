@@ -48,9 +48,19 @@ public class Metric
   private static final String METRIC_NAME_PREFIX = "segment/metadataCache/";
 
   /**
-   * Number of transactions performed on the cache for a datasource.
+   * Number of read-write transactions performed on the cache for a datasource.
    */
-  public static final String TRANSACTION_COUNT = METRIC_NAME_PREFIX + "transactions";
+  public static final String READ_WRITE_TRANSACTIONS = METRIC_NAME_PREFIX + "transactions/readWrite";
+
+  /**
+   * Number of write-only transactions performed on the cache for a datasource.
+   */
+  public static final String WRITE_ONLY_TRANSACTIONS = METRIC_NAME_PREFIX + "transactions/writeOnly";
+
+  /**
+   * Number of read-only transactions performed on the cache for a datasource.
+   */
+  public static final String READ_ONLY_TRANSACTIONS = METRIC_NAME_PREFIX + "transactions/readOnly";
 
   /**
    * Time taken in milliseconds for the latest sync with metadata store.

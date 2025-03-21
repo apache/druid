@@ -21,6 +21,13 @@ package org.apache.druid.metadata.segment.cache;
 
 public class NoopSegmentMetadataCache implements SegmentMetadataCache
 {
+  private static final NoopSegmentMetadataCache INSTANCE = new NoopSegmentMetadataCache();
+
+  public static NoopSegmentMetadataCache instance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public void start()
   {
@@ -52,7 +59,7 @@ public class NoopSegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public boolean isReady()
+  public boolean isSyncedForRead()
   {
     return false;
   }

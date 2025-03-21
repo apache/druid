@@ -58,21 +58,34 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   private final DruidLeaderSelector leaderSelector;
 
   private final int startTerm;
+  private final boolean readFromCache;
 
   private boolean isRollingBack = false;
   private boolean isClosed = false;
 
   private final List<Consumer<DatasourceSegmentMetadataWriter>> pendingCacheWrites = new ArrayList<>();
 
+  /**
+   * Creates a transaction that may read or write from the cache or delegate to
+   * the metadata store if necessary. Writes are always done to the cache unless
+   * the update does not affect the cache contents.
+   *
+   * @param leaderSelector Used to ensure that leadership does not change during
+   *                       the course of the transaction.
+   * @param readFromCache  If true, reads are done from cache. Otherwise,
+   *                       reads are done directly from the metadata store.
+   */
   CachedSegmentMetadataTransaction(
       SegmentMetadataTransaction delegate,
       DatasourceSegmentCache metadataCache,
-      DruidLeaderSelector leaderSelector
+      DruidLeaderSelector leaderSelector,
+      boolean readFromCache
   )
   {
     this.delegate = delegate;
     this.metadataCache = metadataCache;
     this.leaderSelector = leaderSelector;
+    this.readFromCache = readFromCache;
 
     if (leaderSelector.isLeader()) {
       this.startTerm = leaderSelector.localTerm();
@@ -142,19 +155,19 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
   {
-    return metadataCache.findExistingSegmentIds(segments);
+    return performReadAction(reader -> reader.findExistingSegmentIds(segments));
   }
 
   @Override
   public Set<SegmentId> findUsedSegmentIdsOverlapping(Interval interval)
   {
-    return metadataCache.findUsedSegmentIdsOverlapping(interval);
+    return performReadAction(reader -> reader.findUsedSegmentIdsOverlapping(interval));
   }
 
   @Override
   public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    return metadataCache.findHighestUnusedSegmentId(interval, version);
+    return performReadAction(reader -> reader.findHighestUnusedSegmentId(interval, version));
   }
 
   @Override
@@ -174,19 +187,19 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
   {
-    return metadataCache.findUsedSegmentsOverlappingAnyOf(intervals);
+    return performReadAction(reader -> reader.findUsedSegmentsOverlappingAnyOf(intervals));
   }
 
   @Override
   public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
   {
-    return metadataCache.findUsedSegments(segmentIds);
+    return performReadAction(reader -> reader.findUsedSegments(segmentIds));
   }
 
   @Override
   public Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(List<Interval> intervals)
   {
-    return metadataCache.findUsedSegmentsPlusOverlappingAnyOf(intervals);
+    return performReadAction(reader -> reader.findUsedSegmentsPlusOverlappingAnyOf(intervals));
   }
 
   @Override
@@ -211,7 +224,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public DataSegment findUsedSegment(SegmentId segmentId)
   {
-    return metadataCache.findUsedSegment(segmentId);
+    return performReadAction(reader -> reader.findUsedSegment(segmentId));
   }
 
   @Override
@@ -220,7 +233,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
       String sequencePreviousId
   )
   {
-    return metadataCache.findPendingSegmentIds(sequenceName, sequencePreviousId);
+    return performReadAction(reader -> reader.findPendingSegmentIds(sequenceName, sequencePreviousId));
   }
 
   @Override
@@ -229,25 +242,25 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
       Interval interval
   )
   {
-    return metadataCache.findPendingSegmentIdsWithExactInterval(sequenceName, interval);
+    return performReadAction(reader -> reader.findPendingSegmentIdsWithExactInterval(sequenceName, interval));
   }
 
   @Override
   public List<PendingSegmentRecord> findPendingSegmentsOverlapping(Interval interval)
   {
-    return metadataCache.findPendingSegmentsOverlapping(interval);
+    return performReadAction(reader -> reader.findPendingSegmentsOverlapping(interval));
   }
 
   @Override
   public List<PendingSegmentRecord> findPendingSegmentsWithExactInterval(Interval interval)
   {
-    return metadataCache.findPendingSegmentsWithExactInterval(interval);
+    return performReadAction(reader -> reader.findPendingSegmentsWithExactInterval(interval));
   }
 
   @Override
   public List<PendingSegmentRecord> findPendingSegments(String taskAllocatorId)
   {
-    return metadataCache.findPendingSegments(taskAllocatorId);
+    return performReadAction(reader -> reader.findPendingSegments(taskAllocatorId));
   }
 
   // WRITE METHODS
@@ -337,6 +350,19 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     return performWriteAction(
         writer -> writer.deletePendingSegmentsCreatedIn(interval)
     );
+  }
+
+  /**
+   * Performs a read from cache only if {@link #readFromCache} is true.
+   * Otherwise, reads directly from the metadata store.
+   */
+  private <T> T performReadAction(Function<DatasourceSegmentMetadataReader, T> action)
+  {
+    if (readFromCache) {
+      return action.apply(metadataCache);
+    } else {
+      return action.apply(delegate);
+    }
   }
 
   private <T> T performWriteAction(Function<DatasourceSegmentMetadataWriter, T> action)
