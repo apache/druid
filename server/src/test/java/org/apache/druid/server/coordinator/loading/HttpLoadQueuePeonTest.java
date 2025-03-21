@@ -89,9 +89,15 @@ public class HttpLoadQueuePeonTest
             httpClient.processingExecutor,
             true
         ),
-        httpClient.callbackExecutor,
-        new SegmentLoadingCapabilities(1, 3)
-    );
+        httpClient.callbackExecutor
+    )
+    {
+      @Override
+      SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
+      {
+        return new SegmentLoadingCapabilities(1, 3);
+      }
+    };
     httpLoadQueuePeon.start();
   }
 
@@ -325,6 +331,7 @@ public class HttpLoadQueuePeonTest
   {
     Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
 
+    // Without a batch size runtime parameter
     httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
         MAPPER,
@@ -336,9 +343,15 @@ public class HttpLoadQueuePeonTest
             httpClient.processingExecutor,
             true
         ),
-        httpClient.callbackExecutor,
-        new SegmentLoadingCapabilities(1, 3)
-    );
+        httpClient.callbackExecutor
+    )
+    {
+      @Override
+      SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
+      {
+        return new SegmentLoadingCapabilities(1, 3);
+      }
+    };
 
     Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
     Assert.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));

@@ -23,6 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 
+/**
+ * Contains information related to the capability of a server to load segments, for example the number of threads
+ * available.
+ */
 public class SegmentLoadingCapabilities
 {
   private final int numLoadingThreads;

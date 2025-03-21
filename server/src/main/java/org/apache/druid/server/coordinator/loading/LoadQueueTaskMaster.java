@@ -80,9 +80,9 @@ public class LoadQueueTaskMaster
         jsonMapper,
         httpClient,
         config,
+        () -> coordinatorDynamicConfigSupplier.get().getLoadingModeForServer(server.getName()),
         peonExec,
-        callbackExec,
-        () -> coordinatorDynamicConfigSupplier.get().getLoadingModeForServer(server.getName())
+        callbackExec
     );
   }
 

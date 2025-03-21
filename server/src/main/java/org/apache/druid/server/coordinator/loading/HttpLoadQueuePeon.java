@@ -132,9 +132,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       ObjectMapper jsonMapper,
       HttpClient httpClient,
       HttpLoadQueuePeonConfig config,
+      Supplier<SegmentLoadingMode> loadingModeSupplier,
       ScheduledExecutorService processingExecutor,
-      ExecutorService callBackExecutor,
-      Supplier<SegmentLoadingMode> loadingModeSupplier
+      ExecutorService callBackExecutor
   )
   {
     this.jsonMapper = jsonMapper;
@@ -150,30 +150,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @VisibleForTesting
-  HttpLoadQueuePeon(
-      String baseUrl,
-      ObjectMapper jsonMapper,
-      HttpClient httpClient,
-      HttpLoadQueuePeonConfig config,
-      Supplier<SegmentLoadingMode> loadingModeSupplier,
-      ScheduledExecutorService processingExecutor,
-      ExecutorService callBackExecutor,
-      SegmentLoadingCapabilities serverCapabilities
-  )
-  {
-    this.jsonMapper = jsonMapper;
-    this.requestBodyWriter = jsonMapper.writerFor(REQUEST_ENTITY_TYPE_REF);
-    this.httpClient = httpClient;
-    this.config = config;
-    this.processingExecutor = processingExecutor;
-    this.callBackExecutor = callBackExecutor;
-
-    this.serverId = baseUrl;
-    this.loadingModeSupplier = loadingModeSupplier;
-    this.serverCapabilities = serverCapabilities;
-  }
-
-  private SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
+  SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
   {
     try {
       final URL segmentLoadingCapabilitiesURL = new URL(
@@ -192,7 +169,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (HttpServletResponse.SC_NOT_FOUND == responseHandler.getStatus()) {
         log.warn(
             "Historical capabilities endpoint not found at server[%s]. Using default values.",
-            new URL(serverId)
+            segmentLoadingCapabilitiesURL
         );
         return new SegmentLoadingCapabilities(1, 1);
       } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {

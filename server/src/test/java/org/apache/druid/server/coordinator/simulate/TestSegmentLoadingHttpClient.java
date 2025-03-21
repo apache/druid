@@ -88,7 +88,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
       Duration readTimeout
   )
   {
-    if (request.getUrl().toString().contains("/segmentLoadingCapabilities")) {
+    if (request.getUrl().toString().contains("/loadCapabilities")) {
       return getCapabilities(handler);
     }
     return executorService.submit(() -> processRequest(request, handler));
