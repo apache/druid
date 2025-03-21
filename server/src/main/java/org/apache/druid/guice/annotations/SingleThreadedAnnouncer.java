@@ -17,19 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.curator.announcement;
+package org.apache.druid.guice.annotations;
 
-public interface Announcer
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@BindingAnnotation
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface SingleThreadedAnnouncer
 {
-  void start();
-
-  void stop();
-
-  void announce(String path, byte[] bytes);
-
-  void announce(String path, byte[] bytes, boolean removeParentIfCreated);
-
-  void update(String path, byte[] bytes);
-
-  void unannounce(String path);
 }

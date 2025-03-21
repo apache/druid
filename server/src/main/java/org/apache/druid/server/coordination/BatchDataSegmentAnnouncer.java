@@ -33,6 +33,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -91,7 +92,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       DruidServerMetadata server,
       final BatchDataSegmentAnnouncerConfig config,
       ZkPathsConfig zkPaths,
-      Provider<Announcer> announcerProvider,
+      @SingleThreadedAnnouncer Provider<Announcer> announcerProvider,
       ObjectMapper jsonMapper,
       ZkEnablementConfig zkEnablementConfig
   )

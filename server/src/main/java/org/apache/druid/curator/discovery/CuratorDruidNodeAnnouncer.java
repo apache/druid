@@ -28,6 +28,7 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
@@ -47,7 +48,11 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public CuratorDruidNodeAnnouncer(Announcer announcer, ZkPathsConfig config, @Json ObjectMapper jsonMapper)
+  public CuratorDruidNodeAnnouncer(
+      @SingleThreadedAnnouncer Announcer announcer,
+      ZkPathsConfig config,
+      @Json ObjectMapper jsonMapper
+  )
   {
     this.announcer = announcer;
     this.config = config;
