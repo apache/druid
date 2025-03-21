@@ -33,7 +33,7 @@ import java.util.Map;
 
 public class Utils
 {
-
+  public static final String[] EMPTY_STRING_ARRAY = new String[0];
   /**
    * Create a Map from iterables of keys and values. If there are more keys than values, or more values than keys,
    * the excess will be omitted.

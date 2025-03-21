@@ -37,15 +37,17 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.ExcludeScope;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 
 /**
- * Configures the metadata catalog on the Broker and overlord to use a cache
+ * Configures the metadata catalog on the Broker and Overlord to use a cache
  * and network communications for pull and push updates.
  */
 @LoadScope(roles = {NodeRole.BROKER_JSON_NAME, NodeRole.OVERLORD_JSON_NAME})
+@ExcludeScope(roles = {NodeRole.COORDINATOR_JSON_NAME})
 public class CatalogClientModule implements DruidModule
 {
   @Override
