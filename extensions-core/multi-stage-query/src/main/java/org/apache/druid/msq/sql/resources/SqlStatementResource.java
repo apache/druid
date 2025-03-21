@@ -311,7 +311,7 @@ public class SqlStatementResource
       );
       throwIfQueryIsNotSuccessful(queryId, statusPlus);
 
-      final String contentDispositionHeaderValue = filename != null ? String.format("attachment; filename=%s", filename) : null;
+      final String contentDispositionHeaderValue = filename != null ? StringUtils.format("attachment; filename=%s", filename) : null;
 
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
       if (!signature.isPresent() || MSQControllerTask.isIngestion(msqControllerTask.getQuerySpec())) {
