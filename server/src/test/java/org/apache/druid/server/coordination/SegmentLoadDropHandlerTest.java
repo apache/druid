@@ -30,6 +30,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentChangeStatus.State;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.druid.server.TestSegmentUtils.makeSegment;
@@ -106,7 +108,7 @@ public class SegmentLoadDropHandlerTest
 
     scheduledExecutorFactory = (corePoolSize, nameFormat) -> {
       // Override normal behavior by adding the runnable to a list so that you can make sure
-      // all the shceduled runnables are executed by explicitly calling run() on each item in the list
+      // all the scheduled runnables are executed by explicitly calling run() on each item in the list
       return new ScheduledThreadPoolExecutor(corePoolSize, Execs.makeThreadFactory(nameFormat))
       {
         @Override
@@ -230,7 +232,7 @@ public class SegmentLoadDropHandlerTest
         new SegmentChangeRequestDrop(segment2)
     );
 
-    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
 
     Map<DataSegmentChangeRequest, SegmentChangeStatus> expectedStatusMap = new HashMap<>();
     expectedStatusMap.put(batch.get(0), SegmentChangeStatus.PENDING);
@@ -244,7 +246,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
 
-    result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1))).get();
+    result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1)), SegmentLoadingMode.TURBO).get();
     Assert.assertEquals(SegmentChangeStatus.SUCCESS, result.get(0).getStatus());
 
     Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());
@@ -271,7 +273,7 @@ public class SegmentLoadDropHandlerTest
     DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
 
-    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
 
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
@@ -280,7 +282,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(State.FAILED, result.get(0).getStatus().getState());
     Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
 
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -343,7 +345,7 @@ public class SegmentLoadDropHandlerTest
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
 
     // Request 1: Load the segment
-    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -354,7 +356,7 @@ public class SegmentLoadDropHandlerTest
 
     // Request 2: Drop the segment
     batch = ImmutableList.of(new SegmentChangeRequestDrop(segment1));
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -372,7 +374,7 @@ public class SegmentLoadDropHandlerTest
 
     // Request 3: Reload the segment
     batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -389,7 +391,7 @@ public class SegmentLoadDropHandlerTest
 
     // Request 4: Try to reload the segment - segment is loaded and announced again
     batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -420,7 +422,8 @@ public class SegmentLoadDropHandlerTest
         config,
         segmentAnnouncer,
         segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]")
+        scheduledExecutorFactory.create(5, "LoadDropHandlerTest-[%d]"),
+        (ThreadPoolExecutor) scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]")
     );
   }
 }

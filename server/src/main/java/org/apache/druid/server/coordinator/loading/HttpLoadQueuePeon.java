@@ -22,9 +22,12 @@ package org.apache.druid.server.coordinator.loading;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +48,8 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.SegmentLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -53,7 +58,6 @@ import org.joda.time.Duration;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,6 +73,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  *
@@ -114,19 +119,21 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  private final URL changeRequestURL;
   private final String serverId;
 
   private final AtomicBoolean mainLoopInProgress = new AtomicBoolean(false);
   private final ExecutorService callBackExecutor;
+  private final Supplier<SegmentLoadingMode> loadingModeSupplier;
 
   private final ObjectWriter requestBodyWriter;
+  private final SegmentLoadingCapabilities serverCapabilities;
 
   public HttpLoadQueuePeon(
       String baseUrl,
       ObjectMapper jsonMapper,
       HttpClient httpClient,
       HttpLoadQueuePeonConfig config,
+      Supplier<SegmentLoadingMode> loadingModeSupplier,
       ScheduledExecutorService processingExecutor,
       ExecutorService callBackExecutor
   )
@@ -139,17 +146,45 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.callBackExecutor = callBackExecutor;
 
     this.serverId = baseUrl;
+    this.loadingModeSupplier = loadingModeSupplier;
+    this.serverCapabilities = fetchSegmentLoadingCapabilities();
+  }
+
+  @VisibleForTesting
+  SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
+  {
     try {
-      this.changeRequestURL = new URL(
-          new URL(baseUrl),
-          StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/changeRequests?timeout=%d",
-              config.getHostTimeout().getMillis()
-          )
+      final URL segmentLoadingCapabilitiesURL = new URL(
+          new URL(serverId),
+          "druid-internal/v1/segments/loadCapabilities"
+      );
+
+      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
+      InputStream stream = httpClient.go(
+          new Request(HttpMethod.GET, segmentLoadingCapabilitiesURL)
+              .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
+          responseHandler,
+          new Duration(10000)
+      ).get();
+
+      if (HttpServletResponse.SC_NOT_FOUND == responseHandler.getStatus()) {
+        log.warn(
+            "Historical capabilities endpoint not found at server[%s]. Using default values.",
+            segmentLoadingCapabilitiesURL
+        );
+        return new SegmentLoadingCapabilities(1, 1);
+      } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
+        log.makeAlert("Error when fetching capabilities from server[%s]. Received [%s]", new URL(serverId), responseHandler.getStatus());
+        throw new RE("Error when fetching capabilities from server[%s]. Received [%s]", new URL(serverId), responseHandler.getStatus());
+      }
+
+      return jsonMapper.readValue(
+          stream,
+          SegmentLoadingCapabilities.class
       );
     }
-    catch (MalformedURLException ex) {
-      throw new RuntimeException(ex);
+    catch (Throwable th) {
+      throw new RE(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
     }
   }
 
@@ -160,7 +195,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
-    final int batchSize = config.getBatchSize();
+    final SegmentLoadingMode loadingMode = loadingModeSupplier.get();
+    final int batchSize = calculateBatchSize(loadingMode);
+
+    if (batchSize < 1) {
+      log.error("Batch size must be greater than 0.");
+      throw new RE("Batch size must be greater than 0.");
+    }
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
@@ -194,18 +235,27 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     if (newRequests.isEmpty()) {
       log.trace(
           "[%s]Found no load/drop requests. SegmentsToLoad[%d], SegmentsToDrop[%d], batchSize[%d].",
-          serverId, segmentsToLoad.size(), segmentsToDrop.size(), config.getBatchSize()
+          serverId, segmentsToLoad.size(), segmentsToDrop.size(), batchSize
       );
       mainLoopInProgress.set(false);
       return;
     }
 
     try {
-      log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
+      log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode[%s].", newRequests.size(), serverId, loadingMode);
       final boolean hasLoadRequests = newRequests.stream().anyMatch(r -> r instanceof SegmentChangeRequestLoad);
       if (hasLoadRequests && !loadingRateTracker.isLoadingBatch()) {
         loadingRateTracker.markBatchLoadingStarted();
       }
+
+      final URL changeRequestURL = new URL(
+          new URL(serverId),
+          StringUtils.nonStrictFormat(
+              "druid-internal/v1/segments/changeRequests?timeout=%d&loadingMode=%s",
+              config.getHostTimeout().getMillis(),
+              loadingMode
+          )
+      );
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(
@@ -311,6 +361,21 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     catch (Throwable th) {
       log.error(th, "Error sending load/drop request to [%s].", serverId);
       mainLoopInProgress.set(false);
+    }
+  }
+
+  /**
+   * Calculates the number of segments the server is capable of handling at a time. If loading segments in turbo loading
+   * mode, returns the number of turbo loading threads on the server. Otherwise, return the value set by the batch size
+   * runtime parameter, or number of normal threads on the server if the parameter is not set.
+   */
+  @VisibleForTesting
+  int calculateBatchSize(SegmentLoadingMode loadingMode)
+  {
+    if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
+      return serverCapabilities.getNumTurboLoadingThreads();
+    } else {
+      return Configs.valueOrDefault(config.getBatchSize(), serverCapabilities.getNumLoadingThreads());
     }
   }
 
