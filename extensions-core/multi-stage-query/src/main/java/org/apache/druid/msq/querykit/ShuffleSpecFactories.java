@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit;
 
+import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -69,11 +70,21 @@ public class ShuffleSpecFactories
   }
 
   /**
-   * Factory that produces globally sorted partitions of a target size.
+   * Factory that produces globally sorted partitions of a target size, using the {@link ClusterBy} to partition
+   * rows across partitions.
+   *
+   * Produces {@link MixShuffleSpec}, ignoring the target size, if the provided {@link ClusterBy} is empty.
    */
   public static ShuffleSpecFactory getGlobalSortWithTargetSize(int targetSize)
   {
-    return (clusterBy, aggregate) ->
-        new GlobalSortTargetSizeShuffleSpec(clusterBy, targetSize, aggregate);
+    return (clusterBy, aggregate) -> {
+      if (clusterBy.isEmpty()) {
+        // Cannot partition or sort meaningfully because there are no cluster-by keys. Generate a MixShuffleSpec
+        // so everything goes into a single partition.
+        return MixShuffleSpec.instance();
+      } else {
+        return new GlobalSortTargetSizeShuffleSpec(clusterBy, targetSize, aggregate);
+      }
+    };
   }
 }
