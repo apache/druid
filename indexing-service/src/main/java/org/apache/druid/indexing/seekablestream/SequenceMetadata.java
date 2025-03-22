@@ -331,7 +331,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   private class SequenceMetadataTransactionalSegmentPublisher
-      implements TransactionalSegmentPublisher
+      extends TransactionalSegmentPublisher
   {
     private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner;
     private final TaskToolbox toolbox;

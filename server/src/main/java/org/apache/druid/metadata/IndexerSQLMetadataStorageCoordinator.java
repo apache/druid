@@ -91,7 +91,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -306,33 +305,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final String dataSource = segments.iterator().next().getDataSource();
 
-    final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
-
     try {
       return inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
-            // Set definitelyNotUpdated back to false upon retrying.
-            definitelyNotUpdated.set(false);
-
+            // Try to update datasource metadata first
             if (startMetadata != null) {
-              final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+              final SegmentPublishResult result = updateDataSourceMetadataWithHandle(
                   transaction,
                   dataSource,
                   startMetadata,
                   endMetadata
               );
 
-              if (result.isFailed()) {
-                // Metadata was definitely not updated.
-                transaction.setRollbackOnly();
-                definitelyNotUpdated.set(true);
-
-                if (result.canRetry()) {
-                  throw new RetryTransactionException(result.getErrorMsg());
-                } else {
-                  throw InvalidInput.exception(result.getErrorMsg());
-                }
+              // Do not proceed if the datasource metadata update failed
+              if (!result.isSuccess()) {
+                return result;
               }
             }
 
@@ -347,12 +335,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
     catch (CallbackFailedException e) {
-      if (definitelyNotUpdated.get()) {
-        return SegmentPublishResult.fail(e.getMessage());
-      } else {
-        // Must throw exception if we are not sure if we updated or not.
-        throw e;
-      }
+      throw e;
     }
   }
 
@@ -468,45 +451,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       throw new IllegalArgumentException("end metadata cannot be null");
     }
 
-    final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
-
     try {
       return inReadWriteDatasourceTransaction(
           dataSource,
-          transaction -> {
-            // Set definitelyNotUpdated back to false upon retrying.
-            definitelyNotUpdated.set(false);
-
-            final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
-                transaction,
-                dataSource,
-                startMetadata,
-                endMetadata
-            );
-
-            if (result.isFailed()) {
-              // Metadata was definitely not updated.
-              transaction.setRollbackOnly();
-              definitelyNotUpdated.set(true);
-
-              if (result.canRetry()) {
-                throw new RetryTransactionException(result.getErrorMsg());
-              } else {
-                throw new RuntimeException(result.getErrorMsg());
-              }
-            }
-
-            return SegmentPublishResult.ok(ImmutableSet.of());
-          }
+          transaction -> updateDataSourceMetadataWithHandle(
+              transaction,
+              dataSource,
+              startMetadata,
+              endMetadata
+          )
       );
     }
     catch (CallbackFailedException e) {
-      if (definitelyNotUpdated.get()) {
-        return SegmentPublishResult.fail(e.getMessage());
-      } else {
-        // Must throw exception if we are not sure if we updated or not.
-        throw e;
-      }
+      throw e;
     }
   }
 
@@ -1126,25 +1083,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
 
-    final AtomicBoolean metadataNotUpdated = new AtomicBoolean(false);
     try {
       return inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
-            metadataNotUpdated.set(false);
-
+            // Try to update datasource metadata first
             if (startMetadata != null) {
-              final DataStoreMetadataUpdateResult metadataUpdateResult
+              final SegmentPublishResult metadataUpdateResult
                   = updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
 
-              if (metadataUpdateResult.isFailed()) {
-                transaction.setRollbackOnly();
-                metadataNotUpdated.set(true);
-                if (metadataUpdateResult.canRetry()) {
-                  throw new RetryTransactionException(metadataUpdateResult.getErrorMsg());
-                } else {
-                  throw new RuntimeException(metadataUpdateResult.getErrorMsg());
-                }
+              // Abort the transaction if datasource metadata update has failed
+              if (!metadataUpdateResult.isSuccess()) {
+                return metadataUpdateResult;
               }
             }
 
@@ -1172,12 +1122,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
     catch (CallbackFailedException e) {
-      if (metadataNotUpdated.get()) {
-        // Return failed result if metadata was definitely not updated
-        return SegmentPublishResult.fail(e.getMessage());
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 
@@ -2052,7 +1997,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @throws RuntimeException if state is unknown after this call
    */
-  protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
+  protected SegmentPublishResult updateDataSourceMetadataWithHandle(
       final SegmentMetadataTransaction transaction,
       final String dataSource,
       final DataSourceMetadata startMetadata,
@@ -2102,7 +2047,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     if (startMetadataGreaterThanExisting && !startMetadataMatchesExisting) {
       // Offsets stored in startMetadata is greater than the last commited metadata.
-      return DataStoreMetadataUpdateResult.failure(
+      // This can happen because the previous task is still publishing its segments and can resolve once
+      // the previous task finishes publishing.
+      return SegmentPublishResult.retryableFailure(
           "The new start metadata state[%s] is ahead of the last committed"
           + " end state[%s]. Try resetting the supervisor.",
           startMetadata, oldCommitMetadataFromDb
@@ -2111,7 +2058,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
-      return DataStoreMetadataUpdateResult.failure(
+      return SegmentPublishResult.fail(
           "Inconsistency between stored metadata state[%s] and target state[%s]. Try resetting the supervisor.",
           oldCommitMetadataFromDb, startMetadata
       );
@@ -2126,7 +2073,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
     );
 
-    final DataStoreMetadataUpdateResult retVal;
+    final SegmentPublishResult retVal;
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final int numRows = transaction.getHandle().createStatement(
@@ -2143,8 +2090,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .execute();
 
       retVal = numRows == 1
-          ? DataStoreMetadataUpdateResult.SUCCESS
-          : DataStoreMetadataUpdateResult.retryableFailure("Failed to insert metadata for datasource[%s]", dataSource);
+          ? SegmentPublishResult.ok(Set.of())
+          : SegmentPublishResult.retryableFailure("Failed to insert metadata for datasource[%s]", dataSource);
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = transaction.getHandle().createStatement(
@@ -2163,8 +2110,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .execute();
 
       retVal = numRows == 1
-          ? DataStoreMetadataUpdateResult.SUCCESS
-          : DataStoreMetadataUpdateResult.retryableFailure("Failed to update metadata for datasource[%s]", dataSource);
+          ? SegmentPublishResult.ok(Set.of())
+          : SegmentPublishResult.retryableFailure("Failed to update metadata for datasource[%s]", dataSource);
     }
 
     if (retVal.isSuccess()) {
@@ -2520,52 +2467,5 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     return transactionFactory.inReadOnlyDatasourceTransaction(dataSource, callback);
-  }
-
-  public static class DataStoreMetadataUpdateResult
-  {
-    private final boolean failed;
-    private final boolean canRetry;
-    private final String errorMsg;
-
-    public static final DataStoreMetadataUpdateResult SUCCESS = new DataStoreMetadataUpdateResult(false, false, null);
-
-    public static DataStoreMetadataUpdateResult failure(String errorMsgFormat, Object... messageArgs)
-    {
-      return new DataStoreMetadataUpdateResult(true, false, errorMsgFormat, messageArgs);
-    }
-
-    public static DataStoreMetadataUpdateResult retryableFailure(String errorMsgFormat, Object... messageArgs)
-    {
-      return new DataStoreMetadataUpdateResult(true, true, errorMsgFormat, messageArgs);
-    }
-
-    DataStoreMetadataUpdateResult(boolean failed, boolean canRetry, @Nullable String errorMsg, Object... errorFormatArgs)
-    {
-      this.failed = failed;
-      this.canRetry = canRetry;
-      this.errorMsg = null == errorMsg ? null : StringUtils.format(errorMsg, errorFormatArgs);
-    }
-
-    public boolean isFailed()
-    {
-      return failed;
-    }
-
-    public boolean isSuccess()
-    {
-      return !failed;
-    }
-
-    public boolean canRetry()
-    {
-      return canRetry;
-    }
-
-    @Nullable
-    public String getErrorMsg()
-    {
-      return errorMsg;
-    }
   }
 }

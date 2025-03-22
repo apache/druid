@@ -20,6 +20,9 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.timeline.DataSegment;
 
@@ -28,8 +31,11 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.function.Function;
 
-public interface TransactionalSegmentPublisher
+public abstract class TransactionalSegmentPublisher
 {
+  private static final int QUIET_RETRIES = 3;
+  private static final int MAX_RETRIES = 5;
+
   /**
    * Publish segments, along with some commit metadata, in a single transaction.
    *
@@ -40,14 +46,19 @@ public interface TransactionalSegmentPublisher
    * @throws IOException if there was an I/O error when publishing
    * @throws RuntimeException if we cannot tell if the segments were published or not, for some other reason
    */
-  SegmentPublishResult publishAnnotatedSegments(
+  public abstract SegmentPublishResult publishAnnotatedSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
       @Nullable Object commitMetadata,
       @Nullable SegmentSchemaMapping segmentSchemaMapping
   ) throws IOException;
 
-  default SegmentPublishResult publishSegments(
+  /**
+   * Applies the given annotate function on the segments and tries to publish
+   * them. If the action fails with a retryable failure, it can be retried upto
+   * {@link #MAX_RETRIES} times.
+   */
+  public final SegmentPublishResult publishSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
       Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
@@ -57,20 +68,58 @@ public interface TransactionalSegmentPublisher
   {
     final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = outputSegmentsAnnotateFunction
         .andThen(SegmentPublisherHelper::annotateShardSpec);
-    return publishAnnotatedSegments(
+    final Set<DataSegment> annotatedSegmentsToPublish = annotateFunction.apply(segmentsToPublish);
+
+    int attemptCount = 0;
+
+    // Retry until success or until max retries are exhausted
+    SegmentPublishResult result = publishAnnotatedSegments(
         segmentsToBeOverwritten,
-        annotateFunction.apply(segmentsToPublish),
+        annotatedSegmentsToPublish,
         commitMetadata,
         segmentSchemaMapping
     );
+    while (!result.isSuccess() && result.isRetryable() && attemptCount++ < MAX_RETRIES) {
+      awaitNextRetry(result, attemptCount);
+      result = publishAnnotatedSegments(
+          segmentsToBeOverwritten,
+          annotatedSegmentsToPublish,
+          commitMetadata,
+          segmentSchemaMapping
+      );
+    }
+
+    return result;
   }
 
   /**
    * @return true if this publisher has action to take when publishing with an empty segment set.
    *         The publisher used by the seekable stream tasks is an example where this is true.
    */
-  default boolean supportsEmptyPublish()
+  public boolean supportsEmptyPublish()
   {
     return false;
+  }
+
+  /**
+   * Sleeps until the next attempt.
+   */
+  private static void awaitNextRetry(SegmentPublishResult lastResult, int attemptCount)
+  {
+    try {
+      RetryUtils.awaitNextRetry(
+          new ISE(lastResult.getErrorMsg()),
+          StringUtils.format(
+              "Segment publish failed due to error[%s]",
+              lastResult.getErrorMsg()
+          ),
+          attemptCount,
+          MAX_RETRIES,
+          attemptCount <= QUIET_RETRIES
+      );
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -54,9 +55,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -68,6 +69,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 public class StreamAppenderatorDriverTest extends EasyMockSupport
 {
@@ -411,13 +413,14 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) ->
-        SegmentPublishResult.ok(Collections.emptySet());
+    return makePublisher(
+        (segmentsToPublish) -> SegmentPublishResult.ok(Set.of())
+    );
   }
 
   private TransactionalSegmentPublisher makeUpgradingPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) -> {
+    return makePublisher((segmentsToPublish) -> {
       Set<DataSegment> allSegments = new HashSet<>(segmentsToPublish);
       int id = 0;
       for (DataSegment segment : segmentsToPublish) {
@@ -435,17 +438,36 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         allSegments.add(upgradedSegment);
       }
       return SegmentPublishResult.ok(allSegments);
-    };
+    });
   }
 
   static TransactionalSegmentPublisher makeFailingPublisher(boolean failWithException)
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) -> {
+    return makePublisher((segmentsToPublish) -> {
       final RuntimeException exception = new RuntimeException("test");
       if (failWithException) {
         throw exception;
       }
       return SegmentPublishResult.fail(exception.getMessage());
+    });
+  }
+
+  private static TransactionalSegmentPublisher makePublisher(
+      Function<Set<DataSegment>, SegmentPublishResult> publishFunction
+  )
+  {
+    return new TransactionalSegmentPublisher()
+    {
+      @Override
+      public SegmentPublishResult publishAnnotatedSegments(
+          @Nullable Set<DataSegment> segmentsToBeOverwritten,
+          Set<DataSegment> segmentsToPublish,
+          @Nullable Object commitMetadata,
+          @Nullable SegmentSchemaMapping segmentSchemaMapping
+      )
+      {
+        return publishFunction.apply(segmentsToPublish);
+      }
     };
   }
 

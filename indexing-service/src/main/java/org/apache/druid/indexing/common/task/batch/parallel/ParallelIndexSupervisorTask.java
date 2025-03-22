@@ -45,7 +45,6 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
@@ -1191,12 +1190,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       }
     }
 
-    final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
-    final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
-        );
-
+    final TransactionalSegmentPublisher publisher = buildSegmentPublisher(toolbox);
     final boolean published =
         newSegments.isEmpty()
         || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, segmentSchemaMapping).isSuccess();
