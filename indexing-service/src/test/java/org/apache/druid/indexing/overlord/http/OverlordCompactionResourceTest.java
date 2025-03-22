@@ -29,7 +29,6 @@ import org.apache.druid.server.compaction.CompactionProgressResponse;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
 import org.easymock.EasyMock;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -43,17 +42,13 @@ import java.util.Map;
 
 public class OverlordCompactionResourceTest
 {
-  private static final CompactionSupervisorConfig SUPERVISOR_ENABLED
-      = new CompactionSupervisorConfig(true, null);
-  private static final CompactionSupervisorConfig SUPERVISOR_DISABLED
-      = new CompactionSupervisorConfig(false, null);
-
   private CompactionScheduler scheduler;
 
   @Before
   public void setUp()
   {
     scheduler = EasyMock.createStrictMock(CompactionScheduler.class);
+    EasyMock.expect(scheduler.isEnabled()).andReturn(true).anyTimes();
   }
 
   @After
@@ -74,7 +69,7 @@ public class OverlordCompactionResourceTest
             .andReturn(allSnapshots).once();
     EasyMock.replay(scheduler);
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
+    final Response response = new OverlordCompactionResource(scheduler)
         .getCompactionSnapshots("");
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
@@ -95,7 +90,7 @@ public class OverlordCompactionResourceTest
             .andReturn(allSnapshots).once();
     EasyMock.replay(scheduler);
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
+    final Response response = new OverlordCompactionResource(scheduler)
         .getCompactionSnapshots(null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
@@ -113,7 +108,7 @@ public class OverlordCompactionResourceTest
             .andReturn(snapshot).once();
     EasyMock.replay(scheduler);
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
+    final Response response = new OverlordCompactionResource(scheduler)
         .getCompactionSnapshots(TestDataSource.WIKI);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
@@ -129,7 +124,7 @@ public class OverlordCompactionResourceTest
             .andReturn(null).once();
     EasyMock.replay(scheduler);
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
+    final Response response = new OverlordCompactionResource(scheduler)
         .getCompactionSnapshots(TestDataSource.KOALA);
     Assert.assertEquals(404, response.getStatus());
   }
@@ -146,7 +141,7 @@ public class OverlordCompactionResourceTest
             .andReturn(snapshot).once();
     EasyMock.replay(scheduler);
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
+    final Response response = new OverlordCompactionResource(scheduler)
         .getCompactionProgress(TestDataSource.WIKI);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(new CompactionProgressResponse(100L), response.getEntity());
@@ -157,7 +152,7 @@ public class OverlordCompactionResourceTest
   {
     EasyMock.replay(scheduler);
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
+    final Response response = new OverlordCompactionResource(scheduler)
         .getCompactionProgress(null);
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
 
@@ -177,7 +172,7 @@ public class OverlordCompactionResourceTest
             .andReturn(null).once();
     EasyMock.replay(scheduler);
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
+    final Response response = new OverlordCompactionResource(scheduler)
         .getCompactionProgress(TestDataSource.KOALA);
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
 
@@ -193,9 +188,12 @@ public class OverlordCompactionResourceTest
   @Test
   public void testGetProgressReturnsUnsupportedWhenSupervisorDisabled()
   {
+    scheduler = EasyMock.createStrictMock(CompactionScheduler.class);
+    EasyMock.expect(scheduler.isEnabled()).andReturn(false).once();
     EasyMock.replay(scheduler);
+
     verifyResponseWhenSupervisorDisabled(
-        new OverlordCompactionResource(SUPERVISOR_DISABLED, scheduler)
+        new OverlordCompactionResource(scheduler)
             .getCompactionProgress(TestDataSource.WIKI)
     );
   }
@@ -203,9 +201,12 @@ public class OverlordCompactionResourceTest
   @Test
   public void testGetSnapshotReturnsUnsupportedWhenSupervisorDisabled()
   {
+    scheduler = EasyMock.createStrictMock(CompactionScheduler.class);
+    EasyMock.expect(scheduler.isEnabled()).andReturn(false).once();
     EasyMock.replay(scheduler);
+
     verifyResponseWhenSupervisorDisabled(
-        new OverlordCompactionResource(SUPERVISOR_DISABLED, scheduler)
+        new OverlordCompactionResource(scheduler)
             .getCompactionSnapshots(TestDataSource.WIKI)
     );
   }

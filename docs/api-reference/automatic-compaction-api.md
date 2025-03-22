@@ -258,6 +258,102 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 A successful request returns an HTTP `200 OK` message code and an empty response body.
 
+### Update cluster-level compaction config
+
+Updates cluster-level configuration for compaction tasks which applies to all datasources, unless explicitly overridden in the datasource compaction config.
+This includes the following fields:
+
+|Config|Description|Default value|
+|------|-----------|-------------|
+|`compactionTaskSlotRatio`|Ratio of number of slots taken up by compaction tasks to the number of total task slots across all workers.|0.1|
+|`maxCompactionTaskSlots`|Maximum number of task slots that can be taken up by compaction tasks and sub-tasks. Minimum number of task slots available for compaction is 1. When using MSQ engine or Native engine with range partitioning, a single compaction job occupies more than one task slot. In this case, the minimum is 2 so that at least one compaction job can always run in the cluster.|2147483647 (i.e. total task slots)|
+|`compactionPolicy`|Policy to choose intervals for compaction. Currently, the only supported policy is [Newest segment first](#compaction-policy-newestsegmentfirst).|Newest segment first|
+|`useSupervisors`|Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.|false|
+|`engine`|Engine used for running compaction tasks, unless overridden in the datasource-level compaction config. Possible values are `native` and `msq`. `msq` engine can be used for compaction only if `useSupervisors` is `true`.|`native`|
+
+#### Compaction policy `newestSegmentFirst`
+
+|Field|Description|Default value|
+|-----|-----------|-------------|
+|`type`|This must always be `newestSegmentFirst`||
+|`priorityDatasource`|Datasource to prioritize for compaction. The intervals of this datasource are chosen for compaction before the intervals of any other datasource. Within this datasource, the intervals are prioritized based on the chosen compaction policy.|None|
+
+
+#### URL
+
+`POST` `/druid/coordinator/v1/config/compaction/cluster`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="8" label="200 SUCCESS">
+
+
+*Successfully updated compaction configuration*
+
+</TabItem>
+<TabItem value="9" label="404 NOT FOUND">
+
+
+*Invalid `max` value*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="10" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/cluster" \
+--header 'Content-Type: application/json' \
+--data '{
+    "compactionTaskSlotRatio": 0.5,
+    "maxCompactionTaskSlots": 1500,
+    "compactionPolicy": {
+        "type": "newestSegmentFirst",
+        "priorityDatasource": "wikipedia"
+    },
+    "useSupervisors": true,
+    "engine": "msq"
+}'
+
+```
+
+</TabItem>
+<TabItem value="11" label="HTTP">
+
+
+```HTTP
+POST /druid/coordinator/v1/config/compaction/cluster HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+    "compactionTaskSlotRatio": 0.5,
+    "maxCompactionTaskSlots": 1500,
+    "compactionPolicy": {
+        "type": "newestSegmentFirst",
+        "priorityDatasource": "wikipedia"
+    },
+    "useSupervisors": true,
+    "engine": "msq"
+}
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` message code and an empty response body.
+
 ## View automatic compaction configuration
 
 ### Get all automatic compaction configurations
@@ -406,7 +502,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     ],
     "compactionTaskSlotRatio": 0.1,
     "maxCompactionTaskSlots": 2147483647,
-    "useAutoScaleSlots": false
+
 }
 ```
 </details>
@@ -593,7 +689,12 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "globalConfig": {
             "compactionTaskSlotRatio": 0.1,
             "maxCompactionTaskSlots": 2147483647,
-            "useAutoScaleSlots": false
+            "compactionPolicy": {
+                "type": "newestSegmentFirst",
+                "priorityDatasource": "wikipedia"
+            },
+            "useSupervisors": true,
+            "engine": "native"
         },
         "compactionConfig": {
             "dataSource": "wikipedia_hour",
@@ -624,7 +725,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "globalConfig": {
             "compactionTaskSlotRatio": 0.1,
             "maxCompactionTaskSlots": 2147483647,
-            "useAutoScaleSlots": false
+            "compactionPolicy": {
+                "type": "newestSegmentFirst"
+            },
+            "useSupervisors": false,
+            "engine": "native"
         },
         "compactionConfig": {
             "dataSource": "wikipedia_hour",
