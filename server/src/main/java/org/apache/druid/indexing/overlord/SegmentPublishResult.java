@@ -68,7 +68,7 @@ public class SegmentPublishResult
   private SegmentPublishResult(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("success") boolean success,
-      @JsonProperty("canRetry") boolean retryable,
+      @JsonProperty("retryable") boolean retryable,
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
