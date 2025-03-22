@@ -33,9 +33,8 @@ public class Configs
    * @param message Message to use for the exception, if thrown
    * @param args    Arguments used to interpolate the exception message, if thrown
    * @return The given value unchanged if it is not null
-   * @throws org.apache.druid.error.DruidException of
-   *                                               {@link org.apache.druid.error.DruidException.Category#INVALID_INPUT} if the
-   *                                               input {@code value} is null.
+   * @throws org.apache.druid.error.DruidException of type {@link InvalidInput}
+   * if the input {@code value} is null.
    */
   public static <T> T ensureNotNull(T value, String message, Object... args)
   {

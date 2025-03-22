@@ -38,15 +38,15 @@ import java.util.Set;
  */
 public class SegmentPublishResult
 {
-  private final boolean canRetry;
   private final Set<DataSegment> segments;
   private final boolean success;
+  private final boolean retryable;
   private final String errorMsg;
   private final List<PendingSegmentRecord> upgradedPendingSegments;
 
   public static SegmentPublishResult ok(Set<DataSegment> segments)
   {
-    return new SegmentPublishResult(segments, true, null);
+    return new SegmentPublishResult(segments, true, false, null);
   }
 
   public static SegmentPublishResult ok(Set<DataSegment> segments, List<PendingSegmentRecord> upgradedPendingSegments)
@@ -68,16 +68,17 @@ public class SegmentPublishResult
   private SegmentPublishResult(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("success") boolean success,
+      @JsonProperty("canRetry") boolean retryable,
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
-    this(segments, success, false, errorMsg, null);
+    this(segments, success, retryable, errorMsg, null);
   }
 
   private SegmentPublishResult(
       Set<DataSegment> segments,
       boolean success,
-      boolean canRetry,
+      boolean retryable,
       @Nullable String errorMsg,
       List<PendingSegmentRecord> upgradedPendingSegments
   )
@@ -85,7 +86,7 @@ public class SegmentPublishResult
     this.segments = Preconditions.checkNotNull(segments, "segments");
     this.success = success;
     this.errorMsg = errorMsg;
-    this.canRetry = canRetry;
+    this.retryable = retryable;
     this.upgradedPendingSegments = upgradedPendingSegments;
 
     if (!success) {
@@ -122,9 +123,10 @@ public class SegmentPublishResult
     return errorMsg;
   }
 
-  public boolean canRetry()
+  @JsonProperty
+  public boolean isRetryable()
   {
-    return canRetry;
+    return retryable;
   }
 
   @Nullable
@@ -144,7 +146,7 @@ public class SegmentPublishResult
     }
     SegmentPublishResult that = (SegmentPublishResult) o;
     return success == that.success &&
-           canRetry == that.canRetry &&
+           retryable == that.retryable &&
            Objects.equals(segments, that.segments) &&
            Objects.equals(errorMsg, that.errorMsg);
   }
@@ -152,7 +154,7 @@ public class SegmentPublishResult
   @Override
   public int hashCode()
   {
-    return Objects.hash(segments, success, errorMsg, canRetry);
+    return Objects.hash(segments, success, errorMsg, retryable);
   }
 
   @Override
@@ -161,7 +163,7 @@ public class SegmentPublishResult
     return "SegmentPublishResult{" +
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", success=" + success +
-           ", canRetry=" + canRetry +
+           ", retryable=" + retryable +
            ", errorMsg='" + errorMsg + '\'' +
            '}';
   }

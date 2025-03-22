@@ -43,7 +43,7 @@ public abstract class SegmentPublishAction implements TaskAction<SegmentPublishR
 
     // Retry until success or until max retries are exhausted
     SegmentPublishResult result = tryPublishSegments(task, toolbox);
-    while (!result.isSuccess() && result.canRetry() && attemptCount++ < MAX_RETRIES) {
+    while (!result.isSuccess() && result.isRetryable() && attemptCount++ < MAX_RETRIES) {
       awaitNextRetry(taskId, result, attemptCount);
       result = tryPublishSegments(task, toolbox);
     }
