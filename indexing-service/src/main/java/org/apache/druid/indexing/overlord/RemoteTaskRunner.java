@@ -248,7 +248,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 }
                 Futures.addCallback(
                     addWorker(worker),
-                    new FutureCallback<ZkWorker>()
+                    new FutureCallback<>()
                     {
                       @Override
                       public void onSuccess(ZkWorker zkWorker)

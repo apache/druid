@@ -240,7 +240,7 @@ public class SQLServerConnector extends SQLMetadataConnector
       final byte[] value)
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
+        new HandleCallback<>()
         {
           @Override
           public Void withHandle(Handle handle)

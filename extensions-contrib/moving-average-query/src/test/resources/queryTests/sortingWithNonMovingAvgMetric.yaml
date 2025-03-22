@@ -53,9 +53,9 @@ expectedOutput:
   timestamp: 2017-01-02T00:00Z
   event:
     gender: m
-    addPageViews: 0
-    pageViews: 0
-    totalPageViews: 0.0
+    addPageViews: null
+    pageViews: null
+    totalPageViews: null
     trailing7DayAvgTotalPageViews: 2.142857142857143
 intermediateResults:
   groupBy:

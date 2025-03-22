@@ -41,7 +41,7 @@ public class ConciseBitmapFactoryTest
     ImmutableBitmap bitmap = factory.union(
         Iterables.transform(
             Collections.singletonList(new WrappedConciseBitmap()),
-            new Function<WrappedConciseBitmap, ImmutableBitmap>()
+            new Function<>()
             {
               @Override
               public ImmutableBitmap apply(WrappedConciseBitmap input)

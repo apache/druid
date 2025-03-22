@@ -49,6 +49,8 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -57,6 +59,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 {
   private static final String DATA_SOURCE = "dataSource";
@@ -67,6 +70,17 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   private DataSegment segment2;
   private DataSegment segment3;
   private DataSegment segment4;
+
+  @Parameterized.Parameters(name = "useSegmentMetadataCache={0}")
+  public static Object[][] testParameters()
+  {
+    return new Object[][]{{true}, {false}};
+  }
+
+  public KillUnusedSegmentsTaskTest(boolean useSegmentMetadataCache)
+  {
+    super(useSegmentMetadataCache);
+  }
 
   @Before
   public void setup()

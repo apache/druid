@@ -22,11 +22,9 @@ package org.apache.druid.query.extraction;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.commons.compress.utils.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -48,12 +46,6 @@ public abstract class MapBasedLookupExtractorTest
           "", "empty_string"
       );
 
-  @BeforeClass
-  public static void setUpClass()
-  {
-    NullHandling.initializeForTests();
-  }
-
   /**
    * Subclasses implement this method to test the proper {@link LookupExtractor} implementation.
    */
@@ -64,15 +56,8 @@ public abstract class MapBasedLookupExtractorTest
   {
     final LookupExtractor lookup = makeLookupExtractor(simpleLookupMap);
     Assert.assertEquals(Collections.singletonList("foo"), unapply(lookup, "bar"));
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(Collections.emptySet(), Sets.newHashSet(unapply(lookup, null)));
-      Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply(lookup, "")));
-    } else {
-      // Don't test unapply(lookup, "") under replace-with-default mode, because it isn't allowed in that mode, and
-      // implementation behavior is undefined. unapply is specced such that it requires its inputs to go
-      // through nullToEmptyIfNeeded.
-      Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply(lookup, null)));
-    }
+    Assert.assertEquals(Collections.emptySet(), Sets.newHashSet(unapply(lookup, null)));
+    Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply(lookup, "")));
     Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(unapply(lookup, "empty_string")));
     Assert.assertEquals("not existing value returns empty list", Collections.emptyList(), unapply(lookup, "not There"));
   }
@@ -90,10 +75,10 @@ public abstract class MapBasedLookupExtractorTest
   {
     final LookupExtractor lookup = makeLookupExtractor(simpleLookupMap);
     Assert.assertEquals("bar", lookup.apply("foo"));
-    Assert.assertEquals(NullHandling.sqlCompatible() ? "" : null, lookup.apply("null"));
-    Assert.assertEquals(NullHandling.sqlCompatible() ? "" : null, lookup.apply("empty String"));
+    Assert.assertEquals("", lookup.apply("null"));
+    Assert.assertEquals("", lookup.apply("empty String"));
     Assert.assertEquals("empty_string", lookup.apply(""));
-    Assert.assertEquals(NullHandling.sqlCompatible() ? null : "empty_string", lookup.apply(null));
+    Assert.assertNull(lookup.apply(null));
   }
 
   @Test
@@ -116,7 +101,7 @@ public abstract class MapBasedLookupExtractorTest
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
     Assert.assertEquals(
-        NullHandling.sqlCompatible() ? Collections.emptyList() : Collections.singletonList(null),
+        Collections.emptyList(),
         unapply(lookup, "nv")
     );
 
@@ -157,7 +142,7 @@ public abstract class MapBasedLookupExtractorTest
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
     Assert.assertEquals(
-        NullHandling.sqlCompatible() ? "" : null,
+        "",
         lookup.apply("nk")
     );
   }
@@ -170,19 +155,14 @@ public abstract class MapBasedLookupExtractorTest
     final LookupExtractor lookup = makeLookupExtractor(mapWithNullKey);
 
     Assert.assertEquals(
-        NullHandling.sqlCompatible() ? Collections.emptyList() : Collections.singletonList("nk"),
+        Collections.emptyList(),
         unapply(lookup, null)
     );
 
-    if (NullHandling.sqlCompatible()) {
-      // Don't test unapply(lookup, "") under replace-with-default mode, because it isn't allowed in that mode, and
-      // implementation behavior is undefined. unapply is specced such that it requires its inputs to go
-      // through nullToEmptyIfNeeded.
-      Assert.assertEquals(
-          Collections.singletonList("nk"),
-          unapply(lookup, "")
-      );
-    }
+    Assert.assertEquals(
+        Collections.singletonList("nk"),
+        unapply(lookup, "")
+    );
   }
 
   @Test
@@ -195,10 +175,7 @@ public abstract class MapBasedLookupExtractorTest
 
     Assert.assertNull(lookup.apply("missing"));
     Assert.assertEquals("empty", lookup.apply(""));
-    Assert.assertEquals(
-        NullHandling.sqlCompatible() ? null : "empty",
-        lookup.apply(null)
-    );
+    Assert.assertNull(lookup.apply(null));
   }
 
   @Test
@@ -215,7 +192,7 @@ public abstract class MapBasedLookupExtractorTest
     );
 
     Assert.assertEquals(
-        NullHandling.sqlCompatible() ? Collections.emptyList() : Collections.singletonList(null),
+        Collections.emptyList(),
         unapply(lookup, "nv")
     );
   }

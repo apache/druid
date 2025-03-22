@@ -298,7 +298,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                     new Object[]{3L, new Object[]{8L, 9L, 10L}}
                 )
             ),
-            new RowAdapter<Object[]>()
+            new RowAdapter<>()
             {
               @Override
               public ToLongFunction<Object[]> timestampFunction()

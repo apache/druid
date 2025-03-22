@@ -25,8 +25,10 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 
 import java.util.List;
 import java.util.Set;
@@ -96,18 +98,19 @@ public class MSQTaskQueryMakerUtils
    * Validates that a query does not read from a datasource that it is ingesting data into, if realtime segments are
    * being queried.
    */
-  public static void validateRealtimeReindex(final MSQSpec querySpec)
+  public static void validateRealtimeReindex(QueryContext context, MSQDestination destination, Query<?> query)
   {
-    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(querySpec.getQuery().context());
-    if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
+    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(context);
+    if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination) && SegmentSource.REALTIME.equals(segmentSources)) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build("Cannot ingest into datasource[%s] since it is also being queried from, with "
                                  + "REALTIME segments included. Ingest to a different datasource, or disable querying "
                                  + "of realtime segments by modifying [%s] in the query context.",
-                                 ((DataSourceMSQDestination) querySpec.getDestination()).getDataSource(),
+                                 ((DataSourceMSQDestination) destination).getDataSource(),
                                  MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE
                           );
     }
   }
+
 }

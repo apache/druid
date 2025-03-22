@@ -83,7 +83,7 @@ WHERE
   datasource = 'your_dataSource' AND
   is_published = 1
 GROUP BY 1, 2, 3
-ORDER BY 1, 2, 3 DESC;
+ORDER BY 1, 2, 3 DESC
 ```
 
 Please note that the query result might include overshadowed segments.

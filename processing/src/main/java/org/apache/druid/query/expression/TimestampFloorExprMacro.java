@@ -27,7 +27,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorValueProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Period;
 
@@ -132,18 +132,10 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
-      ExprVectorProcessor<?> processor;
-      processor = new LongOutLongInFunctionVectorValueProcessor(
-          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG, inspector.getMaxVectorSize()),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public long apply(long input)
-        {
-          return granularity.bucketStart(input);
-        }
-      };
+      final ExprVectorProcessor<?> processor = new LongUnivariateLongFunctionVectorProcessor(
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+          granularity::bucketStart
+      );
 
       return (ExprVectorProcessor<T>) processor;
     }

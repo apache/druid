@@ -57,30 +57,24 @@ import java.util.stream.Collectors;
 public class MetadataTaskStorage implements TaskStorage
 {
 
-  private static final MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock> TASK_TYPES = new MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock>()
+  private static final MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock> TASK_TYPES = new MetadataStorageActionHandlerTypes<>()
   {
     @Override
     public TypeReference<Task> getEntryType()
     {
-      return new TypeReference<Task>()
-      {
-      };
+      return new TypeReference<>() {};
     }
 
     @Override
     public TypeReference<TaskStatus> getStatusType()
     {
-      return new TypeReference<TaskStatus>()
-      {
-      };
+      return new TypeReference<>() {};
     }
 
     @Override
     public TypeReference<TaskLock> getLockType()
     {
-      return new TypeReference<TaskLock>()
-      {
-      };
+      return new TypeReference<>() {};
     }
   };
 

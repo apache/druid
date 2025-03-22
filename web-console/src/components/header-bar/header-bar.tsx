@@ -151,7 +151,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       />
       <MenuDivider />
       <MenuItem
-        icon={IconNames.COMPASS}
+        icon={IconNames.MAP}
         text="Explore"
         label="(experimental)"
         href="#explore"

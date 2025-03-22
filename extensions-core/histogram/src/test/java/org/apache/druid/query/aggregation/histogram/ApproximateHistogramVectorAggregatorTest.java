@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -46,7 +45,6 @@ public class ApproximateHistogramVectorAggregatorTest
   @Before
   public void setup()
   {
-    NullHandling.initializeForTests();
     VectorValueSelector vectorValueSelector_1 = createMock(VectorValueSelector.class);
     expect(vectorValueSelector_1.getFloatVector()).andReturn(FLOATS).anyTimes();
     expect(vectorValueSelector_1.getNullVector()).andReturn(NULL_VECTOR).anyTimes();

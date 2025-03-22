@@ -205,12 +205,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   )
   {
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<T> make()
           {
-            return new Iterator<T>()
+            return new Iterator<>()
             {
               private ResultBatch<T> currentBatch;
 
@@ -777,7 +777,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           }
         }
         if (!cancellationGizmo.isCanceled() && !cursors.isEmpty()) {
-          getPool().execute(new MergeCombineAction<T>(
+          getPool().execute(new MergeCombineAction<>(
               cursors,
               outputQueue,
               orderingFn,
@@ -931,7 +931,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       return sequence.toYielder(
           new ResultBatch<>(batchSize),
-          new YieldingAccumulator<ResultBatch<E>, E>()
+          new YieldingAccumulator<>()
           {
             int count = 0;
 

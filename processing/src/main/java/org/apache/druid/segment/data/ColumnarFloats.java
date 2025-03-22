@@ -20,7 +20,6 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.FloatColumnSelector;
@@ -123,14 +122,14 @@ public interface ColumnarFloats extends Closeable
         public float getFloat()
         {
           //noinspection AssertWithSideEffects (ignore null handling test initialization check side effect)
-          assert NullHandling.replaceWithDefault() || !isNull();
+          assert !isNull();
           return ColumnarFloats.this.get(offset.getOffset());
         }
 
         @Override
         public double getDouble(int offset)
         {
-          assert NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset);
+          assert !nullValueBitmap.get(offset);
           return ColumnarFloats.this.get(offset);
         }
 

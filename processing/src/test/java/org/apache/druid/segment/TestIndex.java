@@ -567,7 +567,7 @@ public class TestIndex
     final IncrementalIndex retVal = indexSupplier.get();
     final AtomicLong startTime = new AtomicLong();
     int lineCount = source.readLines(
-        new LineProcessor<Integer>()
+        new LineProcessor<>()
         {
           boolean runOnce = false;
           int lineCount = 0;

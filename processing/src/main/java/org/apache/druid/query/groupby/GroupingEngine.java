@@ -32,7 +32,6 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
@@ -501,9 +500,7 @@ public class GroupingEngine
     Closer closer = Closer.create();
     closer.register(bufferHolder);
     try {
-      final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
-          query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP)
-      );
+      final String fudgeTimestampString = query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP);
 
       final DateTime fudgeTimestamp = fudgeTimestampString == null
                                       ? null
@@ -986,7 +983,10 @@ public class GroupingEngine
         }));
   }
 
-  private static boolean summaryRowPreconditions(GroupByQuery query)
+  /**
+   * Whether a query should include a summary row. True for queries that correspond to SQL GROUP BY ().
+   */
+  public static boolean summaryRowPreconditions(GroupByQuery query)
   {
     LimitSpec limit = query.getLimitSpec();
     if (limit instanceof DefaultLimitSpec) {
@@ -995,7 +995,7 @@ public class GroupingEngine
         return false;
       }
     }
-    if (!query.getDimensions().isEmpty()) {
+    if (!query.getDimensions().isEmpty() || query.hasDroppedDimensions()) {
       return false;
     }
     if (query.getGranularity().isFinerThan(Granularities.ALL)) {

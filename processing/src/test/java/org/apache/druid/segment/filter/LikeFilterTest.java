@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -117,9 +116,7 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim2", "bbb", null, null)),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of("0", "1", "2", "3", "4", "6")
-        : ImmutableList.of("0", "1", "2", "4", "6")
+        ImmutableList.of("0", "1", "2", "4", "6")
     );
   }
 
@@ -141,9 +138,7 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim1", "bar", null, new SubstringDimExtractionFn(3, 3))),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of("0", "1", "3", "5", "6")
-        : ImmutableList.of("5", "6")
+        ImmutableList.of("5", "6")
     );
 
     assertFilterMatches(
@@ -152,9 +147,7 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim2", "bbb", null, new SubstringDimExtractionFn(0, 3))),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of("0", "1", "2", "3", "4", "6")
-        : ImmutableList.of("1", "2", "4", "6")
+        ImmutableList.of("1", "2", "4", "6")
     );
   }
 
@@ -176,7 +169,7 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim2", "aa%", null, null)),
-        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "3", "4", "5", "6") : ImmutableList.of("0", "4", "5", "6")
+        ImmutableList.of("0", "4", "5", "6")
     );
   }
 
@@ -198,9 +191,7 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim1", "a%", null, new SubstringDimExtractionFn(1, null))),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of("0", "1", "2", "4", "5", "6")
-        : ImmutableList.of("1", "2", "4", "5", "6")
+        ImmutableList.of("1", "2", "4", "5", "6")
     );
 
     assertFilterMatches(
@@ -209,9 +200,7 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim2", "a%", null, new SubstringDimExtractionFn(1, null))),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of("0", "3", "4", "5", "6")
-        : ImmutableList.of("4", "5", "6")
+        ImmutableList.of("4", "5", "6")
     );
   }
 
@@ -233,7 +222,7 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim2", "%b%", null, null)),
-        NullHandling.sqlCompatible() ? ImmutableList.of("0", "1") : ImmutableList.of("0", "1", "3")
+        ImmutableList.of("0", "1")
     );
   }
 
@@ -249,17 +238,10 @@ public class LikeFilterTest extends BaseFilterTest
   @Test
   public void testMatchEmptyStringWithExtractionFn()
   {
-    if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
-          new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
-          ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
-      );
-    } else {
-      assertFilterMatches(
-          new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
-          ImmutableList.of()
-      );
-    }
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "", null, new SubstringDimExtractionFn(100, 1)),
+        ImmutableList.of()
+    );
   }
 
   @Test
@@ -307,9 +289,7 @@ public class LikeFilterTest extends BaseFilterTest
     // doesnt match null tho in sql compatible mode
     assertFilterMatches(
         new LikeDimFilter("dim2", "%", "@", null),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of("0", "1", "2", "4", "5", "6")
-        : ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
+        ImmutableList.of("0", "1", "2", "4", "5", "6")
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim2", "%", "@", null)),

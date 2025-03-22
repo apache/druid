@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -349,7 +348,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     // null is always 0
     dictionaryWriter.write(null);
     for (String value : strings) {
-      value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
         continue;
       }

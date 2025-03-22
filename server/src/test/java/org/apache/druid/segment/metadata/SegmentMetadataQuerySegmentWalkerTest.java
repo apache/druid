@@ -376,7 +376,8 @@ public class SegmentMetadataQuerySegmentWalkerTest
       SegmentAnalysis mockSegmentAnalysis = EasyMock.mock(SegmentAnalysis.class);
       EasyMock.expect(mockSegmentAnalysis.getId()).andReturn(serverExpectation.getSegmentId().toString()).anyTimes();
       EasyMock.expect(mockSegmentAnalysis.compareTo(EasyMock.isA(SegmentAnalysis.class)))
-          .andAnswer(new IAnswer<Integer>() {
+          .andAnswer(new IAnswer<>()
+          {
             @Override
             public Integer answer()
             {

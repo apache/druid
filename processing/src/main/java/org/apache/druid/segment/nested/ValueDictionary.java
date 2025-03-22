@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ComparatorDimensionDictionary;
@@ -55,7 +54,7 @@ public class ValueDictionary
 
   public ValueDictionary()
   {
-    this.stringDictionary = new ComparatorDimensionDictionary<String>(GenericIndexed.STRING_STRATEGY)
+    this.stringDictionary = new ComparatorDimensionDictionary<>(GenericIndexed.STRING_STRATEGY)
     {
       @Override
       public long estimateSizeOfValue(String value)
@@ -63,7 +62,7 @@ public class ValueDictionary
         return StructuredDataProcessor.estimateStringSize(value);
       }
     };
-    this.longDictionary = new ComparatorDimensionDictionary<Long>(ColumnType.LONG.getNullableStrategy())
+    this.longDictionary = new ComparatorDimensionDictionary<>(ColumnType.LONG.getNullableStrategy())
     {
       @Override
       public long estimateSizeOfValue(Long value)
@@ -71,7 +70,7 @@ public class ValueDictionary
         return StructuredDataProcessor.getLongObjectEstimateSize();
       }
     };
-    this.doubleDictionary = new ComparatorDimensionDictionary<Double>(ColumnType.DOUBLE.getNullableStrategy())
+    this.doubleDictionary = new ComparatorDimensionDictionary<>(ColumnType.DOUBLE.getNullableStrategy())
     {
       @Override
       public long estimateSizeOfValue(Double value)
@@ -82,12 +81,6 @@ public class ValueDictionary
     this.stringArrays = new TreeSet<>(ColumnType.STRING_ARRAY.getNullableStrategy());
     this.longArrays = new TreeSet<>(ColumnType.LONG_ARRAY.getNullableStrategy());
     this.doubleArrays = new TreeSet<>(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
-
-    // always add default values in default value mode. they don't cost much even if they aren't used
-    if (NullHandling.replaceWithDefault()) {
-      longDictionary.add(NullHandling.defaultLongValue());
-      doubleDictionary.add(NullHandling.defaultDoubleValue());
-    }
   }
 
   public int addLongValue(@Nullable Long value)
@@ -161,7 +154,7 @@ public class ValueDictionary
     final ComparatorSortedDimensionDictionary<String> sortedStringDimensionDictionary =
         stringDictionary.sort();
 
-    Indexed<String> strings = new Indexed<String>()
+    Indexed<String> strings = new Indexed<>()
     {
       @Override
       public int size()
@@ -200,7 +193,7 @@ public class ValueDictionary
     final ComparatorSortedDimensionDictionary<Long> sortedLongDimensionDictionary =
         longDictionary.sort();
 
-    Indexed<Long> longs = new Indexed<Long>()
+    Indexed<Long> longs = new Indexed<>()
     {
       @Override
       public int size()
@@ -239,7 +232,7 @@ public class ValueDictionary
     final ComparatorSortedDimensionDictionary<Double> sortedDoubleDimensionDictionary =
         doubleDictionary.sort();
 
-    Indexed<Double> doubles = new Indexed<Double>()
+    Indexed<Double> doubles = new Indexed<>()
     {
       @Override
       public int size()
@@ -278,7 +271,7 @@ public class ValueDictionary
     // offset by 1 because nulls are ignored by the indexer, but always global id 0
     final int adjustLongs = 1 + strings.size();
     final int adjustDoubles = adjustLongs + longs.size();
-    TreeSet<Object[]> sortedArrays = new TreeSet<>(new Comparator<Object[]>()
+    TreeSet<Object[]> sortedArrays = new TreeSet<>(new Comparator<>()
     {
       @Override
       public int compare(Object[] o1, Object[] o2)
@@ -319,7 +312,7 @@ public class ValueDictionary
     sortedArrays.addAll(stringArrays);
     sortedArrays.addAll(longArrays);
     sortedArrays.addAll(doubleArrays);
-    Indexed<Object[]> sortedArraysIndexed = new Indexed<Object[]>()
+    Indexed<Object[]> sortedArraysIndexed = new Indexed<>()
     {
       @Override
       public Iterator<Object[]> iterator()

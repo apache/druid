@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
@@ -31,40 +30,19 @@ public class VectorStringProcessors
 {
   public static <T> ExprVectorProcessor<T> concat(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
   {
-    final ExprVectorProcessor processor;
-    if (NullHandling.sqlCompatible()) {
-      processor = new ObjectOutObjectsInFunctionVectorProcessor(
-          left.asVectorProcessor(inspector),
-          right.asVectorProcessor(inspector),
-          inspector.getMaxVectorSize(),
-          ExpressionType.STRING
-      )
+    final ExprVectorProcessor processor = new ObjectBivariateObjectsFunctionVectorProcessor(
+        left.asVectorProcessor(inspector),
+        right.asVectorProcessor(inspector),
+        ExpressionType.STRING
+    )
+    {
+      @Nullable
+      @Override
+      protected Object processValue(@Nullable Object leftVal, @Nullable Object rightVal)
       {
-        @Nullable
-        @Override
-        protected String processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-        {
-          // in sql compatible mode, nulls are handled by super class and never make it here...
-          return leftVal + (String) rightVal;
-        }
-      };
-    } else {
-      processor = new ObjectOutObjectsInFunctionVectorProcessor(
-          left.asVectorProcessor(inspector),
-          right.asVectorProcessor(inspector),
-          inspector.getMaxVectorSize(),
-          ExpressionType.STRING
-      )
-      {
-        @Nullable
-        @Override
-        protected Object processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-        {
-          return NullHandling.nullToEmptyIfNeeded((String) leftVal)
-                 + NullHandling.nullToEmptyIfNeeded((String) rightVal);
-        }
-      };
-    }
+        return leftVal + (String) rightVal;
+      }
+    };
     return processor;
   }
 
@@ -74,13 +52,11 @@ public class VectorStringProcessors
     for (int i = 0; i < inputs.size(); i++) {
       inputProcessors[i] = CastToTypeVectorProcessor.cast(
           inputs.get(i).asVectorProcessor(inspector),
-          ExpressionType.STRING,
-          inspector.getMaxVectorSize()
+          ExpressionType.STRING
       );
     }
-    final ExprVectorProcessor processor = new ObjectOutMultiObjectInVectorProcessor(
+    final ExprVectorProcessor processor = new ObjectMultivariateObjectsFunctionVectorProcessor(
         inputProcessors,
-        inspector.getMaxVectorSize(),
         ExpressionType.STRING
     )
     {
@@ -89,14 +65,14 @@ public class VectorStringProcessors
       {
         // Result of concatenation is null if any of the Values is null.
         // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
-        String first = NullHandling.nullToEmptyIfNeeded(Evals.asString(in[0][i]));
+        String first = Evals.asString(in[0][i]);
         if (first == null) {
           outValues[i] = null;
           return;
         }
         final StringBuilder builder = new StringBuilder(first);
         for (int inputNumber = 1; inputNumber < in.length; inputNumber++) {
-          final String s = NullHandling.nullToEmptyIfNeeded(Evals.asString(in[inputNumber][i]));
+          final String s = Evals.asString(in[inputNumber][i]);
           if (s == null) {
             outValues[i] = null;
             return;

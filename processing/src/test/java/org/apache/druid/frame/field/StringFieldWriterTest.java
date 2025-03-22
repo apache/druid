@@ -20,7 +20,6 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -129,14 +128,14 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   @Test
   public void testMultiValueStringContainingNulls()
   {
-    doTest(Arrays.asList("foo", NullHandling.emptyToNullIfNeeded(""), "bar", null));
+    doTest(Arrays.asList("foo", "", "bar", null));
   }
 
   @Test
   public void testNullByteReplacement()
   {
     doTest(
-        Arrays.asList("abc\u0000", "foo" + NullHandling.emptyToNullIfNeeded("") + "bar", "def"),
+        Arrays.asList("abc\u0000", "foobar", "def"),
         FieldWritersType.NULL_REPLACING
     );
   }
@@ -144,7 +143,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   @Test
   public void testNullByteNotReplaced()
   {
-    mockSelectors(Arrays.asList("abc\u0000", "foo" + NullHandling.emptyToNullIfNeeded("") + "bar", "def"));
+    mockSelectors(Arrays.asList("abc\u0000", "foobar", "def"));
     Assert.assertThrows(InvalidNullByteException.class, () -> {
       doTestWithSpecificFieldWriter(fieldWriter);
     });

@@ -151,7 +151,7 @@ public class SegmentGeneratorFrameProcessorFactory
     final Sequence<Pair<Integer, ReadableInput>> inputSequence =
         Sequences.simple(Iterables.transform(
             inputSliceReader.attach(0, slice, counters, warningPublisher),
-            new Function<ReadableInput, Pair<Integer, ReadableInput>>()
+            new Function<>()
             {
               int i = 0;
 
@@ -194,7 +194,7 @@ public class SegmentGeneratorFrameProcessorFactory
                   frameContext.indexMerger(),
                   meters,
                   parseExceptionHandler,
-                  true,
+                  false,
                   // MSQ doesn't support CentralizedDatasourceSchema feature as of now.
                   CentralizedDatasourceSchemaConfig.create(false)
               );
@@ -237,7 +237,7 @@ public class SegmentGeneratorFrameProcessorFactory
   @Override
   public TypeReference<Set<DataSegment>> getResultTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>() {};
+    return new TypeReference<>() {};
   }
 
   @Nullable

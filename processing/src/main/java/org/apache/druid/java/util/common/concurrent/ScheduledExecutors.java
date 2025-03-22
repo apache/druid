@@ -47,7 +47,7 @@ public class ScheduledExecutors
         exec,
         initialDelay,
         delay,
-        new Callable<Signal>()
+        new Callable<>()
         {
           @Override
           public Signal call()

@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.benchmark.compression.EncodingSizeProfiler;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -76,10 +75,6 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class FrontCodedIndexedBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"10000", "100000"})
   public int numElements;
 

@@ -25,6 +25,7 @@ import './form-group-with-info.scss';
 
 export interface FormGroupWithInfoProps {
   label?: React.ReactNode;
+  inline?: boolean;
   info?: JSX.Element | string;
   inlineInfo?: boolean;
   children?: React.ReactNode;
@@ -33,7 +34,7 @@ export interface FormGroupWithInfoProps {
 export const FormGroupWithInfo = React.memo(function FormGroupWithInfo(
   props: FormGroupWithInfoProps,
 ) {
-  const { label, info, inlineInfo, children } = props;
+  const { label, inline, info, inlineInfo, children } = props;
 
   const popover = (
     <Popover className="info-popover" content={info} position="left-bottom">
@@ -45,6 +46,7 @@ export const FormGroupWithInfo = React.memo(function FormGroupWithInfo(
     <FormGroup
       className="form-group-with-info"
       label={label}
+      inline={inline}
       labelInfo={info && !inlineInfo && popover}
     >
       {children}

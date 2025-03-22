@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -125,7 +126,32 @@ public class QueryFrameworkUtils
       @Nullable final ViewManager viewManager,
       final DruidSchemaManager druidSchemaManager,
       final AuthorizerMapper authorizerMapper,
-      final CatalogResolver catalogResolver
+      final CatalogResolver catalogResolver)
+  {
+    TimelineServerView timelineServerView = new TestTimelineServerView(walker.getSegments());
+    return createMockRootSchema(
+        injector,
+        conglomerate,
+        walker,
+        plannerConfig,
+        viewManager,
+        druidSchemaManager,
+        authorizerMapper,
+        catalogResolver,
+        timelineServerView
+    );
+  }
+
+  public static DruidSchemaCatalog createMockRootSchema(
+      final Injector injector,
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      @Nullable final ViewManager viewManager,
+      final DruidSchemaManager druidSchemaManager,
+      final AuthorizerMapper authorizerMapper,
+      final CatalogResolver catalogResolver,
+      final TimelineServerView timelineServerView
   )
   {
     DruidSchema druidSchema = createMockSchema(
@@ -133,12 +159,36 @@ public class QueryFrameworkUtils
         conglomerate,
         walker,
         druidSchemaManager,
-        catalogResolver
+        catalogResolver,
+        timelineServerView
     );
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
+        CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
+    DruidOperatorTable createOperatorTable = createOperatorTable(injector);
+
+    return createMockRootSchema(
+        plannerConfig,
+        viewManager,
+        authorizerMapper,
+        druidSchema,
+        systemSchema,
+        lookupSchema,
+        createOperatorTable
+    );
+  }
+
+  static DruidSchemaCatalog createMockRootSchema(
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper,
+      DruidSchema druidSchema,
+      SystemSchema systemSchema,
+      LookupSchema lookupSchema,
+      DruidOperatorTable createOperatorTable
+  )
+  {
     ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
 
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
@@ -159,7 +209,7 @@ public class QueryFrameworkUtils
         new InformationSchema(
             catalog,
             authorizerMapper,
-            createOperatorTable(injector)
+            createOperatorTable
         );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);
@@ -193,17 +243,18 @@ public class QueryFrameworkUtils
     );
   }
 
-  private static DruidSchema createMockSchema(
+  static DruidSchema createMockSchema(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final DruidSchemaManager druidSchemaManager,
-      final CatalogResolver catalog
+      final CatalogResolver catalog,
+      final TimelineServerView timelineServerView
   )
   {
     final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
         createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestTimelineServerView(walker.getSegments()),
+        timelineServerView,
         BrokerSegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
         new InternalQueryConfig(),

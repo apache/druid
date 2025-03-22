@@ -22,10 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.hll.sql;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,7 +33,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -72,7 +69,6 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -82,6 +78,7 @@ import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
@@ -102,10 +99,6 @@ import java.util.stream.Collectors;
 @SqlTestFrameworkConfig.ComponentSupplier(HllSketchComponentSupplier.class)
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final boolean ROUND = true;
 
   // For testHllSketchPostAggsGroupBy, testHllSketchPostAggsTimeseries
@@ -260,19 +253,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new HllSketchModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new HllSketchModule());
     }
 
-    @SuppressWarnings("resource")
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
       HllSketchModule.registerSerde();
       final QueryableIndex index = IndexBuilder
@@ -297,7 +284,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
           .buildMMappedIndex();
 
-      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+      return walker.add(
           DataSegment.builder()
                      .dataSource(CalciteTests.DATASOURCE1)
                      .interval(index.getDataInterval())
@@ -334,17 +321,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, CAST(21 AS BIGINT))\n" // also native column
                        + "FROM druid.foo";
 
-    final List<Object[]> expectedResults;
-
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 2L, 5L, 5L, 5L}
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L, 5L}
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L, 5L}
+    );
 
     testQuery(
         sql,
@@ -456,12 +435,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
-                            NullHandling.replaceWithDefault()
-                            ? Arrays.asList(
-                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                                new CountAggregatorFactory("_a0:count")
-                            )
-                            : Arrays.asList(
+                            Arrays.asList(
                                 new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0:count"),
@@ -513,12 +487,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, 2L},
-            new Object[]{"a", 2L}
-        )
-        : ImmutableList.of(
             new Object[]{"a", 2L}
         )
     );
@@ -904,7 +874,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
-                               .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                               .filters(equality("dim2", 0L, ColumnType.LONG))
                                .granularity(Granularities.ALL)
                                .aggregators(
                                    aggregators(

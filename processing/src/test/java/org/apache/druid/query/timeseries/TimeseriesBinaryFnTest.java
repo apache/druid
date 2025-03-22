@@ -48,7 +48,7 @@ public class TimeseriesBinaryFnTest
   @Test
   public void testMerge()
   {
-    Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> result1 = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -57,7 +57,7 @@ public class TimeseriesBinaryFnTest
             )
         )
     );
-    Result<TimeseriesResultValue> result2 = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> result2 = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -67,7 +67,7 @@ public class TimeseriesBinaryFnTest
         )
     );
 
-    Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> expected = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -90,7 +90,7 @@ public class TimeseriesBinaryFnTest
   @Test
   public void testMergeDay()
   {
-    Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> result1 = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -99,7 +99,7 @@ public class TimeseriesBinaryFnTest
             )
         )
     );
-    Result<TimeseriesResultValue> result2 = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> result2 = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -109,7 +109,7 @@ public class TimeseriesBinaryFnTest
         )
     );
 
-    Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> expected = new Result<>(
         Granularities.DAY.bucketStart(currTime),
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -132,7 +132,7 @@ public class TimeseriesBinaryFnTest
   @Test
   public void testMergeOneNullResult()
   {
-    Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> result1 = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -158,7 +158,7 @@ public class TimeseriesBinaryFnTest
   @Test
   public void testMergeShiftedTimestamp()
   {
-    Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> result1 = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -167,7 +167,7 @@ public class TimeseriesBinaryFnTest
             )
         )
     );
-    Result<TimeseriesResultValue> result2 = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> result2 = new Result<>(
         currTime.plusHours(2),
         new TimeseriesResultValue(
             ImmutableMap.of(
@@ -177,7 +177,7 @@ public class TimeseriesBinaryFnTest
         )
     );
 
-    Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
+    Result<TimeseriesResultValue> expected = new Result<>(
         currTime,
         new TimeseriesResultValue(
             ImmutableMap.of(

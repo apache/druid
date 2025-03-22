@@ -31,12 +31,10 @@
 | 🏷️ Labeler                            | [![labeler](https://img.shields.io/github/actions/workflow/status/apache/druid/labeler.yml?logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/labeler.yml) |
 | ♻️ Reusable Revised ITS               | [![reusable-revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-revised-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/reusable-revised-its.yml) |
 | ♻️ Reusable Standard ITS              | [![reusable-standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-standard-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/reusable-standard-its.yml) |
-| ♻️ Reusable Unit Tests                | [![reusable-unit-tests](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-unit-tests.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/reusable-unit-tests.yml) |
 | 🔄 Revised ITS                        | [![revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/revised-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/revised-its.yml) |
 | 🔧 Standard ITS                       | [![standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/standard-its.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/standard-its.yml) |
 | 🛠️ Static Checks                      | [![static-checks](https://img.shields.io/github/actions/workflow/status/apache/druid/static-checks.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/static-checks.yml) |
 | 🧪 Unit and Integration Tests Unified | [![unit-and-integration-tests-unified](https://img.shields.io/github/actions/workflow/status/apache/druid/unit-and-integration-tests-unified.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/unit-and-integration-tests-unified.yml) |
-| 🔬 Unit Tests                         | [![unit-tests](https://img.shields.io/github/actions/workflow/status/apache/druid/unit-tests.yml?branch=master&logo=github-actions&style=flat-square)](https://github.com/apache/druid/actions/workflows/unit-tests.yml) |
 
 ---
 

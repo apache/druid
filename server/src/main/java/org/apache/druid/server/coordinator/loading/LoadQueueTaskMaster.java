@@ -132,6 +132,7 @@ public class LoadQueueTaskMaster
   {
     isLeader.set(false);
 
+    log.info("Stopping load queue peon for [%d] servers.", loadManagementPeons.size());
     loadManagementPeons.values().forEach(LoadQueuePeon::stop);
     loadManagementPeons.clear();
   }

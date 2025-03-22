@@ -27,7 +27,7 @@ public class TombstonePartitionedChunk<T> implements PartitionChunk<T>
 
   public static <T> TombstonePartitionedChunk<T> make(T obj)
   {
-    return new TombstonePartitionedChunk<T>(obj);
+    return new TombstonePartitionedChunk<>(obj);
   }
 
   public TombstonePartitionedChunk(T object)
