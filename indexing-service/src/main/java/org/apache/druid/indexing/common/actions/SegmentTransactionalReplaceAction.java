@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -109,6 +108,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     return new TypeReference<>() {};
   }
 
+  /**
+   * Performs some sanity checks and publishes the given segments.
+   */
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
@@ -138,9 +140,10 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       );
     }
     catch (Exception e) {
-      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
+
+    IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
 
     // Upgrade any overlapping pending segments
     // Do not perform upgrade in the same transaction as replace commit so that
@@ -154,7 +157,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       }
     }
 
-    IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
     return publishResult;
   }
 

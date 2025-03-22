@@ -19,32 +19,11 @@
 
 package org.apache.druid.common.config;
 
-import org.apache.druid.error.InvalidInput;
-
 /**
  * Utility class for common config operations.
  */
 public class Configs
 {
-  /**
-   * Ensures that the given value is not null, otherwise throws an exception.
-   *
-   * @param value   Value to check for null
-   * @param message Message to use for the exception, if thrown
-   * @param args    Arguments used to interpolate the exception message, if thrown
-   * @return The given value unchanged if it is not null
-   * @throws org.apache.druid.error.DruidException of type {@link InvalidInput}
-   * if the input {@code value} is null.
-   */
-  public static <T> T ensureNotNull(T value, String message, Object... args)
-  {
-    if (value == null) {
-      throw InvalidInput.exception(message, args);
-    } else {
-      return value;
-    }
-  }
-
   /**
    * Returns the given {@code value} if it is not null, otherwise returns the
    * {@code defaultValue}.

@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.common.task.Task;
 
 /**
@@ -37,8 +36,8 @@ public class TaskActionHolder
       @JsonProperty("action") TaskAction action
   )
   {
-    this.task = Configs.ensureNotNull(task, "'task' must not be null");
-    this.action = Configs.ensureNotNull(action, "'action' must not be null");
+    this.task = task;
+    this.action = action;
   }
 
   @JsonProperty

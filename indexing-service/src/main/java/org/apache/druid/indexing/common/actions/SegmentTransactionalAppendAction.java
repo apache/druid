@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
@@ -200,7 +199,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       );
     }
     catch (Exception e) {
-      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
 
