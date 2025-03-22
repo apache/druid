@@ -27,6 +27,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -51,7 +52,7 @@ import java.util.stream.Collectors;
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
  */
-public class SegmentTransactionalInsertAction extends SegmentPublishAction
+public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {
   /**
    * Set of segments that was fully overshadowed by new segments, {@link SegmentTransactionalInsertAction#segments}
@@ -173,22 +174,24 @@ public class SegmentTransactionalInsertAction extends SegmentPublishAction
   }
 
   @Override
-  protected SegmentPublishResult tryPublishSegments(Task task, TaskActionToolbox toolbox)
+  public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    final SegmentPublishResult retVal;
+
     if (segments.isEmpty()) {
       // A stream ingestion task didn't ingest any rows and created no segments (e.g., all records were unparseable),
       // but still needs to update metadata with the progress that the task made.
       try {
-        return toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
+        retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
             dataSource,
             startMetadata,
             endMetadata
         );
       }
       catch (Exception e) {
-        Throwables.throwIfUnchecked(e);
         throw new RuntimeException(e);
       }
+      return retVal;
     }
 
     final Set<DataSegment> allSegments = new HashSet<>(segments);
@@ -207,7 +210,7 @@ public class SegmentTransactionalInsertAction extends SegmentPublishAction
     }
 
     try {
-      return toolbox.getTaskLockbox().doInCriticalSection(
+      retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
@@ -232,6 +235,9 @@ public class SegmentTransactionalInsertAction extends SegmentPublishAction
       Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
+
+    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
+    return retVal;
   }
 
   private void checkWithSegmentLock()

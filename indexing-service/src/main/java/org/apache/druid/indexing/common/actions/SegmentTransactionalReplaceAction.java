@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -59,7 +60,7 @@ import java.util.stream.Collectors;
  *    The supervisor relays the payloads to all the tasks with the corresponding group_id to serve realtime queries
  * </pre>
  */
-public class SegmentTransactionalReplaceAction extends SegmentPublishAction
+public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
   private static final Logger log = new Logger(SegmentTransactionalReplaceAction.class);
 
@@ -109,7 +110,7 @@ public class SegmentTransactionalReplaceAction extends SegmentPublishAction
   }
 
   @Override
-  protected SegmentPublishResult tryPublishSegments(Task task, TaskActionToolbox toolbox)
+  public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
@@ -153,6 +154,7 @@ public class SegmentTransactionalReplaceAction extends SegmentPublishAction
       }
     }
 
+    IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
     return publishResult;
   }
 

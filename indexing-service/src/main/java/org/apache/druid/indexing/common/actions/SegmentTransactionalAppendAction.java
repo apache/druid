@@ -27,6 +27,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -58,7 +59,7 @@ import java.util.stream.Collectors;
  *     }
  * </pre>
  */
-public class SegmentTransactionalAppendAction extends SegmentPublishAction
+public class SegmentTransactionalAppendAction implements TaskAction<SegmentPublishResult>
 {
   private final Set<DataSegment> segments;
   @Nullable
@@ -136,7 +137,7 @@ public class SegmentTransactionalAppendAction extends SegmentPublishAction
   }
 
   @Override
-  protected SegmentPublishResult tryPublishSegments(Task task, TaskActionToolbox toolbox)
+  public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
     if (!(task instanceof PendingSegmentAllocatingTask)) {
       throw DruidException.defensive(
@@ -182,8 +183,9 @@ public class SegmentTransactionalAppendAction extends SegmentPublishAction
       );
     }
 
+    final SegmentPublishResult retVal;
     try {
-      return toolbox.getTaskLockbox().doInCriticalSection(
+      retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
@@ -201,6 +203,9 @@ public class SegmentTransactionalAppendAction extends SegmentPublishAction
       Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
+
+    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
+    return retVal;
   }
 
   @Override
