@@ -23,10 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
-import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -41,48 +39,32 @@ public class DruidCompactionConfig
 {
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
-  private static final CompactionCandidateSearchPolicy DEFAULT_COMPACTION_POLICY
-      = new NewestSegmentFirstPolicy(null);
   private static final DruidCompactionConfig EMPTY_INSTANCE
       = new DruidCompactionConfig(List.of(), null, null, null, null, null);
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
-  private final double compactionTaskSlotRatio;
-  private final int maxCompactionTaskSlots;
-  private final boolean useSupervisors;
-  private final CompactionEngine engine;
-  private final CompactionCandidateSearchPolicy compactionPolicy;
+  private final ClusterCompactionConfig clusterConfig;
 
+  /**
+   * Creates a copy of this {@link DruidCompactionConfig} with the given
+   * datasource compaction configs.
+   */
   public DruidCompactionConfig withDatasourceConfigs(
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    return new DruidCompactionConfig(
-        compactionConfigs,
-        compactionTaskSlotRatio,
-        maxCompactionTaskSlots,
-        compactionPolicy,
-        useSupervisors,
-        engine
-    );
+    return new DruidCompactionConfig(compactionConfigs, clusterConfig);
   }
 
   /**
-   * Creates a copy of this {@link DruidCompactionConfig} by updating the non-null
+   * Creates a copy of this {@link DruidCompactionConfig} by updating the
    * fields provided in the {@link ClusterCompactionConfig}.
    */
   public DruidCompactionConfig withClusterConfig(
-      ClusterCompactionConfig update
+      ClusterCompactionConfig clusterConfig
   )
   {
-    return new DruidCompactionConfig(
-        this.compactionConfigs,
-        Configs.valueOrDefault(update.getCompactionTaskSlotRatio(), compactionTaskSlotRatio),
-        Configs.valueOrDefault(update.getMaxCompactionTaskSlots(), maxCompactionTaskSlots),
-        Configs.valueOrDefault(update.getCompactionPolicy(), compactionPolicy),
-        Configs.valueOrDefault(update.getUseSupervisors(), useSupervisors),
-        Configs.valueOrDefault(update.getEngine(), engine)
-    );
+    return new DruidCompactionConfig(compactionConfigs, clusterConfig);
   }
 
   public DruidCompactionConfig withDatasourceConfig(DataSourceCompactionConfig dataSourceConfig)
@@ -107,16 +89,25 @@ public class DruidCompactionConfig
       @JsonProperty("engine") @Nullable CompactionEngine engine
   )
   {
-    this.compactionConfigs = Configs.valueOrDefault(compactionConfigs, Collections.emptyList());
-    this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
-    this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, Integer.MAX_VALUE);
-    this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
-    this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
-    this.useSupervisors = Configs.valueOrDefault(useSupervisors, false);
+    this(
+        compactionConfigs,
+        new ClusterCompactionConfig(
+            compactionTaskSlotRatio,
+            maxCompactionTaskSlots,
+            compactionPolicy,
+            useSupervisors,
+            engine
+        )
+    );
+  }
 
-    if (!this.useSupervisors && engine == CompactionEngine.MSQ) {
-      throw InvalidInput.exception("MSQ Compaction engine can be used only with compaction supervisors.");
-    }
+  private DruidCompactionConfig(
+      @Nullable List<DataSourceCompactionConfig> compactionConfigs,
+      @Nullable ClusterCompactionConfig clusterConfig
+  )
+  {
+    this.compactionConfigs = Configs.valueOrDefault(compactionConfigs, Collections.emptyList());
+    this.clusterConfig = clusterConfig;
   }
 
   @JsonProperty
@@ -128,37 +119,33 @@ public class DruidCompactionConfig
   @JsonProperty
   public double getCompactionTaskSlotRatio()
   {
-    return compactionTaskSlotRatio;
+    return clusterConfig.getCompactionTaskSlotRatio();
   }
 
   @JsonProperty
   public int getMaxCompactionTaskSlots()
   {
-    return maxCompactionTaskSlots;
+    return clusterConfig.getMaxCompactionTaskSlots();
   }
 
   @JsonProperty
   public boolean isUseSupervisors()
   {
-    return useSupervisors;
+    return clusterConfig.getUseSupervisors();
   }
 
   @JsonProperty
   public CompactionEngine getEngine()
   {
-    return engine;
+    return clusterConfig.getEngine();
   }
 
-  // Null-safe getters not used for serialization
+  /**
+   * Returns the cluster-level compaction config. Not used for serialization.
+   */
   public ClusterCompactionConfig clusterConfig()
   {
-    return new ClusterCompactionConfig(
-        compactionTaskSlotRatio,
-        maxCompactionTaskSlots,
-        compactionPolicy,
-        useSupervisors,
-        engine
-    );
+    return clusterConfig;
   }
 
   public Map<String, DataSourceCompactionConfig> dataSourceToCompactionConfigMap()
@@ -181,7 +168,7 @@ public class DruidCompactionConfig
   @JsonProperty
   public CompactionCandidateSearchPolicy getCompactionPolicy()
   {
-    return compactionPolicy;
+    return clusterConfig.getCompactionPolicy();
   }
 
   @Override
@@ -194,25 +181,14 @@ public class DruidCompactionConfig
       return false;
     }
     DruidCompactionConfig that = (DruidCompactionConfig) o;
-    return Double.compare(that.compactionTaskSlotRatio, compactionTaskSlotRatio) == 0 &&
-           maxCompactionTaskSlots == that.maxCompactionTaskSlots &&
-           useSupervisors == that.useSupervisors &&
-           Objects.equals(compactionPolicy, that.compactionPolicy) &&
-           Objects.equals(engine, that.engine) &&
+    return Objects.equals(clusterConfig, that.clusterConfig) &&
            Objects.equals(compactionConfigs, that.compactionConfigs);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        compactionConfigs,
-        compactionTaskSlotRatio,
-        maxCompactionTaskSlots,
-        compactionPolicy,
-        useSupervisors,
-        engine
-    );
+    return Objects.hash(clusterConfig, compactionConfigs);
   }
 
   @Override
@@ -220,11 +196,7 @@ public class DruidCompactionConfig
   {
     return "CoordinatorCompactionConfig{" +
            "compactionConfigs=" + compactionConfigs +
-           ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
-           ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
-           ", compactionPolicy=" + compactionPolicy +
-           ", useSupervisors=" + useSupervisors +
-           ", engine=" + engine +
+           ", clusterConfig=" + clusterConfig +
            '}';
   }
 }
