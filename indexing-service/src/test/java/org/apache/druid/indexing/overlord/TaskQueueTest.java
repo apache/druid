@@ -100,6 +100,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class TaskQueueTest extends IngestionTestBase
@@ -142,7 +143,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testManageInternalReleaseLockWhenTaskIsNotReady() throws Exception
+  public void testManageQueuedTasksReleaseLockWhenTaskIsNotReady() throws Exception
   {
     // task1 emulates a case when there is a task that was issued before task2 and acquired locks conflicting
     // to task2.
@@ -153,14 +154,14 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TestTask task2 = new TestTask("t2", Intervals.of("2021-01-31/P1M"));
     taskQueue.add(task2);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertFalse(task2.isDone());
     Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
 
     // task3 can run because task2 is still blocked by task1.
     final TestTask task3 = new TestTask("t3", Intervals.of("2021-02-01/P1M"));
     taskQueue.add(task3);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertFalse(task2.isDone());
     Assert.assertTrue(task3.isDone());
     Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
@@ -170,7 +171,7 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.shutdown(task3.getId(), "Emulating shutdown of task3");
 
     // Now task2 should run.
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertTrue(task2.isDone());
   }
 
@@ -377,7 +378,7 @@ public class TaskQueueTest extends IngestionTestBase
       }
     };
     taskQueue.add(task);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
 
     Optional<TaskStatus> statusOptional = getTaskStorage().getStatus(task.getId());
     Assert.assertTrue(statusOptional.isPresent());
@@ -418,7 +419,7 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.setActive();
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
     taskQueue.add(task);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
 
     // Announce the task and wait for it to start running
     final String taskId = task.getId();
@@ -437,7 +438,7 @@ public class TaskQueueTest extends IngestionTestBase
         TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown"), taskLocation),
         workerHolder
     );
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Thread.sleep(100);
 
     // Verify that metrics are emitted on receiving announcement
