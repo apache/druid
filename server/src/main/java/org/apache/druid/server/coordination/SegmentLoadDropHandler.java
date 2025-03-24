@@ -97,7 +97,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SegmentLoadDropHandler-normal-%s")
         ),
-        // Create a fixed size threadpool which has a timeout of 1 minute
+        // Create a fixed size threadpool which has a timeout of 1 minute. Since they are all core threads, new threads
+        // will be created without enqueing the tasks till the capacity is reached.
         new ThreadPoolExecutor(
             config.getNumBootstrapThreads(),
             config.getNumBootstrapThreads(),
