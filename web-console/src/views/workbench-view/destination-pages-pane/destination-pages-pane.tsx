@@ -77,6 +77,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
   const destination = execution.destination;
   const pages = execution.destinationPages;
   if (!pages) return null;
+  const numPages = pages.length;
   const id = Api.encodePath(execution.id);
 
   const numTotalRows = destination?.numTotalRows;
@@ -85,11 +86,11 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     return UrlBaser.base(
       `/druid/v2/sql/statements/${id}/results?${
         pageIndex < 0 ? '' : `page=${pageIndex}&`
-      }resultFormat=${desiredResultFormat}`,
+      }resultFormat=${desiredResultFormat}&filename=${getPageFilename(pageIndex)}`,
     );
   }
 
-  function getPageFilename(pageIndex: number, numPages: number) {
+  function getPageFilename(pageIndex: number) {
     const numPagesString = String(numPages);
     const pageNumberString = String(pageIndex + 1).padStart(numPagesString.length, '0');
     return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
@@ -101,7 +102,6 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     await wait(100);
   }
 
-  const numPages = pages.length;
   return (
     <div className="destination-pages-pane">
       <p>
@@ -184,7 +184,6 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 text="Download"
                 minimal
                 href={getResultUrl(value)}
-                download={getPageFilename(value, numPages)}
               />
             ),
           },
