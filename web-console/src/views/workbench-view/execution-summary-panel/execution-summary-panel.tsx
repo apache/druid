@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
@@ -110,39 +118,36 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
             : `Query ID\n${execution.id}\n(click to copy)`)
         }
       />,
-      execution?.destination?.type === 'durableStorage' && execution.destinationPages ? (
-        <Button
-          key="download"
-          icon={IconNames.DOWNLOAD}
-          data-tooltip="Download data"
-          minimal
-          onClick={() => setShowDestinationPages(true)}
-        />
-      ) : (
-        <Popover
-          key="download"
-          className="download-button"
-          content={
-            <Menu>
-              <MenuItem text="Download results as...">
-                <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
-                <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
-                <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
-                <MenuItem text="SQL (VALUES)" onClick={() => handleDownload('sql')} />
-              </MenuItem>
-              <MenuItem text="Copy to clipboard as...">
-                <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
-                <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
-                <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
-                <MenuItem text="SQL (VALUES)" onClick={() => handleCopy('sql')} />
-              </MenuItem>
-            </Menu>
-          }
-          position={Position.BOTTOM_RIGHT}
-        >
-          <Button icon={IconNames.DOWNLOAD} data-tooltip="Download data in view" minimal />
-        </Popover>
-      ),
+      <Popover
+        key="download"
+        className="download-button"
+        position={Position.BOTTOM_RIGHT}
+        content={
+          <Menu>
+            {execution.destinationPages && (
+              <>
+                <MenuDivider title="Download in bulk" />
+                <MenuItem text="Show result pages" onClick={() => setShowDestinationPages(true)} />
+                <MenuDivider title="Download data in view" />
+              </>
+            )}
+            <MenuItem text="Download results as...">
+              <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
+              <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
+              <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
+              <MenuItem text="SQL (VALUES)" onClick={() => handleDownload('sql')} />
+            </MenuItem>
+            <MenuItem text="Copy to clipboard as...">
+              <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
+              <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
+              <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
+              <MenuItem text="SQL (VALUES)" onClick={() => handleCopy('sql')} />
+            </MenuItem>
+          </Menu>
+        }
+      >
+        <Button icon={IconNames.DOWNLOAD} data-tooltip="Download" minimal />
+      </Popover>,
     );
   }
 
