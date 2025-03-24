@@ -127,7 +127,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
 
       existingSegmentIds.addAll(
           handle.createQuery(StringUtils.format(sql, dbTables.getSegmentsTable(), segmentIdsCsv))
-                .map(String.class)
+                .mapTo(String.class)
                 .list()
       );
     }
