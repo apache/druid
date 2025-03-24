@@ -36,6 +36,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.ManageLifecycle;
@@ -779,9 +780,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final Handle handle
   )
   {
+    final Set<SegmentId> validSegmentIds = IdUtils.filterValidSegmentIds(dataSource, segmentIds);
     final List<DataSegmentPlus> retrievedSegments = SqlSegmentsMetadataQuery
         .forHandle(handle, connector, dbTables.get(), jsonMapper)
-        .retrieveSegmentsById(dataSource, segmentIds);
+        .retrieveSegmentsById(dataSource, validSegmentIds);
 
     final Set<String> unknownSegmentIds = new HashSet<>(segmentIds);
     final List<DataSegment> unusedSegments = new ArrayList<>();

@@ -236,7 +236,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return inReadOnlyDatasourceTransaction(
         dataSource,
         transaction ->
-            retrieveSegmentsById(transaction, segmentIds)
+            retrieveSegmentsById(dataSource, transaction, segmentIds)
                 .stream()
                 .map(DataSegmentPlus::getDataSegment)
                 .collect(Collectors.toSet())
@@ -397,6 +397,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
 
             Set<DataSegmentPlus> upgradedSegments = createNewIdsOfAppendSegmentsAfterReplace(
+                dataSource,
                 transaction,
                 replaceSegments,
                 locksHeldByReplaceTask
@@ -1545,7 +1546,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     // Check if there is a conflict with an existing entry in the segments table
-    if (transaction.findSegment(allocatedId.asSegmentId()) == null) {
+    if (transaction.findExistingSegmentIds(Set.of(allocatedId.asSegmentId())).isEmpty()) {
       return allocatedId;
     }
 
@@ -1639,7 +1640,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         persistSchema(transaction, segments, segmentSchemaMapping);
       }
 
-      Set<String> existedSegments = transaction.findExistingSegmentIds(segments);
+      final Set<SegmentId> segmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+      Set<String> existedSegments = transaction.findExistingSegmentIds(segmentIds);
       log.info("Found these segments already exist in DB: %s", existedSegments);
 
       for (DataSegment segment : segments) {
@@ -1686,6 +1688,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Creates new versions of segments appended while a "REPLACE" task was in progress.
    */
   private Set<DataSegmentPlus> createNewIdsOfAppendSegmentsAfterReplace(
+      final String dataSource,
       final SegmentMetadataTransaction transaction,
       final Set<DataSegment> replaceSegments,
       final Set<ReplaceTaskLock> locksHeldByReplaceTask
@@ -1718,7 +1721,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         = getAppendSegmentsCommittedDuringTask(transaction, taskId);
 
     final List<DataSegmentPlus> segmentsToUpgrade
-        = retrieveSegmentsById(transaction, upgradeSegmentToLockVersion.keySet());
+        = retrieveSegmentsById(dataSource, transaction, upgradeSegmentToLockVersion.keySet());
 
     if (segmentsToUpgrade.isEmpty()) {
       return Collections.emptySet();
@@ -1855,7 +1858,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Do not insert segment IDs which already exist
-    Set<String> existingSegmentIds = transaction.findExistingSegmentIds(segments);
+    final Set<SegmentId> segmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+    Set<String> existingSegmentIds = transaction.findExistingSegmentIds(segmentIds);
     final Set<DataSegment> segmentsToInsert = segments.stream().filter(
         s -> !existingSegmentIds.contains(s.getId().toString())
     ).collect(Collectors.toSet());
@@ -1976,6 +1980,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   private List<DataSegmentPlus> retrieveSegmentsById(
+      String dataSource,
       SegmentMetadataReadTransaction transaction,
       Set<String> segmentIds
   )
@@ -1984,10 +1989,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyList();
     }
 
+    // Validate segment IDs
+    final Set<SegmentId> validSegmentIds = IdUtils.filterValidSegmentIds(dataSource, segmentIds);
+
     if (schemaPersistEnabled) {
-      return transaction.findSegmentsWithSchema(segmentIds);
+      return transaction.findSegmentsWithSchema(validSegmentIds);
     } else {
-      return transaction.findSegments(segmentIds);
+      return transaction.findSegments(validSegmentIds);
     }
   }
 

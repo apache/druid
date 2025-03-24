@@ -19,6 +19,8 @@
 
 package org.apache.druid.metadata.segment.cache;
 
+import org.apache.druid.timeline.SegmentId;
+
 import java.util.Set;
 
 /**
@@ -28,9 +30,9 @@ public class SegmentSyncResult
 {
   private final int deleted;
   private final int updated;
-  private final Set<String> expiredIds;
+  private final Set<SegmentId> expiredIds;
 
-  public SegmentSyncResult(int deleted, int updated, Set<String> expiredIds)
+  public SegmentSyncResult(int deleted, int updated, Set<SegmentId> expiredIds)
   {
     this.deleted = deleted;
     this.updated = updated;
@@ -47,7 +49,7 @@ public class SegmentSyncResult
     return updated;
   }
 
-  public Set<String> getExpiredIds()
+  public Set<SegmentId> getExpiredIds()
   {
     return expiredIds;
   }

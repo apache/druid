@@ -67,6 +67,9 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * In-memory implementation of {@link SegmentMetadataCache}.
  * <p>
+ * Only used segments (excluding num_rows and schema_fingerpring) and
+ * pending segments are cached. Unused segments are not cached.
+ * <p>
  * Non-leader Overlords also keep polling the metadata store to keep the cache
  * up-to-date in case leadership changes.
  * <p>
@@ -479,7 +482,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   /**
    * Retrieves the payloads of required used segments from the metadata store
    * and updates the cache. A segment needs to be refreshed only if
-   * {@link HeapMemoryDatasourceSegmentCache#shouldRefreshUsedSegment}
+   * {@link HeapMemoryDatasourceSegmentCache.SegmentsInInterval#shouldRefreshSegment}
    * returns true for it.
    */
   private void retrieveRequiredUsedSegments(
@@ -487,7 +490,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       DatasourceSegmentSummary summary
   )
   {
-    final Set<String> segmentIdsToRefresh = summary.usedSegmentIdsToRefresh;
+    final Set<SegmentId> segmentIdsToRefresh = summary.usedSegmentIdsToRefresh;
     if (segmentIdsToRefresh.isEmpty()) {
       return;
     }
@@ -543,7 +546,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   /**
    * Retrieves the payloads of required used segments from the metadata store
    * and updates the cache. A segment needs to be refreshed only if
-   * {@link HeapMemoryDatasourceSegmentCache#shouldRefreshUsedSegment}
+   * {@link HeapMemoryDatasourceSegmentCache.SegmentsInInterval#shouldRefreshSegment}
    * returns true for it.
    */
   private void retrieveUsedSegmentPayloads(
@@ -706,7 +709,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final List<SegmentRecord> persistedSegments = new ArrayList<>();
     final List<PendingSegmentRecord> persistedPendingSegments = new ArrayList<>();
 
-    final Set<String> usedSegmentIdsToRefresh = new HashSet<>();
+    final Set<SegmentId> usedSegmentIdsToRefresh = new HashSet<>();
     final Set<DataSegmentPlus> usedSegments = new HashSet<>();
 
     int numPersistedUsedSegments = 0;

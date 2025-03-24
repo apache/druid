@@ -33,6 +33,7 @@ import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -140,9 +141,24 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   // READ METHODS
 
   @Override
-  public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
+  public Set<String> findExistingSegmentIds(Set<SegmentId> segmentIds)
   {
-    return metadataCache.findExistingSegmentIds(segments);
+    final Set<SegmentId> remainingIdsToFind = new HashSet<>(segmentIds);
+
+    // Try to find IDs in cache
+    final Set<String> foundIds = new HashSet<>(
+        metadataCache.findExistingSegmentIds(remainingIdsToFind)
+    );
+    remainingIdsToFind.removeIf(id -> foundIds.contains(id.toString()));
+
+    // Find remaining IDs in metadata store
+    if (!remainingIdsToFind.isEmpty()) {
+      foundIds.addAll(
+          delegate.findExistingSegmentIds(remainingIdsToFind)
+      );
+    }
+
+    return Set.copyOf(foundIds);
   }
 
   @Override
@@ -158,16 +174,28 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegmentPlus> findSegments(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegments(Set<SegmentId> segmentIds)
   {
-    // Read from metadata store since unused segment payloads are not cached
-    return delegate.findSegments(segmentIds);
+    final Set<SegmentId> remainingIdsToFind = new HashSet<>(segmentIds);
+
+    // Try to find segments in cache
+    final List<DataSegmentPlus> foundSegments = new ArrayList<>(
+        metadataCache.findSegments(remainingIdsToFind)
+    );
+    foundSegments.forEach(segment -> remainingIdsToFind.remove(segment.getDataSegment().getId()));
+
+    // Find remaining segments in metadata store
+    foundSegments.addAll(
+        delegate.findSegments(remainingIdsToFind)
+    );
+
+    return List.copyOf(foundSegments);
   }
 
   @Override
-  public List<DataSegmentPlus> findSegmentsWithSchema(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
-    // Read from metadata store since unused segment payloads are not cached
+    // Read from metadata store since unused segment payloads and schema info is not cached
     return delegate.findSegmentsWithSchema(segmentIds);
   }
 
@@ -204,8 +232,14 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public DataSegment findSegment(SegmentId segmentId)
   {
-    // Read from metadata store since unused segment payloads are not cached
-    return delegate.findSegment(segmentId);
+    // Try to find used segment in cache
+    final DataSegment usedSegment = metadataCache.findUsedSegment(segmentId);
+    if (usedSegment == null) {
+      // Read from metadata store since unused segment payloads are not cached
+      return delegate.findSegment(segmentId);
+    } else {
+      return usedSegment;
+    }
   }
 
   @Override

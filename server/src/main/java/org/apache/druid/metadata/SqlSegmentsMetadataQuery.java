@@ -383,7 +383,7 @@ public class SqlSegmentsMetadataQuery
    */
   public List<DataSegmentPlus> retrieveSegmentsById(
       String datasource,
-      Set<String> segmentIds
+      Set<SegmentId> segmentIds
   )
   {
     try (CloseableIterator<DataSegmentPlus> iterator
@@ -406,11 +406,12 @@ public class SqlSegmentsMetadataQuery
    */
   public CloseableIterator<DataSegmentPlus> retrieveSegmentsByIdIterator(
       final String datasource,
-      final Set<String> segmentIds,
+      final Set<SegmentId> segmentIds,
       final boolean includeSchemaInfo
   )
   {
-    final List<List<String>> partitionedSegmentIds = Lists.partition(List.copyOf(segmentIds), 100);
+    final List<String> ids = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toList());
+    final List<List<String>> partitionedSegmentIds = Lists.partition(ids, 100);
 
     // CloseableIterator to query segments in batches
     return new CloseableIterator<>()
@@ -467,7 +468,7 @@ public class SqlSegmentsMetadataQuery
    */
   public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
       String datasource,
-      Set<String> segmentIds
+      Set<SegmentId> segmentIds
   )
   {
     try (CloseableIterator<DataSegmentPlus> iterator

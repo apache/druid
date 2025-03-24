@@ -117,7 +117,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   SegmentSyncResult syncSegmentIds(List<SegmentRecord> persistedSegments, DateTime syncStartTime)
   {
     return withWriteLock(() -> {
-      final Set<String> usedSegmentIdsToRefresh = new HashSet<>();
+      final Set<SegmentId> usedSegmentIdsToRefresh = new HashSet<>();
       int numUnusedSegmentsUpdated = 0;
 
       for (SegmentRecord record : persistedSegments) {
@@ -127,7 +127,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
         if (record.isUsed()) {
           // Refresh this used segment if it has been updated in the metadata store
           if (intervalSegments.shouldRefreshSegment(segmentId, record.getLastUpdatedTime())) {
-            usedSegmentIdsToRefresh.add(segmentId.toString());
+            usedSegmentIdsToRefresh.add(segmentId);
           }
         } else {
           // Add or update the unused segment if needed
@@ -274,11 +274,10 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   // CACHE READ METHODS
 
   @Override
-  public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
+  public Set<String> findExistingSegmentIds(Set<SegmentId> segments)
   {
     return withReadLock(
         () -> segments.stream()
-                      .map(DataSegment::getId)
                       .filter(id -> readSegmentsFor(id.getInterval()).isSegmentIdCached(id))
                       .map(SegmentId::toString)
                       .collect(Collectors.toSet())
@@ -366,15 +365,20 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   @Override
-  public List<DataSegmentPlus> findSegments(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegments(Set<SegmentId> segmentIds)
   {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
+    return withReadLock(
+        () -> segmentIds.stream()
+                        .map(id -> readSegmentsFor(id.getInterval()).idToUsedSegment.get(id))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList())
+    );
   }
 
   @Override
-  public List<DataSegmentPlus> findSegmentsWithSchema(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
+    throw DruidException.defensive("Unsupported: Unused segments and segment schema are not cached");
   }
 
   @Override

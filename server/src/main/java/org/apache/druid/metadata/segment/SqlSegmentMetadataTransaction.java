@@ -111,23 +111,23 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   // READ METHODS
 
   @Override
-  public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
+  public Set<String> findExistingSegmentIds(Set<SegmentId> segmentIds)
   {
     final Set<String> existingSegmentIds = new HashSet<>();
     final String sql = "SELECT id FROM %s WHERE id in (%s)";
 
-    List<List<DataSegment>> partitions = Lists.partition(
-        new ArrayList<>(segments),
+    List<List<SegmentId>> partitions = Lists.partition(
+        new ArrayList<>(segmentIds),
         MAX_SEGMENTS_PER_BATCH
     );
-    for (List<DataSegment> segmentList : partitions) {
-      String segmentIds = segmentList.stream().map(
-          segment -> "'" + StringUtils.escapeSql(segment.getId().toString()) + "'"
+    for (List<SegmentId> segmentIdList : partitions) {
+      String segmentIdsCsv = segmentIdList.stream().map(
+          id -> "'" + StringUtils.escapeSql(id.toString()) + "'"
       ).collect(Collectors.joining(","));
 
       existingSegmentIds.addAll(
-          handle.createQuery(StringUtils.format(sql, dbTables.getSegmentsTable(), segmentIds))
-                .mapTo(String.class)
+          handle.createQuery(StringUtils.format(sql, dbTables.getSegmentsTable(), segmentIdsCsv))
+                .map(String.class)
                 .list()
       );
     }
@@ -164,8 +164,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
   {
-    final Set<String> serializedIds = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toSet());
-    return query.retrieveSegmentsById(dataSource, serializedIds)
+    return query.retrieveSegmentsById(dataSource, segmentIds)
                 .stream()
                 .map(DataSegmentPlus::getDataSegment)
                 .collect(Collectors.toList());
@@ -196,13 +195,13 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegmentPlus> findSegments(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegments(Set<SegmentId> segmentIds)
   {
     return query.retrieveSegmentsById(dataSource, segmentIds);
   }
 
   @Override
-  public List<DataSegmentPlus> findSegmentsWithSchema(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
     return query.retrieveSegmentsWithSchemaById(dataSource, segmentIds);
   }
