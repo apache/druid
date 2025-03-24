@@ -398,7 +398,7 @@ public class HttpLoadQueuePeonTest
         for (DataSegmentChangeRequest cr : changeRequests) {
           cr.go(this, null);
           statuses.add(
-              new DataSegmentChangeResponse(cr, SegmentChangeStatus.SUCCESS)
+              new DataSegmentChangeResponse(cr, SegmentChangeStatus.success())
           );
         }
         return (ListenableFuture<Final>) Futures.immediateFuture(

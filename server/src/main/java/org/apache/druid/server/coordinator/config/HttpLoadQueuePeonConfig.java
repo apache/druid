@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.error.InvalidInput;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -50,12 +50,13 @@ public class HttpLoadQueuePeonConfig
   {
     this.hostTimeout = Configs.valueOrDefault(hostTimeout, Duration.standardMinutes(5));
     this.repeatDelay = Configs.valueOrDefault(repeatDelay, Duration.standardMinutes(1));
-
-    if (batchSize != null && batchSize < 1) {
-      throw new RE("Batch size must be greater than 0.");
-    }
-
     this.batchSize = batchSize;
+
+    InvalidInput.conditionalException(
+        batchSize == null || batchSize >= 1,
+        "'druid.coordinator.loadqueuepeon.http.batchSize'[%s] must be greater than 0",
+        batchSize
+    );
   }
 
   @Nullable

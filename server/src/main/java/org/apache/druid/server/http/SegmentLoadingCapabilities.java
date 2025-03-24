@@ -41,13 +41,13 @@ public class SegmentLoadingCapabilities
     this.numTurboLoadingThreads = numTurboLoadingThreads;
   }
 
-  @JsonProperty("numLoadingThreads")
+  @JsonProperty
   public int getNumLoadingThreads()
   {
     return numLoadingThreads;
   }
 
-  @JsonProperty("numTurboLoadingThreads")
+  @JsonProperty
   public int getNumTurboLoadingThreads()
   {
     return numTurboLoadingThreads;
