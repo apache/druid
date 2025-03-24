@@ -19,10 +19,10 @@
 
 package org.apache.druid.server.coordinator.config;
 
-import com.amazonaws.util.Throwables;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
