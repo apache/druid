@@ -66,7 +66,7 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    ImmutableSet<String> turboLoading = ImmutableSet.of("host1", "host3");
+    ImmutableSet<String> turboLoadingNodes = ImmutableSet.of("host1", "host3");
     assertConfig(
         actual,
         1,
@@ -81,7 +81,7 @@ public class CoordinatorDynamicConfigTest
         decommissioning,
         false,
         false,
-        turboLoading
+        turboLoadingNodes
     );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
@@ -99,7 +99,7 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("host1"),
         false,
         false,
-        turboLoading
+        turboLoadingNodes
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -117,7 +117,7 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("host1"),
         false,
         false,
-        turboLoading
+        turboLoadingNodes
     );
 
     actual = CoordinatorDynamicConfig.builder().withPauseCoordination(true).build(actual);
@@ -135,7 +135,7 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("host1"),
         true,
         false,
-        turboLoading
+        turboLoadingNodes
     );
 
     actual = CoordinatorDynamicConfig.builder().withReplicateAfterLoadTimeout(true).build(actual);
@@ -153,7 +153,7 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("host1"),
         true,
         true,
-        turboLoading
+        turboLoadingNodes
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -171,7 +171,7 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("host1"),
         true,
         true,
-        turboLoading
+        turboLoadingNodes
     );
 
     actual = CoordinatorDynamicConfig.builder().withKillTaskSlotRatio(0.1).build(actual);
@@ -189,7 +189,7 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("host1"),
         true,
         true,
-        turboLoading
+        turboLoadingNodes
     );
 
     actual = CoordinatorDynamicConfig.builder().withMaxKillTaskSlots(5).build(actual);
@@ -207,7 +207,7 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("host1"),
         true,
         true,
-        turboLoading
+        turboLoadingNodes
     );
   }
 

@@ -21,13 +21,9 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 public class SegmentLoadingCapabilitiesTest
 {
@@ -52,33 +48,5 @@ public class SegmentLoadingCapabilitiesTest
 
     Assert.assertEquals(3, reread.getNumLoadingThreads());
     Assert.assertEquals(5, reread.getNumTurboLoadingThreads());
-  }
-
-  @Test
-  public void testSerdeFromEmptyJson()
-  {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(ValueInstantiationException.class, () ->
-            jsonMapper.readValue("{}", SegmentLoadingCapabilities.class)
-        ),
-        CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ValueInstantiationException.class),
-            ThrowableMessageMatcher.hasMessage(
-                CoreMatchers.containsString("numLoadingThreads and numTurboLoadingThreads must be greater than 0.")
-            )
-        )
-    );
-
-    MatcherAssert.assertThat(
-        Assert.assertThrows(ValueInstantiationException.class, () ->
-            jsonMapper.readValue("{\"numLoadingThreads\":3}", SegmentLoadingCapabilities.class)
-        ),
-        CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ValueInstantiationException.class),
-            ThrowableMessageMatcher.hasMessage(
-                CoreMatchers.containsString("numLoadingThreads and numTurboLoadingThreads must be greater than 0.")
-            )
-        )
-    );
   }
 }

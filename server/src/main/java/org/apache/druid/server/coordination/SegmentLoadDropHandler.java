@@ -46,10 +46,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -68,7 +66,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService normalLoadExec;
-  private final ThreadPoolExecutor turboLoadExec;
+  private final ExecutorService turboLoadExec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -93,17 +91,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         config,
         announcer,
         segmentManager,
-        new ScheduledThreadPoolExecutor(
+        Executors.newScheduledThreadPool(
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SegmentLoadDropHandler-normal-%s")
         ),
-        new ThreadPoolExecutor(
-            config.getNumBootstrapThreads(),
+        Execs.multiThreaded(
+            1,
             config.getNumBootstrapThreads(),
             60L,
             TimeUnit.SECONDS,
-            new SynchronousQueue<>(),
-            Execs.makeThreadFactory("SegmentLoadDropHandler-turbo-%s")
+            "SegmentLoadDropHandler-turbo-%s"
         )
     );
   }
@@ -114,7 +111,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
       ScheduledExecutorService normalLoadExec,
-      ThreadPoolExecutor turboLoadExec
+      ExecutorService turboLoadExec
   )
   {
     this.config = config;
@@ -122,8 +119,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.segmentManager = segmentManager;
     this.normalLoadExec = normalLoadExec;
     this.turboLoadExec = turboLoadExec;
-
-    this.turboLoadExec.allowCoreThreadTimeOut(true);
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
@@ -300,7 +295,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * Process a {@link DataSegmentChangeRequest}, invoking the request's
    * {@link DataSegmentChangeRequest#go(DataSegmentChangeHandler, DataSegmentChangeCallback)}.
    * The segmentLoadingMode parameter determines the thread pool to use.
-   * Returns an atomic reference to the segment status.
    */
   private AtomicReference<SegmentChangeStatus> processRequest(
       DataSegmentChangeRequest changeRequest,

@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -87,6 +86,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       new TypeReference<>() {};
 
   private static final EmittingLogger log = new EmittingLogger(HttpLoadQueuePeon.class);
+  private static final long DEFAULT_TIMEOUT = 10000L;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
   private final AtomicReference<CoordinatorRunStats> stats = new AtomicReference<>(new CoordinatorRunStats());
@@ -164,18 +164,21 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           new Request(HttpMethod.GET, segmentLoadingCapabilitiesURL)
               .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
           responseHandler,
-          new Duration(10000)
+          new Duration(DEFAULT_TIMEOUT)
       ).get();
 
       if (HttpServletResponse.SC_NOT_FOUND == responseHandler.getStatus()) {
+        int batchSize = config.getBatchSize() == null ? 1 : config.getBatchSize();
+        SegmentLoadingCapabilities defaultCapabilities = new SegmentLoadingCapabilities(batchSize, batchSize);
         log.warn(
-            "Historical capabilities endpoint not found at server[%s]. Using default values.",
-            segmentLoadingCapabilitiesURL
+            "Historical capabilities endpoint not found at URL[%s]. Using default values[%s].",
+            segmentLoadingCapabilitiesURL,
+            defaultCapabilities
         );
-        return new SegmentLoadingCapabilities(1, 1);
+        return defaultCapabilities;
       } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
-        log.makeAlert("Error when fetching capabilities from server[%s]. Received [%s]", new URL(serverId), responseHandler.getStatus());
-        throw new RE("Error when fetching capabilities from server[%s]. Received [%s]", new URL(serverId), responseHandler.getStatus());
+        log.makeAlert("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
+        throw new RE("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
       }
 
       return jsonMapper.readValue(
@@ -197,11 +200,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     final SegmentLoadingMode loadingMode = loadingModeSupplier.get();
     final int batchSize = calculateBatchSize(loadingMode);
-
-    if (batchSize < 1) {
-      log.error("Batch size must be greater than 0.");
-      throw new RE("Batch size must be greater than 0.");
-    }
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
@@ -368,15 +366,24 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    * Calculates the number of segments the server is capable of handling at a time. If loading segments in turbo loading
    * mode, returns the number of turbo loading threads on the server. Otherwise, return the value set by the batch size
    * runtime parameter, or number of normal threads on the server if the parameter is not set.
+   * Always returns a positive integer.
    */
   @VisibleForTesting
   int calculateBatchSize(SegmentLoadingMode loadingMode)
   {
+    int batchSize;
     if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
-      return serverCapabilities.getNumTurboLoadingThreads();
+      batchSize = serverCapabilities.getNumTurboLoadingThreads();
     } else {
-      return Configs.valueOrDefault(config.getBatchSize(), serverCapabilities.getNumLoadingThreads());
+      batchSize = Configs.valueOrDefault(config.getBatchSize(), serverCapabilities.getNumLoadingThreads());
     }
+
+    if (batchSize < 1) {
+      log.error("Batch size must be greater than 0.");
+      throw new RE("Batch size must be greater than 0.");
+    }
+
+    return batchSize;
   }
 
   private void handleResponseStatus(DataSegmentChangeRequest changeRequest, SegmentChangeStatus status)

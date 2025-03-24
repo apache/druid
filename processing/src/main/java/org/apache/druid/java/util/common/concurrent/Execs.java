@@ -71,6 +71,24 @@ public class Execs
     return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat, priority));
   }
 
+  public static ExecutorService multiThreaded(
+      int corePoolSize,
+      int maxPoolSize,
+      long keepAliveTime,
+      @NotNull TimeUnit timeUnit,
+      @NotNull String nameFormat
+  )
+  {
+    return new ThreadPoolExecutor(
+        corePoolSize,
+        maxPoolSize,
+        keepAliveTime,
+        timeUnit,
+        new SynchronousQueue<>(),
+        Execs.makeThreadFactory(nameFormat)
+    );
+  }
+
   public static ScheduledExecutorService scheduledSingleThreaded(@NotNull String nameFormat)
   {
     return scheduledSingleThreaded(nameFormat, null);
