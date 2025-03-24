@@ -26,7 +26,7 @@ import com.google.inject.Provides;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.ServiceAnnouncer;
 import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.curator.announcement.PathChildrenAnnouncer;
 import org.apache.druid.guice.annotations.DirectExecutorAnnouncer;
@@ -71,7 +71,7 @@ public class AnnouncerModule implements Module
   @Provides
   @SingleThreadedAnnouncer
   @ManageLifecycleAnnouncements
-  public Announcer getAnnouncerWithSingleThreadedExecutorService(CuratorFramework curator, CuratorConfig config)
+  public ServiceAnnouncer getAnnouncerWithSingleThreadedExecutorService(CuratorFramework curator, CuratorConfig config)
   {
     boolean usingPathChildrenCacheAnnouncer = config.getPathChildrenCacheStrategy();
     if (usingPathChildrenCacheAnnouncer) {
@@ -84,7 +84,7 @@ public class AnnouncerModule implements Module
   @Provides
   @DirectExecutorAnnouncer
   @ManageLifecycleAnnouncements
-  public Announcer getAnnouncerWithDirectExecutorService(CuratorFramework curator, CuratorConfig config)
+  public ServiceAnnouncer getAnnouncerWithDirectExecutorService(CuratorFramework curator, CuratorConfig config)
   {
     boolean usingPathChildrenCacheAnnouncer = config.getPathChildrenCacheStrategy();
     if (usingPathChildrenCacheAnnouncer) {

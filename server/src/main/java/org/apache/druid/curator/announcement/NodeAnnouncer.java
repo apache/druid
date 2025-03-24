@@ -57,7 +57,7 @@ import java.util.concurrent.ExecutorService;
  * uses the PathChildrenCache recipe instead.
  * </p>
  */
-public class NodeAnnouncer implements Announcer
+public class NodeAnnouncer implements ServiceAnnouncer
 {
   private static final Logger log = new Logger(NodeAnnouncer.class);
 

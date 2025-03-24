@@ -19,7 +19,7 @@
 
 package org.apache.druid.curator.announcement;
 
-public interface Announcer
+public interface ServiceAnnouncer
 {
   void start();
 

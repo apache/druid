@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * uses the NodeCache recipe instead.
  * </p>
  */
-public class PathChildrenAnnouncer implements Announcer
+public class PathChildrenAnnouncer implements ServiceAnnouncer
 {
   private static final Logger log = new Logger(PathChildrenAnnouncer.class);
 

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.curator.utils.ZKPaths;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.NodeRole;
@@ -43,13 +43,13 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
 
   private static final Logger log = new Logger(CuratorDruidNodeAnnouncer.class);
 
-  private final Announcer announcer;
+  private final ServiceAnnouncer announcer;
   private final ZkPathsConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public CuratorDruidNodeAnnouncer(
-      @SingleThreadedAnnouncer Announcer announcer,
+      @SingleThreadedAnnouncer ServiceAnnouncer announcer,
       ZkPathsConfig config,
       @Json ObjectMapper jsonMapper
   )
