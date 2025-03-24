@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A {@link SegmentMetadataTransaction} that reads only from the cache and sends
@@ -146,9 +147,10 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     final Set<SegmentId> remainingIdsToFind = new HashSet<>(segmentIds);
 
     // Try to find IDs in cache
-    final Set<String> foundIds = new HashSet<>(
-        metadataCache.findExistingSegmentIds(remainingIdsToFind)
-    );
+    final Set<String> foundIds = metadataCache.findUsedSegments(remainingIdsToFind)
+                                              .stream()
+                                              .map(segment -> segment.getDataSegment().getId().toString())
+                                              .collect(Collectors.toCollection(HashSet::new));
     remainingIdsToFind.removeIf(id -> foundIds.contains(id.toString()));
 
     // Find remaining IDs in metadata store
@@ -170,7 +172,8 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    return metadataCache.findHighestUnusedSegmentId(interval, version);
+    // Read from metadata store since unused segments are not cached
+    return delegate.findHighestUnusedSegmentId(interval, version);
   }
 
   @Override
@@ -180,7 +183,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 
     // Try to find segments in cache
     final List<DataSegmentPlus> foundSegments = new ArrayList<>(
-        metadataCache.findSegments(remainingIdsToFind)
+        metadataCache.findUsedSegments(remainingIdsToFind)
     );
     foundSegments.forEach(segment -> remainingIdsToFind.remove(segment.getDataSegment().getId()));
 
@@ -206,7 +209,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
+  public List<DataSegmentPlus> findUsedSegments(Set<SegmentId> segmentIds)
   {
     return metadataCache.findUsedSegments(segmentIds);
   }

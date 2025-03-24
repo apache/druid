@@ -35,11 +35,6 @@ public class Metric
   public static final String PERSISTED_USED_SEGMENTS = "segment/used/count";
 
   /**
-   * Total number of segments currently present in the metadata store.
-   */
-  public static final String PERSISTED_UNUSED_SEGMENTS = "segment/unused/count";
-
-  /**
    * Total number of pending segments currently present in the metadata store.
    */
   public static final String PERSISTED_PENDING_SEGMENTS = "segment/pending/count";
@@ -122,11 +117,6 @@ public class Metric
    * Number of used segments updated in the cache from the metadata store in the latest sync.
    */
   public static final String UPDATED_USED_SEGMENTS = METRIC_NAME_PREFIX + "used/updated";
-
-  /**
-   * Number of unused segments updated in the cache from the metadata store in the latest sync.
-   */
-  public static final String UPDATED_UNUSED_SEGMENTS = METRIC_NAME_PREFIX + "unused/updated";
 
   /**
    * Number of pending segments updated in the cache from the metadata store in the latest sync.

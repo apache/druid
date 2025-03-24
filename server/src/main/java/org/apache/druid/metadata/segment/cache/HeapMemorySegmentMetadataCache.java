@@ -425,7 +425,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   /**
-   * Retrieves all the segment IDs (used and unused) from the metadata store.
+   * Retrieves all used segment IDs from the metadata store.
    * Populates the summary for the datasources found in metadata store.
    */
   private void retrieveAllSegmentIds(
@@ -434,7 +434,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     final Stopwatch retrieveDuration = Stopwatch.createStarted();
     final String sql = StringUtils.format(
-        "SELECT id, dataSource, used, used_status_last_updated FROM %s",
+        "SELECT id, dataSource, used_status_last_updated FROM %s WHERE used = true",
         tablesConfig.getSegmentsTable()
     );
 
@@ -467,10 +467,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     if (numSkippedRecords > 0) {
       emitMetric(Metric.SKIPPED_SEGMENTS, numSkippedRecords);
     }
-    datasourceToSummary.forEach((dataSource, summary) -> {
-      emitMetric(dataSource, Metric.PERSISTED_USED_SEGMENTS, summary.numPersistedUsedSegments);
-      emitMetric(dataSource, Metric.PERSISTED_UNUSED_SEGMENTS, summary.numPersistedUnusedSegments);
-    });
+    datasourceToSummary.forEach(
+        (dataSource, summary) ->
+            emitMetric(dataSource, Metric.PERSISTED_USED_SEGMENTS, summary.persistedSegments.size())
+    );
     emitMetric(Metric.RETRIEVE_SEGMENT_IDS_DURATION_MILLIS, retrieveDuration.millisElapsed());
   }
 
@@ -525,7 +525,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(dataSource);
 
       final SegmentSyncResult result = cache.syncSegmentIds(summary.persistedSegments, syncStartTime);
-      emitNonZeroMetric(dataSource, Metric.UPDATED_UNUSED_SEGMENTS, result.getUpdated());
       emitNonZeroMetric(dataSource, Metric.STALE_USED_SEGMENTS, result.getExpiredIds().size());
       emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, result.getDeleted());
 
@@ -712,17 +711,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final Set<SegmentId> usedSegmentIdsToRefresh = new HashSet<>();
     final Set<DataSegmentPlus> usedSegments = new HashSet<>();
 
-    int numPersistedUsedSegments = 0;
-    int numPersistedUnusedSegments = 0;
-
     private void addSegmentRecord(SegmentRecord record)
     {
       persistedSegments.add(record);
-      if (record.isUsed()) {
-        ++numPersistedUsedSegments;
-      } else {
-        ++numPersistedUnusedSegments;
-      }
     }
 
     private void addPendingSegmentRecord(PendingSegmentRecord record)

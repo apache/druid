@@ -74,7 +74,6 @@ class SegmentRecord
       serializedId = r.getString("id");
       dataSource = r.getString("dataSource");
 
-      final boolean isUsed = r.getBoolean("used");
       final DateTime lastUpdatedTime = nullSafeDate(r.getString(
           "used_status_last_updated"));
 
@@ -86,7 +85,7 @@ class SegmentRecord
         );
         return null;
       } else {
-        return new SegmentRecord(segmentId, isUsed, lastUpdatedTime);
+        return new SegmentRecord(segmentId, true, lastUpdatedTime);
       }
     }
     catch (Exception e) {

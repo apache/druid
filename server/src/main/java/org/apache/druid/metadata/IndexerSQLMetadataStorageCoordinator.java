@@ -2368,10 +2368,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     for (Map<Interval, SegmentId> itvlMap : versionIntervalToSmallestSegmentId.values()) {
       segmentIdsToRetrieve.addAll(itvlMap.values());
     }
-    final List<DataSegment> dataSegments = transaction.findUsedSegments(segmentIdsToRetrieve);
+    final List<DataSegmentPlus> dataSegments = transaction.findUsedSegments(segmentIdsToRetrieve);
     final Set<SegmentId> retrievedIds = new HashSet<>();
     final Map<String, Map<Interval, Integer>> versionIntervalToNumCorePartitions = new HashMap<>();
-    for (DataSegment segment : dataSegments) {
+    for (DataSegmentPlus segmentPlus : dataSegments) {
+      final DataSegment segment = segmentPlus.getDataSegment();
       versionIntervalToNumCorePartitions.computeIfAbsent(segment.getVersion(), v -> new HashMap<>())
                                         .put(segment.getInterval(), segment.getShardSpec().getNumCorePartitions());
       retrievedIds.add(segment.getId());

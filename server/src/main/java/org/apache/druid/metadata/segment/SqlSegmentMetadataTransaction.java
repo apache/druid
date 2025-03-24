@@ -162,12 +162,9 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
+  public List<DataSegmentPlus> findUsedSegments(Set<SegmentId> segmentIds)
   {
-    return query.retrieveSegmentsById(dataSource, segmentIds)
-                .stream()
-                .map(DataSegmentPlus::getDataSegment)
-                .collect(Collectors.toList());
+    return query.retrieveSegmentsById(dataSource, segmentIds);
   }
 
   @Override

@@ -68,7 +68,7 @@ public interface DatasourceSegmentMetadataReader
   /**
    * Retrieves used segments for the given segment IDs.
    */
-  List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds);
+  List<DataSegmentPlus> findUsedSegments(Set<SegmentId> segmentIds);
 
   /**
    * Retrieves used segments that overlap with any of the given intervals. If the
