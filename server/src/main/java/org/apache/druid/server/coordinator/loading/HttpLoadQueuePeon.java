@@ -378,12 +378,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       batchSize = Configs.valueOrDefault(config.getBatchSize(), serverCapabilities.getNumLoadingThreads());
     }
 
-    if (batchSize < 1) {
-      log.error("Batch size must be greater than 0.");
-      throw new RE("Batch size must be greater than 0.");
-    }
-
-    return batchSize;
+    return Math.max(batchSize, 1);
   }
 
   private void handleResponseStatus(DataSegmentChangeRequest changeRequest, SegmentChangeStatus status)

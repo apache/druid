@@ -46,8 +46,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -66,7 +68,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService normalLoadExec;
-  private final ExecutorService turboLoadExec;
+  private final ThreadPoolExecutor turboLoadExec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -91,16 +93,18 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         config,
         announcer,
         segmentManager,
-        Executors.newScheduledThreadPool(
+        new ScheduledThreadPoolExecutor(
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SegmentLoadDropHandler-normal-%s")
         ),
-        Execs.multiThreaded(
-            1,
+        // Create a fixed size threadpool which has a timeout of 1 minute
+        new ThreadPoolExecutor(
+            config.getNumBootstrapThreads(),
             config.getNumBootstrapThreads(),
             60L,
             TimeUnit.SECONDS,
-            "SegmentLoadDropHandler-turbo-%s"
+            new LinkedBlockingQueue<>(),
+            Execs.makeThreadFactory("SegmentLoadDropHandler-turbo-%s")
         )
     );
   }
@@ -111,7 +115,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
       ScheduledExecutorService normalLoadExec,
-      ExecutorService turboLoadExec
+      ThreadPoolExecutor turboLoadExec
   )
   {
     this.config = config;
@@ -119,6 +123,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.segmentManager = segmentManager;
     this.normalLoadExec = normalLoadExec;
     this.turboLoadExec = turboLoadExec;
+
+    this.turboLoadExec.allowCoreThreadTimeOut(true);
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();

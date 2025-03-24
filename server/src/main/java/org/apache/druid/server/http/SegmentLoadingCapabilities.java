@@ -52,4 +52,13 @@ public class SegmentLoadingCapabilities
   {
     return numTurboLoadingThreads;
   }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentLoadingCapabilities{" +
+           "numLoadingThreads=" + numLoadingThreads +
+           ", numTurboLoadingThreads=" + numTurboLoadingThreads +
+           '}';
+  }
 }
