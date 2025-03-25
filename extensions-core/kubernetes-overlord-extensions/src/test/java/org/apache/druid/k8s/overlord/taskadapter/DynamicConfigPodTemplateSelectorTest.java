@@ -70,10 +70,14 @@ public class DynamicConfigPodTemplateSelectorTest
         "No base prop should throw an IAE",
         IAE.class,
         () -> new DynamicConfigPodTemplateSelector(
-        new Properties(),
-        dynamicConfigRef
-    ));
-    Assertions.assertEquals(exception.getMessage(), "Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
+            new Properties(),
+            dynamicConfigRef
+        )
+    );
+    Assertions.assertEquals(
+        exception.getMessage(),
+        "Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base"
+    );
   }
 
   @Test
@@ -90,7 +94,8 @@ public class DynamicConfigPodTemplateSelectorTest
         () -> new DynamicConfigPodTemplateSelector(
             props,
             dynamicConfigRef
-    ));
+        )
+    );
 
     Assertions.assertTrue(exception.getMessage().contains("Failed to load pod template file for"));
   }
@@ -144,7 +149,8 @@ public class DynamicConfigPodTemplateSelectorTest
         dynamicConfigRef
     );
 
-    Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null) {
+    Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null)
+    {
       @Override
       public String getType()
       {
@@ -155,13 +161,21 @@ public class DynamicConfigPodTemplateSelectorTest
     Task noopTask = new NoopTask("id", "id", "datasource", 0, 0, null);
     Optional<PodTemplateWithName> podTemplateWithName = selector.getPodTemplateForTask(kafkaTask);
     Assertions.assertTrue(podTemplateWithName.isPresent());
-    Assertions.assertEquals(1, podTemplateWithName.get().getPodTemplate().getTemplate().getSpec().getVolumes().size(), 1);
+    Assertions.assertEquals(
+        1,
+        podTemplateWithName.get().getPodTemplate().getTemplate().getSpec().getVolumes().size(),
+        1
+    );
     Assertions.assertEquals("index_kafka", podTemplateWithName.get().getName());
 
 
     podTemplateWithName = selector.getPodTemplateForTask(noopTask);
     Assertions.assertTrue(podTemplateWithName.isPresent());
-    Assertions.assertEquals(0, podTemplateWithName.get().getPodTemplate().getTemplate().getSpec().getVolumes().size(), 1);
+    Assertions.assertEquals(
+        0,
+        podTemplateWithName.get().getPodTemplate().getTemplate().getSpec().getVolumes().size(),
+        1
+    );
     Assertions.assertEquals("base", podTemplateWithName.get().getName());
   }
 
@@ -230,7 +244,7 @@ public class DynamicConfigPodTemplateSelectorTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
     dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new SelectorBasedPodTemplateSelectStrategy(
         Collections.singletonList(
-            new Selector("lowThrougput", null, null, Sets.newSet(dataSource)
+            new Selector("lowThroughput", null, null, Sets.newSet(dataSource)
             )
         )
     ));
@@ -249,5 +263,74 @@ public class DynamicConfigPodTemplateSelectorTest
     actual = podTemplateSelector.getPodTemplateForTask(noopTask);
     Assertions.assertTrue(actual.isPresent());
     Assertions.assertEquals(0, actual.get().getPodTemplate().getTemplate().getSpec().getVolumes().size(), 1);
+  }
+
+  @Test
+  public void test_fromTask_LazyLoadInvalidPodTemplateThrowsError() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+
+    DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
+        props,
+        dynamicConfigRef
+    );
+
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
+    Optional<PodTemplateWithName> actual = adapter.getPodTemplateForTask(task);
+    PodTemplate expected = K8sTestUtils.fileToResource("expectedNoopPodTemplate.yaml", PodTemplate.class);
+
+    Assertions.assertTrue(actual.isPresent());
+    Assertions.assertEquals("base", actual.get().getName());
+    Assertions.assertEquals(expected, actual.get().getPodTemplate());
+
+    // Now we change the file to an empty file, and expect an assertion.
+    mapper.writeValue(baseTemplatePath.toFile(), null);
+
+    Exception exception = Assert.assertThrows(
+        "Empty base pod template should throw a exception",
+        IAE.class,
+        () -> adapter.getPodTemplateForTask(task)
+    );
+
+    Assertions.assertTrue(exception.getMessage().contains("Failed to load pod template file"));
+  }
+
+  @Test
+  public void test_fromTask_LazyLoadPodTemplateChangesPodSpecs() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    PodTemplate initialPodTemplate = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", PodTemplate.class);
+    mapper.writeValue(baseTemplatePath.toFile(), initialPodTemplate);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+
+    DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
+        props,
+        dynamicConfigRef
+    );
+
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
+    Optional<PodTemplateWithName> actual = adapter.getPodTemplateForTask(task);
+
+    // Suppose our current pod template does not match with this expected result.
+    PodTemplate expected = K8sTestUtils.fileToResource("expectedNoopPodTemplate.yaml", PodTemplate.class);
+
+    Assertions.assertTrue(actual.isPresent());
+    Assertions.assertEquals("base", actual.get().getName());
+    Assertions.assertNotEquals(expected, actual.get().getPodTemplate());
+
+    // Check if we can match out expected results after we change the pod template file.
+    PodTemplate editedPodTemplate = podTemplateSpec;
+    mapper.writeValue(baseTemplatePath.toFile(), editedPodTemplate);
+    actual = adapter.getPodTemplateForTask(task);
+
+    Assertions.assertTrue(actual.isPresent());
+    Assertions.assertEquals("base", actual.get().getName());
+    Assertions.assertEquals(expected, actual.get().getPodTemplate());
   }
 }

@@ -29,16 +29,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.Triple;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
@@ -299,34 +300,13 @@ public class JoinDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query
-  )
-  {
-    return createSegmentMapFunctionInternal(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        analysis.getBaseQuery().orElse(query)
-    );
-  }
-
-  @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
     DataSource current = newSource;
     DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
     for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-      current = JoinDataSource.create(
-          current,
-          clause.getDataSource(),
-          clause.getPrefix(),
-          clause.getCondition(),
-          clause.getJoinType(),
-          joinBaseFilter,
-          this.joinableFactoryWrapper,
-          clause.getJoinAlgorithm()
-      );
+      current = clause.makeUpdatedJoinDataSource(current, joinBaseFilter, this.joinableFactoryWrapper);
       joinBaseFilter = null;
     }
     return current;
@@ -419,159 +399,147 @@ public class JoinDataSource implements DataSource
            '}';
   }
 
-  private DataSourceAnalysis getAnalysisForDataSource()
-  {
-    final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
-    return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
-  }
-
   /**
    * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
    * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
-   *
-   * @param baseFilter         Filter to apply before the join takes place
-   * @param clauses            Pre-joinable clauses
-   * @param cpuTimeAccumulator An accumulator that we will add CPU nanos to; this is part of the function to encourage
-   *                           callers to remember to track metrics on CPU time required for creation of Joinables
-   * @param query              The query that will be run on the mapped segments. Usually this should be
-   *                           {@code analysis.getBaseQuery().orElse(query)}, where "analysis" is a
-   *                           {@link DataSourceAnalysis} and "query" is the original
-   *                           query from the end user.
+   * @param query
    */
-  private Function<SegmentReference, SegmentReference> createSegmentMapFunctionInternal(
-      @Nullable final Filter baseFilter,
-      final List<PreJoinableClause> clauses,
-      final Query<?> query
-  )
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    // compute column correlations here and RHS correlated values
+    DataSourceAnalysis joinAnalysis = getJoinAnalysisForDataSource();
+    List<PreJoinableClause> clauses = joinAnalysis.getPreJoinableClauses();
+    Filter baseFilter = joinAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
+
     if (clauses.isEmpty()) {
-      return Function.identity();
-    } else {
-      final JoinableClauses joinableClauses = JoinableClauses.createClauses(
-          clauses,
-          joinableFactoryWrapper.getJoinableFactory()
-      );
-      final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
-
-      // Pick off any join clauses that can be converted into filters.
-      final Set<String> requiredColumns = query.getRequiredColumns();
-      final Filter baseFilterToUse;
-      final List<JoinableClause> clausesToUse;
-
-      if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
-        final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
-            joinableClauses.getJoinableClauses(),
-            requiredColumns,
-            Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
-        );
-
-        baseFilterToUse =
-            Filters.maybeAnd(
-                Lists.newArrayList(
-                    Iterables.concat(
-                        Collections.singleton(baseFilter),
-                        conversionResult.lhs
-                    )
-                )
-            ).orElse(null);
-        clausesToUse = conversionResult.rhs;
-      } else {
-        baseFilterToUse = baseFilter;
-        clausesToUse = joinableClauses.getJoinableClauses();
-      }
-
-      // Analyze remaining join clauses to see if filters on them can be pushed down.
-      final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-          new JoinFilterPreAnalysisKey(
-              filterRewriteConfig,
-              clausesToUse,
-              query.getVirtualColumns(),
-              Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
-                     .orElse(null)
-          )
-      );
-      final Function<SegmentReference, SegmentReference> baseMapFn;
-      // A join data source is not concrete
-      // And isConcrete() of an unnest datasource delegates to its base
-      // Hence, in the case of a Join -> Unnest -> Join
-      // if we just use isConcrete on the left
-      // the segment map function for the unnest would never get called
-      // This calls us to delegate to the segmentMapFunction of the left
-      // only when it is not a JoinDataSource
-      if (left instanceof JoinDataSource) {
-        baseMapFn = Function.identity();
-      } else {
-        baseMapFn = left.createSegmentMapFunction(
-            query
-        );
-      }
-      return baseSegment ->
-          new HashJoinSegment(
-              baseMapFn.apply(baseSegment),
-              baseFilterToUse,
-              GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
-              joinFilterPreAnalysis
-          );
+      throw DruidException.defensive("A JoinDataSource with no join clauses should not be mapped.");
     }
+    final JoinableClauses joinableClauses = JoinableClauses.createClauses(
+        clauses,
+        joinableFactoryWrapper.getJoinableFactory()
+    );
+    final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
+
+    // Pick off any join clauses that can be converted into filters.
+    final Set<String> requiredColumns = query.getRequiredColumns();
+    final Filter baseFilterToUse;
+    final List<JoinableClause> clausesToUse;
+
+    if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
+      final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
+          joinableClauses.getJoinableClauses(),
+          requiredColumns,
+          Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
+      );
+
+      baseFilterToUse = Filters.maybeAnd(
+          Lists.newArrayList(
+              Iterables.concat(
+                  Collections.singleton(baseFilter),
+                  conversionResult.lhs
+              )
+          )
+      ).orElse(null);
+      clausesToUse = conversionResult.rhs;
+
+    } else {
+      baseFilterToUse = baseFilter;
+      clausesToUse = joinableClauses.getJoinableClauses();
+    }
+
+    // Analyze remaining join clauses to see if filters on them can be pushed down.
+    final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        new JoinFilterPreAnalysisKey(
+            filterRewriteConfig,
+            clausesToUse,
+            query.getVirtualColumns(),
+            Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
+                .orElse(null)
+        )
+    );
+    final Function<SegmentReference, SegmentReference> baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
+    return baseSegment -> createHashJoinSegment(
+        baseMapFn.apply(baseSegment),
+        baseFilterToUse,
+        clausesToUse,
+        joinFilterPreAnalysis
+    );
+  }
+
+  private SegmentReference createHashJoinSegment(
+      SegmentReference sourceSegment,
+      Filter baseFilterToUse,
+      List<JoinableClause> clausesToUse,
+      JoinFilterPreAnalysis joinFilterPreAnalysis)
+  {
+    if (clausesToUse.isEmpty() && baseFilterToUse == null) {
+      return sourceSegment;
+    }
+    return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
+  }
+
+  private DataSourceAnalysis getAnalysisForDataSource()
+  {
+    return constructAnalysis(this, true);
   }
 
   /**
-   * Flatten a datasource into two parts: the left-hand side datasource (the 'base' datasource), and a list of join
-   * clauses, if any.
+   * Computes the DataSourceAnalysis with join boundaries.
+   *
+   * It will only process what the join datasource could handle in one go - and not more.
+   */
+  public DataSourceAnalysis getJoinAnalysisForDataSource()
+  {
+    return constructAnalysis(this, false);
+  }
+
+  /**
+   * Builds the DataSourceAnalysis for this join.
+   *
+   * @param vertexBoundary if the returned analysis should go up to the vertex boundary.
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
+  private static DataSourceAnalysis constructAnalysis(final JoinDataSource dataSource, boolean vertexBoundary)
   {
     DataSource current = dataSource;
-    DimFilter currentDimFilter = null;
+    DimFilter currentDimFilter = TrueDimFilter.instance();
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
-    // There can be queries like
-    // Join of Unnest of Join of Unnest of Filter
-    // so these checks are needed to be ORed
-    // to get the base
-    // This method is called to get the analysis for the join data source
-    // Since the analysis of an UnnestDS or FilteredDS always delegates to its base
-    // To obtain the base data source underneath a Join
-    // we also iterate through the base of the  FilterDS and UnnestDS in its path
-    // the base of which can be a concrete data source
-    // This also means that an addition of a new datasource
-    // Will need an instanceof check here
-    // A future work should look into if the flattenJoin
-    // can be refactored to omit these instanceof checks
-    while (current instanceof JoinDataSource
-           || current instanceof UnnestDataSource
-           || current instanceof FilteredDataSource) {
+    do {
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
+        currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
+        PreJoinableClause e = new PreJoinableClause(joinDataSource);
+        preJoinableClauses.add(e);
         current = joinDataSource.getLeft();
-        currentDimFilter = validateLeftFilter(current, joinDataSource.getLeftFilter());
-        preJoinableClauses.add(
-            new PreJoinableClause(
-                joinDataSource.getRightPrefix(),
-                joinDataSource.getRight(),
-                joinDataSource.getJoinType(),
-                joinDataSource.getConditionAnalysis(),
-                joinDataSource.getJoinAlgorithm()
-            )
-        );
-      } else if (current instanceof UnnestDataSource) {
-        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-        current = unnestDataSource.getBase();
-      } else {
-        final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
-        current = filteredDataSource.getBase();
+        continue;
       }
+      if (vertexBoundary) {
+        if (current instanceof UnnestDataSource) {
+          final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+          current = unnestDataSource.getBase();
+          continue;
+        } else if (current instanceof FilteredDataSource) {
+          final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
+          current = filteredDataSource.getBase();
+          continue;
+        }
+      }
+      break;
+    } while (true);
+
+    if (currentDimFilter == TrueDimFilter.instance()) {
+      currentDimFilter = null;
     }
 
     // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
     // going-up order. So reverse them.
     Collections.reverse(preJoinableClauses);
 
-    return Triple.of(current, currentDimFilter, preJoinableClauses);
+    return new DataSourceAnalysis(current, null, currentDimFilter, preJoinableClauses, null);
   }
+
 
   /**
    * Validates whether the provided leftFilter is permitted to apply to the provided left-hand datasource. Throws an

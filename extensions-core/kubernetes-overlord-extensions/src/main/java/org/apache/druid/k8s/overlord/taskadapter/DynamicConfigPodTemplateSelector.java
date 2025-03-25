@@ -43,8 +43,9 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
                                               + ".k8s.podTemplate.";
 
   private final Properties properties;
-  private HashMap<String, PodTemplate> podTemplates;
-  private Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
+  private final Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
+  // Supplier allows Overlord to read the most recent pod template file without calling initializeTemplatesFromFileSystem() again.
+  private HashMap<String, Supplier<PodTemplate>> podTemplates;
 
   public DynamicConfigPodTemplateSelector(
       Properties properties,
@@ -56,25 +57,25 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
     initializeTemplatesFromFileSystem();
   }
 
-  private void initializeTemplatesFromFileSystem()
+  private void initializeTemplatesFromFileSystem() throws IAE
   {
-    Set<String> taskAdapterTemplateKeys = getTaskAdapterTemplates(properties);
+    Set<String> taskAdapterTemplateKeys = getTaskAdapterTemplatesKeys(properties);
     if (!taskAdapterTemplateKeys.contains("base")) {
       throw new IAE(
           "Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
     }
 
-    HashMap<String, PodTemplate> podTemplateMap = new HashMap<>();
+    HashMap<String, Supplier<PodTemplate>> podTemplateMap = new HashMap<>();
     for (String taskAdapterTemplateKey : taskAdapterTemplateKeys) {
-      Optional<PodTemplate> template = loadPodTemplate(taskAdapterTemplateKey, properties);
-      if (template.isPresent()) {
-        podTemplateMap.put(taskAdapterTemplateKey, template.get());
-      }
+      Supplier<PodTemplate> templateSupplier = () -> loadPodTemplate(taskAdapterTemplateKey, properties);
+      validateTemplateSupplier(templateSupplier);
+      podTemplateMap.put(taskAdapterTemplateKey, templateSupplier);
     }
+
     podTemplates = podTemplateMap;
   }
 
-  private Set<String> getTaskAdapterTemplates(Properties properties)
+  private Set<String> getTaskAdapterTemplatesKeys(Properties properties)
   {
     Set<String> taskAdapterTemplates = new HashSet<>();
 
@@ -88,23 +89,32 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
     return taskAdapterTemplates;
   }
 
-  private Optional<PodTemplate> loadPodTemplate(String key, Properties properties)
+  private PodTemplate loadPodTemplate(String key, Properties properties) throws IAE
   {
     String property = TASK_PROPERTY + key;
     String podTemplateFile = properties.getProperty(property);
     if (podTemplateFile == null) {
       throw new IAE("Pod template file not specified for [%s]", property);
-
     }
+
     try {
-      return Optional.of(Serialization.unmarshal(
+      // Use Optional to assert unmarshal result is non-null.
+      Optional<PodTemplate> maybeTemplate = Optional.of(Serialization.unmarshal(
           Files.newInputStream(new File(podTemplateFile).toPath()),
           PodTemplate.class
       ));
+
+      return maybeTemplate.get();
     }
     catch (Exception e) {
       throw new IAE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);
     }
+  }
+
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  private void validateTemplateSupplier(Supplier<PodTemplate> templateSupplier) throws IAE
+  {
+    templateSupplier.get();
   }
 
   @Override

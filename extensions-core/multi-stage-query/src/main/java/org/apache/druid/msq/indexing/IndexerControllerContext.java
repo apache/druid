@@ -27,7 +27,6 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -78,7 +77,10 @@ public class IndexerControllerContext implements ControllerContext
 
   private static final Logger log = new Logger(IndexerControllerContext.class);
 
-  private final MSQControllerTask task;
+  private final TaskLockType taskLockType;
+  private final String taskDataSource;
+  private final QueryContext taskQuerySpecContext;
+  private final Map<String, Object> taskContext;
   private final TaskToolbox toolbox;
   private final Injector injector;
   private final ServiceClientFactory clientFactory;
@@ -86,21 +88,29 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceMetricEvent.Builder metricBuilder;
   private final MemoryIntrospector memoryIntrospector;
 
+
+
   public IndexerControllerContext(
-      final MSQControllerTask task,
+      final TaskLockType taskLockType,
+      final String taskDataSource,
+      final QueryContext taskQuerySpecContext,
+      final Map<String, Object> taskContext,
+      final ServiceMetricEvent.Builder metricBuilder,
       final TaskToolbox toolbox,
       final Injector injector,
       final ServiceClientFactory clientFactory,
       final OverlordClient overlordClient
   )
   {
-    this.task = task;
+    this.taskLockType = taskLockType;
+    this.taskDataSource = taskDataSource;
+    this.taskQuerySpecContext = taskQuerySpecContext;
+    this.taskContext = taskContext;
     this.toolbox = toolbox;
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
-    this.metricBuilder = new ServiceMetricEvent.Builder();
+    this.metricBuilder = metricBuilder;
     this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
     final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(toolbox.getIndexingTmpDir());
     this.injector = injector.createChildInjector(
@@ -164,7 +174,7 @@ public class IndexerControllerContext implements ControllerContext
   public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
   {
     final SegmentSource includeSegmentSource =
-        MultiStageQueryContext.getSegmentSources(task.getQuerySpec().getQuery().context());
+        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext);
     return new IndexerTableInputSpecSlicer(
         toolbox.getCoordinatorClient(),
         toolbox.getTaskActionClient(),
@@ -181,7 +191,7 @@ public class IndexerControllerContext implements ControllerContext
   @Override
   public TaskLockType taskLockType()
   {
-    return task.getTaskLockType();
+    return taskLockType;
   }
 
   @Override
@@ -195,7 +205,7 @@ public class IndexerControllerContext implements ControllerContext
   {
     ChatHandler chatHandler = new ControllerChatHandler(
         controller,
-        task.getDataSource(),
+        taskDataSource,
         toolbox.getAuthorizerMapper()
     );
     toolbox.getChatHandlerProvider().register(controller.queryId(), chatHandler, false);
@@ -212,10 +222,10 @@ public class IndexerControllerContext implements ControllerContext
   {
     return new MSQWorkerTaskLauncher(
         queryId,
-        task.getDataSource(),
+        taskDataSource,
         overlordClient,
         workerFailureListener,
-        makeTaskContext(querySpec, queryKernelConfig, task.getContext()),
+        makeTaskContext(querySpec, queryKernelConfig, taskContext),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
         new MSQWorkerTaskLauncherConfig()
@@ -245,7 +255,7 @@ public class IndexerControllerContext implements ControllerContext
         // Assume tasks are symmetric: workers have the same number of processors available as a controller.
         // Create one partition per processor per task, for maximum parallelism.
         MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
-            querySpec.getQuery().context(),
+            querySpec.getContext(),
             memoryIntrospector.numProcessingThreads()
         )
     );
@@ -259,7 +269,7 @@ public class IndexerControllerContext implements ControllerContext
       final ControllerMemoryParameters memoryParameters
   )
   {
-    final QueryContext queryContext = querySpec.getQuery().context();
+    final QueryContext queryContext = querySpec.getContext();
     final int maxConcurrentStages =
         MultiStageQueryContext.getMaxConcurrentStagesWithDefault(queryContext, DEFAULT_MAX_CONCURRENT_STAGES);
     final boolean isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(queryContext);
@@ -313,7 +323,7 @@ public class IndexerControllerContext implements ControllerContext
       final int maxConcurrentStages
   )
   {
-    final QueryContext queryContext = querySpec.getQuery().context();
+    final QueryContext queryContext = querySpec.getContext();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
@@ -322,7 +332,7 @@ public class IndexerControllerContext implements ControllerContext
     builder
         .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled)
         .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
-        .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec))
+        .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec.getQuery(), querySpec.getDestination()))
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);

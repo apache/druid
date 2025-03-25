@@ -177,7 +177,7 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
+    final DataSourceAnalysis analysis = newQuery.getDataSourceAnalysis();
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;

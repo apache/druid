@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -47,6 +45,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -66,9 +65,10 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -78,7 +78,6 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -105,6 +104,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -422,12 +422,12 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class), JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class), JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)));
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class), JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)));
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -672,7 +672,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
-        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
@@ -692,7 +692,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
-        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 10 available
@@ -1347,7 +1347,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
-            new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
+            new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
             null,
             engine,
             null
@@ -1866,16 +1866,6 @@ public class CompactSegmentsTest
       @Nullable Integer numCompactionTaskSlots
   )
   {
-    return doCompactSegments(compactSegments, compactionConfigs, numCompactionTaskSlots, false);
-  }
-
-  private CoordinatorRunStats doCompactSegments(
-      CompactSegments compactSegments,
-      List<DataSourceCompactionConfig> compactionConfigs,
-      @Nullable Integer numCompactionTaskSlots,
-      boolean useAutoScaleSlots
-  )
-  {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDataSourcesSnapshot(dataSources)
@@ -1884,7 +1874,8 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                useAutoScaleSlots,
+                null,
+                null,
                 null
             )
         )
@@ -2159,23 +2150,9 @@ public class CompactSegmentsTest
         compactionPartitionsSpec = clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec();
       }
 
-      Map<String, Object> transformSpec = null;
-      try {
-        if (clientCompactionTaskQuery.getTransformSpec() != null) {
-          transformSpec = jsonMapper.readValue(
-              jsonMapper.writeValueAsString(new TransformSpec(clientCompactionTaskQuery.getTransformSpec()
-                                                                                       .getFilter(), null)),
-              new TypeReference<>() {}
-          );
-        }
-      }
-      catch (JsonProcessingException e) {
-        throw new IAE("Invalid Json payload");
-      }
-
-      List<Object> metricsSpec = null;
+      List<AggregatorFactory> metricsSpec = null;
       if (clientCompactionTaskQuery.getMetricsSpec() != null) {
-        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<>() {});
+        metricsSpec = Arrays.asList(clientCompactionTaskQuery.getMetricsSpec());
       }
 
       for (int i = 0; i < 2; i++) {
@@ -2193,18 +2170,21 @@ public class CompactSegmentsTest
                     clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
                 ),
                 metricsSpec,
-                transformSpec,
-                ImmutableMap.of(
-                    "bitmap",
-                    ImmutableMap.of("type", "roaring"),
-                    "dimensionCompression",
-                    "lz4",
-                    "metricCompression",
-                    "lz4",
-                    "longEncoding",
-                    "longs"
+                clientCompactionTaskQuery.getTransformSpec(),
+                jsonMapper.convertValue(
+                    ImmutableMap.of(
+                        "bitmap",
+                        ImmutableMap.of("type", "roaring"),
+                        "dimensionCompression",
+                        "lz4",
+                        "metricCompression",
+                        "lz4",
+                        "longEncoding",
+                        "longs"
+                    ),
+                    IndexSpec.class
                 ),
-                ImmutableMap.of()
+                jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class)
             ),
             1,
             segmentSize

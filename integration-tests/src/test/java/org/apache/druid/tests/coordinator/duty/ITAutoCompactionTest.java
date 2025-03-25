@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -56,7 +57,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregat
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -64,7 +65,6 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
@@ -133,7 +133,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void setup() throws Exception
   {
     // Set compaction slot to 5
-    updateCompactionTaskSlot(0.5, 10, null);
+    updateCompactionTaskSlot(0.5, 10);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
 
@@ -410,7 +410,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     // added = 31
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
     if (engine == CompactionEngine.MSQ) {
-      updateCompactionTaskSlot(0.1, 2, false);
+      updateCompactionTaskSlot(0.1, 2);
     }
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -744,7 +744,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void testAutoCompactionDutyCanUpdateTaskSlots() throws Exception
   {
     // Set compactionTaskSlotRatio to 0 to prevent any compaction
-    updateCompactionTaskSlot(0, 0, null);
+    updateCompactionTaskSlot(0, 0);
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -761,7 +761,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       // Update compaction slots to be 1
-      updateCompactionTaskSlot(1, 1, null);
+      updateCompactionTaskSlot(1, 1);
       // One day compacted (1 new segment) and one day remains uncompacted. (3 total)
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -1365,7 +1365,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithSegmentGranularityFinerAndNotAlignWithSegment() throws Exception
   {
-    updateCompactionTaskSlot(1, 1, null);
+    updateCompactionTaskSlot(1, 1);
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
@@ -1416,7 +1416,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test(dataProvider = "engine")
   public void testAutoCompactionDutyWithSegmentGranularityCoarserAndNotAlignWithSegment(CompactionEngine engine) throws Exception
   {
-    updateCompactionTaskSlot(1, 1, null);
+    updateCompactionTaskSlot(1, 1);
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
@@ -1610,7 +1610,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           NO_SKIP_OFFSET,
           null,
           null,
-          new UserCompactionTaskTransformConfig(new SelectorDimFilter("page", "Striker Eureka", null)),
+          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null)),
           null,
           false,
           CompactionEngine.NATIVE
@@ -1745,24 +1745,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test
-  public void testUpdateCompactionTaskSlotWithUseAutoScaleSlots() throws Exception
-  {
-    // First try update without useAutoScaleSlots
-    updateCompactionTaskSlot(3, 5, null);
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
-    // Should be default value which is false
-    Assert.assertFalse(compactionConfig.isUseAutoScaleSlots());
-    // Now try update from default value to useAutoScaleSlots=true
-    updateCompactionTaskSlot(3, 5, true);
-    compactionConfig = compactionResource.getCompactionConfig();
-    Assert.assertTrue(compactionConfig.isUseAutoScaleSlots());
-    // Now try update from useAutoScaleSlots=true to useAutoScaleSlots=false
-    updateCompactionTaskSlot(3, 5, false);
-    compactionConfig = compactionResource.getCompactionConfig();
-    Assert.assertFalse(compactionConfig.isUseAutoScaleSlots());
-  }
-
   private void loadData(String indexTask) throws Exception
   {
     loadData(indexTask, ImmutableMap.of());
@@ -1868,7 +1850,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Period skipOffsetFromLatest,
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec,
+      CompactionTransformSpec transformSpec,
       AggregatorFactory[] metricsSpec,
       boolean dropExisting,
       CompactionEngine engine
@@ -1893,7 +1875,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       int maxNumConcurrentSubTasks,
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec,
+      CompactionTransformSpec transformSpec,
       AggregatorFactory[] metricsSpec,
       boolean dropExisting,
       CompactionEngine engine
@@ -2062,16 +2044,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots, Boolean useAutoScaleSlots) throws Exception
+  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots) throws Exception
   {
-    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots);
+    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots);
     // Verify that the compaction config is updated correctly.
     DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
     Assert.assertEquals(compactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
     Assert.assertEquals(compactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
-    if (useAutoScaleSlots != null) {
-      Assert.assertEquals(compactionConfig.isUseAutoScaleSlots(), useAutoScaleSlots.booleanValue());
-    }
   }
 
   private void getAndAssertCompactionStatus(

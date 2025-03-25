@@ -352,11 +352,35 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   }
 
   @Test
+  public void testCoordinatorNoPath() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(403, connection.getResponseCode()); // proxy with no path is not allowed
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testOverlordNoPath() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/overlord", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(403, connection.getResponseCode()); // proxy with no path is not allowed
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
   public void testCoordinatorLeaderUnknown() throws Exception
   {
     isValidLeader = false;
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/druid/coordinator", port)).openConnection());
+        new URL(StringUtils.format("http://localhost:%d/druid/coordinator/status", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(503, connection.getResponseCode());
@@ -369,7 +393,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   {
     isValidLeader = false;
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/druid/indexer", port)).openConnection());
+        new URL(StringUtils.format("http://localhost:%d/druid/indexer/status", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(503, connection.getResponseCode());

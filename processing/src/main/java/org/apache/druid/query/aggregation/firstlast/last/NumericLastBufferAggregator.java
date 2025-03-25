@@ -20,11 +20,11 @@
 package org.apache.druid.query.aggregation.firstlast.last;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import java.nio.ByteBuffer;
 
@@ -65,34 +65,34 @@ public abstract class NumericLastBufferAggregator implements BufferAggregator
 
   boolean isValueNull(ByteBuffer buf, int position)
   {
-    return buf.get(position + NULL_OFFSET) == NullHandling.IS_NULL_BYTE;
+    return buf.get(position + NULL_OFFSET) == TypeStrategies.IS_NULL_BYTE;
   }
 
   void updateTimeWithValue(ByteBuffer buf, int position, long time, ColumnValueSelector valueSelector)
   {
     buf.putLong(position, time);
-    buf.put(position + NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULL_OFFSET, TypeStrategies.IS_NOT_NULL_BYTE);
     putValue(buf, position + VALUE_OFFSET, valueSelector);
   }
 
   void updateTimeWithValue(ByteBuffer buf, int position, long time, Number value)
   {
     buf.putLong(position, time);
-    buf.put(position + NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULL_OFFSET, TypeStrategies.IS_NOT_NULL_BYTE);
     putValue(buf, position + VALUE_OFFSET, value);
   }
 
   void updateTimeWithNull(ByteBuffer buf, int position, long time)
   {
     buf.putLong(position, time);
-    buf.put(position + NULL_OFFSET, NullHandling.IS_NULL_BYTE);
+    buf.put(position + NULL_OFFSET, TypeStrategies.IS_NULL_BYTE);
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MIN_VALUE);
-    buf.put(position + NULL_OFFSET, NullHandling.IS_NULL_BYTE);
+    buf.put(position + NULL_OFFSET, TypeStrategies.IS_NULL_BYTE);
     initValue(buf, position + VALUE_OFFSET);
   }
 

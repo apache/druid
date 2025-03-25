@@ -24,7 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import com.google.inject.name.Names;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
@@ -197,19 +196,6 @@ public class DruidAvaticaTestDriver implements Driver
     {
       super(delegate);
       this.connectionModule = new AvaticaBasedConnectionModule();
-    }
-
-    @Override
-    public DruidModule getCoreModule()
-    {
-      return DruidModuleCollection.of(
-          super.getCoreModule(),
-          binder -> {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-          }
-      );
     }
 
     @Override

@@ -104,7 +104,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
           workerMemoryParameters,
           loadedSegmentMetadata,
           cTask.getTaskLockType(),
-          cTask.getQuerySpec().getQuery().context()
+          cTask.getQuerySpec().getContext()
       );
 
       inMemoryControllerTask.put(cTask.getId(), cTask);
@@ -137,7 +137,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       throw new ISE(e, "Unable to run");
     }
     finally {
-      if (controller != null && queryListener != null) {
+      if (queryListener != null && queryListener.reportMap != null) {
         reports.put(controller.queryId(), queryListener.getReportMap());
       }
     }

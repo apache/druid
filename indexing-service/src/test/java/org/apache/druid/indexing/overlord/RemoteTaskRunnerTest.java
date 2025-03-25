@@ -632,7 +632,7 @@ public class RemoteTaskRunnerTest
         new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
         new TestProvisioningStrategy<>(),
         httpClient,
-        new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null), null)
+        new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null, null), null)
     );
     Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
   }

@@ -440,7 +440,7 @@ public class TaskQueue
             continue;
           }
           if (taskIsReady) {
-            log.info("Asking taskRunner to run: %s", task.getId());
+            log.info("Asking taskRunner to run task[%s]", task.getId());
             runnerTaskFuture = taskRunner.run(task);
           } else {
             // Task.isReady() can internally lock intervals or segments.
@@ -469,7 +469,7 @@ public class TaskQueue
     // Kill tasks that shouldn't be running
     final Set<String> tasksToKill = Sets.difference(runnerTaskFutures.keySet(), knownTaskIds);
     if (!tasksToKill.isEmpty()) {
-      log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
+      log.info("Asking taskRunner to clean up [%,d] tasks.", tasksToKill.size());
 
       // On large installations running several thousands of tasks,
       // concatenating the list of known task ids can be compupationally expensive.
@@ -483,7 +483,7 @@ public class TaskQueue
           taskRunner.shutdown(taskId, reason);
         }
         catch (Exception e) {
-          log.warn(e, "TaskRunner failed to clean up task: %s", taskId);
+          log.warn(e, "TaskRunner failed to clean up task[%s].", taskId);
         }
       }
     }

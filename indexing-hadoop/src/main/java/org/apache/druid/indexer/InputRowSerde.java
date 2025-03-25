@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Rows;
@@ -38,6 +37,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -70,18 +70,18 @@ public class InputRowSerde
       final Consumer<T> write)
   {
     if (ret == null) {
-      out.writeByte(NullHandling.IS_NULL_BYTE);
+      out.writeByte(TypeStrategies.IS_NULL_BYTE);
       return;
     }
 
-    out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
+    out.writeByte(TypeStrategies.IS_NOT_NULL_BYTE);
 
     write.accept(ret);
   }
 
   private static boolean isNullByteSet(final ByteArrayDataInput in)
   {
-    return in.readByte() == NullHandling.IS_NULL_BYTE;
+    return in.readByte() == TypeStrategies.IS_NULL_BYTE;
   }
 
   public interface IndexSerdeTypeHelper<T>
@@ -336,9 +336,9 @@ public class InputRowSerde
           final ColumnType type = aggFactory.getIntermediateType();
 
           if (agg.isNull()) {
-            out.writeByte(NullHandling.IS_NULL_BYTE);
+            out.writeByte(TypeStrategies.IS_NULL_BYTE);
           } else {
-            out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
+            out.writeByte(TypeStrategies.IS_NOT_NULL_BYTE);
             if (type.is(ValueType.FLOAT)) {
               out.writeFloat(agg.getFloat());
             } else if (type.is(ValueType.LONG)) {
@@ -467,7 +467,7 @@ public class InputRowSerde
         final ColumnType type = agg.getIntermediateType();
         final byte metricNullability = in.readByte();
 
-        if (metricNullability == NullHandling.IS_NULL_BYTE) {
+        if (metricNullability == TypeStrategies.IS_NULL_BYTE) {
           // metric value is null.
           continue;
         }

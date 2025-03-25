@@ -39,7 +39,6 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
@@ -158,10 +157,9 @@ public class NativeQueryMaker implements QueryMaker
 
   private List<Interval> findBaseDataSourceIntervals(Query<?> query)
   {
-    return query.getDataSource().getAnalysis()
-                .getBaseQuerySegmentSpec()
-                .map(QuerySegmentSpec::getIntervals)
-                .orElseGet(query::getIntervals);
+    return query.getDataSourceAnalysis()
+        .getEffectiveQuerySegmentSpec()
+        .getIntervals();
   }
 
   @SuppressWarnings("unchecked")

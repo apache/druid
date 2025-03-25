@@ -45,7 +45,8 @@ public class WorkerBehaviorConfigTest
             new AffinityConfig(
                 ImmutableMap.of("foo", ImmutableSet.of("localhost")),
                 false
-            )
+            ),
+            null
         ),
         new EC2AutoScaler(
             7,

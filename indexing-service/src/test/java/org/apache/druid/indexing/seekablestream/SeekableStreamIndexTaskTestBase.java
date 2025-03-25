@@ -49,6 +49,7 @@ import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReport;
@@ -110,7 +111,6 @@ import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -609,7 +609,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         taskStorage,
         metadataStorageCoordinator,
         emitter,
-        new SupervisorManager(null)
+        new SupervisorManager(OBJECT_MAPPER, null)
         {
           @Override
           public boolean checkPointDataSourceMetadata(
