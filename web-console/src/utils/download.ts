@@ -87,7 +87,7 @@ export function downloadFile(text: string, fileFormat: FileFormat, filename: str
   );
 }
 
-function queryResultsToString(queryResult: QueryResult, format: FileFormat): string {
+export function queryResultsToString(queryResult: QueryResult, format: FileFormat): string {
   const { header, rows } = queryResult;
 
   switch (format) {
