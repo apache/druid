@@ -210,7 +210,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         final SegmentHolder holder = queuedSegmentIterator.next();
         final DataSegment segment = holder.getSegment();
         if (holder.hasRequestTimedOut()) {
-          onRequestFailed(holder, "timed out");
+          onRequestFailed(holder, SegmentChangeStatus.failed("timed out"));
           queuedSegmentIterator.remove();
           if (holder.isLoad()) {
             segmentsToLoad.remove(segment);
@@ -407,9 +407,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             queuedSegments.remove(holder);
             activeRequestSegments.remove(holder.getSegment());
             if (status.getState() == SegmentChangeStatus.State.FAILED) {
-              onRequestFailed(holder, status.getFailureCause());
+              onRequestFailed(holder, status);
             } else {
-              onRequestCompleted(holder, RequestStatus.SUCCESS);
+              onRequestCompleted(holder, RequestStatus.SUCCESS, status);
             }
           }
         }, null
@@ -452,7 +452,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       stopped = true;
 
       if (!queuedSegments.isEmpty()) {
-        queuedSegments.forEach(holder -> onRequestCompleted(holder, RequestStatus.CANCELLED));
+        queuedSegments.forEach(
+            holder -> onRequestCompleted(
+                holder,
+                RequestStatus.CANCELLED,
+                SegmentChangeStatus.failed("cancelled")
+            )
+        );
       }
 
       segmentsToDrop.clear();
@@ -487,13 +493,12 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       SegmentHolder holder = segmentsToLoad.get(segment);
       if (holder == null) {
-        log.trace("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
         queuedSize.addAndGet(segment.getSize());
         holder = new SegmentHolder(segment, action, config.getLoadTimeout(), callback);
         segmentsToLoad.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
-        incrementStat(holder, RequestStatus.ASSIGNED);
+        incrementStat(holder, RequestStatus.ASSIGNED, null);
       } else {
         holder.addCallback(callback);
       }
@@ -522,7 +527,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         segmentsToDrop.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
-        incrementStat(holder, RequestStatus.ASSIGNED);
+        incrementStat(holder, RequestStatus.ASSIGNED, null);
       } else {
         holder.addCallback(callback);
       }
@@ -593,16 +598,16 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     return Collections.unmodifiableSet(segmentsMarkedToDrop);
   }
 
-  private void onRequestFailed(SegmentHolder holder, String failureCause)
+  private void onRequestFailed(SegmentHolder holder, SegmentChangeStatus status)
   {
     log.error(
         "Server[%s] failed segment[%s] request[%s] with cause [%s].",
-        serverId, holder.getSegment().getId(), holder.getAction(), failureCause
+        serverId, holder.getSegment().getId(), holder.getAction(), status.getFailureCause()
     );
-    onRequestCompleted(holder, RequestStatus.FAILED);
+    onRequestCompleted(holder, RequestStatus.FAILED, status);
   }
 
-  private void onRequestCompleted(SegmentHolder holder, RequestStatus status)
+  private void onRequestCompleted(SegmentHolder holder, RequestStatus status, SegmentChangeStatus changeStatus)
   {
     final SegmentAction action = holder.getAction();
     log.trace(
@@ -613,14 +618,19 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     if (holder.isLoad()) {
       queuedSize.addAndGet(-holder.getSegment().getSize());
     }
-    incrementStat(holder, status);
+    incrementStat(holder, status, changeStatus);
     executeCallbacks(holder, status == RequestStatus.SUCCESS);
   }
 
-  private void incrementStat(SegmentHolder holder, RequestStatus status)
+  private void incrementStat(SegmentHolder holder, RequestStatus status, SegmentChangeStatus changeStatus)
   {
+    String description = holder.getAction().name();
+    if (changeStatus != null && changeStatus.getLoadingMode() != null) {
+      description += ": " + changeStatus.getLoadingMode().name();
+    }
+
     RowKey rowKey = RowKey.with(Dimension.DATASOURCE, holder.getSegment().getDataSource())
-                          .and(Dimension.DESCRIPTION, holder.getAction().name());
+                          .and(Dimension.DESCRIPTION, description);
     stats.get().add(status.datasourceStat, rowKey, 1);
   }
 
@@ -634,7 +644,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   /**
-   * Tries to cancel a load/drop operation. An load/drop request can be cancelled
+   * Tries to cancel a load/drop operation. A load/drop request can be cancelled
    * only if it has not already been sent to the corresponding server.
    */
   @Override
@@ -654,7 +664,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       }
 
       queuedSegments.remove(holder);
-      onRequestCompleted(holder, RequestStatus.CANCELLED);
+      onRequestCompleted(holder, RequestStatus.CANCELLED, SegmentChangeStatus.failed("cancelled"));
       return true;
     }
   }

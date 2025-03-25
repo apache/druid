@@ -22,28 +22,27 @@ package org.apache.druid.server.coordinator.config;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
-import org.hamcrest.CoreMatchers;
+import com.google.common.base.Throwables;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 public class HttpLoadQueuePeonConfigTest
 {
   @Test
   public void testValidateBatchSize() throws JsonProcessingException
   {
-    ObjectMapper jsonMapper = new ObjectMapper();
+    final ObjectMapper jsonMapper = new ObjectMapper();
 
     MatcherAssert.assertThat(
-        Assert.assertThrows(ValueInstantiationException.class, () ->
-            jsonMapper.readValue("{\"batchSize\":0}", HttpLoadQueuePeonConfig.class)
-        ),
-        CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ValueInstantiationException.class),
-            ThrowableMessageMatcher.hasMessage(
-                CoreMatchers.containsString("Batch size must be greater than 0.")
+        Throwables.getRootCause(
+            Assert.assertThrows(ValueInstantiationException.class, () ->
+                jsonMapper.readValue("{\"batchSize\":0}", HttpLoadQueuePeonConfig.class)
             )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "'druid.coordinator.loadqueuepeon.http.batchSize'[0] must be greater than 0"
         )
     );
 
@@ -57,6 +56,6 @@ public class HttpLoadQueuePeonConfigTest
         "{\"batchSize\":2}",
         HttpLoadQueuePeonConfig.class
     );
-    Assert.assertEquals(2, config.getBatchSize().intValue());
+    Assert.assertEquals(Integer.valueOf(2), config.getBatchSize());
   }
 }
