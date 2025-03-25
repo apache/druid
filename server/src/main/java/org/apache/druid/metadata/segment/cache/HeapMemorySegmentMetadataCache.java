@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -46,12 +47,14 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.TransactionCallback;
 
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -395,9 +398,16 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
 
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
-    retrieveAllSegmentIds(datasourceToSummary);
-    updateSegmentIdsInCache(datasourceToSummary, syncStartTime);
-    retrieveUsedSegmentPayloads(datasourceToSummary);
+
+    // Fetch all used segments if this is the first sync
+    if (syncFinishTime.get() == null) {
+      retrieveAllUsedSegments(datasourceToSummary);
+    } else {
+      retrieveAllSegmentIds(datasourceToSummary);
+      updateSegmentIdsInCache(datasourceToSummary, syncStartTime);
+      retrieveUsedSegmentPayloads(datasourceToSummary);
+    }
+
     updateUsedSegmentPayloadsInCache(datasourceToSummary);
     retrieveAllPendingSegments(datasourceToSummary);
     updatePendingSegmentsInCache(datasourceToSummary, syncStartTime);
@@ -553,31 +563,58 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   )
   {
     final Stopwatch retrieveDuration = Stopwatch.createStarted();
-
-    if (syncFinishTime.get() == null) {
-      datasourceToSummary.forEach(this::retrieveAllUsedSegments);
-    } else {
-      datasourceToSummary.forEach(this::retrieveRequiredUsedSegments);
-    }
-
+    datasourceToSummary.forEach(this::retrieveRequiredUsedSegments);
     emitMetric(Metric.RETRIEVE_SEGMENT_PAYLOADS_DURATION_MILLIS, retrieveDuration.millisElapsed());
   }
 
   /**
-   * Retrieves all used segments for a datasource from the metadata store.
+   * Retrieves all used segments from the metadata store.
+   * This method is called only on the first full sync.
    */
-  private void retrieveAllUsedSegments(String dataSource, DatasourceSegmentSummary summary)
+  private void retrieveAllUsedSegments(
+      Map<String, DatasourceSegmentSummary> datasourceToSummary
+  )
   {
-    inReadOnlyTransaction((handle, status) -> {
+    final Stopwatch retrieveDuration = Stopwatch.createStarted();
+    final String sql = StringUtils.format(
+        "SELECT id, payload, created_date, used_status_last_updated FROM %s WHERE used = true",
+        tablesConfig.getSegmentsTable()
+    );
+
+    final int numSkippedSegments = inReadOnlyTransaction((handle, status) -> {
       try (
-          CloseableIterator<DataSegmentPlus> iterator =
-              SqlSegmentsMetadataQuery.forHandle(handle, connector, tablesConfig, jsonMapper)
-                                      .retrieveUsedSegmentsPlus(dataSource, List.of())
+          ResultIterator<DataSegmentPlus> iterator =
+              handle.createQuery(sql)
+                    .setFetchSize(connector.getStreamingFetchSize())
+                    .map((index, r, ctx) -> mapToSegmentPlus(r))
+                    .iterator()
       ) {
-        iterator.forEachRemaining(summary.usedSegments::add);
-        return 0;
+        int skippedRecords = 0;
+        while (iterator.hasNext()) {
+          final DataSegmentPlus segment = iterator.next();
+          if (segment == null) {
+            ++skippedRecords;
+          } else {
+            datasourceToSummary.computeIfAbsent(
+                segment.getDataSegment().getDataSource(),
+                ds -> new DatasourceSegmentSummary()
+            ).usedSegments.add(segment);
+          }
+        }
+
+        return skippedRecords;
       }
     });
+
+    // Emit metrics
+    if (numSkippedSegments > 0) {
+      emitMetric(Metric.SKIPPED_SEGMENTS, numSkippedSegments);
+    }
+    datasourceToSummary.forEach(
+        (dataSource, summary) ->
+            emitMetric(dataSource, Metric.PERSISTED_USED_SEGMENTS, summary.usedSegments.size())
+    );
+    emitMetric(Metric.RETRIEVE_SEGMENT_PAYLOADS_DURATION_MILLIS, retrieveDuration.millisElapsed());
   }
 
   /**
@@ -672,6 +709,32 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     emitMetric(Metric.RETRIEVE_PENDING_SEGMENTS_DURATION_MILLIS, fetchDuration.millisElapsed());
     if (numSkippedRecords.get() > 0) {
       emitMetric(Metric.SKIPPED_PENDING_SEGMENTS, numSkippedRecords.get());
+    }
+  }
+
+  /**
+   * Tries to parse the fields of the result set into a {@link DataSegmentPlus}.
+   *
+   * @return null if an error occurred while parsing the result
+   */
+  private DataSegmentPlus mapToSegmentPlus(ResultSet resultSet)
+  {
+    String segmentId = null;
+    try {
+      segmentId = resultSet.getString(1);
+      return new DataSegmentPlus(
+          JacksonUtils.readValue(jsonMapper, resultSet.getBytes(2), DataSegment.class),
+          DateTimes.of(resultSet.getString(3)),
+          DateTimes.of(resultSet.getString(4)),
+          true,
+          null,
+          null,
+          null
+      );
+    }
+    catch (Throwable t) {
+      log.noStackTrace().error(t, "Could not read segment with ID[%s]", segmentId);
+      return null;
     }
   }
 
