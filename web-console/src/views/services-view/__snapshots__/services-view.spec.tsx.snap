@@ -62,6 +62,7 @@ exports[`ServicesView renders data 1`] = `
         ]
       }
       onChange={[Function]}
+      onClose={[Function]}
       tableColumnsHidden={[]}
     />
   </Memo(ViewControlBar)>

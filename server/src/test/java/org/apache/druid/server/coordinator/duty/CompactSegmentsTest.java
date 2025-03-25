@@ -718,7 +718,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
-        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
@@ -738,7 +738,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
-        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 10 available
@@ -1643,16 +1643,6 @@ public class CompactSegmentsTest
       @Nullable Integer numCompactionTaskSlots
   )
   {
-    return doCompactSegments(compactSegments, compactionConfigs, numCompactionTaskSlots, false);
-  }
-
-  private CoordinatorRunStats doCompactSegments(
-      CompactSegments compactSegments,
-      List<DataSourceCompactionConfig> compactionConfigs,
-      @Nullable Integer numCompactionTaskSlots,
-      boolean useAutoScaleSlots
-  )
-  {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDataSourcesSnapshot(dataSources)
@@ -1661,7 +1651,8 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                useAutoScaleSlots,
+                null,
+                null,
                 null
             )
         )

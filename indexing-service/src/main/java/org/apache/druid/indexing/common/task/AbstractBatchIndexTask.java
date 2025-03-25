@@ -76,6 +76,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -454,6 +455,30 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             segmentSchemaMapping
         );
     }
+  }
+
+  protected TransactionalSegmentPublisher buildSegmentPublisher(TaskToolbox toolbox)
+  {
+    return new TransactionalSegmentPublisher()
+    {
+      @Override
+      public SegmentPublishResult publishAnnotatedSegments(
+          @Nullable Set<DataSegment> segmentsToBeOverwritten,
+          Set<DataSegment> segmentsToPublish,
+          @Nullable Object commitMetadata,
+          @Nullable SegmentSchemaMapping schemaMapping
+      ) throws IOException
+      {
+        return toolbox.getTaskActionClient().submit(
+            buildPublishAction(
+                segmentsToBeOverwritten,
+                segmentsToPublish,
+                schemaMapping,
+                getTaskLockHelper().getLockTypeToUse()
+            )
+        );
+      }
+    };
   }
 
   protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException

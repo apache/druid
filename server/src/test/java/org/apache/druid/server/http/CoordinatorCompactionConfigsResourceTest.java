@@ -105,15 +105,16 @@ public class CoordinatorCompactionConfigsResourceTest
 
     Assert.assertEquals(0.1, defaultConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
-    Assert.assertFalse(defaultConfig.isUseAutoScaleSlots());
     Assert.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
+    Assert.assertFalse(defaultConfig.isUseSupervisors());
+    Assert.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
   }
 
   @Test
   public void testUpdateClusterConfig()
   {
     Response response = resource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(0.5, 10, true, null),
+        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.OK, response);
@@ -126,7 +127,8 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertNotNull(updatedConfig);
     Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(10, updatedConfig.getMaxCompactionTaskSlots());
-    Assert.assertTrue(updatedConfig.isUseAutoScaleSlots());
+    Assert.assertTrue(updatedConfig.isUseSupervisors());
+    Assert.assertEquals(CompactionEngine.MSQ, updatedConfig.getEngine());
   }
 
   @Test
@@ -135,7 +137,7 @@ public class CoordinatorCompactionConfigsResourceTest
     final DruidCompactionConfig defaultConfig
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
 
-    Response response = resource.setCompactionTaskLimit(0.5, 9, true, mockHttpServletRequest);
+    Response response = resource.setCompactionTaskLimit(0.5, 9, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     final DruidCompactionConfig updatedConfig
@@ -144,7 +146,6 @@ public class CoordinatorCompactionConfigsResourceTest
     // Verify that the task slot fields have been updated
     Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(9, updatedConfig.getMaxCompactionTaskSlots());
-    Assert.assertTrue(updatedConfig.isUseAutoScaleSlots());
 
     // Verify that the other fields are unchanged
     Assert.assertEquals(defaultConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
