@@ -93,7 +93,12 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
             />
           </FormGroup>
         </div>
-        <PreviewPane previewQuery={previewQuery} runSqlQuery={runSqlQuery} deduplicate />
+        <PreviewPane
+          previewQuery={previewQuery}
+          runSqlQuery={runSqlQuery}
+          deduplicate
+          info="The preview samples values for the column within the selected filter."
+        />
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

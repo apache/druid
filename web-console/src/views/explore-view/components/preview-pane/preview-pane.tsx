@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import { Callout } from '@blueprintjs/core';
+import { Button, Callout, Popover } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
 import { dedupe } from 'druid-query-toolkit';
 import React from 'react';
 
+import { PopoverText } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
 import { formatEmpty } from '../../../../utils';
 
@@ -40,10 +42,11 @@ export interface PreviewPaneProps {
   previewQuery: string | undefined;
   runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
   deduplicate?: boolean;
+  info?: string;
 }
 
 export const PreviewPane = React.memo(function PreviewPane(props: PreviewPaneProps) {
-  const { previewQuery, runSqlQuery, deduplicate } = props;
+  const { previewQuery, runSqlQuery, deduplicate, info } = props;
 
   const [previewState] = useQueryManager({
     query: previewQuery,
@@ -55,6 +58,11 @@ export const PreviewPane = React.memo(function PreviewPane(props: PreviewPanePro
   const previewValues = previewState.data ? getPreviewValues(previewState.data) : undefined;
   return (
     <Callout className="preview-pane" title="Preview">
+      {info && (
+        <Popover className="info-popover" content={<PopoverText>{info}</PopoverText>}>
+          <Button icon={IconNames.INFO_SIGN} minimal />
+        </Popover>
+      )}
       {previewState.loading && 'Loading...'}
       {previewState.error && <div className="preview-error">{previewState.getErrorMessage()}</div>}
       {previewValues &&

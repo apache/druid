@@ -88,7 +88,11 @@ export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDia
             />
           </FormGroup>
         </div>
-        <PreviewPane previewQuery={previewQuery} runSqlQuery={runSqlQuery} />
+        <PreviewPane
+          previewQuery={previewQuery}
+          runSqlQuery={runSqlQuery}
+          info="The preview shows the overal value for this measure within the selected filter."
+        />
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
