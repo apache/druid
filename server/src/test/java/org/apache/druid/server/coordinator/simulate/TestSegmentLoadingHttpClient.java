@@ -34,6 +34,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -81,7 +82,6 @@ public class TestSegmentLoadingHttpClient implements HttpClient
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <Intermediate, Final> ListenableFuture<Final> go(
       Request request,
       HttpResponseHandler<Intermediate, Final> handler,
@@ -143,9 +143,11 @@ public class TestSegmentLoadingHttpClient implements HttpClient
         new TypeReference<>() {}
     );
 
+    final SegmentLoadingMode loadingMode = getLoadingMode(request);
+
     return changeRequests
         .stream()
-        .map(changeRequest -> processRequest(changeRequest, changeHandler))
+        .map(changeRequest -> processRequest(changeRequest, loadingMode, changeHandler))
         .collect(Collectors.toList());
   }
 
@@ -175,18 +177,31 @@ public class TestSegmentLoadingHttpClient implements HttpClient
    */
   private DataSegmentChangeResponse processRequest(
       DataSegmentChangeRequest request,
+      SegmentLoadingMode loadingMode,
       DataSegmentChangeHandler handler
   )
   {
     SegmentChangeStatus status;
     try {
       request.go(handler, NOOP_CALLBACK);
-      status = SegmentChangeStatus.SUCCESS;
+      status = SegmentChangeStatus.success(loadingMode);
     }
     catch (Exception e) {
       status = SegmentChangeStatus.failed(e.getMessage());
     }
 
     return new DataSegmentChangeResponse(request, status);
+  }
+
+  private static SegmentLoadingMode getLoadingMode(Request request)
+  {
+    String url = request.getUrl().toString();
+    String[] splits = url.split("loadingMode=");
+
+    if (splits.length > 1) {
+      return SegmentLoadingMode.valueOf(splits[1]);
+    } else {
+      return SegmentLoadingMode.NORMAL;
+    }
   }
 }

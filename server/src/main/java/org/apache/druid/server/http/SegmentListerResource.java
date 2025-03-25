@@ -62,7 +62,7 @@ import java.util.List;
 /**
  * Endpoints exposed here are to be used only for druid internal management of segments by Coordinators, Brokers etc.
  */
-@Path("/druid-internal/v1/segments/")
+@Path("/druid-internal/v1/segments")
 @ResourceFilters(StateResourceFilter.class)
 public class SegmentListerResource
 {

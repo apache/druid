@@ -144,7 +144,7 @@ public class SegmentLoadDropHandlerTest
 
     Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(segment));
 
-    handler.addSegment(segment, DataSegmentChangeCallback.NOOP);
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
 
     // Make sure the scheduled runnable that "deletes" segment files has been executed.
     // Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
@@ -186,7 +186,7 @@ public class SegmentLoadDropHandlerTest
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
-    handler.addSegment(segment, DataSegmentChangeCallback.NOOP);
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
 
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(segment));
 
@@ -194,7 +194,7 @@ public class SegmentLoadDropHandlerTest
 
     Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(segment));
 
-    handler.addSegment(segment, DataSegmentChangeCallback.NOOP);
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
 
     // Make sure the scheduled runnable that "deletes" segment files has been executed.
     // Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
@@ -232,11 +232,11 @@ public class SegmentLoadDropHandlerTest
         new SegmentChangeRequestDrop(segment2)
     );
 
-    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadingMode.NORMAL);
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadingMode.TURBO);
 
     Map<DataSegmentChangeRequest, SegmentChangeStatus> expectedStatusMap = new HashMap<>();
-    expectedStatusMap.put(batch.get(0), SegmentChangeStatus.PENDING);
-    expectedStatusMap.put(batch.get(1), SegmentChangeStatus.SUCCESS);
+    expectedStatusMap.put(batch.get(0), SegmentChangeStatus.pending(SegmentLoadingMode.TURBO));
+    expectedStatusMap.put(batch.get(1), SegmentChangeStatus.success());
     List<DataSegmentChangeResponse> result = future.get();
     for (DataSegmentChangeResponse requestAndStatus : result) {
       Assert.assertEquals(expectedStatusMap.get(requestAndStatus.getRequest()), requestAndStatus.getStatus());
@@ -247,7 +247,7 @@ public class SegmentLoadDropHandlerTest
     }
 
     result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1)), SegmentLoadingMode.TURBO).get();
-    Assert.assertEquals(SegmentChangeStatus.SUCCESS, result.get(0).getStatus());
+    Assert.assertEquals(SegmentChangeStatus.success(SegmentLoadingMode.TURBO), result.get(0).getStatus());
 
     Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());
 
@@ -287,7 +287,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
     result = future.get();
-    Assert.assertEquals(State.SUCCESS, result.get(0).getStatus().getState());
+    Assert.assertEquals(SegmentChangeStatus.success(SegmentLoadingMode.NORMAL), result.get(0).getStatus());
     Assert.assertEquals(ImmutableList.of(segment1, segment1), segmentAnnouncer.getObservedSegments());
 
   }

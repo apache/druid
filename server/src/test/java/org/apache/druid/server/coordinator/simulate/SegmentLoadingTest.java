@@ -28,6 +28,8 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Coordinator simulation test to verify behaviour of segment loading.
@@ -540,6 +542,45 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     loadQueuedSegments();
     Assert.assertEquals(historicalT11.getCurrSize(), historicalT12.getCurrSize());
+  }
+
+  @Test
+  public void testSegmentLoadingModes()
+  {
+    CoordinatorDynamicConfig config =
+        CoordinatorDynamicConfig.builder()
+                                .withTurboLoadingNodes(Set.of(historicalT11.getName()))
+                                .build();
+
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withServers(historicalT11, historicalT12)
+                             .withDynamicConfig(config)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withSegments(Segments.WIKI_10X1D)
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: Assign and load all segments
+    runCoordinatorCycle();
+    loadQueuedSegments();
+    verifyValue(Metric.ASSIGNED_COUNT, 10L);
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+
+    // Run 2: Emit success metrics
+    runCoordinatorCycle();
+    verifyValue(
+        Metric.SUCCESS_ACTIONS,
+        Map.of("server", historicalT11.getName(), "description", "LOAD: TURBO"),
+        5L
+    );
+    verifyValue(
+        Metric.SUCCESS_ACTIONS,
+        Map.of("server", historicalT12.getName(), "description", "LOAD: NORMAL"),
+        5L
+    );
   }
 
   private int getNumLoadedSegments(DruidServer... servers)
