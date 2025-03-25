@@ -32,6 +32,10 @@
   </parent>
 
   <properties>
+    <!-- The JavaScript projects use non-standard folders for their sources, therefore, name it here explicitly -->
+    <maven.build.cache.input.1>src</maven.build.cache.input.1>
+    <maven.build.cache.input.2>public</maven.build.cache.input.2>
+    <maven.build.cache.input.3>script</maven.build.cache.input.3>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
     <node.version>v20.9.0</node.version>
