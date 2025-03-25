@@ -6038,6 +6038,16 @@ license_file_path: licenses/bin/lower-case.MIT
 
 ---
 
+name: "markdown-table-ts"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jiri Hajek
+version: 1.0.3
+license_file_path: licenses/bin/markdown-table-ts.MIT
+
+---
+
 name: "memoize-one"
 license_category: binary
 module: web-console

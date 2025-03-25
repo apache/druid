@@ -30,11 +30,13 @@ import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
-import type { Format } from '../../../utils';
+import type { FileFormat } from '../../../utils';
 import {
   copyAndAlert,
   copyQueryResultsToClipboard,
   downloadQueryResults,
+  FILE_FORMAT_TO_LABEL,
+  FILE_FORMATS,
   formatDurationHybrid,
   formatInteger,
   oneOf,
@@ -86,11 +88,11 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
 
     const warningCount = execution?.stages?.getWarningCount();
 
-    const handleDownload = (format: Format) => {
+    const handleDownload = (format: FileFormat) => {
       downloadQueryResults(queryResult, `results-${execution.id}.${format}`, format);
     };
 
-    const handleCopy = (format: Format) => {
+    const handleCopy = (format: FileFormat) => {
       copyQueryResultsToClipboard(queryResult, format);
     };
 
@@ -132,16 +134,22 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
               </>
             )}
             <MenuItem text="Download results as...">
-              <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
-              <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
-              <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
-              <MenuItem text="SQL (VALUES)" onClick={() => handleDownload('sql')} />
+              {FILE_FORMATS.map(fileFormat => (
+                <MenuItem
+                  key={fileFormat}
+                  text={FILE_FORMAT_TO_LABEL[fileFormat]}
+                  onClick={() => handleDownload(fileFormat)}
+                />
+              ))}
             </MenuItem>
             <MenuItem text="Copy to clipboard as...">
-              <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
-              <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
-              <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
-              <MenuItem text="SQL (VALUES)" onClick={() => handleCopy('sql')} />
+              {FILE_FORMATS.map(fileFormat => (
+                <MenuItem
+                  key={fileFormat}
+                  text={FILE_FORMAT_TO_LABEL[fileFormat]}
+                  onClick={() => handleCopy(fileFormat)}
+                />
+              ))}
             </MenuItem>
           </Menu>
         }

@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-import { formatForFormat } from './download';
+import { formatForFileFormat } from './download';
 
 describe('download', () => {
   it('.formatForFormat', () => {
-    expect(formatForFormat(null, 'csv')).toEqual('');
-    expect(formatForFormat(null, 'tsv')).toEqual('');
-    expect(formatForFormat('', 'csv')).toEqual('""');
-    expect(formatForFormat('null', 'csv')).toEqual('"null"');
-    expect(formatForFormat('hello\nworld', 'csv')).toEqual('"hello world"');
-    expect(formatForFormat(123, 'csv')).toEqual('"123"');
-    expect(formatForFormat(new Date('2021-01-02T03:04:05.678Z'), 'csv')).toEqual(
+    expect(formatForFileFormat(null, 'csv')).toEqual('');
+    expect(formatForFileFormat(null, 'tsv')).toEqual('');
+    expect(formatForFileFormat('', 'csv')).toEqual('""');
+    expect(formatForFileFormat('null', 'csv')).toEqual('"null"');
+    expect(formatForFileFormat('hello\nworld', 'csv')).toEqual('"hello world"');
+    expect(formatForFileFormat(123, 'csv')).toEqual('"123"');
+    expect(formatForFileFormat(new Date('2021-01-02T03:04:05.678Z'), 'csv')).toEqual(
       '"2021-01-02T03:04:05.678Z"',
     );
   });

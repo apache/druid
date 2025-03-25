@@ -19,11 +19,29 @@
 import type { QueryResult } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
+import { Align, getMarkdownTable } from 'markdown-table-ts';
 
 import { copyAndAlert, stringifyValue } from './general';
 import { queryResultToValuesQuery } from './values-query';
 
-export type Format = 'csv' | 'tsv' | 'json' | 'sql';
+export type FileFormat = 'csv' | 'tsv' | 'json' | 'sql' | 'markdown';
+export const FILE_FORMATS: FileFormat[] = ['csv', 'tsv', 'json', 'sql', 'markdown'];
+
+const FILE_FORMAT_TO_MIME_TYPE: Record<FileFormat, string> = {
+  csv: 'text/csv',
+  tsv: 'text/tab-separated-values',
+  json: 'application/json',
+  sql: 'text/plain',
+  markdown: 'text/markdown',
+};
+
+export const FILE_FORMAT_TO_LABEL: Record<FileFormat, string> = {
+  csv: 'CSV',
+  tsv: 'TSV',
+  json: 'JSON (new line delimited)',
+  sql: 'SQL (VALUES)',
+  markdown: 'Markdown table',
+};
 
 export function downloadUrl(url: string, filename: string) {
   // Create a link and set the URL using `createObjectURL`
@@ -42,7 +60,10 @@ export function downloadUrl(url: string, filename: string) {
   }, 0);
 }
 
-export function formatForFormat(s: null | string | number | Date, format: 'csv' | 'tsv'): string {
+export function formatForFileFormat(
+  s: null | string | number | Date,
+  format: 'csv' | 'tsv',
+): string {
   if (s == null) return '';
 
   // stringify and remove line break
@@ -57,29 +78,16 @@ export function formatForFormat(s: null | string | number | Date, format: 'csv' 
   }
 }
 
-export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType;
-  switch (type) {
-    case 'json':
-      blobType = 'application/json';
-      break;
-    case 'tsv':
-      blobType = 'text/tab-separated-values';
-      break;
-    default:
-      // csv
-      blobType = `text/${type}`;
-      break;
-  }
-
-  const blob = new Blob([text], {
-    type: blobType,
-  });
-
-  FileSaver.saveAs(blob, filename);
+export function downloadFile(text: string, fileFormat: FileFormat, filename: string): void {
+  FileSaver.saveAs(
+    new Blob([text], {
+      type: FILE_FORMAT_TO_MIME_TYPE[fileFormat],
+    }),
+    filename,
+  );
 }
 
-function queryResultsToString(queryResult: QueryResult, format: Format): string {
+function queryResultsToString(queryResult: QueryResult, format: FileFormat): string {
   const { header, rows } = queryResult;
 
   switch (format) {
@@ -87,8 +95,8 @@ function queryResultsToString(queryResult: QueryResult, format: Format): string 
     case 'tsv': {
       const separator = format === 'csv' ? ',' : '\t';
       return [
-        header.map(column => formatForFormat(column.name, format)).join(separator),
-        ...rows.map(r => r.map(cell => formatForFormat(cell, format)).join(separator)),
+        header.map(column => formatForFileFormat(column.name, format)).join(separator),
+        ...rows.map(row => row.map(cell => formatForFileFormat(cell, format)).join(separator)),
       ].join('\n');
     }
 
@@ -101,6 +109,15 @@ function queryResultsToString(queryResult: QueryResult, format: Format): string 
         .map(r => JSONBig.stringify(r))
         .join('\n');
 
+    case 'markdown':
+      return getMarkdownTable({
+        table: {
+          head: header.map(column => column.name),
+          body: rows.map(row => row.map(cell => stringifyValue(cell))),
+        },
+        alignment: header.map(column => (column.isNumeric() ? Align.Right : Align.Left)),
+      });
+
     default:
       throw new Error(`unknown format: ${format}`);
   }
@@ -109,13 +126,16 @@ function queryResultsToString(queryResult: QueryResult, format: Format): string 
 export function downloadQueryResults(
   queryResult: QueryResult,
   filename: string,
-  format: Format,
+  fileFormat: FileFormat,
 ): void {
-  const resultString: string = queryResultsToString(queryResult, format);
-  downloadFile(resultString, format, filename);
+  const resultString: string = queryResultsToString(queryResult, fileFormat);
+  downloadFile(resultString, fileFormat, filename);
 }
 
-export function copyQueryResultsToClipboard(queryResult: QueryResult, format: Format): void {
-  const resultString: string = queryResultsToString(queryResult, format);
+export function copyQueryResultsToClipboard(
+  queryResult: QueryResult,
+  fileFormat: FileFormat,
+): void {
+  const resultString: string = queryResultsToString(queryResult, fileFormat);
   copyAndAlert(resultString, 'Query results copied to clipboard');
 }
