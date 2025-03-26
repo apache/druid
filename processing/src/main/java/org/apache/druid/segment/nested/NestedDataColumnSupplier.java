@@ -33,7 +33,6 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
@@ -66,7 +65,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final GenericIndexed<String> fields;
+        final Supplier<? extends Indexed<ByteBuffer>> fieldsSupplier;
         final FieldTypeInfo fieldInfo;
         final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
         final ImmutableBitmap nullValues;
@@ -75,8 +74,8 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
 
-        fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
-        fieldInfo = FieldTypeInfo.read(bb, fields.size());
+        fieldsSupplier = StringEncodingStrategies.getStringDictionarySupplier(mapper, bb, byteOrder);
+        fieldInfo = FieldTypeInfo.read(bb, fieldsSupplier.get().size());
 
         if (parent != null) {
           stringDictionarySupplier = parent.stringDictionarySupplier;
@@ -158,7 +157,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
 
         return new NestedDataColumnSupplier(
             columnName,
-            fields,
+            fieldsSupplier,
             fieldInfo,
             compressedRawColumnSupplier,
             nullValues,
@@ -182,7 +181,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   }
 
   private final String columnName;
-  private final GenericIndexed<String> fields;
+  private final Supplier<? extends Indexed<ByteBuffer>> fieldSupplier;
   private final FieldTypeInfo fieldInfo;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
@@ -200,7 +199,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
 
   private NestedDataColumnSupplier(
       String columnName,
-      GenericIndexed<String> fields,
+      Supplier<? extends Indexed<ByteBuffer>> fieldSupplier,
       FieldTypeInfo fieldInfo,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
@@ -216,7 +215,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   )
   {
     this.columnName = columnName;
-    this.fields = fields;
+    this.fieldSupplier = fieldSupplier;
     this.fieldInfo = fieldInfo;
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
     this.nullValues = nullValues;
@@ -240,7 +239,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields,
+        fieldSupplier,
         fieldInfo,
         stringDictionarySupplier,
         longDictionarySupplier,

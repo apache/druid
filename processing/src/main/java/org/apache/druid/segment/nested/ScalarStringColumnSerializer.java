@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
@@ -43,12 +42,12 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
 {
   public ScalarStringColumnSerializer(
       String name,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
-    super(name, indexSpec, segmentWriteOutMedium, closer);
+    super(name, columnFormatSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -64,7 +63,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
-        indexSpec.getStringDictionaryEncoding(),
+        columnFormatSpec.getStringDictionaryEncoding(),
         segmentWriteOutMedium,
         name
     );
