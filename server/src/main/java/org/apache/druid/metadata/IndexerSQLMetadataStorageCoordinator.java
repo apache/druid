@@ -1990,7 +1990,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Validate segment IDs
-    final Set<SegmentId> validSegmentIds = IdUtils.filterValidSegmentIds(dataSource, segmentIds);
+    final Set<SegmentId> validSegmentIds = IdUtils.getValidSegmentIds(dataSource, segmentIds);
 
     if (schemaPersistEnabled) {
       return transaction.findSegmentsWithSchema(validSegmentIds);

@@ -25,8 +25,8 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.common.StringUtils;
@@ -50,7 +50,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -151,18 +150,10 @@ public class OverlordDataSourcesResource
             return 0;
           }
 
-          // Validate segmentIds
-          final List<String> invalidSegmentIds = new ArrayList<>();
-          for (String segmentId : segmentIds) {
-            if (SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId).isEmpty()) {
-              invalidSegmentIds.add(segmentId);
-            }
-          }
-          if (!invalidSegmentIds.isEmpty()) {
-            throw InvalidInput.exception("Could not parse invalid segment IDs[%s]", invalidSegmentIds);
-          }
-
-          return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(
+              dataSourceName,
+              IdUtils.getValidSegmentIds(dataSourceName, segmentIds)
+          );
         }
       };
 

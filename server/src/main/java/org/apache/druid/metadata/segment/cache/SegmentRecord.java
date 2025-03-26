@@ -79,17 +79,14 @@ class SegmentRecord
 
       final SegmentId segmentId = SegmentId.tryParse(dataSource, serializedId);
       if (segmentId == null) {
-        log.noStackTrace().error(
-            "Could not parse Segment ID[%s] of datasource[%s]",
-            serializedId, dataSource
-        );
+        log.error("Could not parse Segment ID[%s] of datasource[%s]", serializedId, dataSource);
         return null;
       } else {
         return new SegmentRecord(segmentId, true, lastUpdatedTime);
       }
     }
     catch (Exception e) {
-      log.noStackTrace().error(
+      log.error(
           e,
           "Error occurred while reading Segment ID[%s] of datasource[%s]",
           serializedId, dataSource

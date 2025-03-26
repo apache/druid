@@ -273,7 +273,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           log.noStackTrace().info(e, "Interrupted while waiting for cache to be ready");
         }
         catch (Exception e) {
-          log.noStackTrace().error(e, "Error while waiting for cache to be ready");
+          log.error(e, "Error while waiting for cache to be ready");
           throw DruidException.defensive(e, "Error while waiting for cache to be ready");
         }
       }
@@ -694,7 +694,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                     .addPendingSegmentRecord(PendingSegmentRecord.fromResultSet(r, jsonMapper));
               }
               catch (Exception e) {
-                log.noStackTrace().error(
+                log.error(
                     e,
                     "Error occurred while reading Pending Segment ID[%s] of datasource[%s].",
                     segmentId, dataSource
@@ -733,7 +733,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       );
     }
     catch (Throwable t) {
-      log.noStackTrace().error(t, "Could not read segment with ID[%s]", segmentId);
+      log.error(t, "Could not read segment with ID[%s]", segmentId);
       return null;
     }
   }

@@ -171,20 +171,31 @@ public class IdUtils
   }
 
   /**
-   * Tries to parse the given serialized ID as {@link SegmentId}s of the given
+   * Tries to parse the given serialized IDs as {@link SegmentId}s of the given
    * datasource.
    *
    * @return Set containing valid segment IDs.
+   * @throws DruidException if any of the given segment IDs is invalid
    */
-  public static Set<SegmentId> filterValidSegmentIds(String dataSource, Set<String> serializedIds)
+  public static Set<SegmentId> getValidSegmentIds(String dataSource, Set<String> serializedIds)
   {
     final Set<SegmentId> validSegmentIds = new HashSet<>();
+    final Set<String> invalidIds = new HashSet<>();
 
     for (String id : serializedIds) {
       final SegmentId validId = SegmentId.tryParse(dataSource, id);
-      if (validId != null) {
+      if (validId == null) {
+        invalidIds.add(id);
+      } else {
         validSegmentIds.add(validId);
       }
+    }
+
+    if (!invalidIds.isEmpty()) {
+      throw InvalidInput.exception(
+          "Could not parse segment IDs[%s] for datasource[%s]",
+          invalidIds, dataSource
+      );
     }
 
     return validSegmentIds;

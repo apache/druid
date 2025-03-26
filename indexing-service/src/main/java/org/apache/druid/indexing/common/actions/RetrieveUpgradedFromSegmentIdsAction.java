@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
 
 import java.util.Set;
@@ -42,6 +43,8 @@ public class RetrieveUpgradedFromSegmentIdsAction implements TaskAction<Upgraded
   {
     this.dataSource = dataSource;
     this.segmentIds = segmentIds;
+
+    IdUtils.getValidSegmentIds(dataSource, segmentIds);
   }
 
   @JsonProperty

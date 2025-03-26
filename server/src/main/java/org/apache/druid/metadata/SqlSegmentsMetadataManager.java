@@ -36,7 +36,6 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.ManageLifecycle;
@@ -740,7 +739,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<String> segmentIds)
+  public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<SegmentId> segmentIds)
   {
     try {
       Pair<List<DataSegment>, SegmentTimeline> unusedSegmentsAndTimeline = connector
@@ -776,20 +775,19 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private List<DataSegment> retrieveUnusedSegments(
       final String dataSource,
-      final Set<String> segmentIds,
+      final Set<SegmentId> segmentIds,
       final Handle handle
   )
   {
-    final Set<SegmentId> validSegmentIds = IdUtils.filterValidSegmentIds(dataSource, segmentIds);
     final List<DataSegmentPlus> retrievedSegments = SqlSegmentsMetadataQuery
         .forHandle(handle, connector, dbTables.get(), jsonMapper)
-        .retrieveSegmentsById(dataSource, validSegmentIds);
+        .retrieveSegmentsById(dataSource, segmentIds);
 
-    final Set<String> unknownSegmentIds = new HashSet<>(segmentIds);
+    final Set<SegmentId> unknownSegmentIds = new HashSet<>(segmentIds);
     final List<DataSegment> unusedSegments = new ArrayList<>();
     for (DataSegmentPlus entry : retrievedSegments) {
       final DataSegment segment = entry.getDataSegment();
-      unknownSegmentIds.remove(segment.getId().toString());
+      unknownSegmentIds.remove(segment.getId());
       if (Boolean.FALSE.equals(entry.getUsed())) {
         unusedSegments.add(segment);
       }

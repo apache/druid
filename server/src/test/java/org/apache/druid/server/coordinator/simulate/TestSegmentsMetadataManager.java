@@ -118,9 +118,9 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
+  public int markAsUsedNonOvershadowedSegments(String dataSource, Set<SegmentId> segmentIds)
   {
-    return markNonOvershadowedSegmentsAsUsed(dataSource, segment -> segmentIds.contains(segment.getId().toString()));
+    return markNonOvershadowedSegmentsAsUsed(dataSource, segment -> segmentIds.contains(segment.getId()));
   }
 
   @Override

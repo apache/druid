@@ -606,10 +606,10 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     );
 
     publishUnusedSegments(koalaSegment1, koalaSegment2, koalaSegment3);
-    final Set<String> segmentIds = ImmutableSet.of(
-        koalaSegment1.getId().toString(),
-        koalaSegment2.getId().toString(),
-        koalaSegment3.getId().toString()
+    final Set<SegmentId> segmentIds = ImmutableSet.of(
+        koalaSegment1.getId(),
+        koalaSegment2.getId(),
+        koalaSegment3.getId()
     );
 
     sqlSegmentsMetadataManager.poll();
@@ -887,8 +887,8 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     final DataSegment koalaSegment2 = createNewSegment1(TestDataSource.KOALA);
 
     publishUnusedSegments(koalaSegment1, koalaSegment2);
-    final ImmutableSet<String> segmentIds =
-        ImmutableSet.of(koalaSegment1.getId().toString(), koalaSegment2.getId().toString());
+    final ImmutableSet<SegmentId> segmentIds =
+        ImmutableSet.of(koalaSegment1.getId(), koalaSegment2.getId());
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
         ImmutableSet.of(wikiSegment1, wikiSegment2),
@@ -917,8 +917,8 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     final DataSegment koalaSegment1 = createNewSegment1(TestDataSource.KOALA);
     final DataSegment koalaSegment2 = createNewSegment1(TestDataSource.KOALA);
 
-    final ImmutableSet<String> segmentIds =
-        ImmutableSet.of(koalaSegment1.getId().toString(), koalaSegment2.getId().toString());
+    final ImmutableSet<SegmentId> segmentIds =
+        ImmutableSet.of(koalaSegment1.getId(), koalaSegment2.getId());
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
         ImmutableSet.of(wikiSegment1, wikiSegment2),

@@ -1248,7 +1248,7 @@ public class SqlSegmentsMetadataQuery
         );
       }
       catch (Throwable t) {
-        log.noStackTrace().error(t, "Could not read segment with ID[%s]", segmentId);
+        log.error(t, "Could not read segment with ID[%s]", segmentId);
         return null;
       }
     }).iterator();
