@@ -22,6 +22,7 @@ package org.apache.druid.quidem;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.sql.Connection;
@@ -29,6 +30,8 @@ import java.sql.Connection;
 public interface DruidConnectionExtras
 {
   ObjectMapper getObjectMapper();
+
+  SpecificSegmentsQuerySegmentWalker getWalker();
 
   DruidHookDispatcher getDruidHookDispatcher();
 
@@ -41,18 +44,21 @@ public interface DruidConnectionExtras
     private final ObjectMapper objectMapper;
     private final DruidHookDispatcher druidHookDispatcher;
     private final boolean isExplainSupported;
+    private final SpecificSegmentsQuerySegmentWalker walker;
     private final Injector injector;
 
     public DruidConnectionExtrasImpl(
         ObjectMapper objectMapper,
         DruidHookDispatcher druidHookDispatcher,
         boolean isExplainSupported,
+        SpecificSegmentsQuerySegmentWalker walker,
         Injector injector
     )
     {
       this.objectMapper = objectMapper;
       this.druidHookDispatcher = druidHookDispatcher;
       this.isExplainSupported = isExplainSupported;
+      this.walker = walker;
       this.injector = injector;
     }
 
@@ -72,6 +78,12 @@ public interface DruidConnectionExtras
     public boolean isExplainSupported()
     {
       return isExplainSupported;
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker getWalker()
+    {
+      return walker;
     }
 
     @Override

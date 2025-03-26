@@ -70,12 +70,31 @@ public class DruidModuleCollection implements DruidModule
 
   public static DruidModule of(Module... modules)
   {
-    return new DruidModuleCollection(Arrays.asList(modules));
+    return of(Arrays.asList(modules));
   }
 
-  public static DruidModule of(List<Module> modules)
+  public static DruidModule of(List<? extends Module> modules)
   {
-    return new DruidModuleCollection(modules);
+    return new DruidModuleCollection(flatten(modules));
+  }
+
+  public static List<Module> flatten(Module... modules)
+  {
+    return flatten(Arrays.asList(modules));
+  }
+
+  public static List<Module> flatten(List<? extends Module> modules)
+  {
+    ArrayList<Module> flattenedModules = new ArrayList<>(modules.size());
+    for (Module module : modules) {
+      if (module instanceof DruidModuleCollection) {
+        DruidModuleCollection moduleCollection = (DruidModuleCollection) module;
+        flattenedModules.addAll(moduleCollection.subModules);
+      } else {
+        flattenedModules.add(module);
+      }
+    }
+    return flattenedModules;
   }
 
 }

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
@@ -86,7 +87,12 @@ public class DruidAvaticaTestDriver implements Driver
       return server.getConnection(info);
     }
     catch (Exception e) {
-      throw new SQLException("Can't create testconnection", e);
+      if (e instanceof SQLException) {
+        throw (SQLException) e;
+      }
+      // We create an Error here so that the exception is certain to make it out of the Quidem runner because it
+      // captures SqlExceptions and makes the messages hard to find sometimes.
+      throw new Error("Can't create testconnection", e);
     }
   }
 
@@ -100,6 +106,7 @@ public class DruidAvaticaTestDriver implements Driver
         ObjectMapper objectMapper,
         DruidHookDispatcher druidHookDispatcher,
         @Named("isExplainSupported") Boolean isExplainSupported,
+        SpecificSegmentsQuerySegmentWalker walker,
         Injector injector
     )
     {
@@ -107,6 +114,7 @@ public class DruidAvaticaTestDriver implements Driver
           objectMapper,
           druidHookDispatcher,
           isExplainSupported,
+          walker,
           injector
       );
     }
@@ -131,7 +139,6 @@ public class DruidAvaticaTestDriver implements Driver
     {
       closer.close();
     }
-
   }
 
   static class AvaticaJettyServer implements Closeable
