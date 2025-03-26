@@ -24,15 +24,7 @@ import ReactTable from 'react-table';
 import type { Execution } from '../../../druid-models';
 import { SMALL_TABLE_PAGE_SIZE } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
-import {
-  clamp,
-  downloadUrl,
-  formatBytes,
-  formatInteger,
-  pluralIfNeeded,
-  tickIcon,
-  wait,
-} from '../../../utils';
+import { clamp, formatBytes, formatInteger, pluralIfNeeded, tickIcon } from '../../../utils';
 
 import './destination-pages-pane.scss';
 
@@ -90,16 +82,15 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     );
   }
 
-  function getPageFilename(pageIndex: number) {
+  function getFilenamePageInfo(pageIndex: number) {
+    if (pageIndex < 0) return 'all_data';
     const numPagesString = String(numPages);
     const pageNumberString = String(pageIndex + 1).padStart(numPagesString.length, '0');
-    return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
+    return `page_${pageNumberString}_of_${numPagesString}`;
   }
 
-  async function downloadAllData() {
-    if (!pages) return;
-    downloadUrl(getResultUrl(-1), `${id}_all_data.${desiredExtension}`);
-    await wait(100);
+  function getPageFilename(pageIndex: number) {
+    return `${id}_${getFilenamePageInfo(pageIndex)}.${desiredExtension}`;
   }
 
   return (
@@ -134,11 +125,12 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           />
         </Popover>{' '}
         {pages.length > 1 && (
-          <Button
+          <AnchorButton
             intent={Intent.PRIMARY}
             icon={IconNames.DOWNLOAD}
             text="Download all data (concatenated)"
-            onClick={() => void downloadAllData()}
+            href={getResultUrl(-1)}
+            download
           />
         )}
       </p>
@@ -184,6 +176,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 text="Download"
                 minimal
                 href={getResultUrl(value)}
+                download
               />
             ),
           },

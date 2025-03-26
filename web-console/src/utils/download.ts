@@ -43,23 +43,6 @@ export const FILE_FORMAT_TO_LABEL: Record<FileFormat, string> = {
   markdown: 'Markdown table',
 };
 
-export function downloadUrl(url: string, filename: string) {
-  // Create a link and set the URL using `createObjectURL`
-  const link = document.createElement('a');
-  link.style.display = 'none';
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-
-  // To make this work on Firefox we need to wait
-  // a little while before removing it.
-  setTimeout(() => {
-    if (!link.parentNode) return;
-    link.parentNode.removeChild(link);
-  }, 0);
-}
-
 export function formatForFileFormat(
   s: null | string | number | Date,
   format: 'csv' | 'tsv',
@@ -67,7 +50,7 @@ export function formatForFileFormat(
   if (s == null) return '';
 
   // stringify and remove line break
-  const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
+  const str = stringifyValue(s).replace(/\r\n|\r|\n/g, ' ');
 
   if (format === 'csv') {
     // csv: single quote => double quote, handle ','
