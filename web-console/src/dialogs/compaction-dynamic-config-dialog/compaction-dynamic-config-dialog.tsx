@@ -20,52 +20,18 @@ import { Button, Classes, Code, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import type { Field } from '../../components';
-import { AutoForm, ExternalLink, Loader } from '../../components';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, ExternalLink, FormJsonSelector, JsonInput, Loader } from '../../components';
+import type { CompactionDynamicConfig } from '../../druid-models';
+import {
+  COMPACTION_DYNAMIC_CONFIG_DEFAULT_MAX,
+  COMPACTION_DYNAMIC_CONFIG_DEFAULT_RATIO,
+  COMPACTION_DYNAMIC_CONFIG_FIELDS,
+} from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { deleteKeys, getDruidErrorMessage } from '../../utils';
-
-interface CompactionDynamicConfig {
-  compactionTaskSlotRatio: number;
-  maxCompactionTaskSlots: number;
-  compactionPolicy: { type: 'newestSegmentFirst'; priorityDatasource?: string | null };
-  useSupervisors: boolean;
-  engine: 'native' | 'msq';
-}
-
-const DEFAULT_RATIO = 0.1;
-const DEFAULT_MAX = 2147483647;
-const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] = [
-  {
-    name: 'useSupervisors',
-    type: 'boolean',
-    defaultValue: false,
-    info: 'Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.',
-  },
-  {
-    name: 'engine',
-    type: 'string',
-    defined: config => Boolean(config.useSupervisors),
-    defaultValue: 'native',
-    suggestions: ['native', 'msq'],
-    info: 'Engine to use for running compaction tasks, native or MSQ.',
-  },
-  {
-    name: 'compactionTaskSlotRatio',
-    type: 'ratio',
-    defaultValue: DEFAULT_RATIO,
-    info: <>The ratio of the total task slots to the compaction task slots.</>,
-  },
-  {
-    name: 'maxCompactionTaskSlots',
-    type: 'number',
-    defaultValue: DEFAULT_MAX,
-    info: <>The maximum number of task slots for compaction tasks</>,
-    min: 0,
-  },
-];
+import { getDruidErrorMessage } from '../../utils';
 
 export interface CompactionDynamicConfigDialogProps {
   onClose(): void;
@@ -75,18 +41,21 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
   props: CompactionDynamicConfigDialogProps,
 ) {
   const { onClose } = props;
+  const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [dynamicConfig, setDynamicConfig] = useState<
     Partial<CompactionDynamicConfig> | undefined
   >();
+  const [jsonError, setJsonError] = useState<Error | undefined>();
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
     processQuery: async (_, cancelToken) => {
       try {
-        const c = (
-          await Api.instance.get('/druid/coordinator/v1/config/compaction', { cancelToken })
-        ).data;
-        setDynamicConfig(deleteKeys(c, ['compactionConfigs']));
+        const configResp = await Api.instance.get(
+          '/druid/coordinator/v1/config/compaction/cluster',
+          { cancelToken },
+        );
+        setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
           icon: IconNames.ERROR,
@@ -143,17 +112,33 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
             <p>
               The maximum number of task slots used for compaction will be{' '}
               <Code>{`clamp(floor(${
-                dynamicConfig.compactionTaskSlotRatio ?? DEFAULT_RATIO
-              } * total_task_slots), 1, ${
-                dynamicConfig.maxCompactionTaskSlots ?? DEFAULT_MAX
+                dynamicConfig.compactionTaskSlotRatio ?? COMPACTION_DYNAMIC_CONFIG_DEFAULT_RATIO
+              } * total_task_slots), ${dynamicConfig.engine === 'msq' ? 2 : 1}, ${
+                dynamicConfig.maxCompactionTaskSlots ?? COMPACTION_DYNAMIC_CONFIG_DEFAULT_MAX
               })`}</Code>
               .
             </p>
-            <AutoForm
-              fields={COMPACTION_DYNAMIC_CONFIG_FIELDS}
-              model={dynamicConfig}
-              onChange={setDynamicConfig}
+            <FormJsonSelector
+              tab={currentTab}
+              onChange={t => {
+                setJsonError(undefined);
+                setCurrentTab(t);
+              }}
             />
+            {currentTab === 'form' ? (
+              <AutoForm
+                fields={COMPACTION_DYNAMIC_CONFIG_FIELDS}
+                model={dynamicConfig}
+                onChange={setDynamicConfig}
+              />
+            ) : (
+              <JsonInput
+                value={dynamicConfig}
+                height="50vh"
+                onChange={setDynamicConfig}
+                setError={setJsonError}
+              />
+            )}
           </div>
           <div className={Classes.DIALOG_FOOTER}>
             <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -162,6 +147,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
                 onClick={() => void saveConfig()}
                 intent={Intent.PRIMARY}
                 rightIcon={IconNames.TICK}
+                disabled={Boolean(jsonError)}
               />
             </div>
           </div>
