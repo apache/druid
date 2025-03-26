@@ -25,7 +25,9 @@ import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.SeekableInputStream;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -34,7 +36,9 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -55,13 +59,15 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         file,
         schema,
         JSONPathSpec.DEFAULT,
-        true
+        true,
+        false
     );
 
     InputEntityReader readerNotAsString = createReader(
         file,
         schema,
         JSONPathSpec.DEFAULT,
+        false,
         false
     );
 
@@ -80,12 +86,14 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         file,
         schema,
         JSONPathSpec.DEFAULT,
-        true
+        true,
+        false
     );
     readerNotAsString = createReader(
         file,
         schema,
         JSONPathSpec.DEFAULT,
+        false,
         false
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
@@ -309,6 +317,142 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
   }
 
   @Test
+  public void testParquetThriftCompatProjectPushdown() throws IOException
+  {
+    /*
+      message ParquetSchema {
+        required boolean boolColumn;
+        required int32 byteColumn;
+        required int32 shortColumn;
+        required int32 intColumn;
+        required int64 longColumn;
+        required double doubleColumn;
+        required binary binaryColumn (UTF8);
+        required binary stringColumn (UTF8);
+        required binary enumColumn (ENUM);
+        optional boolean maybeBoolColumn;
+        optional int32 maybeByteColumn;
+        optional int32 maybeShortColumn;
+        optional int32 maybeIntColumn;
+        optional int64 maybeLongColumn;
+        optional double maybeDoubleColumn;
+        optional binary maybeBinaryColumn (UTF8);
+        optional binary maybeStringColumn (UTF8);
+        optional binary maybeEnumColumn (ENUM);
+        required group stringsColumn (LIST) {
+          repeated binary stringsColumn_tuple (UTF8);
+        }
+        required group intSetColumn (LIST) {
+          repeated int32 intSetColumn_tuple;
+        }
+        required group intToStringColumn (MAP) {
+          repeated group map (MAP_KEY_VALUE) {
+            required int32 key;
+            optional binary value (UTF8);
+          }
+        }
+        required group complexColumn (MAP) {
+          repeated group map (MAP_KEY_VALUE) {
+            required int32 key;
+            optional group value (LIST) {
+              repeated group value_tuple {
+                required group nestedIntsColumn (LIST) {
+                  repeated int32 nestedIntsColumn_tuple;
+                }
+                required binary nestedStringColumn (UTF8);
+              }
+            }
+          }
+        }
+      }
+     */
+    final String file = "example/compat/parquet-thrift-compat.snappy.parquet";
+    final SeekableFileEntity entity = new SeekableFileEntity(new File(file));
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", DateTimes.of("2018-09-01T00:00:00.000Z")),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("longColumn", "stringsColumn", "intToStringColumn", "complexColumn"))),
+        ColumnsFilter.all()
+    );
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByLogicalMap", "$.intToStringColumn.1"),
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByComplexLogicalMap", "$.complexColumn.1[0].nestedIntsColumn[1]")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    InputEntityReader reader = createReader(
+        entity,
+        schema,
+        flattenSpec,
+        false,
+        true
+    );
+
+    List<InputRow> rows = readAllRows(reader);
+
+    // Verify that Parquet library did indeed seek to a particular offset while reading the data
+    Assert.assertTrue(String.valueOf(entity.pos), entity.pos > 0);
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(4, rows.get(0).getDimensions().size());
+    Assert.assertEquals("0", rows.get(0).getDimension("longColumn").get(0));
+    Assert.assertEquals("arr_0", rows.get(0).getDimension("stringsColumn").get(0));
+    Assert.assertEquals("arr_1", rows.get(0).getDimension("stringsColumn").get(1));
+    Assert.assertEquals("val_1", rows.get(0).getDimension("extractByLogicalMap").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("extractByComplexLogicalMap").get(0));
+
+    entity.pos = 0;
+    reader = createReader(
+        entity,
+        schema,
+        flattenSpec,
+        false,
+        true
+    );
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    final String expectedJson = "{\n"
+                                + "  \"intToStringColumn\" : {\n"
+                                + "    \"0\" : \"val_0\",\n"
+                                + "    \"1\" : \"val_1\",\n"
+                                + "    \"2\" : \"val_2\"\n"
+                                + "  },\n"
+                                + "  \"stringsColumn\" : [ \"arr_0\", \"arr_1\", \"arr_2\" ],\n"
+                                + "  \"longColumn\" : 0,\n"
+                                + "  \"complexColumn\" : {\n"
+                                + "    \"0\" : [ {\n"
+                                + "      \"nestedStringColumn\" : \"val_0\",\n"
+                                + "      \"nestedIntsColumn\" : [ 0, 1, 2 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_1\",\n"
+                                + "      \"nestedIntsColumn\" : [ 1, 2, 3 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_2\",\n"
+                                + "      \"nestedIntsColumn\" : [ 2, 3, 4 ]\n"
+                                + "    } ],\n"
+                                + "    \"1\" : [ {\n"
+                                + "      \"nestedStringColumn\" : \"val_0\",\n"
+                                + "      \"nestedIntsColumn\" : [ 0, 1, 2 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_1\",\n"
+                                + "      \"nestedIntsColumn\" : [ 1, 2, 3 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_2\",\n"
+                                + "      \"nestedIntsColumn\" : [ 2, 3, 4 ]\n"
+                                + "    } ],\n"
+                                + "    \"2\" : [ {\n"
+                                + "      \"nestedStringColumn\" : \"val_0\",\n"
+                                + "      \"nestedIntsColumn\" : [ 0, 1, 2 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_1\",\n"
+                                + "      \"nestedIntsColumn\" : [ 1, 2, 3 ]\n"
+                                + "    }, {\n"
+                                + "      \"nestedStringColumn\" : \"val_2\",\n"
+                                + "      \"nestedIntsColumn\" : [ 2, 3, 4 ]\n"
+                                + "    } ]\n"
+                                + "  }\n"
+                                + "}";
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertTrue(String.valueOf(entity.pos), entity.pos > 0);
+  }
+
+  @Test
   public void testOldRepeatedInt() throws IOException
   {
     final String file = "example/compat/old-repeated-int.parquet";
@@ -436,5 +580,56 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "  }\n"
                                 + "}";
     Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+  }
+
+  private static class SeekableFileEntity extends FileEntity
+  {
+    // It is wrong to declare this variable at this level since it is tied to the seekable stream that might be created
+    // multiple times. However, it is convenient for this test to access this variable to test the seekable stream.
+    long pos = 0;
+    public SeekableFileEntity(File file)
+    {
+      super(file);
+    }
+
+    @Override
+    public boolean isSeekable()
+    {
+      return true;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return getFile().length();
+    }
+
+    @Override
+    public SeekableInputStream openSeekable() throws IOException
+    {
+      return new SeekableInputStream()
+      {
+       // long pos = 0;
+        InputStream delegate = open();
+        @Override
+        public int read() throws IOException
+        {
+          return delegate.read();
+        }
+        @Override
+        public long getPos()
+        {
+          return pos;
+        }
+
+        @Override
+        public void seek(long newPos) throws IOException
+        {
+          delegate = open();
+          delegate.skip(newPos);
+          pos = newPos;
+        }
+      };
+    }
   }
 }

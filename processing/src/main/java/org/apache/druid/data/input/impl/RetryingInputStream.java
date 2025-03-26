@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
+import org.apache.druid.data.input.SeekableInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -32,15 +33,17 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * This class is responsible for re-opening the underlying input
  * stream for the input object on the given {@link #retryCondition}.
  *
+ * RetryingInputStream directly extends {@link SeekableInputStream} since it needs to support seek primitives anyway
+ * to support resuming from an offset.
+ *
  * @param <T> object type
  */
-public class RetryingInputStream<T> extends InputStream
+public class RetryingInputStream<T> extends SeekableInputStream
 {
   private static final Logger log = new Logger(RetryingInputStream.class);
 
@@ -169,6 +172,47 @@ public class RetryingInputStream<T> extends InputStream
   {
     Throwables.propagateIfInstanceOf(t, IOException.class);
     throw new IOException(t);
+  }
+
+  @Override
+  public long getPos() throws IOException
+  {
+    if (delegate == null) {
+      return startOffset;
+    }
+    return startOffset + delegate.getCount();
+  }
+
+  @Override
+  public void seek(long newPos) throws IOException
+  {
+    if (delegate == null) {
+      startOffset = newPos;
+      return;
+    }
+
+    // A less sophisticated version of https://github.com/apache/hadoop/blob/87fb97777745b2cefed6bef57490b84676d2343d/hadoop-tools/hadoop-aws/src/main/java/org/apache/hadoop/fs/s3a/S3AInputStream.java#L364
+    // skip instead of re-opening the stream when possible
+    long diff = newPos - getPos();
+    if (diff > 0) {
+      // forward seek -this is where data can be skipped
+
+      int available = delegate.available();
+      if (diff < available) {
+        delegate.skip(diff);
+
+        if (getPos() == newPos) {
+          startOffset = newPos;
+          return;
+        }
+        log.warn("Failed to seek on %s to %s. Current position %s",
+                 this.object, newPos,  getPos());
+      }
+    }
+
+    delegate.close();
+    startOffset = newPos;
+    delegate = null;
   }
 
   @Override

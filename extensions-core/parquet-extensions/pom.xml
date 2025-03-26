@@ -201,7 +201,7 @@
         </dependency>
       </dependencies>
       <properties>
-        <parquet.version>1.13.0</parquet.version>
+        <parquet.version>1.13.1</parquet.version>
       </properties>
     </profile>
   </profiles>
