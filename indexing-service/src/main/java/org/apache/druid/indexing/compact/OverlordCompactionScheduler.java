@@ -285,7 +285,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
     } else {
       cleanupState();
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS * 6);
+      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS * 4);
     }
   }
 
