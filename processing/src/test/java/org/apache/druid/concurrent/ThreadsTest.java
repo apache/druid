@@ -17,38 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.quidem;
+package org.apache.druid.concurrent;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.IOException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
-public class QTest extends DruidQuidemTestBase
+public class ThreadsTest
 {
-  public QTest()
-  {
-    super(new DruidQuidemCommandHandler());
-  }
-
-  @Override
-  protected File getTestRoot()
-  {
-    return ProjectPathUtils.getPathFromProjectRoot("quidem-ut/src/test/quidem/" + getClass().getName());
-  }
-
   @Test
-  public void ensureNoRecordFilesPresent() throws IOException
+  public void testThreadRename() throws Exception
   {
-    // ensure that the captured ones are saved into this test's input path
-    assertEquals(QuidemCaptureResource.RECORD_PATH, getTestRoot());
-    for (String name : getFileNames()) {
-      if (name.startsWith("record-")) {
-        fail("Record file found: " + name);
-      }
+    String oldName = Thread.currentThread().getName();
+    String newName = "testThreadRename-was:" + oldName;
+    try (AutoCloseable renameBack = Threads.withThreadName(newName)) {
+      assertEquals(newName, Thread.currentThread().getName());
     }
+    assertEquals(oldName, Thread.currentThread().getName());
   }
 }

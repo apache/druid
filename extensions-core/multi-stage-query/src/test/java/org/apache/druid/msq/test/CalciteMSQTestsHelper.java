@@ -45,12 +45,8 @@ import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.TestIndex;
@@ -98,15 +94,6 @@ public class CalciteMSQTestsHelper
       {
       }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
 
-      DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
-      {
-        @Override
-        public String getFormatString()
-        {
-          return "test";
-        }
-      };
-      binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
       binder.bind(QueryProcessingPool.class)
             .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
 
@@ -174,7 +161,6 @@ public class CalciteMSQTestsHelper
         CompleteSegment a = walker.getSegment(segmentId);
         return () -> new ReferenceCountingResourceHolder<>(a, Closer.create());
       }
-
     }
 
     @Provides
@@ -182,18 +168,6 @@ public class CalciteMSQTestsHelper
     {
       return getTestDataServerQueryHandlerFactory();
     }
-
-    @Provides
-    @LazySingleton
-    GroupingEngine getGroupingEngine(GroupByQueryConfig groupByQueryConfig, TestGroupByBuffers groupByBuffers)
-    {
-      GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-          groupByQueryConfig,
-          groupByBuffers
-      ).getGroupingEngine();
-      return groupingEngine;
-    }
-
   }
 
   @Deprecated
