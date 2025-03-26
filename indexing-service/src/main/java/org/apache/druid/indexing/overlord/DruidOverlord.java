@@ -79,7 +79,7 @@ public class DruidOverlord
       final TaskLockConfig taskLockConfig,
       final TaskQueueConfig taskQueueConfig,
       final DefaultTaskConfig defaultTaskConfig,
-      final TaskLockbox taskLockbox,
+      final GlobalTaskLockbox taskLockbox,
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
       @Self final DruidNode selfNode,

@@ -27,13 +27,13 @@ import org.joda.time.Interval;
  * This class represents a critical action must be done while the task's lock is guaranteed to not be revoked in the
  * middle of the action.
  *
- * Implementations must not change the lock state by calling {@link TaskLockbox#lock)}, {@link TaskLockbox#tryLock)},
- * or {@link TaskLockbox#unlock(Task, Interval)}.
+ * Implementations must not change the lock state by calling {@link GlobalTaskLockbox#lock)}, {@link GlobalTaskLockbox#tryLock)},
+ * or {@link GlobalTaskLockbox#unlock(Task, Interval)}.
  *
- * Also, implementations should be finished as soon as possible because all methods in {@link TaskLockbox} are blocked
+ * Also, implementations should be finished as soon as possible because all methods in {@link GlobalTaskLockbox} are blocked
  * until this action is finished.
  *
- * @see TaskLockbox#doInCriticalSection
+ * @see GlobalTaskLockbox#doInCriticalSection
  */
 public class CriticalAction<T>
 {
