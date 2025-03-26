@@ -33,12 +33,11 @@
 
   <properties>
     <maven.build.cache.input.1>src</maven.build.cache.input.1>
-    <maven.build.cache.input.2>public</maven.build.cache.input.2>
-    <maven.build.cache.input.3>script</maven.build.cache.input.3>
-    <maven.build.cache.input.4>lib</maven.build.cache.input.4>
-    <maven.build.cache.input.5>assets</maven.build.cache.input.5>
-    <maven.build.cache.input.6>e2e-tests</maven.build.cache.input.6>
-    <maven.build.cache.input.7>typings</maven.build.cache.input.7>
+    <maven.build.cache.input.2>script</maven.build.cache.input.2>
+    <maven.build.cache.input.3>lib</maven.build.cache.input.3>
+    <maven.build.cache.input.4>assets</maven.build.cache.input.4>
+    <maven.build.cache.input.5>e2e-tests</maven.build.cache.input.5>
+    <maven.build.cache.input.6>typings</maven.build.cache.input.6>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
     <node.version>v20.9.0</node.version>
