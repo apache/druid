@@ -48,6 +48,7 @@ import {
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import type {
   CompactionConfig,
+  CompactionConfigsAndMore,
   CompactionInfo,
   CompactionStatus,
   QueryWithContext,
@@ -614,11 +615,14 @@ GROUP BY 1, 2`;
           // Compaction
           auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
             try {
-              const compactionConfigsResp = await Api.instance.get<{
-                compactionConfigs: CompactionConfig[];
-              }>('/druid/coordinator/v1/config/compaction', { cancelToken });
+              const compactionConfigsAndMore = (
+                await Api.instance.get<CompactionConfigsAndMore>(
+                  '/druid/coordinator/v1/config/compaction',
+                  { cancelToken },
+                )
+              ).data;
               const compactionConfigs = lookupBy(
-                compactionConfigsResp.data.compactionConfigs || [],
+                compactionConfigsAndMore.compactionConfigs || [],
                 c => c.dataSource,
               );
 

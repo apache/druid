@@ -20,6 +20,7 @@ import { Code } from '@blueprintjs/core';
 
 import type { Field } from '../../components';
 import { deepGet, deepSet, oneOfKnown } from '../../utils';
+import type { CompactionDynamicConfig } from '../compaction-dynamic-config/compaction-dynamic-config';
 
 export interface CompactionConfig {
   dataSource: string;
@@ -29,6 +30,10 @@ export interface CompactionConfig {
 
   // Deprecated:
   inputSegmentSizeBytes?: number;
+}
+
+export interface CompactionConfigsAndMore extends CompactionDynamicConfig {
+  compactionConfigs: CompactionConfig[];
 }
 
 export const NOOP_INPUT_SEGMENT_SIZE_BYTES = 100000000000000;
