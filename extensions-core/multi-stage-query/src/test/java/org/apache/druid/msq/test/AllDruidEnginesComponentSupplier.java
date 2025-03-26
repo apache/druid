@@ -17,24 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.msq.quidem;
+package org.apache.druid.msq.test;
 
-import org.apache.druid.quidem.DruidQuidemCommandHandler;
-import org.apache.druid.quidem.DruidQuidemTestBase;
-import org.apache.druid.quidem.ProjectPathUtils;
+import org.apache.druid.sql.calcite.MultiComponentSupplier;
+import org.apache.druid.sql.calcite.MultiComponentSupplier.ComponentSuppliers;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
-import java.io.File;
-
-public class MSQQuidemTest extends DruidQuidemTestBase
+@ComponentSuppliers({
+    StandardComponentSupplier.class,
+    DartComponentSupplier.class,
+    StandardMSQComponentSupplier.class})
+public class AllDruidEnginesComponentSupplier extends MultiComponentSupplier
 {
-  public MSQQuidemTest()
-  {
-    super(new DruidQuidemCommandHandler());
-  }
-
-  @Override
-  protected File getTestRoot()
-  {
-    return ProjectPathUtils.getPathFromProjectRoot("extensions-core/multi-stage-query/src/test/quidem/" + getClass().getName());
-  }
 }
