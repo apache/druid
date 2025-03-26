@@ -93,6 +93,13 @@ services:
       MYSQL_DATABASE: druid
       MYSQL_USER: druid
       MYSQL_PASSWORD: diurd
+    healthcheck:
+      test: "mysql -uroot -pdriud druid -e 'select 1'"
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 3m
+      start_interval: 15s
 
   minio:
     container_name: minio

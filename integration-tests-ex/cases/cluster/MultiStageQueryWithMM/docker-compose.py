@@ -14,8 +14,25 @@
 # limitations under the License.
 
 from template import BaseTemplate, generate
+from template import COORDINATOR, ZOO_KEEPER, METADATA, OVERLORD, KAFKA, MIDDLE_MANAGER
 
 class Template(BaseTemplate):
+
+    def define_coordinator(self):
+        service_name = COORDINATOR
+        service = self.define_master_service(service_name, COORDINATOR)
+        self.add_env(service, 'druid_host', service_name)
+        self.add_env(service, 'druid_manager_segments_pollDuration', 'PT5S')
+        self.add_env(service, 'druid_coordinator_period', 'PT10S')
+
+    def define_indexer(self):
+        '''
+        Override the indexer to MIDDLE_MANAGER
+        '''
+        service = self.define_std_indexer(MIDDLE_MANAGER)
+        self.add_env(service, 'druid_msq_intermediate_storage_enable', 'true')
+        self.add_env(service, 'druid_msq_intermediate_storage_type', 'local')
+        self.add_env(service, 'druid_msq_intermediate_storage_basePath', '/shared/durablestorage/')
 
     # No kafka dependency in this cluster
     def define_kafka(self):
