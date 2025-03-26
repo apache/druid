@@ -360,7 +360,12 @@ public class OverlordCompactionSchedulerTest
 
     Mockito.verify(taskQueue, Mockito.never()).add(ArgumentMatchers.any());
 
-    Assert.assertNull(scheduler.getCompactionSnapshot(TestDataSource.WIKI));
+    Assert.assertEquals(
+        AutoCompactionSnapshot.builder(TestDataSource.WIKI)
+                              .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
+                              .build(),
+        scheduler.getCompactionSnapshot(TestDataSource.WIKI)
+    );
     Assert.assertTrue(scheduler.getAllCompactionSnapshots().isEmpty());
 
     serviceEmitter.verifyNotEmitted(Stats.Compaction.SUBMITTED_TASKS.getMetricName());
