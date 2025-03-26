@@ -21,6 +21,7 @@ package org.apache.druid.tests.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.hll.TgtHllType;
@@ -58,7 +59,9 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -98,6 +101,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -114,11 +118,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private static final String INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS = "/indexer/wikipedia_index_no_rollup_preserve_metric.json";
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
+  private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
 
   @DataProvider(name = "engine")
   public static Object[][] engine()
   {
     return new Object[][]{{CompactionEngine.NATIVE}};
+  }
+
+  @DataProvider(name = "useSupervisors")
+  public static Object[][] useSupervisors()
+  {
+    return new Object[][]{{true}, {false}};
   }
 
   @Inject
@@ -1585,13 +1596,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test
-  public void testAutoCompactionDutyWithFilter() throws Exception
+  @Test(dataProvider = "useSupervisors")
+  public void testAutoCompactionDutyWithFilter(boolean useSupervisors) throws Exception
   {
     loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      intervalsBeforeCompaction.sort(null);
+      intervalsBeforeCompaction.sort(Ordering.natural().reversed());
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
 
@@ -1615,7 +1626,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           false,
           CompactionEngine.NATIVE
       );
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
 
       // For dim "page", result should only contain value "Striker Eureka"
       queryAndResultFields = ImmutableMap.of(
@@ -1628,7 +1639,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       // Verify compacted segments does not get compacted again
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
@@ -1948,9 +1959,38 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Assert.assertNull(foundDataSourceCompactionConfig);
   }
 
+  private void forceTriggerAutoCompaction(
+      List<String> intervals,
+      boolean useSupervisors,
+      int numExpectedSegmentsAfterCompaction
+  ) throws Exception
+  {
+    if (useSupervisors) {
+      final FixedIntervalOrderPolicy policy = new FixedIntervalOrderPolicy(
+          intervals.stream().map(
+              interval -> new FixedIntervalOrderPolicy.Candidate(fullDatasourceName, Intervals.of(interval))
+          ).collect(Collectors.toList())
+      );
+      compactionResource.updateClusterConfig(
+          new ClusterCompactionConfig(0.5, intervals.size(), policy, true, null)
+      );
+      waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
+      compactionResource.updateClusterConfig(
+          new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null)
+      );
+    } else {
+      forceTriggerAutoCompaction(numExpectedSegmentsAfterCompaction);
+    }
+  }
+
   private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction) throws Exception
   {
     compactionResource.forceTriggerAutoCompaction();
+    waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
+  }
+
+  private void waitForCompactionToFinish(int numExpectedSegmentsAfterCompaction)
+  {
     waitForAllTasksToCompleteForDataSource(fullDatasourceName);
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),

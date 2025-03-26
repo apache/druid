@@ -28,6 +28,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -145,9 +146,31 @@ public class CompactionResourceTestClient
     }
   }
 
+  public void updateClusterConfig(ClusterCompactionConfig config) throws Exception
+  {
+    final String url = StringUtils.format(
+        "%sconfig/compaction/cluster",
+        getCoordinatorURL()
+    );
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.POST, new URL(url)).setContent(
+            "application/json",
+            jsonMapper.writeValueAsBytes(config)
+        ),
+        responseHandler
+    ).get();
+    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+      throw new ISE(
+          "Error while updating cluster compaction config, status[%s], content[%s]",
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+  }
+
   public void updateCompactionTaskSlot(Double compactionTaskSlotRatio, Integer maxCompactionTaskSlots) throws Exception
   {
-    String url = StringUtils.format(
+    final String url = StringUtils.format(
         "%sconfig/compaction/taskslots?ratio=%s&max=%s",
         getCoordinatorURL(),
         StringUtils.urlEncode(compactionTaskSlotRatio.toString()),
