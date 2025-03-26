@@ -1959,6 +1959,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Assert.assertNull(foundDataSourceCompactionConfig);
   }
 
+  /**
+   * Performs compaction of the given intervals of the test datasource,
+   * {@link #fullDatasourceName}, and verifies the total number of segments in
+   * the datasource after compaction.
+   */
   private void forceTriggerAutoCompaction(
       List<String> intervals,
       boolean useSupervisors,
@@ -1966,6 +1971,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   ) throws Exception
   {
     if (useSupervisors) {
+      // Enable compaction for the requested intervals
       final FixedIntervalOrderPolicy policy = new FixedIntervalOrderPolicy(
           intervals.stream().map(
               interval -> new FixedIntervalOrderPolicy.Candidate(fullDatasourceName, Intervals.of(interval))
@@ -1974,7 +1980,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       compactionResource.updateClusterConfig(
           new ClusterCompactionConfig(0.5, intervals.size(), policy, true, null)
       );
+
+      // Wait for scheduler to pick up the compaction job
+      Thread.sleep(30_000);
       waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
+
+      // Disable all compaction
       compactionResource.updateClusterConfig(
           new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null)
       );
