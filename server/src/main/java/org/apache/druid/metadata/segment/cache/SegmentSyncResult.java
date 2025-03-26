@@ -17,32 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.metadata.segment;
+package org.apache.druid.metadata.segment.cache;
 
-import org.skife.jdbi.v2.Handle;
+import org.apache.druid.timeline.SegmentId;
 
-import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
- * Represents a single transaction involving read/write of segment metadata into
- * the metadata store. A transaction is associated with a single instance of a
- * {@link Handle} and is meant to be short-lived.
- * <p>
- * A transaction CANNOT read back records it has written due to rollback
- * restrictions in {@link CachedSegmentMetadataTransaction}.
+ * Result of syncing a datasource cache with segments polled from metadata store.
  */
-public interface SegmentMetadataTransaction
-    extends SegmentMetadataReadTransaction, DatasourceSegmentMetadataWriter
+public class SegmentSyncResult
 {
-  /**
-   * Marks this transaction to be rolled back.
-   */
-  void setRollbackOnly();
+  private final int deleted;
+  private final int updated;
+  private final Set<SegmentId> expiredIds;
 
-  @FunctionalInterface
-  interface Callback<T>
+  public SegmentSyncResult(int deleted, int updated, Set<SegmentId> expiredIds)
   {
-    @Nullable
-    T inTransaction(SegmentMetadataTransaction transaction) throws Exception;
+    this.deleted = deleted;
+    this.updated = updated;
+    this.expiredIds = expiredIds;
   }
+
+  public int getDeleted()
+  {
+    return deleted;
+  }
+
+  public int getUpdated()
+  {
+    return updated;
+  }
+
+  public Set<SegmentId> getExpiredIds()
+  {
+    return expiredIds;
+  }
+
 }

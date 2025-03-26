@@ -37,8 +37,8 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -242,18 +242,10 @@ public class DataSourcesResource
             return 0;
           }
 
-          // Validate segmentIds
-          final List<String> invalidSegmentIds = new ArrayList<>();
-          for (String segmentId : segmentIds) {
-            if (SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId).isEmpty()) {
-              invalidSegmentIds.add(segmentId);
-            }
-          }
-          if (!invalidSegmentIds.isEmpty()) {
-            throw InvalidInput.exception("Could not parse invalid segment IDs[%s]", invalidSegmentIds);
-          }
-
-          return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+          return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(
+              dataSourceName,
+              IdUtils.getValidSegmentIds(dataSourceName, segmentIds)
+          );
         }
       };
 
