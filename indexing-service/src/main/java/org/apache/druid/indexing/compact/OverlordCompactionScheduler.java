@@ -103,6 +103,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private final TaskRunnerListener taskRunnerListener;
 
+  private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final CompactSegments duty;
 
@@ -166,28 +167,23 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   @Override
-  public void start()
+  public void becomeLeader()
   {
-    if (isEnabled() && started.compareAndSet(false, true)) {
-      log.info("Starting compaction scheduler.");
-      initState();
-      scheduleOnExecutor(this::scheduledRun);
+    if (isLeader.compareAndSet(false, true)) {
+      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
     }
   }
 
   @Override
-  public void stop()
+  public void stopBeingLeader()
   {
-    if (isEnabled() && started.compareAndSet(true, false)) {
-      log.info("Stopping compaction scheduler.");
-      cleanupState();
-    }
+    isLeader.set(false);
   }
 
   @Override
   public boolean isRunning()
   {
-    return isEnabled() && started.get();
+    return started.get();
   }
 
   @Override
@@ -220,8 +216,16 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     statusTracker.removeDatasource(dataSourceName);
   }
 
+  /**
+   * Initializes scheduler state if required.
+   */
   private synchronized void initState()
   {
+    if (!started.compareAndSet(false, true)) {
+      return;
+    }
+
+    log.info("Starting compaction scheduler.");
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().registerListener(taskRunnerListener, Execs.directExecutor());
@@ -231,8 +235,15 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     }
   }
 
+  /**
+   * Cleans up scheduler state if required.
+   */
   private synchronized void cleanupState()
   {
+    if (!started.compareAndSet(true, false)) {
+      return;
+    }
+
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().unregisterListener(taskRunnerListener.getListenerId());
@@ -251,21 +262,36 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return compactionConfigSupplier.get().isUseSupervisors();
   }
 
+  /**
+   * Periodic task which runs the compaction duty if we are leader and
+   * useSupervisors is true. Otherwise, the scheduler state is cleaned up.
+   */
   private synchronized void scheduledRun()
   {
-    if (isRunning()) {
+    if (!isLeader.get()) {
+      cleanupState();
+      return;
+    }
+
+    if (isEnabled()) {
+      initState();
       try {
         runCompactionDuty();
       }
       catch (Exception e) {
         log.error(e, "Error processing compaction queue. Continuing schedule.");
       }
-      scheduleOnExecutor(this::scheduledRun);
+      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
     } else {
       cleanupState();
+      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS * 6);
     }
   }
 
+  /**
+   * Runs the compaction duty and emits stats if {@link #METRIC_EMISSION_PERIOD}
+   * has elapsed.
+   */
   private synchronized void runCompactionDuty()
   {
     final CoordinatorRunStats stats = new CoordinatorRunStats();
@@ -336,7 +362,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return segmentManager.getSnapshotOfDataSourcesWithAllUsedSegments();
   }
 
-  private void scheduleOnExecutor(Runnable runnable)
+  private void scheduleOnExecutor(Runnable runnable, long delaySeconds)
   {
     executor.schedule(
         () -> {
@@ -347,7 +373,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
             log.error(t, "Error while executing runnable");
           }
         },
-        SCHEDULE_PERIOD_SECONDS,
+        delaySeconds,
         TimeUnit.SECONDS
     );
   }

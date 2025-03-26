@@ -190,6 +190,10 @@ A successful request returns an HTTP `200 OK` message code and an empty response
 
 ### Update capacity for compaction tasks
 
+:::info
+This API is now deprecated. Use [Update cluster-level compaction config](#update-cluster-level-compaction-config) instead.
+:::
+
 Updates the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483647.
 
 Note that while the max compaction tasks can theoretically be set to 2147483647, the practical limit is determined by the available cluster capacity and is capped at 10% of the cluster's total capacity.
@@ -355,6 +359,69 @@ Content-Type: application/json
 A successful request returns an HTTP `200 OK` message code and an empty response body.
 
 ## View automatic compaction configuration
+
+### Get cluster-level compaction config
+
+Retrieves cluster-level configuration for compaction tasks which applies to all datasources, unless explicitly overridden in the datasource compaction config.
+This includes all the fields listed in [Update cluster-level compaction config](#update-cluster-level-compaction-config).
+
+#### URL
+
+`GET` `/druid/coordinator/v1/config/compaction/cluster`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="8" label="200 SUCCESS">
+
+*Successfully retrieved cluster compaction configuration*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="10" label="cURL">
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/cluster"
+```
+</TabItem>
+
+<TabItem value="11" label="HTTP">
+
+```HTTP
+GET /druid/coordinator/v1/config/compaction/cluster HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+```json
+{
+    "compactionTaskSlotRatio": 0.5,
+    "maxCompactionTaskSlots": 1500,
+    "compactionPolicy": {
+        "type": "newestSegmentFirst",
+        "priorityDatasource": "wikipedia"
+    },
+    "useSupervisors": true,
+    "engine": "msq"
+}
+```
+
+</details>
 
 ### Get all automatic compaction configurations
 

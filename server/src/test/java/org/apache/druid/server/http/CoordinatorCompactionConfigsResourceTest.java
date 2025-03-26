@@ -128,13 +128,24 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(10, updatedConfig.getMaxCompactionTaskSlots());
     Assert.assertTrue(updatedConfig.isUseSupervisors());
     Assert.assertEquals(CompactionEngine.MSQ, updatedConfig.getEngine());
+
+    final ClusterCompactionConfig updatedClusterConfig = verifyAndGetPayload(
+        resource.getClusterCompactionConfig(),
+        ClusterCompactionConfig.class
+    );
+    Assert.assertEquals(updatedConfig.clusterConfig(), updatedClusterConfig);
   }
 
   @Test
   public void testSetCompactionTaskLimit()
   {
-    final DruidCompactionConfig defaultConfig
+    final ClusterCompactionConfig oldClusterConfig
+        = new ClusterCompactionConfig(0.1, 100, null, true, CompactionEngine.MSQ);
+    resource.updateClusterCompactionConfig(oldClusterConfig, mockHttpServletRequest);
+
+    final DruidCompactionConfig oldConfig
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
+    Assert.assertEquals(oldClusterConfig, oldConfig.clusterConfig());
 
     Response response = resource.setCompactionTaskLimit(0.5, 9, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
@@ -146,8 +157,13 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(9, updatedConfig.getMaxCompactionTaskSlots());
 
+    // Verify that other cluster config fields are unchanged
+    Assert.assertEquals(oldConfig.isUseSupervisors(), updatedConfig.isUseSupervisors());
+    Assert.assertEquals(oldConfig.getCompactionPolicy(), updatedConfig.getCompactionPolicy());
+    Assert.assertEquals(oldConfig.getEngine(), updatedConfig.getEngine());
+
     // Verify that the other fields are unchanged
-    Assert.assertEquals(defaultConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
+    Assert.assertEquals(oldConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
   }
 
   @Test
