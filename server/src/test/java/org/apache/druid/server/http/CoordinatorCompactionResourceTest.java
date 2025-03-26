@@ -49,7 +49,7 @@ public class CoordinatorCompactionResourceTest
   private final String dataSourceName = "datasource_1";
   private final AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
       dataSourceName,
-      AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+      AutoCompactionSnapshot.ScheduleStatus.RUNNING,
       null,
       1,
       1,

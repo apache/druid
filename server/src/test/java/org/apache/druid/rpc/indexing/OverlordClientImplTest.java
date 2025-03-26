@@ -479,10 +479,10 @@ public class OverlordClientImplTest
   {
     final List<AutoCompactionSnapshot> compactionSnapshots = Arrays.asList(
         AutoCompactionSnapshot.builder("ds1")
-                              .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+                              .withStatus(AutoCompactionSnapshot.ScheduleStatus.RUNNING)
                               .build(),
         AutoCompactionSnapshot.builder("ds2")
-                              .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED)
+                              .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
                               .build()
     );
     serviceClient.expectAndRespond(

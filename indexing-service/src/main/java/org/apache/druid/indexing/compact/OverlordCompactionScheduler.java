@@ -244,6 +244,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       return;
     }
 
+    log.info("Stopping compaction scheduler.");
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().unregisterListener(taskRunnerListener.getListenerId());
@@ -317,7 +318,22 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @Override
   public AutoCompactionSnapshot getCompactionSnapshot(String dataSource)
   {
-    return duty.getAutoCompactionSnapshot(dataSource);
+    if (!activeDatasourceConfigs.containsKey(dataSource)) {
+      return AutoCompactionSnapshot.builder(dataSource)
+                                   .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
+                                   .build();
+    }
+
+    final AutoCompactionSnapshot snapshot = duty.getAutoCompactionSnapshot(dataSource);
+    if (snapshot == null) {
+      final AutoCompactionSnapshot.ScheduleStatus status =
+          isEnabled()
+          ? AutoCompactionSnapshot.ScheduleStatus.AWAITING_FIRST_RUN
+          : AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED;
+      return AutoCompactionSnapshot.builder(dataSource).withStatus(status).build();
+    } else {
+      return snapshot;
+    }
   }
 
   @Override

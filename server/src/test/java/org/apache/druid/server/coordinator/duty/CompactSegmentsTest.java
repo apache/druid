@@ -361,7 +361,7 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -383,7 +383,7 @@ public class CompactSegmentsTest
     for (int i = 1; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -454,7 +454,7 @@ public class CompactSegmentsTest
 
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           dataSourceName,
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
           120 + 40 * (compactionRunCount + 1),
@@ -479,7 +479,7 @@ public class CompactSegmentsTest
     );
     verifySnapshot(
         compactSegments,
-        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         dataSourceName,
         0,
         TOTAL_BYTE_PER_DATASOURCE,
@@ -517,7 +517,7 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -541,7 +541,7 @@ public class CompactSegmentsTest
     for (int i = 1; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -608,7 +608,7 @@ public class CompactSegmentsTest
 
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           dataSourceName,
           // Minus 120 bytes accounting for the three skipped segments' original size
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
@@ -631,7 +631,7 @@ public class CompactSegmentsTest
     );
     verifySnapshot(
         compactSegments,
-        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         dataSourceName,
         0,
         // Minus 120 bytes accounting for the three skipped segments' original size
@@ -1745,7 +1745,7 @@ public class CompactSegmentsTest
 
   private void verifySnapshot(
       CompactSegments compactSegments,
-      AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
+      AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
       String dataSourceName,
       long expectedByteCountAwaitingCompaction,
       long expectedByteCountCompressed,
@@ -1792,7 +1792,7 @@ public class CompactSegmentsTest
         if (i != dataSourceIndex) {
           verifySnapshot(
               compactSegments,
-              AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+              AutoCompactionSnapshot.ScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
               40L * (compactionRunCount + 1),
@@ -1807,7 +1807,7 @@ public class CompactSegmentsTest
         } else {
           verifySnapshot(
               compactSegments,
-              AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+              AutoCompactionSnapshot.ScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
               40L * (compactionRunCount + 1),
@@ -1826,7 +1826,7 @@ public class CompactSegmentsTest
         // This verify that dataSource that ran out of slot has correct statistics
         verifySnapshot(
             compactSegments,
-            AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+            AutoCompactionSnapshot.ScheduleStatus.RUNNING,
             DATA_SOURCE_PREFIX + i,
             TOTAL_BYTE_PER_DATASOURCE - 40L * compactionRunCount,
             40L * compactionRunCount,

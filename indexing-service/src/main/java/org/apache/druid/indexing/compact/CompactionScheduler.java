@@ -82,7 +82,6 @@ public interface CompactionScheduler
   /**
    * Simulates a compaction run with the given cluster config.
    *
-   * @param updateRequest
    * @return Result of the simulation
    */
   CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest);

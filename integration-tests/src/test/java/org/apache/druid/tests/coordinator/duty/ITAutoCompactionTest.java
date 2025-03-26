@@ -620,7 +620,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.greaterThan(0L),
@@ -638,7 +638,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -769,7 +769,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.greaterThan(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -791,7 +791,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -2055,7 +2055,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void getAndAssertCompactionStatus(
       String fullDatasourceName,
-      AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
+      AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
       Matcher<Long> bytesAwaitingCompactionMatcher,
       Matcher<Long> bytesCompactedMatcher,
       Matcher<Long> bytesSkippedMatcher,
