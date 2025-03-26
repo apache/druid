@@ -40,8 +40,8 @@ describe('download', () => {
         ['LONG', 'STRING', 'LONG'],
         ['TIMESTAMP', 'VARCHAR', 'BIGINT'],
         ['1970-01-01T00:00:00.000Z', 'Chrome', 76261],
-        ['1970-01-01T00:00:00.000Z', 'Chrome Mobile', 252689],
-        ['1970-01-01T00:00:00.000Z', 'Chrome', 1753602],
+        ['1970-01-01T00:00:00.000Z', 'Chrome\nMobile', 252689],
+        ['1970-01-01T00:00:00.000Z', '"Ch|rome"', 1753602],
       ],
       true,
       true,
@@ -54,7 +54,7 @@ describe('download', () => {
         "__time","browser","session_length"
         "1970-01-01T00:00:00.000Z","Chrome","76261"
         "1970-01-01T00:00:00.000Z","Chrome Mobile","252689"
-        "1970-01-01T00:00:00.000Z","Chrome","1753602"
+        "1970-01-01T00:00:00.000Z","""Ch|rome""","1753602"
       `);
     });
 
@@ -63,7 +63,7 @@ describe('download', () => {
         __time	browser	session_length
         1970-01-01T00:00:00.000Z	Chrome	76261
         1970-01-01T00:00:00.000Z	Chrome Mobile	252689
-        1970-01-01T00:00:00.000Z	Chrome	1753602
+        1970-01-01T00:00:00.000Z	"Ch|rome"	1753602
       `);
     });
 
@@ -71,7 +71,7 @@ describe('download', () => {
       expect(queryResultsToString(queryResult, 'json')).toEqual(sane`
         {"__time":"1970-01-01T00:00:00.000Z","browser":"Chrome","session_length":76261}
         {"__time":"1970-01-01T00:00:00.000Z","browser":"Chrome Mobile","session_length":252689}
-        {"__time":"1970-01-01T00:00:00.000Z","browser":"Chrome","session_length":1753602}
+        {"__time":"1970-01-01T00:00:00.000Z","browser":"\"Ch|rome\"","session_length":1753602}
       `);
     });
 

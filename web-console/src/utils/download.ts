@@ -43,22 +43,26 @@ export const FILE_FORMAT_TO_LABEL: Record<FileFormat, string> = {
   markdown: 'Markdown table',
 };
 
-export function formatForFileFormat(
-  s: null | string | number | Date,
-  format: 'csv' | 'tsv',
-): string {
+export function stringifyCsvValue(s: null | string | number | Date): string {
   if (s == null) return '';
+  const str = stringifyValue(s).replace(/\r?\n/g, ' ');
+  return `"${str.replace(/"/g, '""')}"`;
+}
 
-  // stringify and remove line break
-  const str = stringifyValue(s).replace(/\r\n|\r|\n/g, ' ');
+export function stringifyTsvValue(s: null | string | number | Date): string {
+  if (s == null) return '';
+  return stringifyValue(s).replace(/\r?\n/g, ' ').replace(/\t/g, ' ');
+}
 
-  if (format === 'csv') {
-    // csv: single quote => double quote, handle ','
-    return `"${str.replace(/"/g, '""')}"`;
-  } else {
-    // tsv: single quote => double quote, \t => ''
-    return str.replace(/\t/g, '').replace(/"/g, '""');
-  }
+function queryResultToDsv(
+  queryResult: QueryResult,
+  delimiter: string,
+  valueFormatter: (v: any) => string,
+): string {
+  return [
+    queryResult.header.map(column => valueFormatter(column.name)).join(delimiter),
+    ...queryResult.rows.map(row => row.map(cell => valueFormatter(cell)).join(delimiter)),
+  ].join('\n');
 }
 
 export function downloadFile(text: string, fileFormat: FileFormat, filename: string): void {
@@ -75,13 +79,10 @@ export function queryResultsToString(queryResult: QueryResult, format: FileForma
 
   switch (format) {
     case 'csv':
-    case 'tsv': {
-      const separator = format === 'csv' ? ',' : '\t';
-      return [
-        header.map(column => formatForFileFormat(column.name, format)).join(separator),
-        ...rows.map(row => row.map(cell => formatForFileFormat(cell, format)).join(separator)),
-      ].join('\n');
-    }
+      return queryResultToDsv(queryResult, ',', stringifyCsvValue);
+
+    case 'tsv':
+      return queryResultToDsv(queryResult, '\t', stringifyTsvValue);
 
     case 'sql':
       return queryResultToValuesQuery(queryResult).toString();
