@@ -235,7 +235,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return inReadOnlyDatasourceTransaction(
         dataSource,
         transaction ->
-            retrieveSegmentsById(transaction, segmentIds)
+            retrieveSegmentsById(dataSource, transaction, segmentIds)
                 .stream()
                 .map(DataSegmentPlus::getDataSegment)
                 .collect(Collectors.toSet())
@@ -243,18 +243,43 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
+  public int markSegmentsWithinIntervalAsUnused(
+      String dataSource,
+      Interval interval,
+      @Nullable List<String> versions
+  )
   {
-    final Integer numSegmentsMarkedUnused = inReadWriteDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
-        transaction -> transaction.markSegmentsWithinIntervalAsUnused(interval, DateTimes.nowUtc())
+        transaction -> transaction.markSegmentsWithinIntervalAsUnused(interval, versions, DateTimes.nowUtc())
     );
+  }
 
-    log.info(
-        "Marked [%,d] segments unused for datasource[%s], interval[%s].",
-        numSegmentsMarkedUnused, dataSource, interval
+  @Override
+  public boolean markSegmentAsUnused(SegmentId segmentId)
+  {
+    return inReadWriteDatasourceTransaction(
+        segmentId.getDataSource(),
+        transaction -> transaction.markSegmentAsUnused(segmentId, DateTimes.nowUtc())
     );
-    return numSegmentsMarkedUnused;
+  }
+
+  @Override
+  public int markSegmentsAsUnused(String dataSource, Set<SegmentId> segmentIds)
+  {
+    return inReadWriteDatasourceTransaction(
+        dataSource,
+        transaction -> transaction.markSegmentsAsUnused(segmentIds, DateTimes.nowUtc())
+    );
+  }
+
+  @Override
+  public int markAllSegmentsAsUnused(String dataSource)
+  {
+    return inReadWriteDatasourceTransaction(
+        dataSource,
+        transaction -> transaction.markAllSegmentsAsUnused(DateTimes.nowUtc())
+    );
   }
 
   private SegmentTimeline getTimelineForIntervals(
@@ -355,6 +380,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
 
             Set<DataSegmentPlus> upgradedSegments = createNewIdsOfAppendSegmentsAfterReplace(
+                dataSource,
                 transaction,
                 replaceSegments,
                 locksHeldByReplaceTask
@@ -553,7 +579,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * those versions.</li>
    * </ul>
    *
-   * @param replaceSegments Segments being committed by a REPLACE task
+   * @param replaceSegments Segments being committed by a "REPLACE" task
    * @return List of inserted pending segment records
    */
   private List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
@@ -1139,7 +1165,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyMap();
     }
 
-    // Shard spec of any of the requests (as they are all compatible) can be used to
+    // Shard spec of one of the requests (as they are all compatible) can be used to
     // identify existing shard specs that share partition space with the requested ones.
     final PartialShardSpec partialShardSpec = requests.get(0).getPartialShardSpec();
 
@@ -1465,7 +1491,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     // Check if there is a conflict with an existing entry in the segments table
-    if (transaction.findSegment(allocatedId.asSegmentId()) == null) {
+    if (transaction.findExistingSegmentIds(Set.of(allocatedId.asSegmentId())).isEmpty()) {
       return allocatedId;
     }
 
@@ -1559,7 +1585,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         persistSchema(transaction, segments, segmentSchemaMapping);
       }
 
-      Set<String> existedSegments = transaction.findExistingSegmentIds(segments);
+      final Set<SegmentId> segmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+      Set<String> existedSegments = transaction.findExistingSegmentIds(segmentIds);
       log.info("Found these segments already exist in DB: %s", existedSegments);
 
       for (DataSegment segment : segments) {
@@ -1603,15 +1630,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Creates new versions of segments appended while a REPLACE task was in progress.
+   * Creates new versions of segments appended while a "REPLACE" task was in progress.
    */
   private Set<DataSegmentPlus> createNewIdsOfAppendSegmentsAfterReplace(
+      final String dataSource,
       final SegmentMetadataTransaction transaction,
       final Set<DataSegment> replaceSegments,
       final Set<ReplaceTaskLock> locksHeldByReplaceTask
   )
   {
-    // If a REPLACE task has locked an interval, it would commit some segments
+    // If a "REPLACE" task has locked an interval, it would commit some segments
     // (or at least tombstones) in that interval (except in LEGACY_REPLACE ingestion mode)
     if (replaceSegments.isEmpty() || locksHeldByReplaceTask.isEmpty()) {
       return Collections.emptySet();
@@ -1638,7 +1666,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         = getAppendSegmentsCommittedDuringTask(transaction, taskId);
 
     final List<DataSegmentPlus> segmentsToUpgrade
-        = retrieveSegmentsById(transaction, upgradeSegmentToLockVersion.keySet());
+        = retrieveSegmentsById(dataSource, transaction, upgradeSegmentToLockVersion.keySet());
 
     if (segmentsToUpgrade.isEmpty()) {
       return Collections.emptySet();
@@ -1775,7 +1803,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Do not insert segment IDs which already exist
-    Set<String> existingSegmentIds = transaction.findExistingSegmentIds(segments);
+    final Set<SegmentId> segmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+    Set<String> existingSegmentIds = transaction.findExistingSegmentIds(segmentIds);
     final Set<DataSegment> segmentsToInsert = segments.stream().filter(
         s -> !existingSegmentIds.contains(s.getId().toString())
     ).collect(Collectors.toSet());
@@ -1896,6 +1925,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   private List<DataSegmentPlus> retrieveSegmentsById(
+      String dataSource,
       SegmentMetadataReadTransaction transaction,
       Set<String> segmentIds
   )
@@ -1904,10 +1934,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyList();
     }
 
+    // Validate segment IDs
+    final Set<SegmentId> validSegmentIds = IdUtils.getValidSegmentIds(dataSource, segmentIds);
+
     if (schemaPersistEnabled) {
-      return transaction.findSegmentsWithSchema(segmentIds);
+      return transaction.findSegmentsWithSchema(validSegmentIds);
     } else {
-      return transaction.findSegments(segmentIds);
+      return transaction.findSegments(validSegmentIds);
     }
   }
 
@@ -2280,10 +2313,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     for (Map<Interval, SegmentId> itvlMap : versionIntervalToSmallestSegmentId.values()) {
       segmentIdsToRetrieve.addAll(itvlMap.values());
     }
-    final List<DataSegment> dataSegments = transaction.findUsedSegments(segmentIdsToRetrieve);
+    final List<DataSegmentPlus> dataSegments = transaction.findUsedSegments(segmentIdsToRetrieve);
     final Set<SegmentId> retrievedIds = new HashSet<>();
     final Map<String, Map<Interval, Integer>> versionIntervalToNumCorePartitions = new HashMap<>();
-    for (DataSegment segment : dataSegments) {
+    for (DataSegmentPlus segmentPlus : dataSegments) {
+      final DataSegment segment = segmentPlus.getDataSegment();
       versionIntervalToNumCorePartitions.computeIfAbsent(segment.getVersion(), v -> new HashMap<>())
                                         .put(segment.getInterval(), segment.getShardSpec().getNumCorePartitions());
       retrievedIds.add(segment.getId());

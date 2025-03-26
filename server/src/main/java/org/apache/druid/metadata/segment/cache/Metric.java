@@ -35,11 +35,6 @@ public class Metric
   public static final String PERSISTED_USED_SEGMENTS = "segment/used/count";
 
   /**
-   * Total number of segments currently present in the metadata store.
-   */
-  public static final String PERSISTED_UNUSED_SEGMENTS = "segment/unused/count";
-
-  /**
    * Total number of pending segments currently present in the metadata store.
    */
   public static final String PERSISTED_PENDING_SEGMENTS = "segment/pending/count";
@@ -50,12 +45,58 @@ public class Metric
   /**
    * Number of transactions performed on the cache for a datasource.
    */
-  public static final String TRANSACTION_COUNT = "transactions";
+  public static final String TRANSACTION_COUNT = METRIC_NAME_PREFIX + "transactions";
+
+  /**
+   * Total number of distinct intervals currently present in the cache.
+   */
+  public static final String CACHED_INTERVALS = METRIC_NAME_PREFIX + "interval/count";
+
+  /**
+   * Total number of segments currently present in the cache.
+   */
+  public static final String CACHED_USED_SEGMENTS = METRIC_NAME_PREFIX + "used/count";
+
+  /**
+   * Total number of segments currently present in the cache.
+   */
+  public static final String CACHED_UNUSED_SEGMENTS = METRIC_NAME_PREFIX + "unused/count";
+
+  /**
+   * Total number of pending segments currently present in the cache.
+   */
+  public static final String CACHED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "pending/count";
+
+
+  // CACHE SYNC TIME METRICS
 
   /**
    * Time taken in milliseconds for the latest sync with metadata store.
    */
   public static final String SYNC_DURATION_MILLIS = METRIC_NAME_PREFIX + "sync/time";
+
+  /**
+   * Time taken in milliseconds to update all segment IDs in the cache.
+   */
+  public static final String UPDATE_IDS_DURATION_MILLIS = METRIC_NAME_PREFIX + "updateIds/time";
+
+  /**
+   * Time taken in milliseconds to fetch payloads of used segments from the metadata store.
+   */
+  public static final String RETRIEVE_SEGMENT_PAYLOADS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchPayloads/time";
+
+  /**
+   * Time taken in milliseconds to fetch all segment IDs from the metadata store.
+   */
+  public static final String RETRIEVE_SEGMENT_IDS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchIds/time";
+
+  /**
+   * Time taken in milliseconds to fetch all pending segments from the metadata store.
+   */
+  public static final String RETRIEVE_PENDING_SEGMENTS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchPending/time";
+
+
+  // CACHE UPDATE METRICS
 
   /**
    * Number of segments which are now stale in the cache and need to be refreshed.
@@ -76,11 +117,6 @@ public class Metric
    * Number of used segments updated in the cache from the metadata store in the latest sync.
    */
   public static final String UPDATED_USED_SEGMENTS = METRIC_NAME_PREFIX + "used/updated";
-
-  /**
-   * Number of unused segments updated in the cache from the metadata store in the latest sync.
-   */
-  public static final String UPDATED_UNUSED_SEGMENTS = METRIC_NAME_PREFIX + "unused/updated";
 
   /**
    * Number of pending segments updated in the cache from the metadata store in the latest sync.
