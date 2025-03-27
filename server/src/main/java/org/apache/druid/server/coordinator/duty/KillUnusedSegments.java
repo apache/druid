@@ -38,6 +38,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -83,6 +84,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
   private DateTime lastKillTime;
   private final Duration bufferPeriod;
+  private final Period maxIntervalToKill;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
@@ -98,6 +100,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     this.maxSegmentsToKill = killConfig.getMaxSegments();
     this.ignoreDurationToRetain = killConfig.isIgnoreDurationToRetain();
     this.durationToRetain = killConfig.getDurationToRetain();
+    this.maxIntervalToKill = killConfig.getMaxInterval();
     if (this.ignoreDurationToRetain) {
       log.info(
           "druid.coordinator.kill.durationToRetain[%s] will be ignored when discovering segments to kill "
@@ -110,11 +113,12 @@ public class KillUnusedSegments implements CoordinatorDuty
     datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
 
     log.info(
-        "Kill task scheduling enabled with period[%s], durationToRetain[%s], bufferPeriod[%s], maxSegmentsToKill[%s]",
+        "Kill task scheduling enabled with period[%s], durationToRetain[%s], bufferPeriod[%s], maxSegmentsToKill[%s] ,maxIntervalToKill[%s]",
         this.period,
         this.ignoreDurationToRetain ? "IGNORING" : this.durationToRetain,
         this.bufferPeriod,
-        this.maxSegmentsToKill
+        this.maxSegmentsToKill,
+        this.maxIntervalToKill
     );
 
     this.segmentsMetadataManager = segmentsMetadataManager;
@@ -230,9 +234,23 @@ public class KillUnusedSegments implements CoordinatorDuty
       final CoordinatorRunStats stats
   )
   {
-    final DateTime maxEndTime = ignoreDurationToRetain
-                                ? DateTimes.COMPARE_DATE_AS_STRING_MAX
-                                : DateTimes.nowUtc().minus(durationToRetain);
+
+    final DateTime minStartTime = datasourceToLastKillIntervalEnd.get(dataSource);
+
+    // Once the first segment from a datasource is killed, we have a valid minStartTime.
+    // Restricting the upper bound to scan segments metadata while running the kill task results in a efficient SQL query.
+    final DateTime maxEndTime;
+    if (ignoreDurationToRetain) {
+      maxEndTime = DateTimes.COMPARE_DATE_AS_STRING_MAX;
+    } else if (minStartTime == null) {
+      maxEndTime = DateTimes.nowUtc().minus(durationToRetain);
+    } else {
+      // If we have already killed a segment, limit the kill interval based on the minStartTime
+      maxEndTime = DateTimes.min(
+              DateTimes.nowUtc().minus(durationToRetain),
+              minStartTime.plus(maxIntervalToKill)
+      );
+    }
 
     final List<Interval> unusedSegmentIntervals = segmentsMetadataManager.getUnusedSegmentIntervals(
         dataSource,

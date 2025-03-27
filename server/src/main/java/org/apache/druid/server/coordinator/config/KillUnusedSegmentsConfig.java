@@ -21,12 +21,16 @@ package org.apache.druid.server.coordinator.config;
 
 import org.apache.druid.common.config.Configs;
 import org.joda.time.Duration;
+import org.joda.time.Period;
+
+import java.util.Objects;
 
 public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
 {
   private final int maxSegments;
   private final boolean ignoreDurationToRetain;
   private final Duration bufferPeriod;
+  private final Period maxInterval;
 
   public KillUnusedSegmentsConfig(
       Boolean cleanupEnabled,
@@ -34,7 +38,8 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
       Duration durationToRetain,
       Boolean ignoreDurationToRetain,
       Duration bufferPeriod,
-      Integer maxSegments
+      Integer maxSegments,
+      Period maxInterval
   )
   {
     super(
@@ -45,6 +50,7 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
     this.ignoreDurationToRetain = Configs.valueOrDefault(ignoreDurationToRetain, false);
     this.bufferPeriod = Configs.valueOrDefault(bufferPeriod, Duration.standardDays(30));
     this.maxSegments = Configs.valueOrDefault(maxSegments, 100);
+    this.maxInterval = Configs.valueOrDefault(maxInterval, Period.days(30));
   }
 
   public int getMaxSegments()
@@ -62,6 +68,33 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
     return ignoreDurationToRetain;
   }
 
+  public Period getMaxInterval()
+  {
+    return maxInterval;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    KillUnusedSegmentsConfig that = (KillUnusedSegmentsConfig) o;
+    return maxSegments == that.maxSegments
+            && ignoreDurationToRetain == that.ignoreDurationToRetain
+            && Objects.equals(maxInterval, that.maxInterval)
+            && Objects.equals(bufferPeriod, that.bufferPeriod);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), maxSegments, maxInterval, ignoreDurationToRetain, bufferPeriod);
+  }
+
   public static Builder builder()
   {
     return new Builder();
@@ -74,6 +107,7 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
     private Boolean ignoreDurationToRetain;
     private Duration bufferPeriod;
     private Integer maxSegments;
+    private Period maxInterval;
 
     private Builder()
     {
@@ -88,7 +122,8 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
           durationToRetain,
           ignoreDurationToRetain,
           bufferPeriod,
-          maxSegments
+          maxSegments,
+          maxInterval
       );
     }
 
@@ -119,6 +154,12 @@ public class KillUnusedSegmentsConfig extends MetadataCleanupConfig
     public Builder withBufferPeriod(Duration bufferPeriod)
     {
       this.bufferPeriod = bufferPeriod;
+      return this;
+    }
+
+    public Builder withMaxIntervalToKill(Period maxInterval)
+    {
+      this.maxInterval = maxInterval;
       return this;
     }
   }
