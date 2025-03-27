@@ -283,6 +283,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
           >
             <Button icon={IconNames.MORE} data-tooltip="More module options" minimal />
           </Popover>
+          <Button icon={IconNames.FILTER} data-tooltip="Module WHERE" minimal onClick={() => {}} />
           <Button
             icon={IconNames.PROPERTIES}
             data-tooltip={showControls ? 'Hide module controls' : 'Show module controls'}
