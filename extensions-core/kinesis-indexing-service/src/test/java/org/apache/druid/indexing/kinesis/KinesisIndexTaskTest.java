@@ -793,7 +793,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
-    waitUntil(task, this::isTaskReadingOrPublishing);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -856,7 +856,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
-    waitUntil(task, this::isTaskReadingOrPublishing);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -915,7 +915,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     final ListenableFuture<TaskStatus> future = runTask(task);
-    waitUntil(task, this::isTaskReadingOrPublishing);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -2462,17 +2462,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
   /**
-   * Return true if specified task is in READING OR PUBLISHING state
-   * This helper method allows UTs to wait until the task associated with the test has started before continuing on with
-   * the test. Checking for PUBLISHING state in addition to READING prevents a race condition where a task could go
-   * publishing before the wait for READING state had started.
+   * Return true if specified task is in PUBLISHING state
    * @param task {@link KinesisIndexTask} having its state checked
-   * @return true if task is in READING or PUBLISHING state, otherwise false
+   * @return true if task is in PUBLISHING state, otherwise false
    */
-  private boolean isTaskReadingOrPublishing(KinesisIndexTask task)
+  private boolean isTaskPublishing(KinesisIndexTask task)
   {
-    return task.getRunner().getStatus() == SeekableStreamIndexTaskRunner.Status.READING ||
-           task.getRunner().getStatus() == SeekableStreamIndexTaskRunner.Status.PUBLISHING;
+    return task.getRunner().getStatus() == SeekableStreamIndexTaskRunner.Status.PUBLISHING;
   }
 
   private static KinesisRecordEntity kjb(
