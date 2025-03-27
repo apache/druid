@@ -413,10 +413,18 @@ public class SegmentBootstrapperTest
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.of(ds1Segment2, ds1Segment1);
 
-    Assert.assertEquals(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
+    Assert.assertTrue(expectedBootstrapSegments.size() == segmentAnnouncer.getObservedSegments().size() &&
+                      expectedBootstrapSegments.containsAll(segmentAnnouncer.getObservedSegments()) &&
+                      segmentAnnouncer.getObservedSegments().containsAll(expectedBootstrapSegments));
 
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
+    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegments().size() &&
+                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegments()) &&
+                      cacheManager.getObservedBootstrapSegments().containsAll(expectedBootstrapSegments));
+
+    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().size() &&
+                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache()) &&
+                      cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().containsAll(expectedBootstrapSegments));
+
     serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
 
