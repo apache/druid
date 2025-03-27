@@ -152,16 +152,10 @@ public class SegmentBootstrapperTest
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
 
-    // The following verbose assert - seen throughout this test class - confirms list item equality irrespective of item order.
-    Assert.assertTrue(expectedBootstrapSegments.size() == segmentAnnouncer.getObservedSegments().size() &&
-                      expectedBootstrapSegments.containsAll(segmentAnnouncer.getObservedSegments()) &&
-                      segmentAnnouncer.getObservedSegments().containsAll(expectedBootstrapSegments));
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegments().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegments()) &&
-                      cacheManager.getObservedBootstrapSegments().containsAll(expectedBootstrapSegments));
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache()) &&
-                      cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().containsAll(expectedBootstrapSegments));
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
+
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegmentsLoadedIntoPageCache());
 
@@ -219,15 +213,11 @@ public class SegmentBootstrapperTest
     }
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
-    Assert.assertTrue(expectedBootstrapSegments.size() == segmentAnnouncer.getObservedSegments().size() &&
-                      expectedBootstrapSegments.containsAll(segmentAnnouncer.getObservedSegments()) &&
-                      segmentAnnouncer.getObservedSegments().containsAll(expectedBootstrapSegments));
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegments().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegments()) &&
-                      cacheManager.getObservedBootstrapSegments().containsAll(expectedBootstrapSegments));
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache()) &&
-                      cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().containsAll(expectedBootstrapSegments));
+
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
+
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegmentsLoadedIntoPageCache());
 
@@ -282,17 +272,9 @@ public class SegmentBootstrapperTest
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
 
-    Assert.assertTrue(expectedBootstrapSegments.size() == segmentAnnouncer.getObservedSegments().size() &&
-                      expectedBootstrapSegments.containsAll(segmentAnnouncer.getObservedSegments()) &&
-                      segmentAnnouncer.getObservedSegments().containsAll(expectedBootstrapSegments));
-
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegments().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegments()) &&
-                      cacheManager.getObservedBootstrapSegments().containsAll(expectedBootstrapSegments));
-
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache()) &&
-                      cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().containsAll(expectedBootstrapSegments));
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
@@ -413,17 +395,9 @@ public class SegmentBootstrapperTest
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.of(ds1Segment2, ds1Segment1);
 
-    Assert.assertTrue(expectedBootstrapSegments.size() == segmentAnnouncer.getObservedSegments().size() &&
-                      expectedBootstrapSegments.containsAll(segmentAnnouncer.getObservedSegments()) &&
-                      segmentAnnouncer.getObservedSegments().containsAll(expectedBootstrapSegments));
-
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegments().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegments()) &&
-                      cacheManager.getObservedBootstrapSegments().containsAll(expectedBootstrapSegments));
-
-    Assert.assertTrue(expectedBootstrapSegments.size() == cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().size() &&
-                      expectedBootstrapSegments.containsAll(cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache()) &&
-                      cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache().containsAll(expectedBootstrapSegments));
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
+    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
@@ -467,5 +441,17 @@ public class SegmentBootstrapperTest
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
 
     bootstrapper.stop();
+  }
+
+  /**
+   * Given two lists, assert they are equivalent and contain the same set of entries irrespecive of entry ordering
+   * @param expected The expected result list
+   * @param actual The actual result list
+   * @param <T>
+   */
+  private static <T> void assertUnsortedListsAreEqual(List<T> expected, List<T> actual)
+  {
+    Assert.assertEquals(expected.size(), actual.size());
+    Assert.assertEquals(Set.copyOf(expected), Set.copyOf(actual));
   }
 }
