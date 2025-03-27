@@ -85,7 +85,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlResourceTest;
-import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -107,6 +106,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.function.Supplier;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class SqlStatementResourceTest extends MSQTestBase
 {
@@ -1293,7 +1294,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private void assertInvalidFileName(String filename, String errorMessage)
   {
-    MatcherAssert.assertThat(
+    assertThat(
         Throwables.getRootCause(
             Assert.assertThrows(DruidException.class, () -> SqlStatementResource.validateFilename(filename))
         ),
