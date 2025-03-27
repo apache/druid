@@ -1599,6 +1599,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test(dataProvider = "useSupervisors")
   public void testAutoCompactionDutyWithFilter(boolean useSupervisors) throws Exception
   {
+    compactionResource.updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null));
+
     loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -1645,13 +1647,15 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test
-  public void testAutoCompationDutyWithMetricsSpec() throws Exception
+  @Test(dataProvider = "useSupervisors")
+  public void testAutoCompationDutyWithMetricsSpec(boolean useSupervisors) throws Exception
   {
+    compactionResource.updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null));
+
     loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      intervalsBeforeCompaction.sort(null);
+      intervalsBeforeCompaction.sort(Ordering.natural().reversed());
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
 
@@ -1674,7 +1678,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           false,
           CompactionEngine.NATIVE
       );
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
 
       // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
       // These new metrics should have the same value as the input field "added"
@@ -1696,7 +1700,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       // Verify compacted segments does not get compacted again
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
@@ -1933,15 +1937,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Thread.sleep(2000);
 
     // Verify that the compaction config is updated correctly.
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
     DataSourceCompactionConfig foundDataSourceCompactionConfig
-        = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
-    Assert.assertNotNull(foundDataSourceCompactionConfig);
-    Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
-    Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
-    Assert.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), skipOffsetFromLatest);
-
-    foundDataSourceCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
+        = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
     Assert.assertNotNull(foundDataSourceCompactionConfig);
     Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
     Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);

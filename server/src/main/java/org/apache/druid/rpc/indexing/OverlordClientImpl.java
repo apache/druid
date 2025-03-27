@@ -321,7 +321,7 @@ public class OverlordClientImpl implements OverlordClient
   {
     final StringBuilder pathBuilder = new StringBuilder("/druid/indexer/v1/compaction/status");
     if (dataSource != null && !dataSource.isEmpty()) {
-      pathBuilder.append("?").append("dataSource=").append(dataSource);
+      pathBuilder.append("?").append("dataSource=").append(StringUtils.urlEncode(dataSource));
     }
 
     return FutureUtils.transform(
@@ -446,7 +446,10 @@ public class OverlordClientImpl implements OverlordClient
   @Override
   public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
   {
-    final String path = "/druid/indexer/v1/compaction/progress?dataSource=" + dataSource;
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/compaction/progress?dataSource=%s",
+        StringUtils.urlEncode(dataSource)
+    );
     return FutureUtils.transform(
         client.asyncRequest(
             new RequestBuilder(HttpMethod.GET, path),

@@ -20,10 +20,12 @@
 package org.apache.druid.indexing.overlord.http;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.error.DruidException;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexing.compact.CompactionScheduler;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.compaction.CompactionProgressResponse;
 import org.apache.druid.server.compaction.CompactionStatistics;
@@ -38,23 +40,41 @@ import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class OverlordCompactionResourceTest
 {
   private CompactionScheduler scheduler;
+  private OverlordCompactionResource compactionResource;
+  private CoordinatorClient coordinatorClient;
+  private SupervisorResource supervisorResource;
 
   @Before
   public void setUp()
   {
     scheduler = EasyMock.createStrictMock(CompactionScheduler.class);
     EasyMock.expect(scheduler.isEnabled()).andReturn(true).anyTimes();
+
+    coordinatorClient = EasyMock.createStrictMock(CoordinatorClient.class);
+    supervisorResource = EasyMock.createStrictMock(SupervisorResource.class);
+
+    compactionResource = new OverlordCompactionResource(
+        scheduler,
+        coordinatorClient,
+        supervisorResource
+    );
   }
 
   @After
   public void tearDown()
   {
-    EasyMock.verify(scheduler);
+    EasyMock.verify(scheduler, coordinatorClient);
+  }
+
+  private void replayAll()
+  {
+    EasyMock.replay(scheduler, coordinatorClient);
   }
 
   @Test
@@ -67,10 +87,9 @@ public class OverlordCompactionResourceTest
 
     EasyMock.expect(scheduler.getAllCompactionSnapshots())
             .andReturn(allSnapshots).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(scheduler)
-        .getCompactionSnapshots("");
+    final Response response = compactionResource.getCompactionSnapshots("");
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
         new CompactionStatusResponse(allSnapshots.values()),
@@ -88,10 +107,9 @@ public class OverlordCompactionResourceTest
 
     EasyMock.expect(scheduler.getAllCompactionSnapshots())
             .andReturn(allSnapshots).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(scheduler)
-        .getCompactionSnapshots(null);
+    final Response response = compactionResource.getCompactionSnapshots(null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
         new CompactionStatusResponse(allSnapshots.values()),
@@ -106,10 +124,9 @@ public class OverlordCompactionResourceTest
 
     EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.WIKI))
             .andReturn(snapshot).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(scheduler)
-        .getCompactionSnapshots(TestDataSource.WIKI);
+    final Response response = compactionResource.getCompactionSnapshots(TestDataSource.WIKI);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
         new CompactionStatusResponse(Collections.singleton(snapshot)),
@@ -122,10 +139,9 @@ public class OverlordCompactionResourceTest
   {
     EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.KOALA))
             .andReturn(null).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(scheduler)
-        .getCompactionSnapshots(TestDataSource.KOALA);
+    final Response response = compactionResource.getCompactionSnapshots(TestDataSource.KOALA);
     Assert.assertEquals(404, response.getStatus());
   }
 
@@ -139,10 +155,9 @@ public class OverlordCompactionResourceTest
 
     EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.WIKI))
             .andReturn(snapshot).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(scheduler)
-        .getCompactionProgress(TestDataSource.WIKI);
+    final Response response = compactionResource.getCompactionProgress(TestDataSource.WIKI);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(new CompactionProgressResponse(100L), response.getEntity());
   }
@@ -150,10 +165,9 @@ public class OverlordCompactionResourceTest
   @Test
   public void testGetProgressForNullDatasourceReturnsBadRequest()
   {
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(scheduler)
-        .getCompactionProgress(null);
+    final Response response = compactionResource.getCompactionProgress(null);
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
 
     final Object responseEntity = response.getEntity();
@@ -170,10 +184,9 @@ public class OverlordCompactionResourceTest
   {
     EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.KOALA))
             .andReturn(null).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(scheduler)
-        .getCompactionProgress(TestDataSource.KOALA);
+    final Response response = compactionResource.getCompactionProgress(TestDataSource.KOALA);
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
 
     final Object responseEntity = response.getEntity();
@@ -186,48 +199,39 @@ public class OverlordCompactionResourceTest
   }
 
   @Test
-  public void testGetProgressReturnsUnsupportedWhenSupervisorDisabled()
+  public void testGetProgress_redirectsToCoordinator_ifSchedulerIsDisabled()
   {
     scheduler = EasyMock.createStrictMock(CompactionScheduler.class);
     EasyMock.expect(scheduler.isEnabled()).andReturn(false).once();
-    EasyMock.replay(scheduler);
 
-    verifyResponseWhenSupervisorDisabled(
-        new OverlordCompactionResource(scheduler)
-            .getCompactionProgress(TestDataSource.WIKI)
-    );
+    EasyMock.expect(coordinatorClient.getBytesAwaitingCompaction(TestDataSource.WIKI))
+            .andReturn(Futures.immediateFuture(new CompactionProgressResponse(100L)));
+    replayAll();
+
+    final Response response =
+        new OverlordCompactionResource(scheduler, coordinatorClient, supervisorResource)
+            .getCompactionProgress(TestDataSource.WIKI);
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(new CompactionProgressResponse(100L), response.getEntity());
   }
 
   @Test
-  public void testGetSnapshotReturnsUnsupportedWhenSupervisorDisabled()
+  public void testGetSnapshot_redirectsToCoordinator_ifSchedulerIsDisabled()
   {
     scheduler = EasyMock.createStrictMock(CompactionScheduler.class);
     EasyMock.expect(scheduler.isEnabled()).andReturn(false).once();
-    EasyMock.replay(scheduler);
 
-    verifyResponseWhenSupervisorDisabled(
-        new OverlordCompactionResource(scheduler)
-            .getCompactionSnapshots(TestDataSource.WIKI)
-    );
-  }
+    final AutoCompactionSnapshot snapshot =
+        AutoCompactionSnapshot.builder(TestDataSource.WIKI).build();
+    EasyMock.expect(coordinatorClient.getCompactionSnapshots(TestDataSource.WIKI))
+            .andReturn(Futures.immediateFuture(new CompactionStatusResponse(List.of(snapshot))));
+    replayAll();
 
-  private void verifyResponseWhenSupervisorDisabled(Response response)
-  {
-    Assert.assertEquals(501, response.getStatus());
-
-    final Object responseEntity = response.getEntity();
-    Assert.assertTrue(responseEntity instanceof ErrorResponse);
-
-    MatcherAssert.assertThat(
-        ((ErrorResponse) responseEntity).getUnderlyingException(),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.UNSUPPORTED,
-            "general"
-        ).expectMessageIs(
-            "Compaction Supervisors are disabled on the Overlord."
-            + " Use Coordinator APIs to fetch compaction status."
-        )
-    );
+    final Response response =
+        new OverlordCompactionResource(scheduler, coordinatorClient, supervisorResource)
+            .getCompactionSnapshots(TestDataSource.WIKI);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
   }
 }

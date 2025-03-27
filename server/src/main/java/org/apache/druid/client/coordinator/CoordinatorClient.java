@@ -25,9 +25,13 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 
@@ -74,4 +78,42 @@ public interface CoordinatorClient
    * Retrieves list of datasources with used segments.
    */
   ListenableFuture<Set<String>> fetchDataSourcesWithUsedSegments();
+
+  /**
+   * Gets the number of bytes yet to be compacted for the given datasource.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/compaction/progress}
+   */
+  ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource);
+
+  /**
+   * Gets the latest compaction snapshots of one or all datasources.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/compaction/status}
+   *
+   * @param dataSource If passed as non-null, then the returned list contains only
+   *                   the snapshot for this datasource.
+   */
+  ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
+
+  /**
+   * Deletes the compaction config for a datasource.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/config/compaction}
+   */
+  ListenableFuture<Void> deleteDatasourceCompactionConfig(String dataSource);
+
+  /**
+   * Adds or updates the compaction config for a datasource.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/config/compaction}
+   */
+  ListenableFuture<Void> updateDatasourceCompactionConfig(DataSourceCompactionConfig config);
+
+  /**
+   * Gets the latest compaction config of a datasource.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/config/compaction/{dataSource}}
+   */
+  ListenableFuture<DataSourceCompactionConfig> getDatasourceCompactionConfig(String dataSource);
 }
