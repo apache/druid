@@ -20,7 +20,6 @@
 package org.apache.druid.msq.sql.resources;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -892,12 +891,18 @@ public class SqlStatementResourceTest extends MSQTestBase
 
     Response resultsResponse1 = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), "results.txt", makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse1.getStatus());
-    Assert.assertEquals("attachment; filename=\"results.txt\"", resultsResponse1.getMetadata().get("Content-Disposition").get(0));
+    Assert.assertEquals(
+        "attachment; filename=\"results.txt\"",
+        getHeader(resultsResponse1, "Content-Disposition")
+    );
     assertExpectedResults(expectedResult, resultsResponse1);
 
     Response resultsResponse2 = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), "final results.txt", makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse2.getStatus());
-    Assert.assertEquals("attachment; filename=\"final results.txt\"", resultsResponse2.getMetadata().get("Content-Disposition").get(0));
+    Assert.assertEquals(
+        "attachment; filename=\"final results.txt\"",
+        getHeader(resultsResponse2, "Content-Disposition")
+    );
     assertExpectedResults(expectedResult, resultsResponse2);
 
     Response resultsResponse3 = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), "/Users/Name/final.txt", makeOkRequest());
@@ -1261,7 +1266,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-  void testValidFilename()
+  public void testValidFilename()
   {
     // Valid cases
     SqlStatementResource.validateFilename("testname");
@@ -1295,9 +1300,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   private void assertInvalidFileName(String filename, String errorMessage)
   {
     assertThat(
-        Throwables.getRootCause(
-            Assert.assertThrows(DruidException.class, () -> SqlStatementResource.validateFilename(filename))
-        ),
+        Assert.assertThrows(DruidException.class, () -> SqlStatementResource.validateFilename(filename)),
         DruidExceptionMatcher.invalidInput().expectMessageIs(errorMessage)
     );
   }
