@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.joda.time.Period;
 
 /**
@@ -32,51 +33,25 @@ public class SegmentsMetadataManagerConfig
 {
   public static final String CONFIG_PREFIX = "druid.manager.segments";
 
-  /**
-   * Cache usage modes.
-   */
-  public enum UseCache
-  {
-    /**
-     * Always read from the cache. Service start-up may be blocked until cache
-     * has synced with the metadata store at least once. Transactions may block
-     * until cache has synced with the metadata store at least once after
-     * becoming leader.
-     */
-    ALWAYS,
-
-    /**
-     * Cache is disabled.
-     */
-    NEVER,
-
-    /**
-     * Read from the cache only if it is already synced with the metadata store.
-     * Does not block service start-up or transactions. Writes may still go to
-     * cache to reduce sync times.
-     */
-    IF_SYNCED
-  }
-
   @JsonProperty
   private final Period pollDuration;
 
   @JsonProperty
-  private final UseCache useCache;
+  private final SegmentMetadataCache.UsageMode cacheMode;
 
   @JsonCreator
   public SegmentsMetadataManagerConfig(
       @JsonProperty("pollDuration") Period pollDuration,
-      @JsonProperty("useCache") UseCache useCache
+      @JsonProperty("useCache") SegmentMetadataCache.UsageMode cacheMode
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.useCache = Configs.valueOrDefault(useCache, UseCache.NEVER);
+    this.cacheMode = Configs.valueOrDefault(cacheMode, SegmentMetadataCache.UsageMode.NEVER);
   }
 
-  public UseCache getUseCache()
+  public SegmentMetadataCache.UsageMode getCacheMode()
   {
-    return useCache;
+    return cacheMode;
   }
 
   public Period getPollDuration()

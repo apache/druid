@@ -77,7 +77,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Non-leader Overlords also keep polling the metadata store to keep the cache
  * up-to-date in case leadership changes.
  * <p>
- * Cache usage modes: {@link SegmentsMetadataManagerConfig.UseCache}:
+ * Cache usage modes: {@link UsageMode}:
  * <p>
  * The map {@link #datasourceToSegmentCache} contains the cache for each datasource.
  * Items are only added to this map and never removed. This is to avoid handling
@@ -108,7 +108,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   private final ObjectMapper jsonMapper;
   private final Duration pollDuration;
-  private final SegmentsMetadataManagerConfig.UseCache useCache;
+  private final UsageMode cacheMode;
   private final MetadataStorageTablesConfig tablesConfig;
   private final SQLMetadataConnector connector;
 
@@ -147,7 +147,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   )
   {
     this.jsonMapper = jsonMapper;
-    this.useCache = config.get().getUseCache();
+    this.cacheMode = config.get().getCacheMode();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
     this.tablesConfig = tablesConfig.get();
     this.connector = connector;
@@ -171,7 +171,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         updateCacheState(CacheState.FOLLOWER, "Scheduling sync with metadata store");
       }
 
-      if (useCache == SegmentsMetadataManagerConfig.UseCache.ALWAYS) {
+      if (cacheMode == UsageMode.ALWAYS) {
         // Cache must always be used, do not finish startup until cache has synced
         performFirstSync();
       }
@@ -183,7 +183,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private void performFirstSync()
   {
     try {
-      log.info("Cache is in usage mode[%s]. Starting first sync with metadata store.", useCache);
+      log.info("Cache is in usage mode[%s]. Starting first sync with metadata store.", cacheMode);
 
       final long syncDurationMillis = syncWithMetadataStore();
       emitMetric(Metric.SYNC_DURATION_MILLIS, syncDurationMillis);
@@ -241,7 +241,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   @Override
   public boolean isEnabled()
   {
-    return useCache != SegmentsMetadataManagerConfig.UseCache.NEVER;
+    return cacheMode != UsageMode.NEVER;
   }
 
   @Override
@@ -265,7 +265,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   /**
    * Verifies that the cache is enabled, started and has become leader.
    * Also waits for the cache to be synced with the metadata store after becoming
-   * leader if {@link #useCache} is set to {@link SegmentsMetadataManagerConfig.UseCache#ALWAYS}.
+   * leader if {@link #cacheMode} is set to {@link UsageMode#ALWAYS}.
    *
    * @throws DruidException if the cache is disabled, stopped or not leader.
    */
@@ -283,7 +283,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           throw InternalServerError.exception("Not leader yet. Segment metadata cache is not usable.");
         case LEADER_FIRST_SYNC_PENDING:
         case LEADER_FIRST_SYNC_STARTED:
-          if (useCache == SegmentsMetadataManagerConfig.UseCache.ALWAYS) {
+          if (cacheMode == UsageMode.ALWAYS) {
             waitForCacheToFinishSync();
             verifyCacheIsUsableAndAwaitSync();
           }

@@ -93,13 +93,13 @@ public class HeapMemorySegmentMetadataCacheTest
   /**
    * Creates the target {@link #cache} to be tested in the current test.
    */
-  private void setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache useCache)
+  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode)
   {
     if (cache != null) {
       throw new ISE("Test target has already been initialized with caching[%s]", cache.isEnabled());
     }
     final SegmentsMetadataManagerConfig metadataManagerConfig
-        = new SegmentsMetadataManagerConfig(null, useCache);
+        = new SegmentsMetadataManagerConfig(null, cacheMode);
     cache = new HeapMemorySegmentMetadataCache(
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
@@ -112,7 +112,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
   private void setupAndSyncCache()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.ALWAYS);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     cache.start();
     cache.becomeLeader();
     syncCacheAfterBecomingLeader();
@@ -139,7 +139,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testStart_schedulesDbPoll_ifCacheIsEnabled()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.ALWAYS);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
 
     cache.start();
@@ -154,7 +154,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testStart_doesNotScheduleDbPoll_ifCacheIsDisabled()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.NEVER);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.NEVER);
     Assert.assertFalse(cache.isEnabled());
 
     cache.start();
@@ -165,7 +165,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testStop_stopsDbPoll_ifCacheIsEnabled()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.ALWAYS);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
 
     cache.start();
@@ -179,7 +179,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testBecomeLeader_isNoop_ifCacheIsDisabled()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.NEVER);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.NEVER);
 
     cache.start();
     Assert.assertFalse(pollExecutor.hasPendingTasks());
@@ -191,7 +191,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testBecomeLeader_throwsException_ifCacheIsStopped()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.ALWAYS);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     DruidExceptionMatcher.defensive().expectMessageIs(
         "Cache has not been started yet"
     ).assertThrowsAndMatches(
@@ -202,7 +202,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testGetDataSource_throwsException_ifCacheIsDisabled()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.NEVER);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.NEVER);
     DruidExceptionMatcher.defensive().expectMessageIs(
         "Segment metadata cache is not enabled."
     ).assertThrowsAndMatches(
@@ -213,7 +213,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testGetDataSource_throwsException_ifCacheIsStoppedOrNotLeader()
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.ALWAYS);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
 
     DruidExceptionMatcher.internalServerError().expectMessageIs(
@@ -233,7 +233,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test(timeout = 60_000)
   public void testGetDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
   {
-    setupTargetWithCaching(SegmentsMetadataManagerConfig.UseCache.ALWAYS);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     cache.start();
     cache.becomeLeader();
 

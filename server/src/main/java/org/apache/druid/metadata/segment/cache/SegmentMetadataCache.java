@@ -66,4 +66,29 @@ public interface SegmentMetadataCache
    */
   DatasourceSegmentCache getDatasource(String dataSource);
 
+  /**
+   * Cache usage modes.
+   */
+  enum UsageMode
+  {
+    /**
+     * Always read from the cache. Service start-up may be blocked until cache
+     * has synced with the metadata store at least once. Transactions may block
+     * until cache has synced with the metadata store at least once after
+     * becoming leader.
+     */
+    ALWAYS,
+
+    /**
+     * Cache is disabled.
+     */
+    NEVER,
+
+    /**
+     * Read from the cache only if it is already synced with the metadata store.
+     * Does not block service start-up or transactions. Writes may still go to
+     * cache to reduce sync times.
+     */
+    IF_SYNCED
+  }
 }

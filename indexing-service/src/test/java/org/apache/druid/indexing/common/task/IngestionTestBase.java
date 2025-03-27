@@ -315,13 +315,13 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   private SqlSegmentMetadataTransactionFactory createTransactionFactory()
   {
-    final SegmentsMetadataManagerConfig.UseCache cacheUsage
+    final SegmentMetadataCache.UsageMode cacheMode
         = useSegmentMetadataCache
-          ? SegmentsMetadataManagerConfig.UseCache.ALWAYS
-          : SegmentsMetadataManagerConfig.UseCache.NEVER;
+          ? SegmentMetadataCache.UsageMode.ALWAYS
+          : SegmentMetadataCache.UsageMode.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheUsage)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,

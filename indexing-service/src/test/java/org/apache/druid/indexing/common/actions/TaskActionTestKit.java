@@ -182,13 +182,13 @@ public class TaskActionTestKit extends ExternalResource
   private SqlSegmentMetadataTransactionFactory setupTransactionFactory(ObjectMapper objectMapper)
   {
     metadataCachePollExec = new BlockingExecutorService("test-cache-poll-exec");
-    SegmentsMetadataManagerConfig.UseCache cacheUsage
+    SegmentMetadataCache.UsageMode cacheMode
         = useSegmentMetadataCache
-          ? SegmentsMetadataManagerConfig.UseCache.ALWAYS
-          : SegmentsMetadataManagerConfig.UseCache.NEVER;
+          ? SegmentMetadataCache.UsageMode.ALWAYS
+          : SegmentMetadataCache.UsageMode.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheUsage)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
