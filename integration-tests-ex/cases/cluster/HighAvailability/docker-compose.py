@@ -39,8 +39,7 @@ class Template(BaseTemplate):
         self.add_env(service, 'DRUID_INSTANCE', 'two')
         self.add_env(service, 'druid_host', service_name)
         service['ports'] = [ '18081:8081', '18281:8281', '15006:8000' ]
-        dep_dict = {ZOO_KEEPER: {'condition': 'service_started'}, METADATA: {'condition': 'service_healthy'}}
-        self.add_depends(service, dep_dict)
+        self.add_depends(service, [ZOO_KEEPER, METADATA])
 
     def define_overlord(self):
         self.define_overlord_one()
@@ -60,8 +59,7 @@ class Template(BaseTemplate):
         self.add_env(service, 'DRUID_INSTANCE', 'two')
         self.add_env(service, 'druid_host', service_name)
         service['ports'] = [ '18090:8090', '18290:8290', '15009:8000' ]
-        dep_dict = {ZOO_KEEPER: {'condition': 'service_started'}, METADATA: {'condition': 'service_healthy'}}
-        self.add_depends(service, dep_dict)
+        self.add_depends(service, [ZOO_KEEPER, METADATA])
 
     # No indexer in this cluster
     def define_indexer(self):
@@ -86,7 +84,6 @@ class Template(BaseTemplate):
         self.add_env(service, 'SERVICE_DRUID_JAVA_OPTS', '-Xmx64m -Xms64m')
         self.add_env(service, 'druid_host', service_name)
         service['ports'] = [ '50011:50011', '9301:9301', '9501:9501', '5010:8000' ]
-        dep_dict = {ZOO_KEEPER: {'condition': 'service_started'}}
-        self.add_depends(service, dep_dict)
+        self.add_depends(service, [ZOO_KEEPER])
 
 generate(__file__, Template())

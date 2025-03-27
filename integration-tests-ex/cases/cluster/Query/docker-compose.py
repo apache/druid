@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from template import BaseTemplate, generate
-from template import COORDINATOR, ZOO_KEEPER, METADATA, OVERLORD, KAFKA, MIDDLE_MANAGER
+from template import COORDINATOR, MIDDLE_MANAGER
 
 class Template(BaseTemplate):
 

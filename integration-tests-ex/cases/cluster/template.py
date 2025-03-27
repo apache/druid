@@ -69,6 +69,12 @@ def generate(template_path, template):
 
 class BaseTemplate:
 
+    # Lookup map to determine what depends_on condition needs to be specified for a docker-compose dependency.
+    SERVICE_DEPENDENCY_CONDITION_LOOKUP = {
+      METADATA: 'service_healthy',
+      ZOO_KEEPER: 'service_started'
+    }
+
     def __init__(self):
         # Cluster is the object tree for the docker-compose.yaml file for our test cluster.
         # The tree is a map of objects, each of which is a map of values. The values are
@@ -269,7 +275,7 @@ class BaseTemplate:
       Defines the kafka service. Returns the service
       '''
       service = self.define_external_service(KAFKA)
-      self.add_depends(service, {ZOO_KEEPER: {'condition': 'service_started'}})
+      self.add_depends(service, [ZOO_KEEPER])
       return service
 
     def define_druid_service(self, name, base) -> dict:
@@ -302,21 +308,21 @@ class BaseTemplate:
 
         Args:
             service: The service definition dictionary that is recieving new dependencies
-            items: A dict of dependencies. The keys are dependency container names and the values are nested dicts that
-                   contain - in most cases - dependency conditions (eg: { 'metadata': { condition: service_healthy }}).
+            items: A list of strings specifying the dependency service name(s)
         '''
         if items is not None and len(items) > 0:
             depends = service.setdefault('depends_on', {})
-            for k,v in items.items():
-                depends[k] = v
+            for dependency_service in items:
+                depends[dependency_service] = {
+                    'condition': BaseTemplate.SERVICE_DEPENDENCY_CONDITION_LOOKUP.get(dependency_service, 'service_started')
+                }
 
     def define_master_service(self, name, base) -> dict:
         '''
         Defines a "master" service: one which depends on the metadata service.
         '''
         service = self.define_druid_service(name, base)
-        dep_dict = { ZOO_KEEPER: {'condition': 'service_started'}, METADATA: {'condition': 'service_healthy'}}
-        self.add_depends(service, dep_dict)
+        self.add_depends(service, [ZOO_KEEPER, METADATA])
         return service
 
     def define_std_master_service(self, name) -> dict:
@@ -345,8 +351,7 @@ class BaseTemplate:
         Defines a Druid "worker" service: one that depends only on ZooKeeper.
         '''
         service = self.define_druid_service(name, base)
-        dep_dict = {ZOO_KEEPER: {'condition': 'service_started'}}
-        self.add_depends(service, dep_dict)
+        self.add_depends(service, [ZOO_KEEPER, METADATA])
         return service
 
     def define_std_worker_service(self, name) -> dict:
