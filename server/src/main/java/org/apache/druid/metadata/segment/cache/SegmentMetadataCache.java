@@ -19,6 +19,8 @@
 
 package org.apache.druid.metadata.segment.cache;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Cache for metadata of pending segments and committed segments maintained by
  * the Overlord to improve performance of segment allocation and other task actions.
@@ -89,6 +91,12 @@ public interface SegmentMetadataCache
      * Does not block service start-up or transactions. Writes may still go to
      * cache to reduce sync times.
      */
-    IF_SYNCED
+    IF_SYNCED;
+
+    @JsonCreator
+    public static UsageMode fromString(String value)
+    {
+      return UsageMode.valueOf(value.toUpperCase());
+    }
   }
 }

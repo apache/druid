@@ -37,21 +37,21 @@ public class SegmentsMetadataManagerConfig
   private final Period pollDuration;
 
   @JsonProperty
-  private final SegmentMetadataCache.UsageMode cacheMode;
+  private final SegmentMetadataCache.UsageMode useCache;
 
   @JsonCreator
   public SegmentsMetadataManagerConfig(
       @JsonProperty("pollDuration") Period pollDuration,
-      @JsonProperty("useCache") SegmentMetadataCache.UsageMode cacheMode
+      @JsonProperty("useCache") SegmentMetadataCache.UsageMode useCache
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.cacheMode = Configs.valueOrDefault(cacheMode, SegmentMetadataCache.UsageMode.NEVER);
+    this.useCache = Configs.valueOrDefault(useCache, SegmentMetadataCache.UsageMode.NEVER);
   }
 
   public SegmentMetadataCache.UsageMode getCacheMode()
   {
-    return cacheMode;
+    return useCache;
   }
 
   public Period getPollDuration()
