@@ -32,23 +32,49 @@ public class SegmentsMetadataManagerConfig
 {
   public static final String CONFIG_PREFIX = "druid.manager.segments";
 
+  /**
+   * Cache usage modes.
+   */
+  public enum UseCache
+  {
+    /**
+     * Always read from the cache. Service start-up may be blocked until cache
+     * has synced with the metadata store at least once. Transactions may block
+     * until cache has synced with the metadata store at least once after
+     * becoming leader.
+     */
+    ALWAYS,
+
+    /**
+     * Cache is disabled.
+     */
+    NEVER,
+
+    /**
+     * Read from the cache only if it is already synced with the metadata store.
+     * Does not block service start-up or transactions. Writes may still go to
+     * cache to reduce sync times.
+     */
+    IF_SYNCED
+  }
+
   @JsonProperty
   private final Period pollDuration;
 
   @JsonProperty
-  private final boolean useCache;
+  private final UseCache useCache;
 
   @JsonCreator
   public SegmentsMetadataManagerConfig(
       @JsonProperty("pollDuration") Period pollDuration,
-      @JsonProperty("useCache") Boolean useCache
+      @JsonProperty("useCache") UseCache useCache
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.useCache = Configs.valueOrDefault(useCache, false);
+    this.useCache = Configs.valueOrDefault(useCache, UseCache.NEVER);
   }
 
-  public boolean isUseCache()
+  public UseCache getUseCache()
   {
     return useCache;
   }

@@ -140,9 +140,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     leaderSelector = new TestDruidLeaderSelector();
 
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
+
+    final SegmentsMetadataManagerConfig.UseCache cacheUsage
+        = useSegmentCache
+          ? SegmentsMetadataManagerConfig.UseCache.ALWAYS
+          : SegmentsMetadataManagerConfig.UseCache.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         mapper,
-        () -> new SegmentsMetadataManagerConfig(null, useSegmentCache),
+        () -> new SegmentsMetadataManagerConfig(null, cacheUsage),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(

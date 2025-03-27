@@ -66,7 +66,7 @@ public class TaskActionTestKit extends ExternalResource
   private SegmentMetadataCache segmentMetadataCache;
   private BlockingExecutorService metadataCachePollExec;
 
-  private boolean useSegmentMetadataCache = new SegmentsMetadataManagerConfig(null, null).isUseCache();
+  private boolean useSegmentMetadataCache = false;
   private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
 
   public TaskLockbox getTaskLockbox()
@@ -182,9 +182,13 @@ public class TaskActionTestKit extends ExternalResource
   private SqlSegmentMetadataTransactionFactory setupTransactionFactory(ObjectMapper objectMapper)
   {
     metadataCachePollExec = new BlockingExecutorService("test-cache-poll-exec");
+    SegmentsMetadataManagerConfig.UseCache cacheUsage
+        = useSegmentMetadataCache
+          ? SegmentsMetadataManagerConfig.UseCache.ALWAYS
+          : SegmentsMetadataManagerConfig.UseCache.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), useSegmentMetadataCache)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheUsage)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
@@ -223,6 +227,6 @@ public class TaskActionTestKit extends ExternalResource
     taskActionToolbox = null;
     segmentMetadataCache.stopBeingLeader();
     segmentMetadataCache.stop();
-    useSegmentMetadataCache = new SegmentsMetadataManagerConfig(null, null).isUseCache();
+    useSegmentMetadataCache = false;
   }
 }
