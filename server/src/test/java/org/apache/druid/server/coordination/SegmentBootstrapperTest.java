@@ -447,7 +447,7 @@ public class SegmentBootstrapperTest
    * Given two lists, assert they are equivalent and contain the same set of entries irrespecive of entry ordering
    * @param expected The expected result list
    * @param actual The actual result list
-   * @param <T>
+   * @param <T> Object type stored in the list parameters
    */
   private static <T> void assertUnsortedListsAreEqual(List<T> expected, List<T> actual)
   {
