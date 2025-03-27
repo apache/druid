@@ -21,6 +21,8 @@ package org.apache.druid.metadata.segment.cache;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+import java.util.Locale;
+
 /**
  * Cache for metadata of pending segments and committed segments maintained by
  * the Overlord to improve performance of segment allocation and other task actions.
@@ -96,7 +98,7 @@ public interface SegmentMetadataCache
     @JsonCreator
     public static UsageMode fromString(String value)
     {
-      return UsageMode.valueOf(value.toUpperCase());
+      return UsageMode.valueOf(value.toUpperCase(Locale.ROOT));
     }
   }
 }
