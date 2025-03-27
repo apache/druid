@@ -32,7 +32,6 @@ import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -53,7 +52,6 @@ import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class HeapMemorySegmentMetadataCacheTest
@@ -95,13 +93,13 @@ public class HeapMemorySegmentMetadataCacheTest
   /**
    * Creates the target {@link #cache} to be tested in the current test.
    */
-  private void setupTargetWithCaching(boolean enabled)
+  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode)
   {
     if (cache != null) {
       throw new ISE("Test target has already been initialized with caching[%s]", cache.isEnabled());
     }
     final SegmentsMetadataManagerConfig metadataManagerConfig
-        = new SegmentsMetadataManagerConfig(null, enabled);
+        = new SegmentsMetadataManagerConfig(null, cacheMode);
     cache = new HeapMemorySegmentMetadataCache(
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
@@ -114,7 +112,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
   private void setupAndSyncCache()
   {
-    setupTargetWithCaching(true);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     cache.start();
     cache.becomeLeader();
     syncCacheAfterBecomingLeader();
@@ -134,13 +132,14 @@ public class HeapMemorySegmentMetadataCacheTest
    */
   private void syncCache()
   {
+    serviceEmitter.flush();
     pollExecutor.finishNextPendingTasks(2);
   }
 
   @Test
   public void testStart_schedulesDbPoll_ifCacheIsEnabled()
   {
-    setupTargetWithCaching(true);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
 
     cache.start();
@@ -155,7 +154,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testStart_doesNotScheduleDbPoll_ifCacheIsDisabled()
   {
-    setupTargetWithCaching(false);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.NEVER);
     Assert.assertFalse(cache.isEnabled());
 
     cache.start();
@@ -166,7 +165,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testStop_stopsDbPoll_ifCacheIsEnabled()
   {
-    setupTargetWithCaching(true);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
 
     cache.start();
@@ -180,7 +179,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testBecomeLeader_isNoop_ifCacheIsDisabled()
   {
-    setupTargetWithCaching(false);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.NEVER);
 
     cache.start();
     Assert.assertFalse(pollExecutor.hasPendingTasks());
@@ -192,7 +191,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testBecomeLeader_throwsException_ifCacheIsStopped()
   {
-    setupTargetWithCaching(true);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     DruidExceptionMatcher.defensive().expectMessageIs(
         "Cache has not been started yet"
     ).assertThrowsAndMatches(
@@ -203,7 +202,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testGetDataSource_throwsException_ifCacheIsDisabled()
   {
-    setupTargetWithCaching(false);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.NEVER);
     DruidExceptionMatcher.defensive().expectMessageIs(
         "Segment metadata cache is not enabled."
     ).assertThrowsAndMatches(
@@ -214,7 +213,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test
   public void testGetDataSource_throwsException_ifCacheIsStoppedOrNotLeader()
   {
-    setupTargetWithCaching(true);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
 
     DruidExceptionMatcher.internalServerError().expectMessageIs(
@@ -234,7 +233,7 @@ public class HeapMemorySegmentMetadataCacheTest
   @Test(timeout = 60_000)
   public void testGetDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
   {
-    setupTargetWithCaching(true);
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     cache.start();
     cache.becomeLeader();
 
@@ -338,7 +337,7 @@ public class HeapMemorySegmentMetadataCacheTest
     );
 
     // Verify that sync duration is not emitted again
-    serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
+    serviceEmitter.verifyNotEmitted(Metric.SYNC_DURATION_MILLIS);
   }
 
   @Test
@@ -361,7 +360,7 @@ public class HeapMemorySegmentMetadataCacheTest
     // Verify that sync completes successfully and updates the valid segment
     setupAndSyncCache();
     serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
-    serviceEmitter.verifyValue(Metric.UPDATED_USED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.CACHED_USED_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.SKIPPED_SEGMENTS, 1L);
 
     final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
@@ -409,7 +408,7 @@ public class HeapMemorySegmentMetadataCacheTest
     setupAndSyncCache();
     serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
     serviceEmitter.verifyValue(Metric.SKIPPED_PENDING_SEGMENTS, 1L);
-    serviceEmitter.verifyValue(Metric.UPDATED_USED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.CACHED_USED_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.PERSISTED_USED_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.PERSISTED_PENDING_SEGMENTS, 0L);
 
@@ -595,19 +594,6 @@ public class HeapMemorySegmentMetadataCacheTest
             pendingSegment.getSequenceName(),
             segmentId.getInterval()
         ).isEmpty()
-    );
-  }
-
-  @Test
-  public void testGetDatasource_increasesTransactionCount()
-  {
-    setupAndSyncCache();
-    cache.getDatasource(TestDataSource.WIKI);
-    cache.getDatasource(TestDataSource.WIKI);
-    serviceEmitter.verifyEmitted(
-        Metric.TRANSACTION_COUNT,
-        Map.of(DruidMetrics.DATASOURCE, TestDataSource.WIKI),
-        2
     );
   }
 

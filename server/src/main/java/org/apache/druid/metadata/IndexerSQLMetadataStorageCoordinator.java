@@ -174,7 +174,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Segments visibility
   )
   {
-    return inReadWriteDatasourceTransaction(
+    return inReadOnlyDatasourceTransaction(
         dataSource,
         transaction -> {
           if (visibility == Segments.ONLY_VISIBLE) {
@@ -283,7 +283,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   private SegmentTimeline getTimelineForIntervals(
-      final SegmentMetadataTransaction transaction,
+      final SegmentMetadataReadTransaction transaction,
       final List<Interval> intervals
   )
   {
@@ -1500,6 +1500,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         allocatedId.getInterval(),
         allocatedId.getVersion()
     );
+    log.info(
+        "Allocated SegmentId[%s] is already in use. Using next ID after max[%s].",
+        allocatedId.asSegmentId(), unusedMaxId
+    );
+
     // No unused segment. Just return the allocated id
     if (unusedMaxId == null) {
       return allocatedId;
