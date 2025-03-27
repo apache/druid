@@ -71,13 +71,13 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * In-memory implementation of {@link SegmentMetadataCache}.
  * <p>
- * Only used segments (excluding num_rows and schema_fingerpring) and
+ * Only used segments (excluding num_rows and schema_fingerprint) and
  * pending segments are cached. Unused segments are not cached.
  * <p>
  * Non-leader Overlords also keep polling the metadata store to keep the cache
  * up-to-date in case leadership changes.
  * <p>
- * Cache usage modes: {@link UsageMode}:
+ * For cache usage modes, see {@link UsageMode}.
  * <p>
  * The map {@link #datasourceToSegmentCache} contains the cache for each datasource.
  * Items are only added to this map and never removed. This is to avoid handling

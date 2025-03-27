@@ -20,8 +20,7 @@
 package org.apache.druid.metadata.segment.cache;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-
-import java.util.Locale;
+import org.apache.druid.error.InvalidInput;
 
 /**
  * Cache for metadata of pending segments and committed segments maintained by
@@ -81,24 +80,43 @@ public interface SegmentMetadataCache
      * until cache has synced with the metadata store at least once after
      * becoming leader.
      */
-    ALWAYS,
+    ALWAYS("always"),
 
     /**
      * Cache is disabled.
      */
-    NEVER,
+    NEVER("never"),
 
     /**
      * Read from the cache only if it is already synced with the metadata store.
      * Does not block service start-up or transactions. Writes may still go to
      * cache to reduce sync times.
      */
-    IF_SYNCED;
+    IF_SYNCED("ifSynced");
+
+    private final String name;
+
+    UsageMode(String name)
+    {
+      this.name = name;
+    }
 
     @JsonCreator
     public static UsageMode fromString(String value)
     {
-      return UsageMode.valueOf(value.toUpperCase(Locale.ROOT));
+      for (UsageMode mode : values()) {
+        if (mode.toString().equals(value)) {
+          return mode;
+        }
+      }
+
+      throw InvalidInput.exception("No such cache usage mode[%s]", value);
+    }
+
+    @Override
+    public String toString()
+    {
+      return name;
     }
   }
 }

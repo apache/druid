@@ -1500,6 +1500,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         allocatedId.getInterval(),
         allocatedId.getVersion()
     );
+    log.info(
+        "Allocated SegmentId[%s] is already in use. Using next ID after max[%s].",
+        allocatedId.asSegmentId(), unusedMaxId
+    );
+
     // No unused segment. Just return the allocated id
     if (unusedMaxId == null) {
       return allocatedId;
