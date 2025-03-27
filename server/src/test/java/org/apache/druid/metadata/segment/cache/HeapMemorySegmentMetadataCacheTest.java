@@ -32,6 +32,7 @@ import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -49,7 +50,9 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class HeapMemorySegmentMetadataCacheTest
@@ -227,26 +230,50 @@ public class HeapMemorySegmentMetadataCacheTest
     );
   }
 
-  @Test
-  public void testIsSyncedForRead_returnsTrue_whenCacheIsLeaderAndSynced()
+  @Test(timeout = 60_000)
+  public void testGetDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
   {
     setupTargetWithCaching(true);
-    Assert.assertFalse(cache.isSyncedForRead());
-
     cache.start();
-    Assert.assertFalse(cache.isSyncedForRead());
-
-    syncCache();
-    Assert.assertFalse(cache.isSyncedForRead());
-
     cache.becomeLeader();
-    Assert.assertFalse(cache.isSyncedForRead());
 
-    syncCache();
-    syncCache();
-    Assert.assertTrue(cache.isSyncedForRead());
+    final List<String> observedEventOrder = new ArrayList<>();
 
-    Assert.assertNotNull(cache.getDatasource(TestDataSource.WIKI));
+    // Invoke getDatasource in Thread 1
+    final Thread getDatasourceThread = new Thread(() -> {
+      cache.getDatasource(TestDataSource.WIKI);
+      observedEventOrder.add("getDatasource completed");
+    });
+    getDatasourceThread.start();
+
+    // Invoke syncCache in Thread 2 after a wait period
+    Thread.sleep(100);
+    final Thread syncCompleteThread = new Thread(() -> {
+      observedEventOrder.add("before first sync");
+      syncCacheAfterBecomingLeader();
+    });
+    syncCompleteThread.start();
+
+    // Verify that the getDatasource call finishes only after the first sync
+    getDatasourceThread.join();
+    syncCompleteThread.join();
+    Assert.assertEquals(
+        List.of("before first sync", "getDatasource completed"),
+        observedEventOrder
+    );
+
+    // Verify that subsequent calls to getDatasource do not wait
+    final Thread getDatasourceThread2 = new Thread(() -> {
+      cache.getDatasource(TestDataSource.WIKI);
+      observedEventOrder.add("getDatasource 2 completed");
+    });
+    getDatasourceThread2.start();
+    getDatasourceThread2.join();
+
+    Assert.assertEquals(
+        List.of("before first sync", "getDatasource completed", "getDatasource 2 completed"),
+        observedEventOrder
+    );
   }
 
   @Test
@@ -601,6 +628,19 @@ public class HeapMemorySegmentMetadataCacheTest
             pendingSegment.getSequenceName(),
             segmentId.getInterval()
         ).isEmpty()
+    );
+  }
+
+  @Test
+  public void testGetDatasource_increasesTransactionCount()
+  {
+    setupAndSyncCache();
+    cache.getDatasource(TestDataSource.WIKI);
+    cache.getDatasource(TestDataSource.WIKI);
+    serviceEmitter.verifyEmitted(
+        Metric.TRANSACTION_COUNT,
+        Map.of(DruidMetrics.DATASOURCE, TestDataSource.WIKI),
+        2
     );
   }
 
