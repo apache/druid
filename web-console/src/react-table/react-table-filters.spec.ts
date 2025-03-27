@@ -20,7 +20,7 @@ import {
   sqlQueryCustomTableFilter,
   stringToTableFilters,
   tableFiltersToString,
-} from './react-table-utils';
+} from './react-table-filters';
 
 describe('react-table-utils', () => {
   describe('sqlQueryCustomTableFilter', () => {

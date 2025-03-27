@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -150,11 +149,9 @@ public class SegmentTransactionalInsertActionTest
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.fail(
-            InvalidInput.exception(
-                "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
-                + " ahead of the last committed end state[null]. Try resetting the supervisor."
-            ).toString()
+        SegmentPublishResult.retryableFailure(
+            "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
+            + " ahead of the last committed end state[null]. Try resetting the supervisor."
         ),
         result
     );

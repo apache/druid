@@ -33,10 +33,12 @@ import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A {@link SegmentMetadataTransaction} that reads only from the cache and sends
@@ -153,9 +155,30 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   // READ METHODS
 
   @Override
-  public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
+  public Set<String> findExistingSegmentIds(Set<SegmentId> segmentIds)
   {
-    return performReadAction(reader -> reader.findExistingSegmentIds(segments));
+    final Set<SegmentId> remainingIdsToFind = new HashSet<>(segmentIds);
+
+    // Try to find IDs in cache
+    final Set<String> foundIds = new HashSet<>();
+    if (readFromCache) {
+      foundIds.addAll(
+          metadataCache.findUsedSegments(remainingIdsToFind)
+                       .stream()
+                       .map(segment -> segment.getDataSegment().getId().toString())
+                       .collect(Collectors.toCollection(HashSet::new))
+      );
+      remainingIdsToFind.removeIf(id -> foundIds.contains(id.toString()));
+    }
+
+    // Find remaining IDs in metadata store
+    if (!remainingIdsToFind.isEmpty()) {
+      foundIds.addAll(
+          delegate.findExistingSegmentIds(remainingIdsToFind)
+      );
+    }
+
+    return Set.copyOf(foundIds);
   }
 
   @Override
@@ -167,20 +190,38 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    return performReadAction(reader -> reader.findHighestUnusedSegmentId(interval, version));
+    // Read from metadata store since unused segments are not cached
+    return delegate.findHighestUnusedSegmentId(interval, version);
   }
 
   @Override
-  public List<DataSegmentPlus> findSegments(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegments(Set<SegmentId> segmentIds)
   {
-    // Read from metadata store since unused segment payloads are not cached
-    return delegate.findSegments(segmentIds);
+    final Set<SegmentId> remainingIdsToFind = new HashSet<>(segmentIds);
+
+    // Try to find segments in cache
+    final List<DataSegmentPlus> foundSegments = new ArrayList<>();
+    if (readFromCache) {
+      foundSegments.addAll(
+          metadataCache.findUsedSegments(remainingIdsToFind)
+      );
+      foundSegments.forEach(segment -> remainingIdsToFind.remove(segment.getDataSegment().getId()));
+    }
+
+    // Find remaining segments in metadata store
+    if (!remainingIdsToFind.isEmpty()) {
+      foundSegments.addAll(
+          delegate.findSegments(remainingIdsToFind)
+      );
+    }
+
+    return List.copyOf(foundSegments);
   }
 
   @Override
-  public List<DataSegmentPlus> findSegmentsWithSchema(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
-    // Read from metadata store since unused segment payloads are not cached
+    // Read from metadata store since unused segment payloads and schema info is not cached
     return delegate.findSegmentsWithSchema(segmentIds);
   }
 
@@ -191,7 +232,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
+  public List<DataSegmentPlus> findUsedSegments(Set<SegmentId> segmentIds)
   {
     return performReadAction(reader -> reader.findUsedSegments(segmentIds));
   }
@@ -217,8 +258,14 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public DataSegment findSegment(SegmentId segmentId)
   {
-    // Read from metadata store since unused segment payloads are not cached
-    return delegate.findSegment(segmentId);
+    // Try to find used segment in cache
+    final DataSegment usedSegment = metadataCache.findUsedSegment(segmentId);
+    if (usedSegment == null) {
+      // Read from metadata store since unused segment payloads are not cached
+      return delegate.findSegment(segmentId);
+    } else {
+      return usedSegment;
+    }
   }
 
   @Override
@@ -278,10 +325,38 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime)
+  public boolean markSegmentAsUnused(SegmentId segmentId, DateTime updateTime)
   {
     return performWriteAction(
-        writer -> writer.markSegmentsWithinIntervalAsUnused(interval, updateTime)
+        writer -> writer.markSegmentAsUnused(segmentId, updateTime)
+    );
+  }
+
+  @Override
+  public int markSegmentsAsUnused(Set<SegmentId> segmentIds, DateTime updateTime)
+  {
+    return performWriteAction(
+        writer -> writer.markSegmentsAsUnused(segmentIds, updateTime)
+    );
+  }
+
+  @Override
+  public int markAllSegmentsAsUnused(DateTime updateTime)
+  {
+    return performWriteAction(
+        writer -> writer.markAllSegmentsAsUnused(updateTime)
+    );
+  }
+
+  @Override
+  public int markSegmentsWithinIntervalAsUnused(
+      Interval interval,
+      @Nullable List<String> versions,
+      DateTime updateTime
+  )
+  {
+    return performWriteAction(
+        writer -> writer.markSegmentsWithinIntervalAsUnused(interval, versions, updateTime)
     );
   }
 

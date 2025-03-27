@@ -19,15 +19,24 @@
 
 package org.apache.druid.quidem;
 
+import com.google.inject.Injector;
 import net.hydromatic.quidem.Quidem.ConnectionFactory;
 import net.hydromatic.quidem.Quidem.PropertyHandler;
+import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.http.client.utils.URIBuilder;
+
+import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class DruidQuidemConnectionFactory implements ConnectionFactory, PropertyHandler
 {
   private Properties props = new Properties();
+  private Map<String, String> envs = new HashMap<>();
 
   public DruidQuidemConnectionFactory()
   {
@@ -38,10 +47,50 @@ public class DruidQuidemConnectionFactory implements ConnectionFactory, Property
   @Override
   public Connection connect(String name, boolean reference) throws Exception
   {
-    if (name.startsWith("druidtest://")) {
-      return DriverManager.getConnection(name, props);
+    URI uri = URI.create(name);
+    if (uri.getScheme().endsWith("test")) {
+      // This property will be set by DruidQuidemTestBase to select the supplier
+      // for MultiComponentSupplier backed tests.
+      // note: caching will be based on the effective config: so if the same
+      // supplier is used from different MultiComponentSupplier it will be
+      // shared.
+      String customSupplier = props.getProperty("componentSupplier");
+      if (customSupplier != null) {
+        URIBuilder builder = new URIBuilder(uri);
+        builder.addParameter("componentSupplier", customSupplier);
+        builder.setHost("");
+        name = builder.build().toString();
+      }
+      Connection connection = DriverManager.getConnection(name, props);
+      envs = buildEnvsForConnection(connection);
+      return connection;
     }
     throw new RuntimeException("unknown connection '" + name + "'");
+  }
+
+  private static Map<String, String> buildEnvsForConnection(Connection connection)
+  {
+    Map<String, String> envs = new HashMap<>();
+    DruidConnectionExtras extras = DruidConnectionExtras.unwrapOrThrow(connection);
+    Injector injector = extras.getInjector();
+    QueryComponentSupplier supplier = injector.getInstance(QueryComponentSupplier.class);
+    Class<? extends SqlEngine> engineClazz = supplier.getSqlEngineClass();
+    String engineName = engineClazz.getName();
+    boolean isDart = engineName.contains("Dart");
+    boolean isMSQ = engineName.contains("MSQ");
+    boolean isNative = engineName.contains("Native");
+
+    envs.put("isDart", String.valueOf(isDart));
+    envs.put("isMSQ", String.valueOf(isMSQ));
+    envs.put("isNative", String.valueOf(isNative));
+    envs.put("isTaskBased", String.valueOf(isDart || isMSQ));
+
+    return envs;
+  }
+
+  public Object envLookup(String key)
+  {
+    return envs.get(key);
   }
 
   @Override

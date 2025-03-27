@@ -110,7 +110,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     )
     {
       @Override
-      protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
+      protected SegmentPublishResult updateDataSourceMetadataWithHandle(
           SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,

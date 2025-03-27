@@ -739,7 +739,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<String> segmentIds)
+  public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<SegmentId> segmentIds)
   {
     try {
       Pair<List<DataSegment>, SegmentTimeline> unusedSegmentsAndTimeline = connector
@@ -775,7 +775,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private List<DataSegment> retrieveUnusedSegments(
       final String dataSource,
-      final Set<String> segmentIds,
+      final Set<SegmentId> segmentIds,
       final Handle handle
   )
   {
@@ -783,11 +783,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         .forHandle(handle, connector, dbTables.get(), jsonMapper)
         .retrieveSegmentsById(dataSource, segmentIds);
 
-    final Set<String> unknownSegmentIds = new HashSet<>(segmentIds);
+    final Set<SegmentId> unknownSegmentIds = new HashSet<>(segmentIds);
     final List<DataSegment> unusedSegments = new ArrayList<>();
     for (DataSegmentPlus entry : retrievedSegments) {
       final DataSegment segment = entry.getDataSegment();
-      unknownSegmentIds.remove(segment.getId().toString());
+      unknownSegmentIds.remove(segment.getId());
       if (Boolean.FALSE.equals(entry.getUsed())) {
         unusedSegments.add(segment);
       }
@@ -823,7 +823,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, true)
+                                    .markSegments(segmentIds, true, DateTimes.nowUtc())
     );
   }
 
@@ -854,7 +854,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final int numSegments = connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegments(Collections.singletonList(segmentId), false)
+                                      .markSegments(List.of(segmentId), false, DateTimes.nowUtc())
       );
 
       return numSegments > 0;
@@ -871,7 +871,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, false)
+                                    .markSegments(segmentIds, false, DateTimes.nowUtc())
     );
   }
 

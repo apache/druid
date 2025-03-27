@@ -135,7 +135,7 @@ public class CompactionRunSimulator
 
     // Unlimited task slots to ensure that simulator does not skip any interval
     final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
-        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null)
+        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();

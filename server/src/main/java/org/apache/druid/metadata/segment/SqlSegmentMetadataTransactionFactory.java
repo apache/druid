@@ -101,7 +101,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
             emitTransactionCount(Metric.READ_ONLY_TRANSACTIONS, dataSource);
             return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
           } else {
-            return executeReadAndClose(createSqlTransaction(dataSource, handle, status), callback);
+            return executeReadAndClose(sqlTransaction, callback);
           }
         },
         QUIET_RETRIES,
