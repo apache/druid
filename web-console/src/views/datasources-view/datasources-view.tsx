@@ -948,7 +948,12 @@ GROUP BY 1, 2`;
   private readonly saveCompaction = async (compactionConfig: CompactionConfig) => {
     if (!compactionConfig) return;
     try {
-      await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      await Api.instance.post(
+        `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(
+          compactionConfig.dataSource,
+        )}`,
+        compactionConfig,
+      );
       this.setState({ compactionDialogOpenOn: undefined });
       this.fetchData();
     } catch (e) {
@@ -972,7 +977,7 @@ GROUP BY 1, 2`;
         onClick: async () => {
           try {
             await Api.instance.delete(
-              `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}`,
+              `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(datasource)}`,
             );
             this.setState({ compactionDialogOpenOn: undefined }, () => this.fetchData());
           } catch (e) {
