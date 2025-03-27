@@ -20,6 +20,7 @@
 package org.apache.druid.msq.sql.resources;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -28,6 +29,8 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -82,6 +85,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlResourceTest;
+import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -1232,5 +1236,45 @@ public class SqlStatementResourceTest extends MSQTestBase
     } else {
       Assert.assertEquals(expected.getErrorResponse().getAsMap(), actual.getErrorResponse().getAsMap());
     }
+  }
+
+  @Test
+  void testValidFilename()
+  {
+    // Valid cases
+    SqlStatementResource.validateFilename("testname");
+    SqlStatementResource.validateFilename("A.txt");
+    SqlStatementResource.validateFilename("final-results.txt");
+    SqlStatementResource.validateFilename("final results.txt");
+
+    // Empty
+    assertInvalidFileName("", "Filename cannot be null or empty");
+
+    // Too long
+    assertInvalidFileName(StringUtils.repeat("A", 300), "Filename cannot be longer than 255 characters");
+
+    // Special characters
+    assertInvalidFileName("He\\llo", "Filename contains invalid characters");
+    assertInvalidFileName("Hello/Name", "Filename contains invalid characters");
+    assertInvalidFileName("C:/Users/Name", "Filename contains invalid characters");
+    assertInvalidFileName("username:password", "Filename contains invalid characters");
+    assertInvalidFileName("A>B", "Filename contains invalid characters");
+    assertInvalidFileName("A<B", "Filename contains invalid characters");
+    assertInvalidFileName("A\0a11", "Filename contains invalid characters");
+    assertInvalidFileName("\rrB", "Filename contains invalid characters");
+    assertInvalidFileName("\nAnB", "Filename contains invalid characters");
+    assertInvalidFileName("A|B", "Filename contains invalid characters");
+    assertInvalidFileName("A<\"B", "Filename contains invalid characters");
+    assertInvalidFileName("A<?B", "Filename contains invalid characters");
+  }
+
+  private void assertInvalidFileName(String filename, String errorMessage)
+  {
+    MatcherAssert.assertThat(
+        Throwables.getRootCause(
+            Assert.assertThrows(DruidException.class, () -> SqlStatementResource.validateFilename(filename))
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(errorMessage)
+    );
   }
 }
