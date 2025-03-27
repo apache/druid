@@ -105,17 +105,21 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   private SqlSegmentMetadataTransactionFactory transactionFactory;
   private BlockingExecutorService cachePollExecutor;
 
-  private final boolean useSegmentCache;
+  private final SegmentMetadataCache.UsageMode cacheMode;
 
-  @Parameterized.Parameters(name = "useSegmentCache = {0}")
+  @Parameterized.Parameters(name = "cacheMode = {0}")
   public static Object[][] testParameters()
   {
-    return new Object[][]{{true}, {false}};
+    return new Object[][]{
+        {SegmentMetadataCache.UsageMode.ALWAYS},
+        {SegmentMetadataCache.UsageMode.NEVER},
+        {SegmentMetadataCache.UsageMode.IF_SYNCED}
+    };
   }
 
-  public IndexerSQLMetadataStorageCoordinatorTest(boolean useSegmentCache)
+  public IndexerSQLMetadataStorageCoordinatorTest(SegmentMetadataCache.UsageMode cacheMode)
   {
-    this.useSegmentCache = useSegmentCache;
+    this.cacheMode = cacheMode;
   }
 
   @Before
@@ -141,10 +145,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
 
-    final SegmentMetadataCache.UsageMode cacheMode
-        = useSegmentCache
-          ? SegmentMetadataCache.UsageMode.ALWAYS
-          : SegmentMetadataCache.UsageMode.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
@@ -161,10 +161,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     leaderSelector.becomeLeader();
 
     // Get the cache ready if required
-    if (useSegmentCache) {
+    if (isCacheEnabled()) {
       segmentMetadataCache.start();
       segmentMetadataCache.becomeLeader();
-      cachePollExecutor.finishNextPendingTasks(4);
+      refreshCache();
+      refreshCache();
     }
 
     transactionFactory = new SqlSegmentMetadataTransactionFactory(
@@ -214,11 +215,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     leaderSelector.stopBeingLeader();
   }
 
-  void refreshCache()
+  private void refreshCache()
   {
-    if (useSegmentCache) {
+    if (isCacheEnabled()) {
       cachePollExecutor.finishNextPendingTasks(2);
     }
+  }
+  
+  private boolean isCacheEnabled()
+  {
+    return cacheMode != SegmentMetadataCache.UsageMode.NEVER;
   }
 
   @Test
@@ -937,7 +943,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testCleanUpgradeSegmentsTableForTask()
   {
-    Assume.assumeFalse(useSegmentCache);
+    Assume.assumeFalse(isCacheEnabled());
 
     final String taskToClean = "taskToClean";
     final ReplaceTaskLock replaceLockToClean = new ReplaceTaskLock(
@@ -2182,7 +2188,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testLargeIntervalWithStringComparison()
   {
     // Known Issue when not using cache: https://github.com/apache/druid/issues/12860
-    Assume.assumeTrue(useSegmentCache);
+    Assume.assumeTrue(isCacheEnabled());
 
     coordinator.commitSegments(
         ImmutableSet.of(
@@ -2283,7 +2289,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testUpdateSegmentsInMetaDataStorage()
   {
-    Assume.assumeFalse(useSegmentCache);
+    Assume.assumeFalse(isCacheEnabled());
 
     // Published segments to MetaDataStorage
     coordinator.commitSegments(SEGMENTS, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
@@ -3714,7 +3720,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testRetrieveUpgradedFromSegmentIdsInBatches()
   {
-    Assume.assumeFalse(useSegmentCache);
+    Assume.assumeFalse(isCacheEnabled());
 
     final int size = 500;
     final int batchSize = 100;
@@ -3914,7 +3920,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testCachedTransaction_cannotReadWhatItWrites()
   {
-    Assume.assumeTrue(useSegmentCache);
+    Assume.assumeTrue(isCacheEnabled());
 
     transactionFactory.inReadWriteDatasourceTransaction(
         TestDataSource.WIKI,
@@ -3940,9 +3946,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testCacheIsUsed_ifReady()
+  public void testReadOperation_usesCache_ifSynced()
   {
-    Assume.assumeTrue(useSegmentCache);
+    Assume.assumeTrue(isCacheEnabled());
 
     Assert.assertTrue(segmentMetadataCache.isSyncedForRead());
 
@@ -3965,7 +3971,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testReadOperation_doesNotUseCache_ifNotSynced()
   {
-    Assume.assumeTrue(useSegmentCache);
+    Assume.assumeTrue(isCacheEnabled());
 
     segmentMetadataCache.stopBeingLeader();
     Assert.assertFalse(segmentMetadataCache.isSyncedForRead());
@@ -3996,9 +4002,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testWriteOperation_usesCache_ifNotSynced()
+  public void testWriteOperation_alwaysUsesCache_inModeIfSynced()
   {
-    Assume.assumeTrue(useSegmentCache);
+    Assume.assumeTrue(cacheMode == SegmentMetadataCache.UsageMode.IF_SYNCED);
 
     // Lose and regain leadership
     segmentMetadataCache.stopBeingLeader();
