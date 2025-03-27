@@ -110,7 +110,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
   public void setUp()
   {
     connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.seconds(3), false);
+    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.seconds(3), null);
     storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
     segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
@@ -1330,7 +1330,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     final Interval theInterval = Intervals.of("2012-03-15T00:00:00.000/2012-03-20T00:00:00.000");
 
     // Re-create SqlSegmentsMetadataManager with a higher poll duration
-    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.seconds(1), false);
+    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.seconds(1), null);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),

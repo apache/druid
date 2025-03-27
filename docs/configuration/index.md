@@ -1175,8 +1175,8 @@ The following properties pertain to segment metadata caching on the Overlord tha
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.manager.segments.useCache`|If `true`, segment metadata is cached on the Overlord to speed up metadata operations.|false|
-|`druid.manager.segments.pollDuration`|Duration (in ISO 8601 format) between successive syncs of the cache with the metadata store. This property is used only when `druid.manager.segments.useCache` is `true`.|`PT1M` (1 minute)|
+|`druid.manager.segments.useCache`|Denotes the usage mode of the segment metadata cache. Possible modes are: (a) `never`: Cache is disabled. (b) `always`: Reads are always done from the cache. Service start-up will be blocked until cache has synced with the metadata store at least once. Transactions will block until cache has synced with the metadata store at least once after becoming leader. (c) `ifSynced`: Reads are done from the cache only if it has already synced with the metadata store. This mode does not block service start-up or transactions.|`never`|
+|`druid.manager.segments.pollDuration`|Duration (in ISO 8601 format) between successive syncs of the cache with the metadata store. This property is used only when `druid.manager.segments.useCache` is set to `always` or `ifSynced`.|`PT1M` (1 minute)|
 
 #### Overlord dynamic configuration
 
