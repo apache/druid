@@ -875,12 +875,33 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     Assert.assertEquals(
-        "attachment; filename=my-file.ndjson",
+        "attachment; filename=\"my-file.ndjson\"",
         getHeader(
             resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), "my-file.ndjson", makeOkRequest()),
             SqlStatementResource.CONTENT_DISPOSITION_RESPONSE_HEADER
         )
     );
+  }
+
+  @Test
+  public void testDownloadResultsAsFile() throws Exception
+  {
+    final String expectedResult = "{\"_time\":123,\"alias\":\"foo\",\"market\":\"bar\"}\n"
+                                  + "{\"_time\":234,\"alias\":\"foo1\",\"market\":\"bar1\"}\n\n";
+
+    Response resultsResponse1 = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), "results.txt", makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse1.getStatus());
+    Assert.assertEquals("attachment; filename=\"results.txt\"", resultsResponse1.getMetadata().get("Content-Disposition").get(0));
+    assertExpectedResults(expectedResult, resultsResponse1);
+
+    Response resultsResponse2 = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), "final results.txt", makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse2.getStatus());
+    Assert.assertEquals("attachment; filename=\"final results.txt\"", resultsResponse2.getMetadata().get("Content-Disposition").get(0));
+    assertExpectedResults(expectedResult, resultsResponse2);
+
+    Response resultsResponse3 = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), "/Users/Name/final.txt", makeOkRequest());
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resultsResponse3.getStatus());
+    Assert.assertNull(resultsResponse3.getMetadata().get("Content-Disposition"));
   }
 
   private void assertExpectedResults(String expectedResult, Response resultsResponse) throws IOException
@@ -943,7 +964,7 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     Assert.assertEquals(
-        "attachment; filename=my-file.ndjson",
+        "attachment; filename=\"my-file.ndjson\"",
         getHeader(
             resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, 0L, null, "my-file.ndjson", makeOkRequest()),
             SqlStatementResource.CONTENT_DISPOSITION_RESPONSE_HEADER
@@ -1246,26 +1267,28 @@ public class SqlStatementResourceTest extends MSQTestBase
     SqlStatementResource.validateFilename("A.txt");
     SqlStatementResource.validateFilename("final-results.txt");
     SqlStatementResource.validateFilename("final results.txt");
+    SqlStatementResource.validateFilename("final;results.txt");
+    SqlStatementResource.validateFilename("final@results.txt");
 
     // Empty
-    assertInvalidFileName("", "Filename cannot be null or empty");
+    assertInvalidFileName("", "Filename cannot be empty.");
 
     // Too long
-    assertInvalidFileName(StringUtils.repeat("A", 300), "Filename cannot be longer than 255 characters");
+    assertInvalidFileName(StringUtils.repeat("A", 300), "Filename cannot be longer than 255 characters.");
 
     // Special characters
-    assertInvalidFileName("He\\llo", "Filename contains invalid characters");
-    assertInvalidFileName("Hello/Name", "Filename contains invalid characters");
-    assertInvalidFileName("C:/Users/Name", "Filename contains invalid characters");
-    assertInvalidFileName("username:password", "Filename contains invalid characters");
-    assertInvalidFileName("A>B", "Filename contains invalid characters");
-    assertInvalidFileName("A<B", "Filename contains invalid characters");
-    assertInvalidFileName("A\0a11", "Filename contains invalid characters");
-    assertInvalidFileName("\rrB", "Filename contains invalid characters");
-    assertInvalidFileName("\nAnB", "Filename contains invalid characters");
-    assertInvalidFileName("A|B", "Filename contains invalid characters");
-    assertInvalidFileName("A<\"B", "Filename contains invalid characters");
-    assertInvalidFileName("A<?B", "Filename contains invalid characters");
+    assertInvalidFileName("He\\llo", "Filename contains invalid characters.");
+    assertInvalidFileName("Hello/Name", "Filename contains invalid characters.");
+    assertInvalidFileName("C:/Users/Name", "Filename contains invalid characters.");
+    assertInvalidFileName("username:password", "Filename contains invalid characters.");
+    assertInvalidFileName("A>B", "Filename contains invalid characters.");
+    assertInvalidFileName("A<B", "Filename contains invalid characters.");
+    assertInvalidFileName("A\0a11", "Filename contains invalid characters.");
+    assertInvalidFileName("\rrB", "Filename contains invalid characters.");
+    assertInvalidFileName("\nAnB", "Filename contains invalid characters.");
+    assertInvalidFileName("A|B", "Filename contains invalid characters.");
+    assertInvalidFileName("A<\"B", "Filename contains invalid characters.");
+    assertInvalidFileName("A<?B", "Filename contains invalid characters.");
   }
 
   private void assertInvalidFileName(String filename, String errorMessage)
