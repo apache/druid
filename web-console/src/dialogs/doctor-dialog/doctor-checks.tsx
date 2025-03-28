@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { CompactionConfigs } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet, pluralIfNeeded, queryDruidSql } from '../../utils';
 import { postToSampler } from '../../utils/sampler';
@@ -373,10 +374,11 @@ ORDER BY "num_bad_time_chunks"`,
 
       if (sqlResult.length) {
         // Grab the auto-compaction definitions and ignore dataSources that already have auto-compaction
-        let compactionResult: any;
+        let compactionResult: CompactionConfigs;
         try {
-          compactionResult = (await Api.instance.get('/druid/coordinator/v1/config/compaction'))
-            .data;
+          compactionResult = (
+            await Api.instance.get('/druid/indexer/v1/compaction/config/datasources')
+          ).data;
         } catch (e) {
           controls.addIssue(`Could not get compaction config. Something is wrong.`);
           return;

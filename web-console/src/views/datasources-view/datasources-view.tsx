@@ -48,7 +48,7 @@ import {
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import type {
   CompactionConfig,
-  CompactionConfigsAndMore,
+  CompactionConfigs,
   CompactionInfo,
   CompactionStatus,
   QueryWithContext,
@@ -616,8 +616,8 @@ GROUP BY 1, 2`;
           auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
             try {
               const compactionConfigsAndMore = (
-                await Api.instance.get<CompactionConfigsAndMore>(
-                  '/druid/coordinator/v1/config/compaction',
+                await Api.instance.get<CompactionConfigs>(
+                  '/druid/indexer/v1/compaction/config/datasources',
                   { cancelToken },
                 )
               ).data;
@@ -628,7 +628,7 @@ GROUP BY 1, 2`;
 
               const compactionStatusesResp = await Api.instance.get<{
                 latestStatus: CompactionStatus[];
-              }>('/druid/coordinator/v1/compaction/status', { cancelToken });
+              }>('/druid/indexer/v1/compaction/status/datasources', { cancelToken });
               const compactionStatuses = lookupBy(
                 compactionStatusesResp.data.latestStatus || [],
                 c => c.dataSource,
