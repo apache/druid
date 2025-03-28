@@ -1283,18 +1283,18 @@ public class SqlStatementResourceTest extends MSQTestBase
     assertInvalidFileName(StringUtils.repeat("A", 300), "Filename cannot be longer than 255 characters.");
 
     // Special characters
-    assertInvalidFileName("He\\llo", "Filename contains invalid characters.");
-    assertInvalidFileName("Hello/Name", "Filename contains invalid characters.");
-    assertInvalidFileName("C:/Users/Name", "Filename contains invalid characters.");
-    assertInvalidFileName("username:password", "Filename contains invalid characters.");
-    assertInvalidFileName("A>B", "Filename contains invalid characters.");
-    assertInvalidFileName("A<B", "Filename contains invalid characters.");
-    assertInvalidFileName("A\0a11", "Filename contains invalid characters.");
-    assertInvalidFileName("\rrB", "Filename contains invalid characters.");
-    assertInvalidFileName("\nAnB", "Filename contains invalid characters.");
-    assertInvalidFileName("A|B", "Filename contains invalid characters.");
-    assertInvalidFileName("A<\"B", "Filename contains invalid characters.");
-    assertInvalidFileName("A<?B", "Filename contains invalid characters.");
+    assertInvalidFileName("He\\llo", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("Hello/Name", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("C:/Users/Name", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("username:password", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("A>ValueB", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("A<ValueB", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("A\0a11", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("\rrB", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("\nAnB", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("A|B", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("A\"B", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
+    assertInvalidFileName("A?B", "Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \\0, \\n, or \\r)");
   }
 
   private void assertInvalidFileName(String filename, String errorMessage)

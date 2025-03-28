@@ -997,7 +997,7 @@ public class SqlStatementResource
   }
 
   /**
-   * Validates that a filename in valid. File names are considered to be valid if it is:
+   * Validates that a filename is valid. Filenames are considered to be valid if it is:
    * <ul>
    *   <li>Not empty.</li>
    *   <li>Not longer than 255 characters.</li>
@@ -1016,7 +1016,7 @@ public class SqlStatementResource
     }
 
     if (!FILENAME_PATTERN.matcher(filename).matches()) {
-      throw InvalidInput.exception("Filename contains invalid characters.");
+      throw InvalidInput.exception("Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \0, \n, or \r)");
     }
     return filename;
   }
