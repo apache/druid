@@ -238,6 +238,11 @@
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+            <version>${nashorn.version}</version>
+        </dependency>
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.apache.druid</groupId>
