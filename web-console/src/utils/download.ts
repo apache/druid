@@ -45,13 +45,23 @@ export const FILE_FORMAT_TO_LABEL: Record<FileFormat, string> = {
 
 export function stringifyCsvValue(s: null | string | number | Date): string {
   if (s == null) return '';
-  const str = stringifyValue(s).replace(/\r?\n/g, ' ');
-  return `"${str.replace(/"/g, '""')}"`;
+  const str = stringifyValue(s).replace(/\r?\n/g, ' ').replace(/"/g, '""');
+
+  if (/["\n\t,]/.test(str)) {
+    return `"${str}"`;
+  }
+
+  return str;
 }
 
 export function stringifyTsvValue(s: null | string | number | Date): string {
   if (s == null) return '';
-  return stringifyValue(s).replace(/\r?\n/g, ' ').replace(/\t/g, ' ');
+  return stringifyValue(s).replace(/\r?\n|\t/g, ' ');
+}
+
+export function stringifyMarkdownValue(s: null | string | number | Date): string {
+  if (s == null) return '';
+  return stringifyValue(s).replace(/\r?\n/g, '<br>');
 }
 
 function queryResultToDsv(
@@ -97,7 +107,7 @@ export function queryResultsToString(queryResult: QueryResult, format: FileForma
       return getMarkdownTable({
         table: {
           head: header.map(column => column.name),
-          body: rows.map(row => row.map(cell => stringifyValue(cell))),
+          body: rows.map(row => row.map(stringifyMarkdownValue)),
         },
         alignment: header.map(column => (column.isNumeric() ? Align.Right : Align.Left)),
       });
