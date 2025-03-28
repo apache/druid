@@ -288,6 +288,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
             icon={IconNames.PROPERTIES}
             data-tooltip={showControls ? 'Hide module controls' : 'Show module controls'}
             minimal
+            active={showControls}
             onClick={() => setModuleState(moduleState.change({ showControls: !showControls }))}
           />
         </ButtonGroup>
