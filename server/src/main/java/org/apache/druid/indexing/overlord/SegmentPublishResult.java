@@ -22,7 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -34,59 +34,59 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Result of an operation that attempts to publish segments. Indicates the set of segments actually published
- * and whether or not the transaction was a success.
- *
- * If "success" is false then the segments set will be empty.
- *
- * It's possible for the segments set to be empty even if "success" is true, since the segments set only
- * includes segments actually published as part of the transaction. The requested segments could have been
- * published by a different transaction (e.g. in the case of replica sets) and this one would still succeed.
+ * Result of a segment publish operation.
  */
 public class SegmentPublishResult
 {
   private final Set<DataSegment> segments;
   private final boolean success;
-  @Nullable
+  private final boolean retryable;
   private final String errorMsg;
-  @Nullable
   private final List<PendingSegmentRecord> upgradedPendingSegments;
 
   public static SegmentPublishResult ok(Set<DataSegment> segments)
   {
-    return new SegmentPublishResult(segments, true, null);
+    return new SegmentPublishResult(segments, true, false, null);
   }
 
   public static SegmentPublishResult ok(Set<DataSegment> segments, List<PendingSegmentRecord> upgradedPendingSegments)
   {
-    return new SegmentPublishResult(segments, true, null, upgradedPendingSegments);
+    return new SegmentPublishResult(segments, true, false, null, upgradedPendingSegments);
   }
 
-  public static SegmentPublishResult fail(String errorMsg)
+  public static SegmentPublishResult fail(String errorMsg, Object... args)
   {
-    return new SegmentPublishResult(ImmutableSet.of(), false, errorMsg);
+    return new SegmentPublishResult(Set.of(), false, false, StringUtils.format(errorMsg, args), null);
+  }
+
+  public static SegmentPublishResult retryableFailure(String errorMsg, Object... args)
+  {
+    return new SegmentPublishResult(Set.of(), false, true, StringUtils.format(errorMsg, args), null);
   }
 
   @JsonCreator
   private SegmentPublishResult(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("success") boolean success,
+      @JsonProperty("retryable") boolean retryable,
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
-    this(segments, success, errorMsg, null);
+    this(segments, success, retryable, errorMsg, null);
   }
 
   private SegmentPublishResult(
       Set<DataSegment> segments,
       boolean success,
-       @Nullable String errorMsg,
+      boolean retryable,
+      @Nullable String errorMsg,
       List<PendingSegmentRecord> upgradedPendingSegments
   )
   {
     this.segments = Preconditions.checkNotNull(segments, "segments");
     this.success = success;
     this.errorMsg = errorMsg;
+    this.retryable = retryable;
     this.upgradedPendingSegments = upgradedPendingSegments;
 
     if (!success) {
@@ -98,6 +98,12 @@ public class SegmentPublishResult
     }
   }
 
+  /**
+   * Set of segments published successfully.
+   *
+   * @return Empty set if the publish operation failed or if all the segments had
+   * already been published by a different transaction.
+   */
   @JsonProperty
   public Set<DataSegment> getSegments()
   {
@@ -117,6 +123,12 @@ public class SegmentPublishResult
     return errorMsg;
   }
 
+  @JsonProperty
+  public boolean isRetryable()
+  {
+    return retryable;
+  }
+
   @Nullable
   public List<PendingSegmentRecord> getUpgradedPendingSegments()
   {
@@ -134,6 +146,7 @@ public class SegmentPublishResult
     }
     SegmentPublishResult that = (SegmentPublishResult) o;
     return success == that.success &&
+           retryable == that.retryable &&
            Objects.equals(segments, that.segments) &&
            Objects.equals(errorMsg, that.errorMsg);
   }
@@ -141,7 +154,7 @@ public class SegmentPublishResult
   @Override
   public int hashCode()
   {
-    return Objects.hash(segments, success, errorMsg);
+    return Objects.hash(segments, success, errorMsg, retryable);
   }
 
   @Override
@@ -150,6 +163,7 @@ public class SegmentPublishResult
     return "SegmentPublishResult{" +
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", success=" + success +
+           ", retryable=" + retryable +
            ", errorMsg='" + errorMsg + '\'' +
            '}';
   }

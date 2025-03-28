@@ -85,7 +85,8 @@ public class QueryFrameworkUtils
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
       final QuerySegmentWalker walker,
-      final QueryRunnerFactoryConglomerate conglomerate
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final AuthorizerMapper authorizerMapper
   )
   {
     return new QueryLifecycleFactory(
@@ -95,7 +96,7 @@ public class QueryFrameworkUtils
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new AuthConfig(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        authorizerMapper,
         Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
     );
   }
@@ -179,7 +180,7 @@ public class QueryFrameworkUtils
     );
   }
 
-  static DruidSchemaCatalog createMockRootSchema(
+  public static DruidSchemaCatalog createMockRootSchema(
       final PlannerConfig plannerConfig,
       final ViewManager viewManager,
       final AuthorizerMapper authorizerMapper,
@@ -243,7 +244,7 @@ public class QueryFrameworkUtils
     );
   }
 
-  static DruidSchema createMockSchema(
+  public static DruidSchema createMockSchema(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
@@ -253,7 +254,7 @@ public class QueryFrameworkUtils
   )
   {
     final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
-        createMockQueryLifecycleFactory(walker, conglomerate),
+        createMockQueryLifecycleFactory(walker, conglomerate, CalciteTests.TEST_AUTHORIZER_MAPPER),
         timelineServerView,
         BrokerSegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,

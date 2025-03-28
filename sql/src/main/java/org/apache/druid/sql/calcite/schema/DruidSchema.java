@@ -25,6 +25,7 @@ import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.inject.Inject;
+
 import java.util.Set;
 
 public class DruidSchema extends AbstractTableSchema
@@ -74,7 +75,7 @@ public class DruidSchema extends AbstractTableSchema
   public Set<String> getTableNames()
   {
     if (druidSchemaManager != null) {
-      return druidSchemaManager.getTableNames();
+      return druidSchemaManager.getTableNames(segmentMetadataCache);
     } else {
       return catalogResolver.getTableNames(segmentMetadataCache.getDatasourceNames());
     }
