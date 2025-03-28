@@ -77,7 +77,8 @@ public class TierSegmentBalancer
     Map<Boolean, List<ServerHolder>> partitions =
         servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
     this.decommissioningServers = partitions.get(true);
-    this.activeServers = partitions.get(false);
+    this.activeServers = // TODO: cleanup
+        partitions.get(false).stream().collect(Collectors.partitioningBy(ServerHolder::isUnmanaged)).get(false);
 
     this.movingSegmentCount = activeServers.stream().mapToInt(ServerHolder::getNumMovingSegments).sum();
     this.maxSegmentsToMove = maxSegmentsToMove;

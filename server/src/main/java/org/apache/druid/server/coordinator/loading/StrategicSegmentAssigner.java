@@ -446,7 +446,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     for (ServerHolder server : eligibleServers) {
       if (server.isDecommissioning()) {
         eligibleDyingServers.add(server);
-      } else {
+      } else if (!server.isUnmanaged()){
         eligibleLiveServers.add(server);
       }
     }

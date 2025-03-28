@@ -57,6 +57,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
   private final boolean isDecommissioning;
+  private final boolean isUnmanaged;
   private final int maxAssignmentsInRun;
   private final int maxLifetimeInQueue;
 
@@ -85,6 +86,17 @@ public class ServerHolder implements Comparable<ServerHolder>
     this(server, peon, isDecommissioning, 0, 1);
   }
 
+  public ServerHolder(
+      ImmutableDruidServer server,
+      LoadQueuePeon peon,
+      boolean isDecommissioning,
+      int maxSegmentsInLoadQueue,
+      int maxLifetimeInQueue
+  )
+  {
+    this(server, peon, isDecommissioning, false, maxSegmentsInLoadQueue, maxLifetimeInQueue);
+  }
+
   /**
    * Creates a new ServerHolder valid for a single coordinator run.
    *
@@ -101,6 +113,7 @@ public class ServerHolder implements Comparable<ServerHolder>
       ImmutableDruidServer server,
       LoadQueuePeon peon,
       boolean isDecommissioning,
+      boolean isUnmanaged,
       int maxSegmentsInLoadQueue,
       int maxLifetimeInQueue
   )
@@ -108,6 +121,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.server = server;
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
+    this.isUnmanaged = isUnmanaged;
 
     this.maxAssignmentsInRun = maxSegmentsInLoadQueue == 0
                                ? Integer.MAX_VALUE
@@ -213,6 +227,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return isDecommissioning;
   }
 
+  public boolean isUnmanaged()
+  {
+    return isUnmanaged;
+  }
+
   public boolean isLoadQueueFull()
   {
     return totalAssignmentsInRun >= maxAssignmentsInRun;
@@ -238,6 +257,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   public boolean canLoadSegment(DataSegment segment)
   {
     return !isDecommissioning
+           && !isUnmanaged
            && !hasSegmentLoaded(segment.getId())
            && getActionOnSegment(segment) == null
            && totalAssignmentsInRun < maxAssignmentsInRun

@@ -152,6 +152,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   )
   {
     final Set<String> decommissioningServers = dynamicConfig.getDecommissioningNodes();
+    final Set<String> unmanagedServers = dynamicConfig.getUnmanagedNodes();
     final DruidCluster.Builder cluster = DruidCluster.builder();
     for (ImmutableDruidServer server : currentServers) {
       cluster.add(
@@ -159,6 +160,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
               server,
               taskMaster.getPeonForServer(server),
               decommissioningServers.contains(server.getHost()),
+              unmanagedServers.contains(server.getHost()),
               segmentLoadingConfig.getMaxSegmentsInLoadQueue(),
               segmentLoadingConfig.getMaxLifetimeInLoadQueue()
           )
