@@ -37,10 +37,10 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -206,22 +206,6 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
-  {
-    final String path = StringUtils.format(
-        "/druid/coordinator/v1/compaction/progress?dataSource=%s",
-        StringUtils.urlEncode(dataSource)
-    );
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
-            new BytesFullResponseHandler()
-        ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), CompactionProgressResponse.class)
-    );
-  }
-
-  @Override
   public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
   {
     final StringBuilder pathBuilder = new StringBuilder("/druid/coordinator/v1/compaction/status");
@@ -283,6 +267,24 @@ public class CoordinatorClientImpl implements CoordinatorClient
             jsonMapper,
             holder.getContent(),
             DataSourceCompactionConfig.class
+        )
+    );
+  }
+
+  @Override
+  public ListenableFuture<DruidCompactionConfig> getCompactionConfig()
+  {
+    final String path = "/druid/coordinator/v1/config/compaction";
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(
+            jsonMapper,
+            holder.getContent(),
+            DruidCompactionConfig.class
         )
     );
   }

@@ -25,9 +25,9 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -80,13 +80,6 @@ public interface CoordinatorClient
   ListenableFuture<Set<String>> fetchDataSourcesWithUsedSegments();
 
   /**
-   * Gets the number of bytes yet to be compacted for the given datasource.
-   * <p>
-   * API: {@code GET /druid/coordinator/v1/compaction/progress}
-   */
-  ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource);
-
-  /**
    * Gets the latest compaction snapshots of one or all datasources.
    * <p>
    * API: {@code GET /druid/coordinator/v1/compaction/status}
@@ -116,4 +109,11 @@ public interface CoordinatorClient
    * API: {@code GET /druid/coordinator/v1/config/compaction/{dataSource}}
    */
   ListenableFuture<DataSourceCompactionConfig> getDatasourceCompactionConfig(String dataSource);
+
+  /**
+   * Gets the current compaction config.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/config/compaction}
+   */
+  ListenableFuture<DruidCompactionConfig> getCompactionConfig();
 }

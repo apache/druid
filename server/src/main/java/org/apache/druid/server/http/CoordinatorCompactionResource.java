@@ -21,15 +21,10 @@ package org.apache.druid.server.http;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
-import org.apache.druid.rpc.HttpResponseException;
-import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.compaction.CompactionProgressResponse;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -52,16 +47,13 @@ import java.util.Collection;
 public class CoordinatorCompactionResource
 {
   private final DruidCoordinator coordinator;
-  private final OverlordClient overlordClient;
 
   @Inject
   public CoordinatorCompactionResource(
-      DruidCoordinator coordinator,
-      OverlordClient overlordClient
+      DruidCoordinator coordinator
   )
   {
     this.coordinator = coordinator;
-    this.overlordClient = overlordClient;
   }
 
   /**
@@ -89,10 +81,6 @@ public class CoordinatorCompactionResource
       return ServletResourceUtils.buildErrorResponseFrom(InvalidInput.exception("No DataSource specified"));
     }
 
-    if (isCompactionSupervisorEnabled()) {
-      return buildResponse(overlordClient.getBytesAwaitingCompaction(dataSource));
-    }
-
     final AutoCompactionSnapshot snapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
     if (snapshot == null) {
       return ServletResourceUtils.buildErrorResponseFrom(NotFound.exception("Unknown DataSource"));
@@ -109,10 +97,6 @@ public class CoordinatorCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    if (isCompactionSupervisorEnabled()) {
-      return buildResponse(overlordClient.getCompactionSnapshots(dataSource));
-    }
-
     final Collection<AutoCompactionSnapshot> snapshots;
     if (dataSource == null || dataSource.isEmpty()) {
       snapshots = coordinator.getAutoCompactionSnapshot().values();
@@ -137,38 +121,5 @@ public class CoordinatorCompactionResource
     return Response.ok().entity(
         coordinator.simulateRunWithConfigUpdate(updatePayload)
     ).build();
-  }
-
-  private <T> Response buildResponse(ListenableFuture<T> future)
-  {
-    try {
-      return Response.ok(FutureUtils.getUnchecked(future, true)).build();
-    }
-    catch (Exception e) {
-      if (e.getCause() instanceof HttpResponseException) {
-        final HttpResponseException cause = (HttpResponseException) e.getCause();
-        return Response.status(cause.getResponse().getStatus().getCode())
-                       .entity(cause.getResponse().getContent())
-                       .build();
-      } else {
-        return ServletResourceUtils.buildErrorResponseFrom(
-            InternalServerError.exception(e.getMessage())
-        );
-      }
-    }
-  }
-
-  /**
-   * Check if compaction supervisors are enabled on the Overlord. 
-   */
-  private boolean isCompactionSupervisorEnabled()
-  {
-    try {
-      return FutureUtils.getUnchecked(overlordClient.isCompactionSupervisorEnabled(), true);
-    }
-    catch (Exception e) {
-      // Overlord is probably on an older version, assume that compaction supervisor is not enabled
-      return false;
-    }
   }
 }
