@@ -1286,6 +1286,9 @@ Getting the query results for an ingestion query returns an empty response.
 * `resultFormat` (optional)
     * Type: String
     * Defines the format in which the results are presented. The following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. The default is `object`.
+* `filename` (optional)
+    * Type: String  
+    * If set, attaches a `Content-Disposition` header to the response with the value of `attachment; filename={filename}`. The filename must not be longer than 255 characters and must not contain the characters `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `\0`, `\n`, or `\r`.
 
 #### Responses
 
