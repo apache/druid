@@ -124,15 +124,13 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             rightIcon={IconNames.CARET_DOWN}
           />
         </Popover>{' '}
-        {pages.length > 1 && (
-          <AnchorButton
-            intent={Intent.PRIMARY}
-            icon={IconNames.DOWNLOAD}
-            text="Download all data (concatenated)"
-            href={getResultUrl(-1)}
-            download
-          />
-        )}
+        <AnchorButton
+          intent={Intent.PRIMARY}
+          icon={IconNames.DOWNLOAD}
+          text="Download all data (concatenated)"
+          href={getResultUrl(-1)}
+          download
+        />
       </p>
       <ReactTable
         data={pages}
