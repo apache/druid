@@ -187,11 +187,17 @@
             <artifactId>commons-collections4</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.openjdk.nashorn</groupId>
-            <artifactId>nashorn-core</artifactId>
-            <version>${nashorn.version}</version>
-        </dependency>
+<dependency>
+    <groupId>org.graalvm.polyglot</groupId>
+    <artifactId>polyglot</artifactId>
+    <version>${graaljs.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.graalvm.polyglot</groupId>
+    <artifactId>js</artifactId>
+    <version>${graaljs.version}</version>
+    <type>pom</type>
+</dependency>
         <dependency>
             <groupId>com.cronutils</groupId>
             <artifactId>cron-utils</artifactId>

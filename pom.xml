@@ -70,6 +70,7 @@
     </scm>
 
     <properties>
+        <graaljs.version>24.2.0</graaljs.version>
         <java.version>11</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>

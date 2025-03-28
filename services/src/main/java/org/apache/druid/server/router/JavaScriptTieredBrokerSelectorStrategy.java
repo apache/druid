@@ -59,7 +59,7 @@ public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
 
   private SelectorFunction compileSelectorFunction()
   {
-    final ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+    final ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
     try {
       ((Compilable) engine).compile("var apply = " + function).eval();
       return ((Invocable) engine).getInterface(SelectorFunction.class);
