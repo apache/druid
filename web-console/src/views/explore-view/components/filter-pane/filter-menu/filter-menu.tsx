@@ -108,6 +108,7 @@ type FilterMenuTab = 'compose' | 'sql';
 
 export interface FilterMenuProps {
   querySource: QuerySource;
+  extraFilter: SqlExpression;
   filter: SqlExpression;
   initPattern?: FilterPattern;
   onPatternChange(newPattern: FilterPattern): void;
@@ -121,6 +122,7 @@ export interface FilterMenuProps {
 export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps) {
   const {
     querySource,
+    extraFilter,
     filter,
     initPattern,
     onPatternChange,
@@ -161,6 +163,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
       cont = (
         <ValuesFilterControl
           querySource={querySource}
+          extraFilter={extraFilter}
           filter={filter}
           filterPattern={pattern}
           setFilterPattern={setPattern}
@@ -173,6 +176,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
       cont = (
         <ContainsFilterControl
           querySource={querySource}
+          extraFilter={extraFilter}
           filter={filter}
           filterPattern={pattern}
           setFilterPattern={setPattern}
@@ -185,6 +189,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
       cont = (
         <RegexpFilterControl
           querySource={querySource}
+          extraFilter={extraFilter}
           filter={filter}
           filterPattern={pattern}
           setFilterPattern={setPattern}

@@ -32,6 +32,7 @@ interface ModuleStateValue {
   moduleId: string;
   moduleWhere?: SqlExpression;
   parameterValues: ParameterValues;
+  showModuleWhere?: boolean;
   showControls?: boolean;
 }
 
@@ -53,12 +54,14 @@ export class ModuleState {
   public readonly moduleId: string;
   public readonly moduleWhere: SqlExpression;
   public readonly parameterValues: ParameterValues;
+  public readonly showModuleWhere: boolean;
   public readonly showControls: boolean;
 
   constructor(value: ModuleStateValue) {
     this.moduleId = value.moduleId;
     this.moduleWhere = value.moduleWhere || SqlLiteral.TRUE;
     this.parameterValues = value.parameterValues;
+    this.showModuleWhere = Boolean(value.showModuleWhere);
     this.showControls = Boolean(value.showControls);
   }
 
@@ -68,6 +71,7 @@ export class ModuleState {
       parameterValues: this.parameterValues,
     };
     if (!SqlLiteral.isTrue(this.moduleWhere)) value.moduleWhere = this.moduleWhere;
+    if (this.showModuleWhere) value.showModuleWhere = true;
     if (this.showControls) value.showControls = true;
     return value;
   }
@@ -77,6 +81,10 @@ export class ModuleState {
       ...this.valueOf(),
       ...newValues,
     });
+  }
+
+  public changeModuleWhere(moduleWhere: SqlExpression): ModuleState {
+    return this.change({ moduleWhere });
   }
 
   public changeParameterValues(parameterValues: ParameterValues): ModuleState {

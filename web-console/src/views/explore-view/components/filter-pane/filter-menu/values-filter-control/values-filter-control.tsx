@@ -33,6 +33,7 @@ import './values-filter-control.scss';
 
 export interface ValuesFilterControlProps {
   querySource: QuerySource;
+  extraFilter: SqlExpression;
   filter: SqlExpression;
   filterPattern: ValuesFilterPattern;
   setFilterPattern(filterPattern: ValuesFilterPattern): void;
@@ -42,7 +43,7 @@ export interface ValuesFilterControlProps {
 export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   props: ValuesFilterControlProps,
 ) {
-  const { querySource, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
+  const { querySource, extraFilter, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
   const { column, negated, values: selectedValues } = filterPattern;
   const [initValues] = useState(selectedValues);
   const [searchString, setSearchString] = useState('');
@@ -52,6 +53,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
       querySource
         .getInitQuery(
           SqlExpression.and(
+            extraFilter,
             filter,
             searchString ? F('ICONTAINS_STRING', C(column), searchString) : undefined,
           ),
@@ -61,7 +63,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
         .changeLimitValue(101)
         .toString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [querySource.query, filter, column, searchString],
+    [querySource.query, extraFilter, filter, column, searchString],
   );
 
   const [valuesState] = useQueryManager<string, any[]>({

@@ -36,7 +36,7 @@ import { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import type { Column, QueryResult, SqlExpression } from 'druid-query-toolkit';
-import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import { QueryRunner, SqlLiteral, SqlQuery } from 'druid-query-toolkit';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Loader, SplitterLayout, TimezoneMenuItems } from '../../components';
@@ -319,6 +319,7 @@ export const ExploreView = React.memo(function ExploreView() {
               <FilterPane
                 ref={filterPane}
                 querySource={querySource}
+                extraFilter={SqlLiteral.TRUE}
                 timezone={timezone}
                 filter={where}
                 onFilterChange={setWhere}

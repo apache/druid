@@ -39,6 +39,7 @@ function regexpIssue(possibleRegexp: string): string | undefined {
 
 export interface RegexpFilterControlProps {
   querySource: QuerySource;
+  extraFilter: SqlExpression;
   filter: SqlExpression;
   filterPattern: RegexpFilterPattern;
   setFilterPattern(filterPattern: RegexpFilterPattern): void;
@@ -48,21 +49,25 @@ export interface RegexpFilterControlProps {
 export const RegexpFilterControl = React.memo(function RegexpFilterControl(
   props: RegexpFilterControlProps,
 ) {
-  const { querySource, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
+  const { querySource, extraFilter, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
   const { column, negated, regexp } = filterPattern;
 
   const previewQuery = useMemo(
     () =>
       querySource
         .getInitQuery(
-          SqlExpression.and(filter, regexp ? filterPatternToExpression(filterPattern) : undefined),
+          SqlExpression.and(
+            extraFilter,
+            filter,
+            regexp ? filterPatternToExpression(filterPattern) : undefined,
+          ),
         )
         .addSelect(F.cast(C(column), 'VARCHAR').as('c'), { addToGroupBy: 'end' })
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- exclude 'makePattern' from deps
-    [querySource.query, filter, column, regexp, negated],
+    [querySource.query, extraFilter, filter, column, regexp, negated],
   );
 
   const [previewState] = useQueryManager<string, string[]>({
