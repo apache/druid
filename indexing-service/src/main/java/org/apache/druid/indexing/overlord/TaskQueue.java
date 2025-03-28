@@ -128,7 +128,7 @@ public class TaskQueue
    * queue management is in progress. {@link #start} and {@link #stop} methods
    * acquire a WRITE lock whereas all other operations acquire a READ lock.
    */
-  private final ReentrantReadWriteLock giant = new ReentrantReadWriteLock(true);
+  private final ReentrantReadWriteLock startStopLock = new ReentrantReadWriteLock(true);
 
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private final BlockingQueue<Object> managementMayBeNecessary = new ArrayBlockingQueue<>(8);
@@ -205,7 +205,7 @@ public class TaskQueue
   @LifecycleStart
   public void start()
   {
-    giant.writeLock().lock();
+    startStopLock.writeLock().lock();
 
     try {
       Preconditions.checkState(!active, "queue must be stopped");
@@ -272,7 +272,7 @@ public class TaskQueue
       }
     }
     finally {
-      giant.writeLock().unlock();
+      startStopLock.writeLock().unlock();
     }
   }
 
@@ -282,7 +282,7 @@ public class TaskQueue
   @LifecycleStop
   public void stop()
   {
-    giant.writeLock().lock();
+    startStopLock.writeLock().lock();
 
     try {
       activeTasks.clear();
@@ -292,7 +292,7 @@ public class TaskQueue
       requestManagement();
     }
     finally {
-      giant.writeLock().unlock();
+      startStopLock.writeLock().unlock();
     }
   }
 
@@ -365,12 +365,12 @@ public class TaskQueue
   @VisibleForTesting
   void manageQueuedTasks()
   {
-    giant.readLock().lock();
+    startStopLock.readLock().lock();
     try {
       startPendingTasksOnRunner();
     }
     finally {
-      giant.readLock().unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
@@ -380,7 +380,7 @@ public class TaskQueue
    * Cleans up tasks present on the {@link #taskRunner} but not present in
    * {@link #activeTasks} anymore.
    */
-  @GuardedBy("giant")
+  @GuardedBy("startStopLock")
   private void startPendingTasksOnRunner()
   {
     final Set<String> unknownTaskIds = new HashSet<>();
@@ -410,7 +410,7 @@ public class TaskQueue
     }
   }
 
-  @GuardedBy("giant")
+  @GuardedBy("startStopLock")
   private void startPendingTaskOnRunner(TaskEntry entry, ListenableFuture<TaskStatus> runnerTaskFuture)
   {
     // Don't do anything with tasks that have recently finished; notifyStatus will handle it.
@@ -506,7 +506,7 @@ public class TaskQueue
 
     taskContextEnricher.enrichContext(task);
 
-    giant.readLock().lock();
+    startStopLock.readLock().lock();
 
     try {
       Preconditions.checkState(active, "Queue is not active!");
@@ -530,11 +530,11 @@ public class TaskQueue
       return true;
     }
     finally {
-      giant.readLock().unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
-  @GuardedBy("giant")
+  @GuardedBy("startStopLock")
   private void addTaskInternal(final Task task, final DateTime updateTime)
   {
     final AtomicBoolean added = new AtomicBoolean(false);
@@ -568,7 +568,7 @@ public class TaskQueue
    * the DB would still have the task as RUNNING and {@link #syncFromStorage()}
    * might add it back to the queue, thus causing a duplicate run of the task.
    */
-  @GuardedBy("giant")
+  @GuardedBy("startStopLock")
   private void removeTaskInternal(final String taskId, final DateTime deleteTime)
   {
     final AtomicReference<Task> removedTask = new AtomicReference<>();
@@ -601,7 +601,7 @@ public class TaskQueue
   public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
     Preconditions.checkNotNull(taskId, "taskId");
-    giant.readLock().lock();
+    startStopLock.readLock().lock();
     try {
       updateTaskEntry(
           taskId,
@@ -614,7 +614,7 @@ public class TaskQueue
       );
     }
     finally {
-      giant.readLock().unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
@@ -628,7 +628,7 @@ public class TaskQueue
   public void shutdownWithSuccess(final String taskId, String reasonFormat, Object... args)
   {
     Preconditions.checkNotNull(taskId, "taskId");
-    giant.readLock().lock();
+    startStopLock.readLock().lock();
     try {
       updateTaskEntry(
           taskId,
@@ -636,7 +636,7 @@ public class TaskQueue
       );
     }
     finally {
-      giant.readLock().unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
@@ -825,7 +825,7 @@ public class TaskQueue
    */
   private void syncFromStorage()
   {
-    giant.readLock().lock();
+    startStopLock.readLock().lock();
     final DateTime syncStartTime = DateTimes.nowUtc();
 
     try {
@@ -865,7 +865,7 @@ public class TaskQueue
       throw new RuntimeException(e);
     }
     finally {
-      giant.readLock().unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
@@ -1070,7 +1070,7 @@ public class TaskQueue
    */
   private void updateTaskEntry(String taskId, Consumer<TaskEntry> updateOperation)
   {
-    giant.readLock().lock();
+    startStopLock.readLock().lock();
     try {
       activeTasks.compute(
           taskId,
@@ -1084,7 +1084,7 @@ public class TaskQueue
       );
     }
     finally {
-      giant.readLock().unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
