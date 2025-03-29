@@ -793,7 +793,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
-    waitUntil(task, this::isTaskReading);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -856,7 +856,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
-    waitUntil(task, this::isTaskReading);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -915,7 +915,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     final ListenableFuture<TaskStatus> future = runTask(task);
-    waitUntil(task, this::isTaskReading);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -2459,6 +2459,16 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private boolean isTaskReading(KinesisIndexTask task)
   {
     return task.getRunner().getStatus() == SeekableStreamIndexTaskRunner.Status.READING;
+  }
+
+  /**
+   * Return true if specified task is in PUBLISHING state
+   * @param task {@link KinesisIndexTask} having its state checked
+   * @return true if task is in PUBLISHING state, otherwise false
+   */
+  private boolean isTaskPublishing(KinesisIndexTask task)
+  {
+    return task.getRunner().getStatus() == SeekableStreamIndexTaskRunner.Status.PUBLISHING;
   }
 
   private static KinesisRecordEntity kjb(
