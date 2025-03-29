@@ -48,7 +48,7 @@ class Template(BaseTemplate):
 
     def define_overlord(self):
         service = self.define_druid_service(OVERLORD, OVERLORD)
-        self.add_depends(service, [ZOO_KEEPER, METADATA, "create_minio_buckets"])
+        self.add_depends(service, [ZOO_KEEPER, METADATA, 'create_minio_buckets'])
         return service
 
     # This test uses different data than the default.
@@ -60,8 +60,12 @@ class Template(BaseTemplate):
 
     def create_minio_bucket(self):
         service = self.define_external_service("create_minio_buckets")
-        self.add_depends(service, ["minio"])
+        self.add_depends(service, ['minio'])
         return service
+
+    # No kafka dependency in this cluster
+    def define_kafka(self):
+        pass
 
     def define_custom_services(self):
         self.create_minio_container()

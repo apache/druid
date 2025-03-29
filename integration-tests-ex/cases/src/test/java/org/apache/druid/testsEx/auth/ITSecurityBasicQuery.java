@@ -74,6 +74,10 @@ public class ITSecurityBasicQuery
   public static final String USER_1_PASSWORD = "password1";
   private static final String EXPORT_TASK = "/indexer/export_task.json";
 
+  // Time in ms to sleep after updating role permissions in each test. This intends to give the
+  // underlying test cluster enough time to sync permissions and be ready when test execution starts.
+  private static final int SYNC_SLEEP = 10000;
+
   @Before
   public void setUp() throws IOException
   {
@@ -161,8 +165,8 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synced, to avoid flakiness
-    Thread.sleep(1000);
+    // Allow permissions sync across cluster to avoid flakes
+    Thread.sleep(SYNC_SLEEP);
 
     String queryLocal =
         StringUtils.format(
@@ -226,8 +230,8 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synced, to avoid flakiness
-    Thread.sleep(4000);
+    // Allow permissions sync across cluster to avoid flakes
+    Thread.sleep(SYNC_SLEEP);
 
     String exportQuery =
         StringUtils.format(
@@ -266,8 +270,8 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synced, to avoid flakyness
-    Thread.sleep(1000);
+    // Allow permissions sync across cluster to avoid flakes
+    Thread.sleep(SYNC_SLEEP);
 
     String exportQuery =
         StringUtils.format(
@@ -306,8 +310,8 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synced, to avoid flakiness
-    Thread.sleep(1000);
+    // Allow permissions sync across cluster to avoid flakes
+    Thread.sleep(SYNC_SLEEP);
 
     String task = createTaskString();
     StatusResponseHolder statusResponseHolder = overlordResourceTestClient.submitTaskAndReturnStatusWithAuth(task, USER_1, USER_1_PASSWORD);
@@ -327,8 +331,8 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Wait for a second so that the auth is synced, to avoid flakiness
-    Thread.sleep(1000);
+    // Allow permissions sync across cluster to avoid flakes
+    Thread.sleep(SYNC_SLEEP);
 
     String task = createTaskString();
     StatusResponseHolder statusResponseHolder = overlordResourceTestClient.submitTaskAndReturnStatusWithAuth(task, USER_1, USER_1_PASSWORD);

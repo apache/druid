@@ -24,6 +24,10 @@ class Template(BaseTemplate):
         self.add_property(service, 'druid.msq.intermediate.storage.basePath', '/shared/durablestorage/')
         self.add_property(service, 'druid.export.storage.baseDir', '/')
 
+    # No kafka dependency in this cluster
+    def define_kafka(self):
+        pass
+
     def extend_druid_service(self, service):
         self.add_env_file(service, '../Common/environment-configs/auth.env')
         self.add_env(service, 'druid_test_loadList', 'druid-basic-security')

@@ -14,18 +14,26 @@
 # limitations under the License.
 
 from template import BaseTemplate, generate
+from template import COORDINATOR, MIDDLE_MANAGER
 
 class Template(BaseTemplate):
 
-    def define_indexer(self):
-        service = super().define_indexer()
-        self.add_property(service, 'druid.msq.intermediate.storage.enable', 'true')
-        self.add_property(service, 'druid.msq.intermediate.storage.type', 'local')
-        self.add_property(service, 'druid.msq.intermediate.storage.basePath', '/shared/durablestorage/')
-        self.add_property(service, 'druid.export.storage.baseDir', '/')
 
-    # No kafka dependency in this cluster
-    def define_kafka(self):
-        pass
+    def define_coordinator(self):
+        service_name = COORDINATOR
+        service = self.define_master_service(service_name, COORDINATOR)
+        self.add_env(service, 'druid_host', service_name)
+        self.add_env(service, 'druid_manager_segments_pollDuration', 'PT5S')
+        self.add_env(service, 'druid_coordinator_period', 'PT10S')
+
+    def define_indexer(self):
+        '''
+        Override the indexer to MIDDLE_MANAGER
+        '''
+        service = self.define_std_indexer(MIDDLE_MANAGER)
+        self.add_env(service, 'druid_msq_intermediate_storage_enable', 'true')
+        self.add_env(service, 'druid_msq_intermediate_storage_type', 'local')
+        self.add_env(service, 'druid_msq_intermediate_storage_basePath', '/shared/durablestorage/')
+        self.add_env(service, 'druid_export_storage_baseDir', '/')
 
 generate(__file__, Template())
