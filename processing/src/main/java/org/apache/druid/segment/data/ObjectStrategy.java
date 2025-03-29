@@ -53,6 +53,20 @@ public interface ObjectStrategy<T> extends Comparator<T>
   byte[] toBytes(@Nullable T val);
 
   /**
+   * Additional method to avoid ClassCastException when {@link ObjectStrategy#toBytes(T)} is called with a byte[] as a
+   * parameter. Class casting is performed explicitly to prevent unexpected behavior.
+   */
+  @Nullable
+  default byte[] objectToBytes(@Nullable Object val)
+  {
+    if (val instanceof byte[]) {
+      return (byte[]) val;
+    } else {
+      return toBytes((T) val);
+    }
+  }
+
+  /**
    * Whether {@link #compare} is valid or not.
    */
   default boolean canCompare()
