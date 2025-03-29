@@ -39,7 +39,8 @@ When you insert or replace data with SQL-based ingestion, set the context parame
 
 This example inserts data into a table named `w000` without performing any data rollup:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 INSERT INTO w000
@@ -85,7 +86,8 @@ CLUSTERED BY channel
 
 This example inserts data into a table named `kttm_rollup` and performs data rollup. This example implements the recommendations described in [Rollup](./concepts.md#rollup).
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 INSERT INTO "kttm_rollup"
@@ -126,7 +128,8 @@ CLUSTERED BY browser, session
 
 This example aggregates data from a table named `w000` and inserts the result into `w002`.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 INSERT INTO w002
@@ -153,7 +156,8 @@ CLUSTERED BY page
 
 This example inserts data into a table named `w003` and joins data from two sources:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 INSERT INTO w003
@@ -209,7 +213,8 @@ PARTITIONED BY HOUR
 
 This example replaces the entire datasource used in the table `w007` with the new query data while dropping the old data:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 REPLACE INTO w007
@@ -256,7 +261,8 @@ CLUSTERED BY channel
 
 This example replaces certain segments in a datasource with the new query data while dropping old segments:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 REPLACE INTO w007
@@ -279,7 +285,8 @@ CLUSTERED BY page
 
 ## REPLACE for reindexing an existing datasource into itself
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 REPLACE INTO w000
@@ -305,7 +312,8 @@ CLUSTERED BY page
 
 ## SELECT with EXTERN and JOIN
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 WITH flights AS (
