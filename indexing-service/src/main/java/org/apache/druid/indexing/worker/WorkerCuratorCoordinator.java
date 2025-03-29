@@ -25,11 +25,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.CuratorUtils;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.ServiceAnnouncer;
+import org.apache.druid.guice.annotations.DirectExecutorAnnouncer;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -54,7 +54,7 @@ public class WorkerCuratorCoordinator
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
   private final CuratorFramework curatorFramework;
-  private final Announcer announcer;
+  private final ServiceAnnouncer announcer;
 
   private final String baseAnnouncementsPath;
   private final String baseTaskPath;
@@ -69,6 +69,7 @@ public class WorkerCuratorCoordinator
       IndexerZkConfig indexerZkConfig,
       RemoteTaskRunnerConfig config,
       CuratorFramework curatorFramework,
+      @DirectExecutorAnnouncer ServiceAnnouncer announcer,
       Worker worker
   )
   {
@@ -76,8 +77,7 @@ public class WorkerCuratorCoordinator
     this.config = config;
     this.curatorFramework = curatorFramework;
     this.worker = worker;
-
-    this.announcer = new Announcer(curatorFramework, Execs.directExecutor());
+    this.announcer = announcer;
 
     this.baseAnnouncementsPath = getPath(Arrays.asList(indexerZkConfig.getAnnouncementsPath(), worker.getHost()));
     this.baseTaskPath = getPath(Arrays.asList(indexerZkConfig.getTasksPath(), worker.getHost()));
@@ -87,7 +87,7 @@ public class WorkerCuratorCoordinator
   @LifecycleStart
   public void start() throws Exception
   {
-    log.info("WorkerCuratorCoordinator good to go sir. Server[%s]", worker.getHost());
+    log.info("WorkerCuratorCoordinator good to go. Server[%s]", worker.getHost());
     synchronized (lock) {
       if (started) {
         return;

@@ -63,6 +63,9 @@ public class CuratorConfig
   @JsonProperty("maxZkRetries")
   private int maxZkRetries = 29;
 
+  @JsonProperty("pathChildrenCacheStrategy")
+  private boolean pathChildrenCacheStrategy = true;
+
   public static CuratorConfig create(String hosts)
   {
     CuratorConfig config = new CuratorConfig();
@@ -140,5 +143,10 @@ public class CuratorConfig
   public int getMaxZkRetries()
   {
     return maxZkRetries;
+  }
+
+  public boolean getPathChildrenCacheStrategy()
+  {
+    return pathChildrenCacheStrategy;
   }
 }
