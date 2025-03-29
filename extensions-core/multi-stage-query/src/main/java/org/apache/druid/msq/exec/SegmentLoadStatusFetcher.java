@@ -27,17 +27,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.discovery.BrokerClient;
+import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -238,13 +236,11 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
    */
   private VersionLoadStatus fetchLoadStatusFromBroker() throws Exception
   {
-    Request request = brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/");
     SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
                                      ResultFormat.OBJECTLINES,
                                      false, false, false, null, null
     );
-    request.setContent(MediaType.APPLICATION_JSON, objectMapper.writeValueAsBytes(sqlQuery));
-    String response = brokerClient.sendQuery(request);
+    String response = brokerClient.submit(sqlQuery);
 
     if (response == null) {
       // Unable to query broker
