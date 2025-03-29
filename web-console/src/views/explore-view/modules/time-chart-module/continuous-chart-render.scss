@@ -18,6 +18,8 @@
 
 @import '../../../../variables';
 
+$default-chart-color: $druid-brand;
+
 .continuous-chart-render {
   position: relative;
   overflow: hidden;
@@ -28,10 +30,6 @@
 
     text {
       user-select: none;
-    }
-
-    .mark-bar {
-      fill: #497ee6;
     }
 
     .selection {
@@ -89,25 +87,29 @@
       opacity: 0.7;
     }
 
+    .mark-bar {
+      fill: #00b6c3;
+    }
+
     .mark-line {
       stroke-width: 1.5px;
-      stroke: #497ee6;
+      stroke: $default-chart-color;
       fill: none;
     }
 
     .mark-area {
-      fill: #497ee6;
-      opacity: 0.7;
+      fill: $default-chart-color;
+      opacity: 0.5;
     }
 
     .single-point {
-      stroke: #497ee6;
+      stroke: $default-chart-color;
       opacity: 0.7;
       stroke-width: 1.5px;
     }
 
     .selected-point {
-      fill: #497ee6;
+      fill: $default-chart-color;
     }
   }
 

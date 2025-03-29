@@ -30,6 +30,7 @@ import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { SqlLiteral } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { useMemoWithPrevious } from '../../../../hooks';
@@ -53,6 +54,7 @@ import { ModuleRepository } from '../../module-repository/module-repository';
 import { adjustTransferValue, normalizeType } from '../../utils';
 import { ControlPane } from '../control-pane/control-pane';
 import { DroppableContainer } from '../droppable-container/droppable-container';
+import { FilterPane } from '../filter-pane/filter-pane';
 import { Issue } from '../issue/issue';
 import { ModulePicker } from '../module-picker/module-picker';
 
@@ -115,7 +117,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
     onAddToSourceQueryAsColumn,
     onAddToSourceQueryAsMeasure,
   } = props;
-  const { moduleId, parameterValues, showControls } = moduleState;
+  const { moduleId, moduleWhere, parameterValues, showModuleWhere, showControls } = moduleState;
   const [stage, setStage] = useState<Stage | undefined>();
 
   const module = ModuleRepository.getModule(moduleId);
@@ -174,6 +176,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
         timezone,
         where,
         setWhere,
+        moduleWhere,
         parameterValues: parameterValuesWithDefaults,
         setParameterValues: updateParameterValues,
         runSqlQuery,
@@ -191,15 +194,27 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
     setModuleState(moduleState.applyShowMeasure(measure));
   }
 
+  const moduleHasFilter = !SqlLiteral.isTrue(moduleWhere);
   return (
     <div
       className={classNames(
         'module-pane',
         className,
         showControls ? 'show-controls' : 'no-controls',
+        showModuleWhere ? 'show-filter' : 'no-filter',
       )}
     >
-      <div className="module-top-bar">
+      {showModuleWhere && (
+        <FilterPane
+          querySource={querySource}
+          extraFilter={where}
+          timezone={timezone}
+          filter={moduleWhere}
+          onFilterChange={newFilter => setModuleState(moduleState.changeModuleWhere(newFilter))}
+          runSqlQuery={runSqlQuery}
+        />
+      )}
+      <div className="module-control-bar">
         <ModulePicker
           selectedModuleId={moduleId}
           onSelectedModuleIdChange={newModuleId => {
@@ -254,42 +269,49 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
             onAddToSourceQueryAsMeasure={onAddToSourceQueryAsMeasure}
           />
         )}
-        <div className="bar-expander" />
-        <ButtonGroup>
-          <Popover
-            position={Position.BOTTOM_RIGHT}
-            content={
-              <Menu>
-                <MenuItem
-                  icon={IconNames.RESET}
-                  text="Reset visualization parameters"
-                  onClick={() => {
-                    setModuleState(
-                      moduleState.changeParameterValues(
-                        getStickyParameterValuesForModule(moduleId),
-                      ),
-                    );
-                  }}
-                />
-                <MenuItem
-                  icon={IconNames.TRASH}
-                  text="Delete module"
-                  intent={Intent.DANGER}
-                  onClick={onDelete}
-                />
-              </Menu>
-            }
-          >
-            <Button icon={IconNames.MORE} data-tooltip="More module options" minimal />
-          </Popover>
-          <Button
-            icon={IconNames.PROPERTIES}
-            data-tooltip={showControls ? 'Hide module controls' : 'Show module controls'}
-            minimal
-            onClick={() => setModuleState(moduleState.change({ showControls: !showControls }))}
-          />
-        </ButtonGroup>
       </div>
+      <ButtonGroup className="corner-buttons">
+        <Popover
+          position={Position.BOTTOM_RIGHT}
+          content={
+            <Menu>
+              <MenuItem
+                icon={IconNames.RESET}
+                text="Reset visualization parameters"
+                onClick={() => {
+                  setModuleState(
+                    moduleState.changeParameterValues(getStickyParameterValuesForModule(moduleId)),
+                  );
+                }}
+              />
+              <MenuItem
+                icon={IconNames.TRASH}
+                text="Delete module"
+                intent={Intent.DANGER}
+                onClick={onDelete}
+              />
+            </Menu>
+          }
+        >
+          <Button icon={IconNames.MORE} data-tooltip="More module options" minimal />
+        </Popover>
+        <Button
+          icon={moduleHasFilter ? IconNames.FILTER_KEEP : IconNames.FILTER}
+          data-tooltip={`${showModuleWhere ? 'Hide' : 'Show'} module filter bar${
+            moduleHasFilter ? `\nCurrent filter: ${moduleWhere}` : ''
+          }`}
+          minimal
+          active={showModuleWhere}
+          onClick={() => setModuleState(moduleState.change({ showModuleWhere: !showModuleWhere }))}
+        />
+        <Button
+          icon={IconNames.PROPERTIES}
+          data-tooltip={`${showControls ? 'Hide' : 'Show'} module controls`}
+          minimal
+          active={showControls}
+          onClick={() => setModuleState(moduleState.change({ showControls: !showControls }))}
+        />
+      </ButtonGroup>
       {showControls && module && (
         <div className="control-pane-container">
           <ControlPane
