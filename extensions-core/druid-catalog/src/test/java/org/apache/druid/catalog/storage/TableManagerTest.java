@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
@@ -27,14 +28,21 @@ import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
 import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.segment.VirtualColumns;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -85,9 +93,29 @@ public class TableManagerTest
   @Test
   public void testCreate() throws DuplicateKeyException, NotFoundException
   {
+    final DatasourceProjectionMetadata projectionMetadata = new DatasourceProjectionMetadata(
+        new AggregateProjectionSpec(
+            "projection",
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(
+                    Granularities.HOUR,
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                )
+            ),
+            ImmutableList.of(
+                new StringDimensionSchema("dim")
+            ),
+            new AggregatorFactory[]{
+                new CountAggregatorFactory("count")
+            }
+        )
+    );
+
+    List<Object> jsonProjectionSpec = JSON_MAPPER.convertValue(ImmutableList.of(projectionMetadata), List.class);
     Map<String, Object> props = ImmutableMap.of(
         DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D",
-        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000
+        DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY, 1_000_000,
+        DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, jsonProjectionSpec
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(TableId.datasource("table1"), spec);

@@ -33,7 +33,6 @@ import java.util.Map;
 
 public class Utils
 {
-
   /**
    * Create a Map from iterables of keys and values. If there are more keys than values, or more values than keys,
    * the excess will be omitted.

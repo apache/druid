@@ -110,6 +110,15 @@ public class AggregateProjectionMetadata
     return Objects.hash(schema, numRows);
   }
 
+  @Override
+  public String toString()
+  {
+    return "AggregateProjectionMetadata{" +
+           "schema=" + schema +
+           ", numRows=" + numRows +
+           '}';
+  }
+
   public static class Schema
   {
     /**
@@ -464,6 +473,22 @@ public class AggregateProjectionMetadata
           Arrays.hashCode(aggregators),
           ordering
       );
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Schema{" +
+             "name='" + name + '\'' +
+             ", timeColumnName='" + timeColumnName + '\'' +
+             ", virtualColumns=" + virtualColumns +
+             ", groupingColumns=" + groupingColumns +
+             ", aggregators=" + Arrays.toString(aggregators) +
+             ", ordering=" + ordering +
+             ", timeColumnPosition=" + timeColumnPosition +
+             ", granularity=" + granularity +
+             ", orderingWithTimeSubstitution=" + orderingWithTimeSubstitution +
+             '}';
     }
   }
 }

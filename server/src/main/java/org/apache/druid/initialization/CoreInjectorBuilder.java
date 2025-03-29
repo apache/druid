@@ -25,6 +25,7 @@ import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.CatalogCoreModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -131,7 +132,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new StartupLoggingModule(),
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
-        new StorageConnectorModule()
+        new StorageConnectorModule(),
+        new CatalogCoreModule()
     );
     return this;
   }

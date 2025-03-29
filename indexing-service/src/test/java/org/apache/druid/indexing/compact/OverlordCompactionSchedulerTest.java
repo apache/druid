@@ -55,6 +55,7 @@ import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
@@ -230,7 +231,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testMsqCompactionConfigWithOneMaxTasksIsInvalid()
   {
-    final DataSourceCompactionConfig datasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig datasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withEngine(CompactionEngine.MSQ)
@@ -254,10 +255,10 @@ public class OverlordCompactionSchedulerTest
     scheduler.start();
     scheduler.startCompaction(
         TestDataSource.WIKI,
-        DataSourceCompactionConfig.builder()
-                                  .forDataSource(TestDataSource.WIKI)
-                                  .withSkipOffsetFromLatest(Period.seconds(0))
-                                  .build()
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(TestDataSource.WIKI)
+                                              .withSkipOffsetFromLatest(Period.seconds(0))
+                                              .build()
     );
 
     executor.finishNextPendingTask();
@@ -299,10 +300,10 @@ public class OverlordCompactionSchedulerTest
     scheduler.start();
     scheduler.startCompaction(
         TestDataSource.WIKI,
-        DataSourceCompactionConfig.builder()
-                                  .forDataSource(TestDataSource.WIKI)
-                                  .withSkipOffsetFromLatest(Period.seconds(0))
-                                  .build()
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(TestDataSource.WIKI)
+                                              .withSkipOffsetFromLatest(Period.seconds(0))
+                                              .build()
     );
     scheduler.stopCompaction(TestDataSource.WIKI);
 
@@ -333,10 +334,10 @@ public class OverlordCompactionSchedulerTest
     scheduler.start();
     scheduler.startCompaction(
         TestDataSource.WIKI,
-        DataSourceCompactionConfig.builder()
-                                  .forDataSource(TestDataSource.WIKI)
-                                  .withSkipOffsetFromLatest(Period.seconds(0))
-                                  .build()
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(TestDataSource.WIKI)
+                                              .withSkipOffsetFromLatest(Period.seconds(0))
+                                              .build()
     );
 
     final CompactionSimulateResult simulateResult = scheduler.simulateRunWithConfigUpdate(

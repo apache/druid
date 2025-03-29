@@ -46,21 +46,21 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
+public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSerdeBasic() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withSkipOffsetFromLatest(new Period(3600))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -76,7 +76,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithMaxRowsPerSegment() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -86,7 +86,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -101,7 +101,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithMaxTotalRows() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -110,7 +110,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -125,7 +125,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeMaxTotalRowsWithMaxRowsPerSegment() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -134,7 +134,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -226,7 +226,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpec() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -235,7 +235,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -250,7 +250,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpecWithQueryGranularity() throws Exception
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -259,7 +259,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -277,7 +277,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithNullGranularitySpec() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -285,7 +285,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -300,7 +300,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpecWithNullValues() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -309,7 +309,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -324,7 +324,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpecWithRollup() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -333,7 +333,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -351,7 +351,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeIOConfigWithNonNullDropExisting() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -361,7 +361,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -377,7 +377,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeIOConfigWithNullDropExisting() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -387,7 +387,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -403,7 +403,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeDimensionsSpec() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -416,7 +416,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -431,7 +431,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeTransformSpec() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -440,7 +440,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
@@ -455,7 +455,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeMetricsSpec() throws IOException
   {
-    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+    final InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
@@ -464,7 +464,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
-    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+    final InlineSchemaDataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, InlineSchemaDataSourceCompactionConfig.class);
 
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());

@@ -93,7 +93,7 @@ public class NewestSegmentFirstPolicyBenchmark
       final String dataSource = DATA_SOURCE_PREFIX + i;
       compactionConfigs.put(
           dataSource,
-          DataSourceCompactionConfig
+          InlineSchemaDataSourceCompactionConfig
               .builder()
               .forDataSource(dataSource)
               .withTaskPriority(0)

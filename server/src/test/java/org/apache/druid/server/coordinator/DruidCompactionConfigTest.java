@@ -50,12 +50,12 @@ public class DruidCompactionConfigTest
   {
     final DruidCompactionConfig config = new DruidCompactionConfig(
         Arrays.asList(
-            DataSourceCompactionConfig
+            InlineSchemaDataSourceCompactionConfig
                 .builder()
                 .forDataSource(TestDataSource.WIKI)
                 .withSkipOffsetFromLatest(Period.hours(1))
                 .build(),
-            DataSourceCompactionConfig
+            InlineSchemaDataSourceCompactionConfig
                 .builder()
                 .forDataSource(TestDataSource.KOALA)
                 .withSkipOffsetFromLatest(Period.hours(2))
@@ -97,7 +97,7 @@ public class DruidCompactionConfigTest
     final DruidCompactionConfig config = DruidCompactionConfig.empty();
     Assert.assertTrue(config.getCompactionConfigs().isEmpty());
 
-    final DataSourceCompactionConfig dataSourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig dataSourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withEngine(CompactionEngine.NATIVE)

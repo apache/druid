@@ -34,8 +34,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.server.coordinator.CreateDataSegments;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -74,7 +74,7 @@ public class CompactionRunSimulatorTest
 
     final CompactionSimulateResult simulateResult = simulator.simulateRunWithConfig(
         DruidCompactionConfig.empty().withDatasourceConfig(
-            DataSourceCompactionConfig.builder().forDataSource("wiki").build()
+            InlineSchemaDataSourceCompactionConfig.builder().forDataSource("wiki").build()
         ),
         segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments(),
         CompactionEngine.NATIVE
