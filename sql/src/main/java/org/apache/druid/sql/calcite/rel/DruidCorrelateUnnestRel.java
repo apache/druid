@@ -81,7 +81,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__")
   {
     @Override
-    public boolean isConcrete()
+    public boolean isProcessable()
     {
       return false;
     }

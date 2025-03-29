@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
 
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -50,12 +50,13 @@ public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
 
-    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
+    ExecutionVertex ev = ExecutionVertex.of(query);
+    DataSource baseDataSource = ev.getBaseDataSource();
 
-    if (analysis.isConcreteAndTableBased() && analysis.getBaseUnionDataSource().isPresent()) {
+    if (ev.isProcessable() && ev.isTableBased() && baseDataSource instanceof UnionDataSource) {
       // Union of tables.
 
-      final UnionDataSource unionDataSource = analysis.getBaseUnionDataSource().get();
+      final UnionDataSource unionDataSource = (UnionDataSource) baseDataSource;
 
       if (unionDataSource.getDataSourcesAsTableDataSources().isEmpty()) {
         // Shouldn't happen, because UnionDataSource doesn't allow empty unions.
@@ -83,7 +84,7 @@ public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
                     (Function<Pair<TableDataSource, Integer>, Sequence<T>>) singleSourceWithIndex ->
                         baseRunner.run(
                             queryPlus.withQuery(
-                                Queries.withBaseDataSource(query, singleSourceWithIndex.lhs)
+                                ev.buildQueryWithBaseDataSource(singleSourceWithIndex.lhs)
                                        // assign the subqueryId. this will be used to validate that every query servers
                                        // have responded per subquery in RetryQueryRunner
                                        .withSubQueryId(generateSubqueryId(
