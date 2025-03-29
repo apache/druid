@@ -35,8 +35,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
-import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -223,23 +221,6 @@ public interface OverlordClient
    * API: {@code /druid/indexer/v1/compaction/isSupervisorEnabled}
    */
   ListenableFuture<Boolean> isCompactionSupervisorEnabled();
-
-  /**
-   * Gets the number of bytes yet to be compacted for the given datasource.
-   * <p>
-   * API: {@code /druid/indexer/v1/compaction/progress}
-   */
-  ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource);
-
-  /**
-   * Gets the latest compaction snapshots of one or all datasources.
-   * <p>
-   * API: {@code /druid/indexer/v1/compaction/status}
-   *
-   * @param dataSource If passed as non-null, then the returned list contains only
-   *                   the snapshot for this datasource.
-   */
-  ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
 
   /**
    * Marks all non-overshadowed segments of the datasource as used.

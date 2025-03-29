@@ -154,7 +154,7 @@ public abstract class AbstractIndexerTest
   protected void waitForAllTasksToCompleteForDataSource(final String dataSource)
   {
     ITRetryUtil.retryUntilTrue(
-        () -> (indexer.getUncompletedTasksForDataSource(dataSource).size() == 0),
+        () -> indexer.getUncompletedTasksForDataSource(dataSource).isEmpty(),
         StringUtils.format("Waiting for all tasks of [%s] to complete", dataSource)
     );
   }

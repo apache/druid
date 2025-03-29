@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.coordinator;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -29,6 +30,7 @@ import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -39,8 +41,13 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -56,7 +63,9 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class CoordinatorClientImplTest
 {
@@ -372,6 +381,122 @@ public class CoordinatorClientImplTest
     Assert.assertEquals(
         segmentLoadInfoList,
         coordinatorClient.fetchServerViewSegments("xyz", intervals)
+    );
+  }
+
+  @Test
+  public void test_getCompactionSnapshots_nullDataSource()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    final List<AutoCompactionSnapshot> compactionSnapshots = List.of(
+        AutoCompactionSnapshot.builder("ds1")
+                              .withStatus(AutoCompactionSnapshot.ScheduleStatus.RUNNING)
+                              .build(),
+        AutoCompactionSnapshot.builder("ds2")
+                              .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
+                              .build()
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/compaction/status"),
+        HttpResponseStatus.OK,
+        Map.of(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionStatusResponse(compactionSnapshots))
+    );
+
+    Assert.assertEquals(
+        new CompactionStatusResponse(compactionSnapshots),
+        coordinatorClient.getCompactionSnapshots(null).get()
+    );
+  }
+
+  @Test
+  public void test_getCompactionSnapshots_nonNullDataSource() throws Exception
+  {
+    final List<AutoCompactionSnapshot> compactionSnapshots = List.of(
+        AutoCompactionSnapshot.builder("ds1").build()
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/compaction/status?dataSource=ds1"),
+        HttpResponseStatus.OK,
+        Map.of(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionStatusResponse(compactionSnapshots))
+    );
+
+    Assert.assertEquals(
+        new CompactionStatusResponse(compactionSnapshots),
+        coordinatorClient.getCompactionSnapshots("ds1").get()
+    );
+  }
+
+  @Test
+  public void test_getDatasourceCompactionConfig() throws Exception
+  {
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("ds1")
+        .withEngine(CompactionEngine.MSQ)
+        .build();
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/config/compaction/ds1"),
+        HttpResponseStatus.OK,
+        Map.of(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(config)
+    );
+
+    Assert.assertEquals(
+        config,
+        coordinatorClient.getDatasourceCompactionConfig("ds1").get()
+    );
+  }
+
+  @Test
+  public void test_updateDatasourceCompactionConfig() throws Exception
+  {
+    final DataSourceCompactionConfig config =
+        DataSourceCompactionConfig.builder().forDataSource("ds1").build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/config/compaction")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        Map.of(),
+        null
+    );
+
+    coordinatorClient.updateDatasourceCompactionConfig(config).get();
+  }
+
+  @Test
+  public void test_deleteDatasourceCompactionConfig() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.DELETE, "/druid/coordinator/v1/config/compaction/ds1"),
+        HttpResponseStatus.OK,
+        Map.of(),
+        null
+    );
+
+    coordinatorClient.deleteDatasourceCompactionConfig("ds1").get();
+  }
+
+  @Test
+  public void test_getCompactionConfig() throws Exception
+  {
+    final DruidCompactionConfig config = DruidCompactionConfig
+        .empty()
+        .withClusterConfig(new ClusterCompactionConfig(0.5, 1, null, true, null))
+        .withDatasourceConfig(DataSourceCompactionConfig.builder().forDataSource("ds1").build());
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/config/compaction"),
+        HttpResponseStatus.OK,
+        Map.of(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(config)
+    );
+
+    Assert.assertEquals(
+        config,
+        coordinatorClient.getCompactionConfig().get()
     );
   }
 }

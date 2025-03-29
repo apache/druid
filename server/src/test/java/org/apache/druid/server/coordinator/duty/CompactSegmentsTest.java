@@ -69,7 +69,10 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -129,7 +132,7 @@ public class CompactSegmentsTest
   private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
   private static final int MAXIMUM_CAPACITY_WITH_AUTO_SCALE = 10;
 
-  @Parameterized.Parameters(name = "scenario: {0}, engine: {2}")
+  @Parameterized.Parameters(name = "partitionsSpec:{0}, engine:{2}")
   public static Collection<Object[]> constructorFeeder()
   {
     final MutableInt nextRangePartitionBoundary = new MutableInt(0);
@@ -173,11 +176,12 @@ public class CompactSegmentsTest
   private final PartitionsSpec partitionsSpec;
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
   private final CompactionEngine engine;
+  private CompactionCandidateSearchPolicy policy;
 
   private final List<DataSegment> allSegments = new ArrayList<>();
   private DataSourcesSnapshot dataSources;
   private CompactionStatusTracker statusTracker;
-  Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
+  private final Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
 
   public CompactSegmentsTest(
       PartitionsSpec partitionsSpec,
@@ -210,6 +214,7 @@ public class CompactSegmentsTest
     }
     dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments);
     statusTracker = new CompactionStatusTracker(JSON_MAPPER);
+    policy = new NewestSegmentFirstPolicy(null);
   }
 
   private DataSegment createSegment(String dataSource, int startDay, boolean beforeNoon, int partition)
@@ -340,6 +345,13 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testRun_withFixedIntervalOrderPolicy()
+  {
+    policy = new FixedIntervalOrderPolicy(List.of());
+    testRun();
+  }
+
+  @Test
   public void testMakeStats()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
@@ -361,7 +373,7 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -383,7 +395,7 @@ public class CompactSegmentsTest
     for (int i = 1; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -454,7 +466,7 @@ public class CompactSegmentsTest
 
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           dataSourceName,
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
           120 + 40 * (compactionRunCount + 1),
@@ -479,7 +491,7 @@ public class CompactSegmentsTest
     );
     verifySnapshot(
         compactSegments,
-        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         dataSourceName,
         0,
         TOTAL_BYTE_PER_DATASOURCE,
@@ -517,7 +529,7 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -541,7 +553,7 @@ public class CompactSegmentsTest
     for (int i = 1; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -608,7 +620,7 @@ public class CompactSegmentsTest
 
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           dataSourceName,
           // Minus 120 bytes accounting for the three skipped segments' original size
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
@@ -631,7 +643,7 @@ public class CompactSegmentsTest
     );
     verifySnapshot(
         compactSegments,
-        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         dataSourceName,
         0,
         // Minus 120 bytes accounting for the three skipped segments' original size
@@ -1745,7 +1757,7 @@ public class CompactSegmentsTest
 
   private void verifySnapshot(
       CompactSegments compactSegments,
-      AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
+      AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
       String dataSourceName,
       long expectedByteCountAwaitingCompaction,
       long expectedByteCountCompressed,
@@ -1792,7 +1804,7 @@ public class CompactSegmentsTest
         if (i != dataSourceIndex) {
           verifySnapshot(
               compactSegments,
-              AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+              AutoCompactionSnapshot.ScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
               40L * (compactionRunCount + 1),
@@ -1807,7 +1819,7 @@ public class CompactSegmentsTest
         } else {
           verifySnapshot(
               compactSegments,
-              AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+              AutoCompactionSnapshot.ScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
               40L * (compactionRunCount + 1),
@@ -1826,7 +1838,7 @@ public class CompactSegmentsTest
         // This verify that dataSource that ran out of slot has correct statistics
         verifySnapshot(
             compactSegments,
-            AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+            AutoCompactionSnapshot.ScheduleStatus.RUNNING,
             DATA_SOURCE_PREFIX + i,
             TOTAL_BYTE_PER_DATASOURCE - 40L * compactionRunCount,
             40L * compactionRunCount,
@@ -1874,7 +1886,7 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                null,
+                policy,
                 null,
                 null
             )
@@ -1891,6 +1903,23 @@ public class CompactSegmentsTest
       Supplier<String> expectedVersionSupplier
   )
   {
+    if (policy instanceof FixedIntervalOrderPolicy) {
+      // Priority expected intervals
+      final List<FixedIntervalOrderPolicy.Candidate> eligibleCandidates = new ArrayList<>();
+      datasourceToSegments.keySet().forEach(
+          ds -> eligibleCandidates.add(
+              new FixedIntervalOrderPolicy.Candidate(ds, expectedInterval)
+          )
+      );
+      // Make all other intervals eligible too
+      datasourceToSegments.keySet().forEach(
+          ds -> eligibleCandidates.add(
+              new FixedIntervalOrderPolicy.Candidate(ds, Intervals.ETERNITY)
+          )
+      );
+      policy = new FixedIntervalOrderPolicy(eligibleCandidates);
+    }
+
     for (int i = 0; i < 3; i++) {
       final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(

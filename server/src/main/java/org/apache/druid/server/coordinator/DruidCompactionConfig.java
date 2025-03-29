@@ -131,7 +131,7 @@ public class DruidCompactionConfig
   @JsonProperty
   public boolean isUseSupervisors()
   {
-    return clusterConfig.getUseSupervisors();
+    return clusterConfig.isUseSupervisors();
   }
 
   @JsonProperty

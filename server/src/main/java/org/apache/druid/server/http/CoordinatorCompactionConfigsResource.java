@@ -28,6 +28,7 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
@@ -102,6 +103,14 @@ public class CoordinatorCompactionConfigsResource
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
+  @GET
+  @Path("/cluster")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getClusterCompactionConfig()
+  {
+    return Response.ok(configManager.getCurrentCompactionConfig().clusterConfig()).build();
+  }
+
   /**
    * @deprecated in favor of {@link #updateClusterCompactionConfig}.
    */
@@ -115,16 +124,16 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    return updateClusterCompactionConfig(
-        new ClusterCompactionConfig(
-            compactionTaskSlotRatio,
-            maxCompactionTaskSlots,
-            null,
-            null,
-            null
-        ),
-        req
+    final ClusterCompactionConfig currentConfig = configManager.getCurrentCompactionConfig().clusterConfig();
+    final ClusterCompactionConfig updatedClusterConfig = new ClusterCompactionConfig(
+        Configs.valueOrDefault(compactionTaskSlotRatio, currentConfig.getCompactionTaskSlotRatio()),
+        Configs.valueOrDefault(maxCompactionTaskSlots, currentConfig.getMaxCompactionTaskSlots()),
+        currentConfig.getCompactionPolicy(),
+        currentConfig.isUseSupervisors(),
+        currentConfig.getEngine()
     );
+
+    return updateClusterCompactionConfig(updatedClusterConfig, req);
   }
 
   @POST

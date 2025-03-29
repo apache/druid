@@ -51,13 +51,13 @@ public class AutoCompactionSnapshotTest
     Assert.assertEquals(26, actual.getBytesAwaitingCompaction());
     Assert.assertEquals(26, actual.getIntervalCountAwaitingCompaction());
     Assert.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
-    Assert.assertEquals(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING, actual.getScheduleStatus());
+    Assert.assertEquals(AutoCompactionSnapshot.ScheduleStatus.RUNNING, actual.getScheduleStatus());
     Assert.assertEquals(expectedDataSource, actual.getDataSource());
     Assert.assertEquals(expectedMessage, actual.getMessage());
 
     AutoCompactionSnapshot expected = new AutoCompactionSnapshot(
         expectedDataSource,
-        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         expectedMessage,
         26,
         26,

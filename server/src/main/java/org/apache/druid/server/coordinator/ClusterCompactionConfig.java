@@ -40,9 +40,9 @@ public class ClusterCompactionConfig
   private static final CompactionCandidateSearchPolicy DEFAULT_COMPACTION_POLICY
       = new NewestSegmentFirstPolicy(null);
 
-  private final Double compactionTaskSlotRatio;
-  private final Integer maxCompactionTaskSlots;
-  private final Boolean useSupervisors;
+  private final double compactionTaskSlotRatio;
+  private final int maxCompactionTaskSlots;
+  private final boolean useSupervisors;
   private final CompactionEngine engine;
   private final CompactionCandidateSearchPolicy compactionPolicy;
 
@@ -85,7 +85,7 @@ public class ClusterCompactionConfig
   }
 
   @JsonProperty
-  public boolean getUseSupervisors()
+  public boolean isUseSupervisors()
   {
     return useSupervisors;
   }
