@@ -144,6 +144,7 @@ public class TaskQueueScaleTest
         new NoopTaskContextEnricher()
     );
 
+    storageCoordinator.start();
     taskQueue.start();
     closer.register(taskQueue::stop);
   }
@@ -323,7 +324,7 @@ public class TaskQueueScaleTest
       }
       if (!existingTask.getResult().isDone()) {
         exec.schedule(() -> {
-          existingTask.setResult(TaskStatus.failure("taskId", "stopped"));
+          existingTask.setResult(TaskStatus.failure(existingTask.getTaskId(), "stopped"));
           synchronized (knownTasks) {
             knownTasks.remove(taskid);
           }
