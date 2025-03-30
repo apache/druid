@@ -86,8 +86,6 @@ services:
         ipv4_address: 172.172.172.3
     ports:
       - 3306:3306
-    volumes:
-      - ${SHARED_DIR}/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       MYSQL_ROOT_PASSWORD: driud
       MYSQL_DATABASE: druid

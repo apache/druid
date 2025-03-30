@@ -129,10 +129,8 @@ function show_status {
 function build_shared_dir {
   mkdir -p $SHARED_DIR
   # Must start with an empty DB to keep MySQL happy
-  sudo rm -rf $SHARED_DIR/db
   mkdir -p $SHARED_DIR/logs
   mkdir -p $SHARED_DIR/tasklogs
-  mkdir -p $SHARED_DIR/db
   mkdir -p $SHARED_DIR/kafka
   mkdir -p $SHARED_DIR/resources
   mkdir -p $SHARED_DIR/export
