@@ -34,6 +34,7 @@ import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class CoordinatorCompactionResourceTest
@@ -70,7 +71,7 @@ public class CoordinatorCompactionResourceTest
   @Test
   public void testGetCompactionSnapshotForDataSourceWithEmptyQueryParameter()
   {
-    Map<String, AutoCompactionSnapshot> expected = ImmutableMap.of(
+    Map<String, AutoCompactionSnapshot> expected = Map.of(
         dataSourceName,
         expectedSnapshot
     );
@@ -80,7 +81,7 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock)
         .getCompactionSnapshotForDataSource("");
-    Assert.assertEquals(new CompactionStatusResponse(expected.values()), response.getEntity());
+    Assert.assertEquals(new CompactionStatusResponse(List.of(expectedSnapshot)), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
 
@@ -98,7 +99,7 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock)
         .getCompactionSnapshotForDataSource(null);
-    Assert.assertEquals(new CompactionStatusResponse(expected.values()), response.getEntity());
+    Assert.assertEquals(new CompactionStatusResponse(List.of(expectedSnapshot)), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
 

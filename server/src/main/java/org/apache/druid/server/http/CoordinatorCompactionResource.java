@@ -20,7 +20,6 @@
 package org.apache.druid.server.http;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.error.InvalidInput;
@@ -41,7 +40,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Collection;
+import java.util.List;
 
 @Path("/druid/coordinator/v1/compaction")
 public class CoordinatorCompactionResource
@@ -97,15 +96,15 @@ public class CoordinatorCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    final Collection<AutoCompactionSnapshot> snapshots;
+    final List<AutoCompactionSnapshot> snapshots;
     if (dataSource == null || dataSource.isEmpty()) {
-      snapshots = coordinator.getAutoCompactionSnapshot().values();
+      snapshots = List.copyOf(coordinator.getAutoCompactionSnapshot().values());
     } else {
       AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
       if (autoCompactionSnapshot == null) {
         return ServletResourceUtils.buildErrorResponseFrom(NotFound.exception("Unknown DataSource"));
       }
-      snapshots = ImmutableList.of(autoCompactionSnapshot);
+      snapshots = List.of(autoCompactionSnapshot);
     }
     return Response.ok(new CompactionStatusResponse(snapshots)).build();
   }

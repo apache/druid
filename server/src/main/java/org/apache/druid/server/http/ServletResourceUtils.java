@@ -19,18 +19,23 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class ServletResourceUtils
 {
+  private static final Logger log = new Logger(ServletResourceUtils.class);
+
   /**
    * Sanitize the exception as a map of "error" to information about the exception.
    *
@@ -60,5 +65,28 @@ public class ServletResourceUtils
                    .type(MediaType.APPLICATION_JSON_TYPE)
                    .entity(new ErrorResponse(e))
                    .build();
+  }
+
+  public static Response buildUpdateResponse(Supplier<Boolean> updateOperation)
+  {
+    return buildReadResponse(() -> Map.of("success", updateOperation.get()));
+  }
+
+  public static <T> Response buildReadResponse(Supplier<T> readOperation)
+  {
+    try {
+      return Response.ok(readOperation.get()).build();
+    }
+    catch (DruidException e) {
+      log.error(e, "Error building response");
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
+    catch (Exception e) {
+      log.error(e, "Error building response");
+      return Response
+          .serverError()
+          .entity(Map.of("error", "Server error", "message", Throwables.getRootCause(e).toString()))
+          .build();
+    }
   }
 }

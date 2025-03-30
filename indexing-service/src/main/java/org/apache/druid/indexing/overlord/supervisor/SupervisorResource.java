@@ -151,56 +151,26 @@ public class SupervisorResource
             throw new ForbiddenException(authResult.getErrorMessage());
           }
 
-          createOrUpdateSupervisorSpec(spec, manager, skipRestartIfUnmodified, req);
+          // Check if the spec needs to be updated
+          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
+            return Response.ok().build();
+          }
+
+          manager.createOrUpdateAndStartSupervisor(spec);
+
+          final String auditPayload
+              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+          auditManager.doAudit(
+              AuditEntry.builder()
+                        .key(spec.getId())
+                        .type("supervisor")
+                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                        .payload(auditPayload)
+                        .build()
+          );
           return Response.ok(Map.of("id", spec.getId())).build();
         }
-    );
-  }
-
-  /**
-   * Adds or updates the given supervisor spec.
-   * Similar to {@link #specPost} but this method doesn't perform authorization
-   * checks.
-   */
-  public Response updateSupervisorSpec(
-      SupervisorSpec spec,
-      boolean skipRestartIfUnmodified,
-      HttpServletRequest req
-  )
-  {
-    return asLeaderWithSupervisorManager(manager -> {
-      createOrUpdateSupervisorSpec(spec, manager, skipRestartIfUnmodified, req);
-      return Response.ok().build();
-    });
-  }
-
-  /**
-   * Creates or updates a supervisor spec.
-   */
-  private void createOrUpdateSupervisorSpec(
-      SupervisorSpec spec,
-      SupervisorManager manager,
-      Boolean skipRestartIfUnmodified,
-      HttpServletRequest req
-  )
-  {
-    // Check if the spec needs to be updated
-    if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-      return;
-    }
-
-    manager.createOrUpdateAndStartSupervisor(spec);
-
-    final String auditPayload
-        = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
-    auditManager.doAudit(
-        AuditEntry.builder()
-                  .key(spec.getId())
-                  .type("supervisor")
-                  .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                  .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                  .payload(auditPayload)
-                  .build()
     );
   }
 

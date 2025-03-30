@@ -79,7 +79,8 @@ public class KillCompactionConfigTest
     coordinatorConfigManager = new CoordinatorConfigManager(
         mockJacksonConfigManager,
         mockConnector,
-        mockConnectorConfig
+        mockConnectorConfig,
+        null
     );
   }
 

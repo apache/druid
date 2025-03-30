@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
@@ -42,6 +43,8 @@ import java.util.Map;
 
 public class CompactionResourceTestClient
 {
+  private static final Logger log = new Logger(CompactionResourceTestClient.class);
+
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String coordinator;
@@ -77,15 +80,17 @@ public class CompactionResourceTestClient
 
   public void submitCompactionConfig(final DataSourceCompactionConfig dataSourceCompactionConfig) throws Exception
   {
+    final String dataSource = dataSourceCompactionConfig.getDataSource();
     String url = StringUtils.format(
         "%s/compaction/config/datasources/%s",
-        getOverlordURL(), StringUtils.urlEncode(dataSourceCompactionConfig.getDataSource())
+        getOverlordURL(), StringUtils.urlEncode(dataSource)
     );
     StatusResponseHolder response = httpClient.go(
         new Request(HttpMethod.POST, new URL(url)).setContent(
             "application/json",
             jsonMapper.writeValueAsBytes(dataSourceCompactionConfig)
-        ), responseHandler
+        ),
+        responseHandler
     ).get();
 
     if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -95,6 +100,10 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
+    log.info(
+        "Submitted compaction config for datasource[%s] with response[%s]",
+        dataSource, response.getContent()
+    );
   }
 
   public void deleteDataSourceCompactionConfig(final String dataSource) throws Exception
@@ -165,8 +174,8 @@ public class CompactionResourceTestClient
   public void updateClusterConfig(ClusterCompactionConfig config) throws Exception
   {
     final String url = StringUtils.format(
-        "%sconfig/compaction/cluster",
-        getCoordinatorURL()
+        "%s/compaction/config/cluster",
+        getOverlordURL()
     );
     StatusResponseHolder response = httpClient.go(
         new Request(HttpMethod.POST, new URL(url)).setContent(
@@ -186,7 +195,7 @@ public class CompactionResourceTestClient
 
   public ClusterCompactionConfig getClusterConfig() throws Exception
   {
-    String url = StringUtils.format("%sconfig/compaction/cluster", getCoordinatorURL());
+    String url = StringUtils.format("%s/compaction/config/cluster", getOverlordURL());
     StatusResponseHolder response = httpClient.go(
         new Request(HttpMethod.GET, new URL(url)), responseHandler
     ).get();

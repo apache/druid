@@ -476,7 +476,7 @@ public class CoordinatorSimulationBuilder
 
       this.metadataManager = new MetadataManager(
           null,
-          new CoordinatorConfigManager(jacksonConfigManager, null, null),
+          new CoordinatorConfigManager(jacksonConfigManager, null, null, null),
           segmentManager,
           null,
           ruleManager,

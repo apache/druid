@@ -19,12 +19,15 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import net.thisptr.jackson.jq.internal.misc.Lists;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.InternalServerError;
@@ -32,17 +35,21 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.CompactionSupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.ServletResourceUtils;
+import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -52,11 +59,12 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * New compaction APIs exposed by the Overlord.
@@ -70,48 +78,105 @@ import java.util.List;
 public class OverlordCompactionResource
 {
   private final CompactionScheduler scheduler;
+  private final AuthorizerMapper authorizerMapper;
   private final CoordinatorClient coordinatorClient;
-  private final SupervisorResource supervisorResource;
+  private final CoordinatorConfigManager configManager;
+  private final CompactionSupervisorManager supervisorManager;
 
   @Inject
   public OverlordCompactionResource(
       CompactionScheduler scheduler,
+      AuthorizerMapper authorizerMapper,
       CoordinatorClient coordinatorClient,
-      SupervisorResource supervisorResource
+      CoordinatorConfigManager configManager,
+      CompactionSupervisorManager supervisorManager
   )
   {
     this.scheduler = scheduler;
+    this.configManager = configManager;
+    this.authorizerMapper = authorizerMapper;
     this.coordinatorClient = coordinatorClient;
-    this.supervisorResource = supervisorResource;
+    this.supervisorManager = supervisorManager;
   }
 
   @GET
   @Path("/isSupervisorEnabled")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response isCompactionSupervisorEnabled()
   {
-    return Response.ok(scheduler.isEnabled()).build();
+    return ServletResourceUtils.buildReadResponse(
+        scheduler::isEnabled
+    );
+  }
+
+  @POST
+  @Path("/config/cluster")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
+  public Response updateClusterCompactionConfig(
+      ClusterCompactionConfig updatePayload,
+      @Context HttpServletRequest req
+  )
+  {
+    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+    return ServletResourceUtils.buildUpdateResponse(
+        () -> configManager.updateClusterCompactionConfig(updatePayload, auditInfo)
+    );
+  }
+
+  @GET
+  @Path("/config/cluster")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
+  public Response getClusterCompactionConfig()
+  {
+    return ServletResourceUtils.buildReadResponse(
+        configManager::getClusterCompactionConfig
+    );
   }
 
   @GET
   @Path("/status/datasources")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getAllCompactionSnapshots()
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getAllCompactionSnapshots(
+      @Context HttpServletRequest request
+  )
   {
     if (scheduler.isEnabled()) {
-      return Response.ok(
-          new CompactionStatusResponse(List.copyOf(scheduler.getAllCompactionSnapshots().values()))
-      ).build();
+      return ServletResourceUtils.buildReadResponse(() -> {
+        final List<AutoCompactionSnapshot> allSnapshots =
+            List.copyOf(scheduler.getAllCompactionSnapshots().values());
+        return new CompactionStatusResponse(
+            filterByAuthorizedDatasources(
+                request,
+                allSnapshots,
+                AutoCompactionSnapshot::getDataSource
+            )
+        );
+      });
     } else {
-      return buildResponse(coordinatorClient.getCompactionSnapshots(null));
+      return buildResponse(
+          Futures.transform(
+              coordinatorClient.getCompactionSnapshots(null),
+              response -> new CompactionStatusResponse(
+                  filterByAuthorizedDatasources(
+                      request,
+                      response.getLatestStatus(),
+                      AutoCompactionSnapshot::getDataSource
+                  )
+              ),
+              MoreExecutors.directExecutor()
+          )
+      );
     }
   }
 
   @GET
   @Path("/status/datasources/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(DatasourceResourceFilter.class)
+  @ResourceFilters(StateResourceFilter.class)
   public Response getDatasourceCompactionSnapshot(
       @PathParam("dataSource") String dataSource
   )
@@ -146,34 +211,27 @@ public class OverlordCompactionResource
   )
   {
     if (scheduler.isEnabled()) {
-      final Response supervisorResponse =
-          supervisorResource.specGetAll("includeSpec", true, "includeType", request);
-
-      if (supervisorResponse.getStatus() >= 200 && supervisorResponse.getStatus() < 300) {
-        final List<DataSourceCompactionConfig> configs = new ArrayList<>();
-
-        @SuppressWarnings("unchecked")
-        final List<SupervisorStatus> allSupervisors = (List<SupervisorStatus>) supervisorResponse.getEntity();
-        for (SupervisorStatus status : allSupervisors) {
-          final SupervisorSpec spec = status.getSpec();
-          if (status.getType().equals(CompactionSupervisorSpec.TYPE)
-              && spec instanceof CompactionSupervisorSpec) {
-            configs.add(((CompactionSupervisorSpec) spec).getSpec());
-          }
-        }
-
-        return Response.ok(new CompactionConfigsResponse(configs)).build();
-      } else {
-        return supervisorResponse;
-      }
+      return ServletResourceUtils.buildReadResponse(() -> {
+        final List<CompactionSupervisorSpec> configs = filterByAuthorizedDatasources(
+            request,
+            supervisorManager.getAllCompactionSupervisors(),
+            supervisor -> supervisor.getSpec().getDataSource()
+        );
+        return new CompactionConfigsResponse(
+            configs.stream()
+                   .map(CompactionSupervisorSpec::getSpec)
+                   .collect(Collectors.toList())
+        );
+      });
     } else {
-      return buildResponse(
-          Futures.transform(
-              coordinatorClient.getCompactionConfig(),
-              config -> new CompactionConfigsResponse(config.getCompactionConfigs()),
-              MoreExecutors.directExecutor()
-          )
-      );
+      return ServletResourceUtils.buildReadResponse(() -> {
+        final List<DataSourceCompactionConfig> configs = filterByAuthorizedDatasources(
+            request,
+            configManager.getCurrentCompactionConfig().getCompactionConfigs(),
+            DataSourceCompactionConfig::getDataSource
+        );
+        return new CompactionConfigsResponse(configs);
+      });
     }
   }
 
@@ -185,7 +243,7 @@ public class OverlordCompactionResource
   public Response updateDatasourceCompactionConfig(
       @PathParam("dataSource") String dataSource,
       DataSourceCompactionConfig newConfig,
-      @Context HttpServletRequest req
+      @Context HttpServletRequest request
   )
   {
     if (isEmpty(dataSource)) {
@@ -198,14 +256,14 @@ public class OverlordCompactionResource
     }
 
     if (scheduler.isEnabled()) {
-      return supervisorResource.updateSupervisorSpec(
-          new CompactionSupervisorSpec(newConfig, false, scheduler),
-          true,
-          req
+      final CompactionSupervisorSpec spec = new CompactionSupervisorSpec(newConfig, false, scheduler);
+      return ServletResourceUtils.buildUpdateResponse(
+          () -> supervisorManager.updateCompactionSupervisor(spec, request)
       );
     } else {
-      return buildResponse(
-          coordinatorClient.updateDatasourceCompactionConfig(newConfig)
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(request);
+      return ServletResourceUtils.buildUpdateResponse(
+          () -> configManager.updateDatasourceCompactionConfig(newConfig, auditInfo)
       );
     }
   }
@@ -223,26 +281,13 @@ public class OverlordCompactionResource
     }
 
     if (scheduler.isEnabled()) {
-      final String supervisorId = getCompactionSupervisorId(dataSource);
-      final Response supervisorResponse = supervisorResource.specGet(supervisorId);
-
-      if (supervisorResponse.getStatus() >= 200 && supervisorResponse.getStatus() < 300) {
-        final Object spec = supervisorResponse.getEntity();
-        if (spec instanceof CompactionSupervisorSpec) {
-          return Response.ok(((CompactionSupervisorSpec) spec).getSpec()).build();
-        } else {
-          return ServletResourceUtils.buildErrorResponseFrom(
-              InternalServerError.exception(
-                  "Supervisor spec for ID[%s] is of unknown type[%s]",
-                  supervisorId, spec == null ? null : spec.getClass().getSimpleName()
-              )
-          );
-        }
-      } else {
-        return supervisorResponse;
-      }
+      return ServletResourceUtils.buildReadResponse(
+          () -> supervisorManager.getCompactionSupervisor(dataSource).getSpec()
+      );
     } else {
-      return buildResponse(coordinatorClient.getDatasourceCompactionConfig(dataSource));
+      return ServletResourceUtils.buildReadResponse(
+          () -> configManager.getDatasourceCompactionConfig(dataSource)
+      );
     }
   }
 
@@ -260,10 +305,38 @@ public class OverlordCompactionResource
     }
 
     if (scheduler.isEnabled()) {
-      return supervisorResource.terminate(getCompactionSupervisorId(dataSource));
+      return ServletResourceUtils.buildUpdateResponse(
+          () -> supervisorManager.deleteCompactionSupervisor(dataSource)
+      );
     } else {
-      return buildResponse(
-          coordinatorClient.deleteDatasourceCompactionConfig(dataSource)
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+      return ServletResourceUtils.buildUpdateResponse(
+          () -> configManager.deleteDatasourceCompactionConfig(dataSource, auditInfo)
+      );
+    }
+  }
+
+  @GET
+  @Path("/config/datasources/{dataSource}/history")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getDatasourceCompactionConfigHistory(
+      @PathParam("dataSource") String dataSource,
+      @QueryParam("interval") String interval,
+      @QueryParam("count") Integer count
+  )
+  {
+    if (isEmpty(dataSource)) {
+      return invalidInputResponse("No DataSource specified");
+    }
+
+    if (scheduler.isEnabled()) {
+      return ServletResourceUtils.buildReadResponse(
+          () -> supervisorManager.getCompactionSupervisorHistory(dataSource)
+      );
+    } else {
+      return ServletResourceUtils.buildReadResponse(
+          () -> configManager.getCompactionConfigHistory(dataSource, interval, count)
       );
     }
   }
@@ -284,11 +357,6 @@ public class OverlordCompactionResource
   private static boolean isEmpty(String dataSource)
   {
     return dataSource == null || dataSource.isEmpty();
-  }
-
-  private static String getCompactionSupervisorId(String dataSource)
-  {
-    return CompactionSupervisorSpec.ID_PREFIX + dataSource;
   }
 
   private static Response invalidInputResponse(String message, Object... args)
@@ -312,6 +380,39 @@ public class OverlordCompactionResource
             InternalServerError.exception(e.getMessage())
         );
       }
+    }
+  }
+
+  private <T> List<T> filterByAuthorizedDatasources(
+      final HttpServletRequest request,
+      List<T> resources,
+      Function<T, String> getDatasource
+  )
+  {
+    final Function<T, Iterable<ResourceAction>> raGenerator =
+        entry -> List.of(createDatasourceResourceAction(getDatasource.apply(entry), request));
+
+    return Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            request,
+            resources,
+            raGenerator,
+            authorizerMapper
+        )
+    );
+  }
+
+  private static ResourceAction createDatasourceResourceAction(
+      String dataSource,
+      HttpServletRequest request
+  )
+  {
+    switch (request.getMethod()) {
+      case "GET":
+      case "HEAD":
+        return AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource);
+      default:
+        return AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(dataSource);
     }
   }
 }

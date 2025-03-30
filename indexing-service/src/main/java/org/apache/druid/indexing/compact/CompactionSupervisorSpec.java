@@ -42,6 +42,11 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   private final CompactionScheduler scheduler;
   private final CompactionConfigValidationResult validationResult;
 
+  public static String getSupervisorIdForDatasource(String dataSource)
+  {
+    return ID_PREFIX + dataSource;
+  }
+
   @JsonCreator
   public CompactionSupervisorSpec(
       @JsonProperty("spec") DataSourceCompactionConfig spec,
@@ -71,7 +76,7 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   @Override
   public String getId()
   {
-    return ID_PREFIX + spec.getDataSource();
+    return getSupervisorIdForDatasource(spec.getDataSource());
   }
 
   public CompactionConfigValidationResult getValidationResult()
