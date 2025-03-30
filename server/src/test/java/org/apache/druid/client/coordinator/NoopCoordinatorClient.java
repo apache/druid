@@ -26,8 +26,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -92,27 +90,4 @@ public class NoopCoordinatorClient implements CoordinatorClient
     throw new UnsupportedOperationException();
   }
 
-  @Override
-  public ListenableFuture<Void> deleteDatasourceCompactionConfig(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<Void> updateDatasourceCompactionConfig(DataSourceCompactionConfig config)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<DataSourceCompactionConfig> getDatasourceCompactionConfig(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<DruidCompactionConfig> getCompactionConfig()
-  {
-    throw new UnsupportedOperationException();
-  }
 }

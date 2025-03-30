@@ -137,7 +137,12 @@ public class SupervisorResource
           }
           catch (UOE e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(Map.of("error", e.getMessage()))
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   e.getMessage()
+                               )
+                           )
                            .build();
           }
 
@@ -153,7 +158,7 @@ public class SupervisorResource
 
           // Check if the spec needs to be updated
           if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-            return Response.ok().build();
+            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
@@ -169,7 +174,7 @@ public class SupervisorResource
                         .payload(auditPayload)
                         .build()
           );
-          return Response.ok(Map.of("id", spec.getId())).build();
+          return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }
     );
   }

@@ -26,8 +26,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -89,31 +87,4 @@ public interface CoordinatorClient
    */
   ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
 
-  /**
-   * Deletes the compaction config for a datasource.
-   * <p>
-   * API: {@code POST /druid/coordinator/v1/config/compaction}
-   */
-  ListenableFuture<Void> deleteDatasourceCompactionConfig(String dataSource);
-
-  /**
-   * Adds or updates the compaction config for a datasource.
-   * <p>
-   * API: {@code POST /druid/coordinator/v1/config/compaction}
-   */
-  ListenableFuture<Void> updateDatasourceCompactionConfig(DataSourceCompactionConfig config);
-
-  /**
-   * Gets the latest compaction config of a datasource.
-   * <p>
-   * API: {@code GET /druid/coordinator/v1/config/compaction/{dataSource}}
-   */
-  ListenableFuture<DataSourceCompactionConfig> getDatasourceCompactionConfig(String dataSource);
-
-  /**
-   * Gets the current compaction config.
-   * <p>
-   * API: {@code GET /druid/coordinator/v1/config/compaction}
-   */
-  ListenableFuture<DruidCompactionConfig> getCompactionConfig();
 }
