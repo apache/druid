@@ -72,6 +72,7 @@ public class CoordinatorCompactionConfigsResource
   @Deprecated
   @Path("/taskslots")
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
@@ -95,6 +96,7 @@ public class CoordinatorCompactionConfigsResource
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response addOrUpdateDatasourceCompactionConfig(
       final DataSourceCompactionConfig newConfig,
       @Context HttpServletRequest req

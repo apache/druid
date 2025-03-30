@@ -21,12 +21,12 @@ package org.apache.druid.indexing.overlord.http;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
@@ -113,6 +113,7 @@ public class OverlordCompactionResource
   @POST
   @Path("/config/cluster")
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   public Response updateClusterCompactionConfig(
       ClusterCompactionConfig updatePayload,
