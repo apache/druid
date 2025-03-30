@@ -26,15 +26,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.sql.client.BrokerClient;
+import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -86,7 +88,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
                                            + "FROM sys.segments\n"
                                            + "WHERE datasource = '%s' AND is_overshadowed = 0 AND (%s)";
 
-  private final BrokerClient brokerClient;
+  private final BrokerClientImpl brokerClient;
   private final ObjectMapper objectMapper;
   // Map of version vs latest load status.
   private final AtomicReference<VersionLoadStatus> versionLoadStatusReference;
@@ -100,7 +102,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
   private final ListeningExecutorService executorService;
 
   public SegmentLoadStatusFetcher(
-      BrokerClient brokerClient,
+      BrokerClientImpl brokerClient,
       ObjectMapper objectMapper,
       String queryId,
       String datasource,
@@ -236,20 +238,22 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
    */
   private VersionLoadStatus fetchLoadStatusFromBroker() throws Exception
   {
-    SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
-                                     ResultFormat.OBJECTLINES,
+    ClientSqlQuery clientSqlQuery = new ClientSqlQuery(StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
+                                     ResultFormat.OBJECTLINES.contentType(),
                                      false, false, false, null, null
     );
-    String response = brokerClient.submit(sqlQuery);
+    ListenableFuture<SqlTaskStatus> response = brokerClient.submitSqlTask(clientSqlQuery);
+    SqlTaskStatus taskStatus = response.get();
+    String taskId = taskStatus.getTaskId();
 
-    if (response == null) {
+    if (taskId == null) {
       // Unable to query broker
       return new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated);
-    } else if (response.trim().isEmpty()) {
+    } else if (taskId.trim().isEmpty()) {
       // If no segments are returned for a version, all segments have been dropped by a drop rule.
       return new VersionLoadStatus(0, 0, 0, 0, 0);
     } else {
-      return objectMapper.readValue(response, VersionLoadStatus.class);
+      return objectMapper.readValue(taskId, VersionLoadStatus.class);
     }
   }
 
