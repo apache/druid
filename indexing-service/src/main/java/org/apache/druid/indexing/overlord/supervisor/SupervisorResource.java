@@ -155,8 +155,6 @@ public class SupervisorResource
           if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
           }
-
-          // Check if the spec needs to be updated
           if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
             return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
@@ -174,6 +172,7 @@ public class SupervisorResource
                         .payload(auditPayload)
                         .build()
           );
+
           return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }
     );

@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -78,15 +79,14 @@ public class ServletResourceUtils
       return Response.ok(readOperation.get()).build();
     }
     catch (DruidException e) {
-      log.error(e, "Error building response");
+      log.error(e, "Error executing HTTP request");
       return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (Exception e) {
-      log.error(e, "Error building response");
-      return Response
-          .serverError()
-          .entity(Map.of("error", "Server error", "message", Throwables.getRootCause(e).toString()))
-          .build();
+      log.error(e, "Error executing HTTP request");
+      return ServletResourceUtils.buildErrorResponseFrom(
+          InternalServerError.exception(Throwables.getRootCause(e), "Unknown error occurred")
+      );
     }
   }
 }
