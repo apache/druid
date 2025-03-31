@@ -128,7 +128,6 @@ function show_status {
 
 function build_shared_dir {
   mkdir -p $SHARED_DIR
-  # Must start with an empty DB to keep MySQL happy
   mkdir -p $SHARED_DIR/logs
   mkdir -p $SHARED_DIR/tasklogs
   mkdir -p $SHARED_DIR/kafka
