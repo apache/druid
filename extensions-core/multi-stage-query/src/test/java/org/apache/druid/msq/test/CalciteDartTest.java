@@ -88,6 +88,19 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @Test
+  public void testCount()
+  {
+    testBuilder()
+        .sql("SELECT count(1) from foo")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {2},
+                new Object[] {2}
+            )
+        )
+        .run();
+  }
 
   @Test
   public void testSelectDim1FromFoo11()
