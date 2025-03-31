@@ -79,7 +79,9 @@ import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
-import org.apache.druid.query.policy.PolicyConfig;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -91,7 +93,6 @@ import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.server.TestSegmentUtils.SegmentForTesting;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -139,7 +140,7 @@ public class ServerManagerTest
   @Bind
   private SegmentManager segmentManager;
   @Bind
-  private AuthConfig authConfig;
+  private PolicyEnforcer policyEnforcer;
   @Bind
   private ServerConfig serverConfig;
   @Bind
@@ -186,7 +187,7 @@ public class ServerManagerTest
     cache = new LocalCacheProvider().get();
     cacheConfig = new CacheConfig();
     serverConfig = new ServerConfig();
-    authConfig = new AuthConfig();
+    policyEnforcer = NoopPolicyEnforcer.instance();
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
@@ -610,12 +611,7 @@ public class ServerManagerTest
         SegmentMetadataQuery.class,
         factory
     ));
-    authConfig = AuthConfig.newBuilder()
-                           .setTableSecurityPolicyConfig(new PolicyConfig(
-                               PolicyConfig.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST,
-                               ImmutableList.of()
-                           ))
-                           .build();
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of("NoRestrictionPolicy"));
     serverManager = Guice.createInjector(BoundFieldModule.of(this)).getInstance(ServerManager.class);
     Interval interval = Intervals.of("P1d/2011-04-01");
     SearchQuery query = searchQuery("test", interval, Granularities.ALL);

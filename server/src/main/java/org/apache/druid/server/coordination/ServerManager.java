@@ -55,6 +55,7 @@ import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -64,7 +65,6 @@ import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -93,7 +93,7 @@ public class ServerManager implements QuerySegmentWalker
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
   private final ServerConfig serverConfig;
-  private final AuthConfig authConfig;
+  private final PolicyEnforcer policyEnforcer;
 
   @Inject
   public ServerManager(
@@ -106,7 +106,7 @@ public class ServerManager implements QuerySegmentWalker
       CacheConfig cacheConfig,
       SegmentManager segmentManager,
       ServerConfig serverConfig,
-      AuthConfig authConfig
+      PolicyEnforcer policyEnforcer
   )
   {
     this.conglomerate = conglomerate;
@@ -120,7 +120,7 @@ public class ServerManager implements QuerySegmentWalker
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
     this.serverConfig = serverConfig;
-    this.authConfig = authConfig;
+    this.policyEnforcer = policyEnforcer;
   }
 
   @Override
@@ -195,8 +195,7 @@ public class ServerManager implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    if (!(theQuery instanceof SegmentMetadataQuery)
-        && !dataSourceFromQuery.validate(authConfig.getTableSecurityPolicyConfig())) {
+    if (!(theQuery instanceof SegmentMetadataQuery) && !policyEnforcer.validate(dataSourceFromQuery)) {
       throw new ISE("Failed security validation with dataSource [%s]", dataSourceFromQuery);
     }
 

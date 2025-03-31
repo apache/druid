@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
-import org.apache.druid.query.policy.PolicyConfig;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
 
@@ -169,9 +169,9 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public boolean validate(PolicyConfig tableSecurityPolicyConfig)
+  public boolean validate(PolicyEnforcer policyEnforcer)
   {
-    return tableSecurityPolicyConfig.allowPolicy(policy);
+    return policyEnforcer.validate(this);
   }
 
   @Override

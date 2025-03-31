@@ -30,8 +30,9 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.Policy;
-import org.apache.druid.query.policy.PolicyConfig;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
@@ -231,24 +232,20 @@ public class DataSourceTest
         TableDataSource.create("table1"),
         RowFilterPolicy.from(new NullFilter("random-column", null))
     );
-    Assert.assertTrue(restrictedDataSource.validate(PolicyConfig.defaultInstance()));
+    Assert.assertTrue(restrictedDataSource.validate(NoopPolicyEnforcer.instance()));
+    Assert.assertTrue(restrictedDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
     // Fail, only NoRestrictionPolicy is allowed.
-    Assert.assertFalse(restrictedDataSource.validate(new PolicyConfig(
-        PolicyConfig.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST,
-        ImmutableList.of(NoRestrictionPolicy.class.getSimpleName())
-    )));
+    Assert.assertFalse(restrictedDataSource.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        "NoRestrictionPolicy"))));
   }
 
   @Test
   public void testValidate_onTableDataSource()
   {
     TableDataSource tableDataSource = TableDataSource.create("table1");
-    Assert.assertTrue(tableDataSource.validate(PolicyConfig.defaultInstance()));
+    Assert.assertTrue(tableDataSource.validate(NoopPolicyEnforcer.instance()));
     // Fail, policy must exist on table
-    Assert.assertFalse(tableDataSource.validate(new PolicyConfig(
-        PolicyConfig.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST,
-        ImmutableList.of()
-    )));
+    Assert.assertFalse(tableDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
   }
 
   @Test
@@ -259,17 +256,13 @@ public class DataSourceTest
             TableDataSource.create("table1"),
             RowFilterPolicy.from(new NullFilter("random-column", null))
         ),
-        TableDataSource.create("table2")));
-    Assert.assertTrue(unionDataSource.validate(PolicyConfig.defaultInstance()));
+        TableDataSource.create("table2")
+    ));
+    Assert.assertTrue(unionDataSource.validate(NoopPolicyEnforcer.instance()));
     // Fail, policy must exist on table
-    Assert.assertFalse(unionDataSource.validate(new PolicyConfig(
-        PolicyConfig.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST,
-        ImmutableList.of()
-    )));
+    Assert.assertFalse(unionDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
     // Fail, only NoRestrictionPolicy is allowed.
-    Assert.assertFalse(unionDataSource.validate(new PolicyConfig(
-        PolicyConfig.TablePolicySecurityLevel.APPLY_WHEN_APPLICABLE,
-        ImmutableList.of(NoRestrictionPolicy.class.getSimpleName())
-    )));
+    Assert.assertFalse(unionDataSource.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        "NoRestrictionPolicy"))));
   }
 }

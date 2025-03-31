@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.Policy;
-import org.apache.druid.query.policy.PolicyConfig;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -124,10 +124,10 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public boolean validate(PolicyConfig tableSecurityPolicyConfig)
+  public boolean validate(PolicyEnforcer policyEnforcer)
   {
     // If it reaches here, this table is not wrapped with a RestrictedDataSource (which should overwrite this method).
-    return !tableSecurityPolicyConfig.policyMustBeCheckedAndExistOnAllTables();
+    return policyEnforcer.validate(this);
   }
 
   @Override

@@ -45,11 +45,12 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.Optional;
@@ -59,14 +60,14 @@ import java.util.function.Function;
 
 /**
  * This server manager is designed to test various query failures.
- * <p>
+ *
  * - Missing segments. A segment can be missing during a query if a historical drops the segment
- * after the broker issues the query to the historical. To mimic this situation, the historical
- * with this server manager announces all segments assigned, but reports missing segment for the
- * first segment of the datasource specified in the query. The missing report is only generated once for the first
- * segment. Post that report, all segments are served for the datasource. See ITQueryRetryTestOnMissingSegments.
+ *   after the broker issues the query to the historical. To mimic this situation, the historical
+ *   with this server manager announces all segments assigned, but reports missing segment for the
+ *   first segment of the datasource specified in the query. The missing report is only generated once for the first
+ *   segment. Post that report, all segments are served for the datasource. See ITQueryRetryTestOnMissingSegments.
  * - Other query errors. This server manager returns a sequence that always throws an exception
- * based on a given query context value. See ITQueryErrorTest.
+ *   based on a given query context value. See ITQueryErrorTest.
  *
  * @see org.apache.druid.query.RetryQueryRunner for query retrying.
  * @see org.apache.druid.client.JsonParserIterator for handling query errors from historicals.
@@ -96,8 +97,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
       Cache cache,
       CacheConfig cacheConfig,
       SegmentManager segmentManager,
-      ServerConfig serverConfig,
-      AuthConfig authConfig
+      ServerConfig serverConfig
   )
   {
     super(
@@ -110,7 +110,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         cacheConfig,
         segmentManager,
         serverConfig,
-        authConfig
+        NoopPolicyEnforcer.instance()
     );
   }
 

@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
-import org.apache.druid.query.policy.PolicyConfig;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentReference;
 import java.util.List;
 import java.util.Map;
@@ -144,11 +144,11 @@ public interface DataSource
   /**
    * Returns true if the datasource complies with the policy restrictions on tables.
    */
-  default boolean validate(PolicyConfig tableSecurityPolicyConfig)
+  default boolean validate(PolicyEnforcer policyEnforcer)
   {
     return this.getChildren()
                .stream()
-               .allMatch(child -> child.validate(tableSecurityPolicyConfig));
+               .allMatch(child -> child.validate(policyEnforcer));
   }
 
   /**
