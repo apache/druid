@@ -51,7 +51,6 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.HashSet;
