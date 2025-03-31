@@ -51,10 +51,9 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
     initQuery: null,
     processQuery: async (_, cancelToken) => {
       try {
-        const configResp = await Api.instance.get(
-          '/druid/coordinator/v1/config/compaction/cluster',
-          { cancelToken },
-        );
+        const configResp = await Api.instance.get('/druid/v1/indexer/compaction/config/cluster', {
+          cancelToken,
+        });
         setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
@@ -71,7 +70,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
   async function saveConfig() {
     if (!dynamicConfig) return;
     try {
-      await Api.instance.post(`/druid/coordinator/v1/config/compaction/cluster`, dynamicConfig);
+      await Api.instance.post('/druid/v1/indexer/compaction/config/cluster', dynamicConfig);
     } catch (e) {
       AppToaster.show({
         icon: IconNames.ERROR,

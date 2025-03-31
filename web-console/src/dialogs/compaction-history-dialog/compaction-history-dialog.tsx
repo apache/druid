@@ -66,7 +66,9 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
     processQuery: async (datasource, cancelToken) => {
       try {
         return await getApiArray<CompactionHistoryEntry>(
-          `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
+          `/druid/v1/indexer/compaction/config/datasources/${Api.encodePath(
+            datasource,
+          )}/history?count=20`,
           cancelToken,
         );
       } catch (e) {
