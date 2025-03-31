@@ -24,25 +24,25 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.client.broker.BrokerClientImpl;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -88,7 +88,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
                                            + "FROM sys.segments\n"
                                            + "WHERE datasource = '%s' AND is_overshadowed = 0 AND (%s)";
 
-  private final BrokerClientImpl brokerClient;
+  private final BrokerClient brokerClient;
   private final ObjectMapper objectMapper;
   // Map of version vs latest load status.
   private final AtomicReference<VersionLoadStatus> versionLoadStatusReference;
@@ -102,7 +102,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
   private final ListeningExecutorService executorService;
 
   public SegmentLoadStatusFetcher(
-      BrokerClientImpl brokerClient,
+      BrokerClient brokerClient,
       ObjectMapper objectMapper,
       String queryId,
       String datasource,
@@ -244,6 +244,12 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
     );
     ListenableFuture<SqlTaskStatus> response = brokerClient.submitSqlTask(clientSqlQuery);
     SqlTaskStatus taskStatus = response.get();
+    if (taskStatus == null || taskStatus.getState() != TaskState.SUCCESS) {
+      // Unable to query broker or task failed
+      log.warn("Failed to get load status from broker, task state: %s",
+              taskStatus != null ? taskStatus.getState() : "null");
+      return new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated);
+    }
     String taskId = taskStatus.getTaskId();
 
     if (taskId == null) {

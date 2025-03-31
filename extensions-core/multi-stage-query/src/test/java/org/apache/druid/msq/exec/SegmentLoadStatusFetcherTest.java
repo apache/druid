@@ -20,9 +20,12 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.discovery.BrokerClient;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
@@ -34,12 +37,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class SegmentLoadStatusFetcherTest
 {
@@ -55,15 +58,17 @@ public class SegmentLoadStatusFetcherTest
   @Test
   public void testSingleVersionWaitsForLoadCorrectly() throws Exception
   {
+    @SuppressWarnings("unchecked")
+    ListenableFuture<SqlTaskStatus> mockFuture = mock(ListenableFuture.class);
     brokerClient = mock(BrokerClient.class);
 
-    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer<String>()
+    doReturn(mock(ListenableFuture.class)).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
+    doAnswer(new Answer<ListenableFuture<SqlTaskStatus>>()
     {
       int timesInvoked = 0;
 
       @Override
-      public String answer(InvocationOnMock invocation) throws Throwable
+      public ListenableFuture<SqlTaskStatus> answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
         SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
@@ -73,9 +78,16 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        return new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = new ObjectMapper().writeValueAsString(loadStatus);
+        SqlTaskStatus taskStatus = new SqlTaskStatus(
+            jsonResponse,
+            timesInvoked >= 5 ? TaskState.SUCCESS : TaskState.RUNNING,
+            null
+        );
+        when(mockFuture.get()).thenReturn(taskStatus);
+        return mockFuture;
       }
-    }).when(brokerClient).sendQuery(any());
+    }).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
         new ObjectMapper(),
@@ -86,21 +98,23 @@ public class SegmentLoadStatusFetcherTest
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
 
-    verify(brokerClient, times(5)).sendQuery(any());
+    verify(brokerClient, times(5)).submitSqlTask(any(ClientSqlQuery.class));
   }
 
   @Test
   public void testMultipleVersionWaitsForLoadCorrectly() throws Exception
   {
+    @SuppressWarnings("unchecked")
+    ListenableFuture<SqlTaskStatus> mockFuture = mock(ListenableFuture.class);
     brokerClient = mock(BrokerClient.class);
 
-    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer<String>()
+    doReturn(mock(ListenableFuture.class)).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
+    when(brokerClient.submitSqlTask(any(ClientSqlQuery.class))).thenAnswer(new Answer<ListenableFuture<SqlTaskStatus>>()
     {
       int timesInvoked = 0;
 
       @Override
-      public String answer(InvocationOnMock invocation) throws Throwable
+      public ListenableFuture<SqlTaskStatus> answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
         SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
@@ -110,9 +124,17 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        return new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = new ObjectMapper().writeValueAsString(loadStatus);
+
+        SqlTaskStatus taskStatus = new SqlTaskStatus(
+            jsonResponse,
+            TaskState.SUCCESS,
+            null
+        );
+        when(mockFuture.get()).thenReturn(taskStatus);
+        return mockFuture;
       }
-    }).when(brokerClient).sendQuery(any());
+    });
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
         new ObjectMapper(),
@@ -123,22 +145,25 @@ public class SegmentLoadStatusFetcherTest
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
 
-    verify(brokerClient, times(5)).sendQuery(any());
+    verify(brokerClient, times(5)).submitSqlTask(any(ClientSqlQuery.class));
   }
 
   @Test
   public void triggerCancellationFromAnotherThread() throws Exception
   {
+    @SuppressWarnings("unchecked")
+    ListenableFuture<SqlTaskStatus> mockFuture = mock(ListenableFuture.class);
     brokerClient = mock(BrokerClient.class);
-    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer<String>()
+
+    doReturn(mock(ListenableFuture.class)).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
+    doAnswer(new Answer<ListenableFuture<SqlTaskStatus>>()
     {
       int timesInvoked = 0;
 
       @Override
-      public String answer(InvocationOnMock invocation) throws Throwable
+      public ListenableFuture<SqlTaskStatus> answer(InvocationOnMock invocation) throws Throwable
       {
-        // sleeping broker call to simulate a long running query
+        // sleeping broker call to simulate a long-running query
         Thread.sleep(1000);
         timesInvoked++;
         SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
@@ -148,9 +173,18 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        return new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = new ObjectMapper().writeValueAsString(loadStatus);
+
+        SqlTaskStatus taskStatus = new SqlTaskStatus(
+                jsonResponse,
+                TaskState.SUCCESS,
+                null
+        );
+        when(mockFuture.get()).thenReturn(taskStatus);
+
+        return mockFuture;
       }
-    }).when(brokerClient).sendQuery(any());
+    }).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
         new ObjectMapper(),
