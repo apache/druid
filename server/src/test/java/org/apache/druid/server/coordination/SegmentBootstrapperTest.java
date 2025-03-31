@@ -188,11 +188,7 @@ public class SegmentBootstrapperTest
 
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
-    final SegmentLoadDropHandler handler = new SegmentLoadDropHandler(
-        segmentLoaderConfig,
-        segmentAnnouncer,
-        segmentManager
-    );
+    final SegmentLoadDropHandler handler = new SegmentLoadDropHandler(segmentLoaderConfig, segmentAnnouncer, segmentManager);
     final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
         handler,
         segmentLoaderConfig,
@@ -304,10 +300,7 @@ public class SegmentBootstrapperTest
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.NONE;
-          binder.bind(Key.get(
-                    BroadcastDatasourceLoadingSpec.class,
-                    Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
-                ))
+          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
                 .toInstance(broadcastMode);
         }
     );
@@ -367,12 +360,8 @@ public class SegmentBootstrapperTest
         new LifecycleModule(),
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.loadOnly(ImmutableSet.of(
-              "test1"));
-          binder.bind(Key.get(
-                    BroadcastDatasourceLoadingSpec.class,
-                    Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
-                ))
+          final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.loadOnly(ImmutableSet.of("test1"));
+          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
                 .toInstance(broadcastMode);
         }
     );
