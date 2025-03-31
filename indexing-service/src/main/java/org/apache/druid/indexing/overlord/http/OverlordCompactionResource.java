@@ -37,12 +37,14 @@ import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.CompactionSupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -50,7 +52,9 @@ import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -333,11 +337,19 @@ public class OverlordCompactionResource
 
     if (scheduler.isEnabled()) {
       return ServletResourceUtils.buildReadResponse(
-          () -> supervisorManager.getCompactionSupervisorHistory(dataSource)
+          () -> new CompactionConfigHistoryResponse(
+              filterByCountAndInterval(
+                  supervisorManager.getCompactionSupervisorHistory(dataSource),
+                  interval,
+                  count
+              )
+          )
       );
     } else {
       return ServletResourceUtils.buildReadResponse(
-          () -> configManager.getCompactionConfigHistory(dataSource, interval, count)
+          () -> new CompactionConfigHistoryResponse(
+              configManager.getCompactionConfigHistory(dataSource, interval, count)
+          )
       );
     }
   }
@@ -382,6 +394,28 @@ public class OverlordCompactionResource
         );
       }
     }
+  }
+
+  /**
+   * Filters the given list of audit entries by both interval and count, if
+   * specified.
+   */
+  private static List<DataSourceCompactionConfigAuditEntry> filterByCountAndInterval(
+      List<DataSourceCompactionConfigAuditEntry> entries,
+      @Nullable String serializedInterval,
+      @Nullable Integer count
+  )
+  {
+    final Interval interval = serializedInterval == null || serializedInterval.isEmpty()
+                              ? null : Intervals.of(serializedInterval);
+    return entries.stream()
+                  .filter(
+                      entry -> interval == null
+                               || entry.getAuditTime() == null
+                               || interval.contains(entry.getAuditTime())
+                  )
+                  .limit(count == null ? Integer.MAX_VALUE : count)
+                  .collect(Collectors.toList());
   }
 
   private <T> List<T> filterByAuthorizedDatasources(

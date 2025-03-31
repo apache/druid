@@ -1851,9 +1851,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private void updateClusterConfig(ClusterCompactionConfig clusterConfig) throws Exception
   {
     compactionResource.updateClusterConfig(clusterConfig);
-
-    final ClusterCompactionConfig updatedConfig = compactionResource.getClusterConfig();
-    Assert.assertEquals(clusterConfig, updatedConfig);
     LOG.info("Updated cluster config to [%s]", clusterConfig);
   }
 

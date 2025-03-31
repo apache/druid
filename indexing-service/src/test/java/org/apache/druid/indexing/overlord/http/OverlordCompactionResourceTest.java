@@ -31,6 +31,8 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.supervisor.CompactionSupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -38,6 +40,7 @@ import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -368,6 +371,60 @@ public class OverlordCompactionResourceTest
     final Response response = compactionResource.getAllCompactionConfigs(httpRequest);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(new CompactionConfigsResponse(List.of(wikiConfig)), response.getEntity());
+  }
+
+  @Test
+  public void test_getDatasourceCompactionConfigHistory_withFilters()
+  {
+    final String supervisorId = CompactionSupervisorSpec.getSupervisorIdForDatasource(TestDataSource.WIKI);
+
+    final CompactionSupervisorSpec spec = new CompactionSupervisorSpec(wikiConfig, false, validator);
+    final List<VersionedSupervisorSpec> specVersions = List.of(
+        new VersionedSupervisorSpec(spec, "2025-03"),
+        new VersionedSupervisorSpec(spec, "2025-02"),
+        new VersionedSupervisorSpec(spec, "2025-01")
+    );
+
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId(supervisorId))
+            .andReturn(specVersions)
+            .anyTimes();
+    replayAll();
+
+    final List<DataSourceCompactionConfigAuditEntry> history = List.of(
+        new DataSourceCompactionConfigAuditEntry(null, wikiConfig, null, DateTimes.of("2025-03")),
+        new DataSourceCompactionConfigAuditEntry(null, wikiConfig, null, DateTimes.of("2025-02")),
+        new DataSourceCompactionConfigAuditEntry(null, wikiConfig, null, DateTimes.of("2025-01"))
+    );
+
+    Response response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, null, null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history), response.getEntity());
+
+    // Filter by count
+    response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, null, 2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history.subList(0, 2)), response.getEntity());
+
+    // Filter by interval
+    response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, "2025-01/P40D", null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history.subList(1, 3)), response.getEntity());
+
+    // Filter by interval and count
+    response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, "2025-01/P40D", 1);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history.subList(1, 2)), response.getEntity());
+  }
+
+  private static CompactionConfigHistoryResponse toHistoryResponse(
+      List<DataSourceCompactionConfigAuditEntry> entries
+  )
+  {
+    return new CompactionConfigHistoryResponse(entries);
   }
 
   private void verifyInvalidInputResponse(Response response, String message)

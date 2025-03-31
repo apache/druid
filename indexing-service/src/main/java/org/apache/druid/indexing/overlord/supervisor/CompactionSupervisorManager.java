@@ -167,8 +167,9 @@ public class CompactionSupervisorManager
   /**
    * Gets the change history for the compaction supervisor of the given datasource.
    *
-   * @return Empty list if no history exists for the compaction supervisor of
-   * this datasource.
+   * @return Change history for the compaction supervisor of the given datasource
+   * in descending order by update time or an empty list if no history exists
+   * for the compaction supervisor of this datasource.
    */
   public List<DataSourceCompactionConfigAuditEntry> getCompactionSupervisorHistory(String dataSource)
   {
