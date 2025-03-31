@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,6 +34,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataSupervisorManager;
@@ -60,6 +62,8 @@ import java.util.Map;
 @RunWith(EasyMockRunner.class)
 public class SupervisorManagerTest extends EasyMockSupport
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+
   @Mock
   private MetadataSupervisorManager metadataSupervisorManager;
 
@@ -80,7 +84,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Before
   public void setUp()
   {
-    manager = new SupervisorManager(metadataSupervisorManager);
+    manager = new SupervisorManager(MAPPER, metadataSupervisorManager);
   }
 
   @Test
@@ -109,7 +113,6 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
 
     resetAll();
-    metadataSupervisorManager.insert("id1", spec2);
     supervisor2.start();
     supervisor1.stop(true);
     replayAll();
@@ -173,6 +176,23 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec(null, null));
     verifyAll();
+  }
+
+  @Test
+  public void testShouldUpdateSupervisor()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1);
+    SupervisorSpec spec2 = new TestSupervisorSpec("id2", supervisor2);
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", spec
+    );
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    replayAll();
+    manager.start();
+    Assert.assertFalse(manager.shouldUpdateSupervisor(spec));
+    Assert.assertTrue(manager.shouldUpdateSupervisor(spec2));
+    Assert.assertTrue(manager.shouldUpdateSupervisor(new NoopSupervisorSpec("id1", null)));
   }
 
   @Test
@@ -533,7 +553,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec("noop", ImmutableList.of("noopDS"));
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec suspendedSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec suspendedSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor suspendedSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(suspendedSpec.getId()).andReturn("suspendedSpec").anyTimes();
     EasyMock.expect(suspendedSpec.isSuspended()).andReturn(true).anyTimes();
@@ -544,7 +564,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(suspendedSpec);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec activeSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec activeSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor activeSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeSpec.getId()).andReturn("activeSpec").anyTimes();
     EasyMock.expect(activeSpec.isSuspended()).andReturn(false).anyTimes();
@@ -555,7 +575,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(activeSpec);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec activeSpecWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec activeSpecWithConcurrentLocks = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor activeSupervisorWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeSpecWithConcurrentLocks.getId()).andReturn("activeSpecWithConcurrentLocks").anyTimes();
     EasyMock.expect(activeSpecWithConcurrentLocks.isSuspended()).andReturn(false).anyTimes();
@@ -570,7 +590,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(activeSpecWithConcurrentLocks);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec activeAppendSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec activeAppendSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor activeAppendSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeAppendSpec.getId()).andReturn("activeAppendSpec").anyTimes();
     EasyMock.expect(activeAppendSpec.isSuspended()).andReturn(false).anyTimes();
@@ -585,7 +605,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
     // A supervisor with useConcurrentLocks set to false explicitly must not use an append lock
-    SeekableStreamSupervisorSpec specWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec specWithUseConcurrentLocksFalse = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor supervisorWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(specWithUseConcurrentLocksFalse.getId()).andReturn("useConcurrentLocksFalse").anyTimes();
     EasyMock.expect(specWithUseConcurrentLocksFalse.isSuspended()).andReturn(false).anyTimes();
@@ -639,7 +659,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     NoopSupervisorSpec noopSpec = new NoopSupervisorSpec("noop", ImmutableList.of("noopDS"));
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec streamingSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec streamingSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     SeekableStreamSupervisor streamSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     streamSupervisor.registerNewVersionOfPendingSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().once();

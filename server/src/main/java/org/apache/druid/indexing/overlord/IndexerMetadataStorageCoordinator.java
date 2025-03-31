@@ -25,6 +25,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -148,14 +149,39 @@ public interface IndexerMetadataStorageCoordinator
   Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds);
 
   /**
-   * Mark as unused segments which include ONLY data within the given interval.
+   * Marks the segment as unused.
    *
-   * @param dataSource The data source the segments belong to
-   * @param interval   Filter the data segments to ones that include data in this interval exclusively.
-   *
-   * @return number of segments marked unused
+   * @return true if the segment was updated, false otherwise
    */
-  int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval);
+  boolean markSegmentAsUnused(SegmentId segmentId);
+
+  /**
+   * Marks the given segments as unused.
+   *
+   * @return Number of segments updated
+   */
+  int markSegmentsAsUnused(String dataSource, Set<SegmentId> segmentIds);
+
+  /**
+   * Marks all the segments in given datasource as unused.
+   *
+   * @return Number of updated segments
+   */
+  int markAllSegmentsAsUnused(String dataSource);
+
+  /**
+   * Marks segments that are fully contained in the given interval as unused.
+   *
+   * @param versions Optional list of segment versions eligible for update.
+   *                 If this list is passed as null, all segment versions are
+   *                 eligible for updated. If passed as empty, no segment is updated.
+   * @return Number of segments updated
+   */
+  int markSegmentsWithinIntervalAsUnused(
+      String dataSource,
+      Interval interval,
+      @Nullable List<String> versions
+  );
 
   /**
    * Attempts to insert a set of segments and corresponding schema to the metadata storage.

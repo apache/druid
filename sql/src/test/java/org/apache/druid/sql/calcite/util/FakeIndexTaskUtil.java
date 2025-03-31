@@ -75,7 +75,7 @@ public class FakeIndexTaskUtil
     if (localInputSource.getBaseDir().isAbsolute()) {
       return inputSource;
     }
-    File newBaseDir = localInputSource.getBaseDir().toPath().resolve(projectRoot.toPath()).toFile();
+    File newBaseDir = projectRoot.toPath().resolve(localInputSource.getBaseDir().toPath()).toFile();
     return new LocalInputSource(
         newBaseDir,
         localInputSource.getFilter(),

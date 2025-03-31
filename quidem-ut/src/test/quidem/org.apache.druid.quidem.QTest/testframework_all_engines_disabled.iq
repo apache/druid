@@ -1,0 +1,20 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier
+!set outputformat mysql
+
+!disabled StandardComponentSupplier not supported on native engine: scan with order-by
+
+select dim1 from foo order by dim1;
++------+
+| dim1 |
++------+
+|      |
+| 1    |
+| 10.1 |
+| 2    |
+| abc  |
+| def  |
++------+
+(6 rows)
+
+!ok

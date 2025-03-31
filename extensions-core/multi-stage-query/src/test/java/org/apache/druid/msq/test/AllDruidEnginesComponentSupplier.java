@@ -17,24 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.common.config;
+package org.apache.druid.msq.test;
 
-import com.google.inject.Inject;
+import org.apache.druid.sql.calcite.MultiComponentSupplier;
+import org.apache.druid.sql.calcite.MultiComponentSupplier.ComponentSuppliers;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
-/**
- * Some dead constants
- */
-public class NullHandling
+@ComponentSuppliers({
+    StandardComponentSupplier.class,
+    DartComponentSupplier.class,
+    StandardMSQComponentSupplier.class})
+public class AllDruidEnginesComponentSupplier extends MultiComponentSupplier
 {
-  public static final byte IS_NULL_BYTE = (byte) 1;
-  public static final byte IS_NOT_NULL_BYTE = (byte) 0;
-
-  /**
-   * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
-   * See org.apache.druid.guice.NullHandlingModule for details.
-   * It does not take effect in all unit tests since we don't use Guice Injection.
-   */
-  @Inject
-  private static NullValueHandlingConfig INSTANCE;
-
 }

@@ -25,9 +25,8 @@ import React, { useMemo, useState } from 'react';
 
 import { ClearableInput } from '../../../../../../components';
 import { useQueryManager } from '../../../../../../hooks';
-import { caseInsensitiveContains, filterMap } from '../../../../../../utils';
+import { caseInsensitiveContains, filterMap, toggle } from '../../../../../../utils';
 import type { QuerySource } from '../../../../models';
-import { toggle } from '../../../../utils';
 import { ColumnValue } from '../../../column-value/column-value';
 
 import './values-filter-control.scss';

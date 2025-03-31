@@ -32,7 +32,7 @@ public class Stats
     public static final CoordinatorStat DROPPED
         = CoordinatorStat.toDebugAndEmit("dropped", "segment/dropped/count");
     public static final CoordinatorStat DELETED
-        = CoordinatorStat.toLogAndEmit("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("deleted", "segment/deleted/count");
     public static final CoordinatorStat MOVED
         = CoordinatorStat.toDebugAndEmit("moved", "segment/moved/count");
 

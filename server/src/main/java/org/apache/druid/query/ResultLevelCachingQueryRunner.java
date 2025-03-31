@@ -30,6 +30,7 @@ import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.Cache.NamedKey;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.io.LimitedOutputStream;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -105,6 +106,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
+        // Call accumulate on the sequence to ensure that all Wrapper/Closer/Baggage/etc. get called
+        resultFromClient.accumulate(null, (accumulated, in) -> accumulated);
         return deserializeResults(cachedResultSet, strategy, existingResultSetId);
       } else {
         @Nullable
@@ -152,6 +155,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
                   // The resultset identifier and its length is cached along with the resultset
                   resultLevelCachePopulator.populateResults();
                   log.debug("Cache population complete for query %s", query.getId());
+                } else { // thrown == null && !resultLevelCachePopulator.isShouldPopulate()
+                  log.error("Failed (gracefully) to populate result level cache for query %s", query.getId());
                 }
                 resultLevelCachePopulator.stopPopulating();
               }
@@ -233,8 +238,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       try {
         //   Save the resultSetId and its length
         resultLevelCachePopulator.cacheObjectStream.write(ByteBuffer.allocate(Integer.BYTES)
-                                                                    .putInt(resultSetId.length())
-                                                                    .array());
+                                                              .putInt(resultSetId.length())
+                                                              .array());
         resultLevelCachePopulator.cacheObjectStream.write(StringUtils.toUtf8(resultSetId));
       }
       catch (IOException ioe) {
@@ -255,7 +260,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     private final Cache.NamedKey key;
     private final CacheConfig cacheConfig;
     @Nullable
-    private ByteArrayOutputStream cacheObjectStream;
+    private LimitedOutputStream cacheObjectStream;
 
     private ResultLevelCachePopulator(
         Cache cache,
@@ -270,7 +275,14 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       this.serialiers = mapper.getSerializerProviderInstance();
       this.key = key;
       this.cacheConfig = cacheConfig;
-      this.cacheObjectStream = shouldPopulate ? new ByteArrayOutputStream() : null;
+      this.cacheObjectStream = shouldPopulate ? new LimitedOutputStream(
+          new ByteArrayOutputStream(),
+          cacheConfig.getResultLevelCacheLimit(), limit -> StringUtils.format(
+          "resultLevelCacheLimit[%,d] exceeded. "
+          + "Max ResultLevelCacheLimit for cache exceeded. Result caching failed.",
+          limit
+      )
+      ) : null;
     }
 
     boolean isShouldPopulate()
@@ -289,12 +301,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     )
     {
       Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream");
-      int cacheLimit = cacheConfig.getResultLevelCacheLimit();
       try (JsonGenerator gen = mapper.getFactory().createGenerator(cacheObjectStream)) {
         JacksonUtils.writeObjectUsingSerializerProvider(gen, serialiers, cacheFn.apply(resultEntry));
-        if (cacheLimit > 0 && cacheObjectStream.size() > cacheLimit) {
-          stopPopulating();
-        }
       }
       catch (IOException ex) {
         log.error(ex, "Failed to retrieve entry to be cached. Result Level caching will not be performed!");

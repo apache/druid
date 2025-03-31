@@ -1608,6 +1608,38 @@ public class MSQInsertTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1NoDimensionsWithLimit(String contextName, Map<String, Object> context)
+  {
+    Map<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .build();
+
+    List<Object[]> expectedRows = ImmutableList.of(new Object[]{DateTimes.utc(0L).getMillis(), 5L});
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .addTimeColumn()
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery()
+        .setSql("insert into foo1 select count(*) cnt from foo where dim1 != '' limit 4 partitioned by all")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(queryContext)
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+        .setExpectedResultRows(expectedRows)
+        .setExpectedMSQSegmentReport(
+            new MSQSegmentReport(
+                NumberedShardSpec.class.getSimpleName(),
+                "Using NumberedShardSpec to generate segments since the query is inserting rows."
+            )
+        )
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
   public void testInsertOnRestricted(String contextName, Map<String, Object> context)
   {
     // Set expected results based on query's end user

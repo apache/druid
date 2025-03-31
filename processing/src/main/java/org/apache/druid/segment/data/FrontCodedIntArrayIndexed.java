@@ -21,10 +21,10 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -79,7 +79,7 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
     final byte version = orderedBuffer.get();
     Preconditions.checkArgument(version == 0, "only V0 exists, encountered " + version);
     final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
-    final boolean hasNull = NullHandling.IS_NULL_BYTE == orderedBuffer.get();
+    final boolean hasNull = TypeStrategies.IS_NULL_BYTE == orderedBuffer.get();
     final int numValues = VByte.readInt(orderedBuffer);
     // size of offsets + values
     final int size = VByte.readInt(orderedBuffer);

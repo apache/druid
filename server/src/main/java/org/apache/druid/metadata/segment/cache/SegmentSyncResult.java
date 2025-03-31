@@ -17,31 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.config;
+package org.apache.druid.metadata.segment.cache;
 
-import org.joda.time.Duration;
-import org.joda.time.Period;
-import org.skife.config.Coercer;
-import org.skife.config.Coercible;
+import org.apache.druid.timeline.SegmentId;
+
+import java.util.Set;
 
 /**
-*/
-public class DurationCoercible implements Coercible<Duration>
+ * Result of syncing a datasource cache with segments polled from metadata store.
+ */
+public class SegmentSyncResult
 {
-  @Override
-  public Coercer<Duration> accept(Class<?> clazz)
-  {
-    if (Duration.class != clazz) {
-      return null;
-    }
+  private final int deleted;
+  private final int updated;
+  private final Set<SegmentId> expiredIds;
 
-    return new Coercer<>()
-    {
-      @Override
-      public Duration coerce(String value)
-      {
-        return new Period(value).toStandardDuration();
-      }
-    };
+  public SegmentSyncResult(int deleted, int updated, Set<SegmentId> expiredIds)
+  {
+    this.deleted = deleted;
+    this.updated = updated;
+    this.expiredIds = expiredIds;
   }
+
+  public int getDeleted()
+  {
+    return deleted;
+  }
+
+  public int getUpdated()
+  {
+    return updated;
+  }
+
+  public Set<SegmentId> getExpiredIds()
+  {
+    return expiredIds;
+  }
+
 }

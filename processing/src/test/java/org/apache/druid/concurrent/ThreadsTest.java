@@ -17,20 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.config;
+package org.apache.druid.concurrent;
 
-import org.skife.config.ConfigurationObjectFactory;
+import org.junit.jupiter.api.Test;
 
-import java.util.Properties;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
-*/
-public class Config
+public class ThreadsTest
 {
-  public static ConfigurationObjectFactory createFactory(Properties props)
+  @Test
+  public void testThreadRename() throws Exception
   {
-    ConfigurationObjectFactory configFactory = new ConfigurationObjectFactory(props);
-    configFactory.addCoercible(new DurationCoercible());
-    return configFactory;
+    String oldName = Thread.currentThread().getName();
+    String newName = "testThreadRename-was:" + oldName;
+    try (AutoCloseable renameBack = Threads.withThreadName(newName)) {
+      assertEquals(newName, Thread.currentThread().getName());
+    }
+    assertEquals(oldName, Thread.currentThread().getName());
   }
 }

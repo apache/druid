@@ -17,21 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.sql.avatica;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.common.config.NullValueHandlingConfig;
+import com.google.inject.Inject;
+import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.sql.SqlStatementFactory;
 
-/**
- */
-public class NullHandlingModule implements Module
+public class DartDruidMeta extends DruidMeta
 {
-  @Override
-  public void configure(Binder binder)
+  @Inject
+  public DartDruidMeta(
+      final @Dart SqlStatementFactory sqlStatementFactory,
+      final AvaticaServerConfig config,
+      final ErrorHandler errorHandler,
+      final AuthenticatorMapper authMapper)
   {
-    JsonConfigProvider.bind(binder, "druid.generic", NullValueHandlingConfig.class);
-    binder.requestStaticInjection(NullHandling.class);
+    super(sqlStatementFactory, config, errorHandler, authMapper);
   }
 }
