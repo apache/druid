@@ -20,6 +20,7 @@
 package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -146,6 +147,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty("projections")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;

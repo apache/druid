@@ -29,6 +29,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -64,7 +66,7 @@ public class CompactionState
       @JsonProperty("transformSpec") CompactionTransformSpec transformSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
-      @JsonProperty("projections") List<AggregateProjectionSpec> projections
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -73,7 +75,7 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
-    this.projections = projections;
+    this.projections = projections == null ? Collections.emptyList() : projections;
   }
 
   @JsonProperty
@@ -172,7 +174,7 @@ public class CompactionState
       CompactionTransformSpec transformSpec,
       IndexSpec indexSpec,
       GranularitySpec granularitySpec,
-      List<AggregateProjectionSpec> projections
+      @Nullable List<AggregateProjectionSpec> projections
   )
   {
     CompactionState compactionState = new CompactionState(

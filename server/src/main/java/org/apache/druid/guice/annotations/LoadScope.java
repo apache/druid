@@ -26,7 +26,8 @@ import java.lang.annotation.Target;
 
 /**
  * An annotation to specify node types that a {@link com.google.inject.Module} can be loaded on.
- * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}.
+ * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}. If both {@link LoadScope}
+ * and {@link ExcludeScope} are set, {@link ExcludeScope} takes precedence
  * <p>
  * A module not decorated with this annotation or {@link ExcludeScope} will be loaded on every node role.
  *

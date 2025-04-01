@@ -45,6 +45,11 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 /**
  * Configures the metadata catalog on the Broker and Overlord to use a cache
  * and network communications for pull and push updates.
+ * <p>
+ * {@link ExcludeScope} is set for this module when run as the coordinator due to conflicting bindings between this and
+ * {@link CatalogCoordinatorModule} (this can occur when running in combined coordinator and overlord mode). The
+ * bindings of {@link CatalogCoordinatorModule} can satisfy everything required by the overlord when operating in
+ * combined mode.
  */
 @LoadScope(roles = {NodeRole.BROKER_JSON_NAME, NodeRole.OVERLORD_JSON_NAME})
 @ExcludeScope(roles = {NodeRole.COORDINATOR_JSON_NAME})

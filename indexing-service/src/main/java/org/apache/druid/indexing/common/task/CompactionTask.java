@@ -1131,6 +1131,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
 
 
+    /**
+     * gets set of projections out of {@link Metadata#getProjections()} contained in a {@link QueryableIndex}. If
+     * a projection name already exists, it will be replaced with the schema of projections from this
+     * {@link QueryableIndex}.
+     */
     private void processProjections(final QueryableIndex index)
     {
       if (!needProjections) {

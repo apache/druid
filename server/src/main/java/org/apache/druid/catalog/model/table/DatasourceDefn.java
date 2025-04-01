@@ -29,6 +29,7 @@ import org.apache.druid.catalog.model.ModelProperties.GranularityPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
+import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -99,6 +100,9 @@ public class DatasourceDefn extends TableDefn
     }
   }
 
+  /**
+   * Check if {@link TableSpec#type()} is {@link DatasourceDefn#TABLE_TYPE}
+   */
   public static boolean isDatasource(String tableType)
   {
     return DatasourceDefn.TABLE_TYPE.equals(tableType);

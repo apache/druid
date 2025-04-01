@@ -157,7 +157,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
       return null;
     }
     return CatalogUtils.asDruidGranularity(
-        table.getProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY)
+        table.decodeProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY)
     );
   }
 
@@ -182,7 +182,7 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     if (table == null) {
       return null;
     }
-    List<DatasourceProjectionMetadata> projections = table.getProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+    List<DatasourceProjectionMetadata> projections = table.decodeProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
     if (projections == null) {
       return null;
     }
