@@ -28,7 +28,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.dart.worker.DartWorkerClient;
+import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerStats;
@@ -56,7 +56,7 @@ public class DartWorkerManagerTest
   private AutoCloseable mockCloser;
 
   @Mock
-  private DartWorkerClient workerClient;
+  private DartWorkerClientImpl workerClient;
 
   @BeforeEach
   public void setUp()

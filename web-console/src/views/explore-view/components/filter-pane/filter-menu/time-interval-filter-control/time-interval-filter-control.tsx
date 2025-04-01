@@ -18,35 +18,69 @@
 
 import { FormGroup } from '@blueprintjs/core';
 import type { TimeIntervalFilterPattern } from 'druid-query-toolkit';
-import React from 'react';
+import React, { useState } from 'react';
 
 import type { QuerySource } from '../../../../models';
-import { UtcDateInput } from '../../../utc-date-input/utc-date-input';
+import { IsoDateInput } from '../../../iso-date-input/iso-date-input';
 
 import './time-interval-filter-control.scss';
+
+function isSwappedFilterPattern(pattern: TimeIntervalFilterPattern) {
+  return pattern.end <= pattern.start;
+}
 
 export interface TimeIntervalFilterControlProps {
   querySource: QuerySource;
   filterPattern: TimeIntervalFilterPattern;
-  setFilterPattern(filterPattern: TimeIntervalFilterPattern): void;
+  setFilterPatternOrIssue(
+    filterPattern: TimeIntervalFilterPattern | undefined,
+    issue: string | undefined,
+  ): void;
+  onIssue(issue: string): void;
 }
 
 export const TimeIntervalFilterControl = React.memo(function TimeIntervalFilterControl(
   props: TimeIntervalFilterControlProps,
 ) {
-  const { filterPattern, setFilterPattern } = props;
-  const { start, end } = filterPattern;
+  const { filterPattern, setFilterPatternOrIssue, onIssue } = props;
+  const [swappedFilterPattern, setSwappedFilterPattern] = useState<
+    TimeIntervalFilterPattern | undefined
+  >();
+  const { start, end } = swappedFilterPattern || filterPattern;
 
   return (
     <div className="time-interval-filter-control">
       <FormGroup label="Start">
-        <UtcDateInput
+        <IsoDateInput
           date={start}
-          onChange={start => setFilterPattern({ ...filterPattern, start })}
+          onChange={start => {
+            const newPattern = { ...filterPattern, start };
+            if (isSwappedFilterPattern(newPattern)) {
+              setSwappedFilterPattern(newPattern);
+              setFilterPatternOrIssue(undefined, 'Start date must be before end date');
+            } else {
+              setSwappedFilterPattern(undefined);
+              setFilterPatternOrIssue(newPattern, undefined);
+            }
+          }}
+          onIssue={() => onIssue('Bad start date')}
         />
       </FormGroup>
       <FormGroup label="End">
-        <UtcDateInput date={end} onChange={end => setFilterPattern({ ...filterPattern, end })} />
+        <IsoDateInput
+          date={end}
+          onChange={end => {
+            const newPattern = { ...filterPattern, end };
+            if (isSwappedFilterPattern(newPattern)) {
+              setSwappedFilterPattern(newPattern);
+              setFilterPatternOrIssue(undefined, 'End date must be after start date');
+            } else {
+              setSwappedFilterPattern(undefined);
+              setFilterPatternOrIssue(newPattern, undefined);
+            }
+          }}
+          onIssue={() => onIssue('Bad end date')}
+        />
       </FormGroup>
     </div>
   );

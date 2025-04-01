@@ -31,7 +31,7 @@ import {
   filterModeToIcon,
   filterModeToTitle,
   parseFilterModeAndNeedle,
-} from './react-table-utils';
+} from './react-table-filters';
 
 interface FilterRendererProps {
   column: Column;

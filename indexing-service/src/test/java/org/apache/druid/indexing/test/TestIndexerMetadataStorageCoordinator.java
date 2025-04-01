@@ -20,8 +20,6 @@
 package org.apache.druid.indexing.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -34,30 +32,31 @@ import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
-  private final Set<DataSegment> published = Sets.newConcurrentHashSet();
   private final Set<DataSegment> nuked = Sets.newConcurrentHashSet();
-  private final List<DataSegment> unusedSegments;
+  private final TestSegmentsMetadataManager segmentsMetadataManager = new TestSegmentsMetadataManager();
+
   private int deleteSegmentsCount = 0;
 
-  public TestIndexerMetadataStorageCoordinator()
+  public TestSegmentsMetadataManager getSegmentsMetadataManager()
   {
-    unusedSegments = new ArrayList<>();
+    return segmentsMetadataManager;
   }
 
   @Override
@@ -87,13 +86,13 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return ImmutableSet.of();
+    return Set.of();
   }
 
   @Override
   public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
   {
-    return ImmutableList.of();
+    return List.of();
   }
 
   @Override
@@ -103,7 +102,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Segments visibility
   )
   {
-    return ImmutableSet.of();
+    return Set.of();
   }
 
   @Override
@@ -126,26 +125,41 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    synchronized (unusedSegments) {
-      return ImmutableList.copyOf(
-          unusedSegments.stream()
-                        .filter(ds -> !nuked.contains(ds))
-                        .limit(limit != null ? limit : Long.MAX_VALUE)
-                        .iterator()
-      );
-    }
+    return segmentsMetadataManager.getAllUnusedSegments()
+                                  .stream()
+                                  .filter(ds -> !nuked.contains(ds))
+                                  .limit(limit != null ? limit : Long.MAX_VALUE)
+                                  .collect(Collectors.toList());
   }
 
   @Override
   public Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds)
   {
-    return Collections.emptySet();
+    return Set.of();
   }
 
   @Override
-  public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
+  public boolean markSegmentAsUnused(SegmentId segmentId)
   {
-    return 0;
+    return segmentsMetadataManager.markSegmentAsUnused(segmentId);
+  }
+
+  @Override
+  public int markSegmentsAsUnused(String dataSource, Set<SegmentId> segmentIds)
+  {
+    return segmentsMetadataManager.markSegmentsAsUnused(segmentIds);
+  }
+
+  @Override
+  public int markAllSegmentsAsUnused(String dataSource)
+  {
+    return segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSource);
+  }
+
+  @Override
+  public int markSegmentsWithinIntervalAsUnused(String dataSource, Interval interval, @Nullable List<String> versions)
+  {
+    return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSource, interval, versions);
   }
 
   @Override
@@ -156,11 +170,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
-      if (published.add(segment)) {
+      if (segmentsMetadataManager.addSegment(segment)) {
         added.add(segment);
       }
     }
-    return ImmutableSet.copyOf(added);
+    return Set.copyOf(added);
   }
 
   @Override
@@ -172,7 +186,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       boolean isTimeChunk
   )
   {
-    return Collections.emptyMap();
+    return Map.of();
   }
 
   @Override
@@ -315,7 +329,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       final Set<String> segmentIds
   )
   {
-    return Collections.emptyMap();
+    return Map.of();
   }
 
   @Override
@@ -324,7 +338,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       final Set<String> segmentIds
   )
   {
-    return Collections.emptyMap();
+    return Map.of();
   }
 
   @Override
@@ -336,31 +350,23 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     return SegmentTimeline.forSegments(retrieveUsedSegmentsForIntervals(
         dataSource,
-        Collections.singletonList(interval),
+        List.of(interval),
         Segments.INCLUDING_OVERSHADOWED
     ));
   }
 
   public Set<DataSegment> getPublished()
   {
-    return ImmutableSet.copyOf(published);
+    return segmentsMetadataManager.getAllSegments();
   }
 
   public Set<DataSegment> getNuked()
   {
-    return ImmutableSet.copyOf(nuked);
+    return Set.copyOf(nuked);
   }
 
   public int getDeleteSegmentsCount()
   {
     return deleteSegmentsCount;
-  }
-
-  public void setUnusedSegments(List<DataSegment> newUnusedSegments)
-  {
-    synchronized (unusedSegments) {
-      unusedSegments.clear();
-      unusedSegments.addAll(newUnusedSegments);
-    }
   }
 }

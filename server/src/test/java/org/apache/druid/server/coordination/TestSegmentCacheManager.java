@@ -30,9 +30,9 @@ import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -59,11 +59,15 @@ class TestSegmentCacheManager extends NoopSegmentCacheManager
   TestSegmentCacheManager(final Set<DataSegment> segmentsToCache)
   {
     this.cachedSegments = ImmutableList.copyOf(segmentsToCache);
-    this.observedBootstrapSegments = new ArrayList<>();
-    this.observedBootstrapSegmentsLoadedIntoPageCache = new ArrayList<>();
-    this.observedSegments = new ArrayList<>();
-    this.observedSegmentsLoadedIntoPageCache = new ArrayList<>();
-    this.observedSegmentsRemovedFromCache = new ArrayList<>();
+
+    // While inneficient, these CopyOnWriteArrayList objects greatly simplify meeting the thread
+    // safety mandate from SegmentCacheManager. For testing, this should be ok.
+    this.observedBootstrapSegments = new CopyOnWriteArrayList<>();
+    this.observedBootstrapSegmentsLoadedIntoPageCache = new CopyOnWriteArrayList<>();
+    this.observedSegments = new CopyOnWriteArrayList<>();
+    this.observedSegmentsLoadedIntoPageCache = new CopyOnWriteArrayList<>();
+    this.observedSegmentsRemovedFromCache = new CopyOnWriteArrayList<>();
+
     this.observedShutdownBootstrapCount = new AtomicInteger(0);
   }
 

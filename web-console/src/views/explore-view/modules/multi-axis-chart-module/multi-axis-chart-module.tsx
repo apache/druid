@@ -71,7 +71,16 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     },
   },
   component: function MultiAxisChartModule(props) {
-    const { querySource, timezone, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const {
+      querySource,
+      timezone,
+      where,
+      setWhere,
+      moduleWhere,
+      parameterValues,
+      stage,
+      runSqlQuery,
+    } = props;
     const containerRef = useRef<HTMLDivElement>();
     const chartRef = useRef<ECharts>();
     const [highlight, setHighlight] = useState<MultiAxisChartHighlight | undefined>();
@@ -87,7 +96,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     const dataQuery = useMemo(() => {
       return {
         query: querySource
-          .getInitQuery(where)
+          .getInitQuery(where.and(moduleWhere))
           .addSelect(F.timeFloor(C(timeColumnName || '__time'), L(timeGranularity)).as('time'), {
             addToGroupBy: 'end',
             addToOrderBy: 'end',
@@ -96,7 +105,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           .applyForEach(measures, (q, measure) => q.addSelect(measure.expression.as(measure.name))),
         timezone,
       };
-    }, [querySource, timezone, where, timeColumnName, timeGranularity, measures]);
+    }, [querySource, timezone, where, moduleWhere, timeColumnName, timeGranularity, measures]);
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,

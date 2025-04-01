@@ -1234,6 +1234,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
       final JsonNode newQueryNode = queryJsonMapper.valueToTree(newQuery);
       ((ObjectNode) newQueryNode).remove("context");
+      JsonNode fc = ((ObjectNode) newQueryNode).get("searchFilterContext");
+      if (fc != null) {
+        ((ObjectNode) fc).remove("nowMs");
+      }
+
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
     }
     catch (Exception e) {
