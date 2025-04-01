@@ -745,6 +745,14 @@ If you are running multiple Druid clusters and would like to have a dedicated na
 
 Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces.
 
+##### Differentiating Task Pods Created From Multiple Namespaces
+
+When we have task pods running in multiple namespaces, it will be difficult to tell which task pods are being started by which cluster. You can specify a task name prefix, `druid.indexer.runner.k8sTaskNamePrefix`, to provide clarity on the namespace that your tasks are responsible for. After configuration, your task names will change from `coordinatorissuedcompactdataso-0e74d5132781cc950eecf04--1-vbx6t` to `taskprefix-0e74d5132781cc950eecf04--1-vbx6t`
+
+When configuring the `druid.indexer.runner.k8sTaskNamePrefix`, you should note that:
+- The prefix will cut off at 30 characters, as the task names must respect Kubernetes' 63-character limit.
+- Special characters `: - . _` will be ignored.
+
 ##### Dealing with ZooKeeper Problems
 
 Ensure that when you are running task pods in another namespace, your task pods are able to communicate with ZooKeeper which might be deployed in the same namespace with overlord. If you are using custom pod templates as described below, you can configure `druid.zk.service.host` to your tasks.
@@ -758,6 +766,7 @@ Should you require the needed permissions for interacting across Kubernetes name
 | --- | --- | --- | --- | --- |
 | `druid.indexer.runner.namespace` | `String` | If Overlord and task pods are running in different namespaces, specify the Overlord namespace. | - | Yes |
 | `druid.indexer.runner.overlordNamespace` | `String` | Only applicable when using Custom Template Pod Adapter. If Overlord and task pods are running in different namespaces, specify the Overlord namespace. | `druid.indexer.runner.namespace` | No |
+| `druid.indexer.runner.k8sTaskNamePrefix` | `String` |  Use this if you want to change your task name to contain a more human-readable prefix. Maximum 30 characters. Special characters `: - . _` will be ignored. | `""` | No |
 | `druid.indexer.runner.debugJobs` | `boolean` | Clean up K8s jobs after tasks complete. | False | No |
 | `druid.indexer.runner.sidecarSupport` | `boolean` | Deprecated, specify adapter type as runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` instead. If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod. | False | No |
 | `druid.indexer.runner.primaryContainerName` | `String` | If running with sidecars, the `primaryContainerName` should be that of your druid container like `druid-overlord`. | First container in `podSpec` list | No |
