@@ -20,6 +20,7 @@
 package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -30,7 +31,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -56,6 +56,7 @@ public class CompactionState
   private final IndexSpec indexSpec;
   private final GranularitySpec granularitySpec;
   private final List<AggregatorFactory> metricsSpec;
+  @Nullable
   private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
@@ -75,7 +76,7 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
-    this.projections = projections == null ? Collections.emptyList() : projections;
+    this.projections = projections;
   }
 
   @JsonProperty
@@ -115,6 +116,8 @@ public class CompactionState
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
