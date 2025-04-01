@@ -82,6 +82,7 @@ import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -317,6 +318,7 @@ public class CachingClusteredClientBenchmark
         },
         forkJoinPool,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        NoopPolicyEnforcer.instance(),
         new NoopServiceEmitter()
     );
   }

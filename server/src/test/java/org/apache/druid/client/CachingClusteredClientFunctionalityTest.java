@@ -20,6 +20,7 @@
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -33,6 +34,7 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -40,9 +42,16 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -73,11 +82,13 @@ import java.util.concurrent.ForkJoinPool;
 public class CachingClusteredClientFunctionalityTest
 {
   private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
+  private static final int DEFAULT_MERGE_LIMIT = 10;
 
   private CachingClusteredClient client;
   private VersionedIntervalTimeline<String, ServerSelector> timeline;
   private TimelineServerView serverView;
   private Cache cache;
+  private CachePopulator cachePopulator;
 
   @ClassRule
   public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
@@ -88,14 +99,40 @@ public class CachingClusteredClientFunctionalityTest
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    client = makeClient(
-        new ForegroundCachePopulator(OBJECT_MAPPER, new CachePopulatorStats(), -1)
+    cachePopulator = new ForegroundCachePopulator(OBJECT_MAPPER, new CachePopulatorStats(), -1);
+  }
+
+  @Test
+  public void testPolicyEnforcer()
+  {
+    client = makeClient(new RestrictAllTablesPolicyEnforcer(null));
+    final TimeseriesQuery timeseriesQuery = Druids.newTimeseriesQueryBuilder()
+                                                  .dataSource("test")
+                                                  .intervals("2015-01-02/2015-01-03")
+                                                  .granularity("day")
+                                                  .aggregators(ImmutableList.of(new CountAggregatorFactory("rows")))
+                                                  .context(ImmutableMap.of("uncoveredIntervalsLimit", 3))
+                                                  .build();
+    final SegmentMetadataQuery segmentMetadataQuery = Druids.newSegmentMetadataQueryBuilder()
+                                                            .dataSource("test")
+                                                            .intervals("2015-01-02/2015-01-03")
+                                                            .build();
+    final RestrictedDataSource restricted = RestrictedDataSource.create(
+        TableDataSource.create("test"),
+        NoRestrictionPolicy.instance()
     );
+    // query failed, expecting a restriction on dataSource
+    ISE e = Assert.assertThrows(ISE.class, () -> runQuery(client, timeseriesQuery, ResponseContext.createEmpty()));
+    Assert.assertEquals("Failed security validation with dataSource [test]", e.getMessage());
+    //
+    runQuery(client, segmentMetadataQuery, ResponseContext.createEmpty());
+    runQuery(client, timeseriesQuery.withDataSource(restricted), ResponseContext.createEmpty());
   }
 
   @Test
   public void testUncoveredInterval()
   {
+    client = makeClient();
     addToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1");
     addToTimeline(Intervals.of("2015-01-04/2015-01-05"), "1");
     addToTimeline(Intervals.of("2015-02-04/2015-02-05"), "1");
@@ -217,16 +254,12 @@ public class CachingClusteredClientFunctionalityTest
     ));
   }
 
-  protected CachingClusteredClient makeClient(final CachePopulator cachePopulator)
+  protected CachingClusteredClient makeClient()
   {
-    return makeClient(cachePopulator, cache, 10);
+    return makeClient(NoopPolicyEnforcer.instance());
   }
 
-  protected CachingClusteredClient makeClient(
-      final CachePopulator cachePopulator,
-      final Cache cache,
-      final int mergeLimit
-  )
+  protected CachingClusteredClient makeClient(PolicyEnforcer policyEnforcer)
   {
     return new CachingClusteredClient(
         conglomerateRule.getConglomerate(),
@@ -294,7 +327,7 @@ public class CachingClusteredClientFunctionalityTest
           @Override
           public int getCacheBulkMergeLimit()
           {
-            return mergeLimit;
+            return DEFAULT_MERGE_LIMIT;
           }
         },
         new DruidHttpClientConfig()
@@ -329,6 +362,7 @@ public class CachingClusteredClientFunctionalityTest
         },
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        policyEnforcer,
         new NoopServiceEmitter()
     );
   }

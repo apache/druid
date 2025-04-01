@@ -43,6 +43,7 @@ import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -72,7 +73,9 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -125,6 +128,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final BrokerParallelMergeConfig parallelMergeConfig;
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
+  private final PolicyEnforcer policyEnforcer;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -139,6 +143,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BrokerParallelMergeConfig parallelMergeConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
+      PolicyEnforcer policyEnforcer,
       ServiceEmitter emitter
   )
   {
@@ -152,6 +157,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.parallelMergeConfig = parallelMergeConfig;
     this.pool = pool;
     this.scheduler = scheduler;
+    this.policyEnforcer = policyEnforcer;
     this.emitter = emitter;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
@@ -199,6 +205,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final boolean specificSegments
   )
   {
+    Query<T> query = queryPlus.getQuery();
+    if (!(query instanceof SegmentMetadataQuery) && !policyEnforcer.validate(query.getDataSource())) {
+      throw new ISE("Failed security validation with dataSource [%s]", query.getDataSource());
+    }
+
     final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext)
         .run(timelineConverter, specificSegments);
     initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, result.numQueryServers);

@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.QueryableIndex;
@@ -132,6 +133,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         QueryStackTests.getParallelMergeConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        NoopPolicyEnforcer.instance(),
         new NoopServiceEmitter()
     );
     servers = new ArrayList<>();
