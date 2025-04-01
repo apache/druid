@@ -188,6 +188,16 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.graalvm.js</groupId>
+            <artifactId>js-scriptengine</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.js</groupId>
+            <artifactId>js</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>com.cronutils</groupId>
             <artifactId>cron-utils</artifactId>
             <version>${cronutils.version}</version>
