@@ -56,6 +56,7 @@ CORS
 CNF
 CPUs
 CSVs
+centralized
 CentralizedDatasourceSchema
 Ceph
 circledR
@@ -349,10 +350,12 @@ firefox
 firehose
 FirehoseFactory
 firehoses
+FireHydrant
 fromPigAvroStorage
 frontends
 granularities
 granularitySpec
+gRPC
 gzip
 gzipped
 hadoop
@@ -513,6 +516,7 @@ reingesting
 reingestion
 repo
 requireSSL
+resize
 rollup
 rollups
 ROW_NUMBER
@@ -2042,6 +2046,7 @@ autoscale
 autoscalers
 batch_index_task
 cgroup
+cgroupv2
 classloader
 com.metamx
 common.runtime.properties
@@ -2368,6 +2373,7 @@ druid-time-min-max
 sqlserver-metadata-storage
 graphite-emitter|Graphite metrics emitter
 statsd-emitter|StatsD metrics emitter
+statsd
 kafka-emitter|Kafka metrics emitter
 druid-thrift-extensions
 druid-opentsdb-emitter
