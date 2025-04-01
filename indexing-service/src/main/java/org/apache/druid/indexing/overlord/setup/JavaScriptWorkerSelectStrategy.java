@@ -29,27 +29,11 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.js.JavaScriptConfig;
 
-import javax.script.Bindings;
-import javax.script.Compilable;
-import javax.script.Invocable;
-import javax.script.ScriptContext;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineFactory;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
-import java.util.List;
-
 public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
 {
   public interface SelectorFunction
   {
     String apply(WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task);
-  }
-
-  public interface SelectorFunction1
-  {
-    String apply(String config, String zkWorkers, String task);
   }
 
   private final String function;
@@ -69,36 +53,6 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
     this.function = fn;
   }
 
-  private SelectorFunction compileSelectorFunction()
-  {
-    String s = "function (a,b,c) { return null; }";
-    List<ScriptEngineFactory> aa = new ScriptEngineManager().getEngineFactories();
-    final ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
-
-    Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-//    bindings.put("polyglot.js.allowHostAccess", true);
-//    bindings.put("polyglot.js.allowHostClassLookup", (Predicate<String>) s -> true);
-    bindings.put("polyglot.js.nashorn-compat", true);
-    try {
-      if(true) {
-        ((Compilable) engine).compile("var apply = " + function).eval();
-        SelectorFunction aa1 = ((Invocable) engine).getInterface(SelectorFunction.class);
-        return aa1;
-
-      }else {
-
-      ((Compilable) engine).compile("var apply = " + s).eval();
-      SelectorFunction1 aa1 = ((Invocable) engine).getInterface(SelectorFunction1.class);
-      return null;
-      }
-    }
-    catch (ScriptException e) {
-      throw new RuntimeException(e);
-    } finally {
-      int asd =1;
-    }
-  }
-
   @Override
   public ImmutableWorkerInfo findWorkerForTask(
       WorkerTaskRunnerConfig config,
@@ -106,7 +60,7 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
       Task task
   )
   {
-    fnSelector = fnSelector == null ? compileSelectorFunction() : fnSelector;
+    fnSelector = fnSelector == null ? JavaScriptUtil.compileSelectorFunction(SelectorFunction.class, function) : fnSelector;
     String worker = fnSelector.apply(config, zkWorkers, task);
     return worker == null ? null : zkWorkers.get(worker);
   }
