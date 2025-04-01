@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.utils;
 
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -45,6 +46,7 @@ public class ITRetryUtil
     retryUntil(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
   }
 
+  @SuppressForbidden(reason = "System#out")
   public static void retryUntil(
       Callable<Boolean> callable,
       boolean expectedValue,
