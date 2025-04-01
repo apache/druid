@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -38,6 +37,8 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.server.http.SegmentLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -82,13 +83,21 @@ public class HttpLoadQueuePeonTest
         MAPPER,
         httpClient,
         new HttpLoadQueuePeonConfig(null, null, 10),
+        () -> SegmentLoadingMode.NORMAL,
         new WrappingScheduledExecutorService(
             "HttpLoadQueuePeonTest-%s",
             httpClient.processingExecutor,
             true
         ),
         httpClient.callbackExecutor
-    );
+    )
+    {
+      @Override
+      SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
+      {
+        return new SegmentLoadingCapabilities(1, 3);
+      }
+    };
     httpLoadQueuePeon.start();
   }
 
@@ -317,6 +326,37 @@ public class HttpLoadQueuePeonTest
     );
   }
 
+  @Test
+  public void testBatchSize()
+  {
+    Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+
+    // Without a batch size runtime parameter
+    httpLoadQueuePeon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        httpClient,
+        new HttpLoadQueuePeonConfig(null, null, null),
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService(
+            "HttpLoadQueuePeonTest-%s",
+            httpClient.processingExecutor,
+            true
+        ),
+        httpClient.callbackExecutor
+    )
+    {
+      @Override
+      SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
+      {
+        return new SegmentLoadingCapabilities(1, 3);
+      }
+    };
+
+    Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+    Assert.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));
+  }
+
   private LoadPeonCallback markSegmentProcessed(DataSegment segment)
   {
     return success -> httpClient.processedSegments.add(segment);
@@ -350,22 +390,21 @@ public class HttpLoadQueuePeonTest
       httpResponseHandler.handleResponse(httpResponse, null);
       try {
         List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
-            request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>()
-            {
-            }
+            request.getContent().array(),
+            HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
         );
 
         List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {
           cr.go(this, null);
           statuses.add(
-              new DataSegmentChangeResponse(cr, SegmentChangeStatus.SUCCESS)
+              new DataSegmentChangeResponse(cr, SegmentChangeStatus.success())
           );
         }
         return (ListenableFuture<Final>) Futures.immediateFuture(
             new ByteArrayInputStream(
                 MAPPER
-                    .writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+                    .writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
                     .writeValueAsBytes(statuses)
             )
         );

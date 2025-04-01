@@ -677,7 +677,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
 
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolChestBroker.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -823,7 +823,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
 
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolchestBroker.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -972,7 +972,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolchestBroker = groupByFactoryBroker.getToolchest();
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolchestBroker.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)

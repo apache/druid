@@ -1202,7 +1202,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     @Override
     public ObjectCollection<V> values()
     {
-      return new AbstractObjectCollection<V>()
+      return new AbstractObjectCollection<>()
       {
         @Override
         public ObjectIterator<V> iterator()

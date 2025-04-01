@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.realtime;
 
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -37,7 +37,7 @@ public class ChatHandlers
    *
    * @return authorization result
    */
-  public static Access authorizationCheck(
+  public static AuthorizationResult authorizationCheck(
       HttpServletRequest req,
       Action action,
       String dataSource,
@@ -49,11 +49,11 @@ public class ChatHandlers
         action
     );
 
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+    AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
 
-    return access;
+    return authResult;
   }
 }

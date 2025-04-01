@@ -36,7 +36,6 @@ import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -48,6 +47,8 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -86,10 +87,9 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -153,7 +153,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Nullable
   private final DimensionsSpec dimensionsSpec;
   @Nullable
-  private final ClientCompactionTaskTransformSpec transformSpec;
+  private final CompactionTransformSpec transformSpec;
   @Nullable
   private final AggregatorFactory[] metricsSpec;
   @Nullable
@@ -177,7 +177,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @JsonProperty("ioConfig") @Nullable CompactionIOConfig ioConfig,
       @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
-      @JsonProperty("transformSpec") @Nullable final ClientCompactionTaskTransformSpec transformSpec,
+      @JsonProperty("transformSpec") @Nullable final CompactionTransformSpec transformSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
@@ -359,7 +359,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
   @JsonProperty
   @Nullable
-  public ClientCompactionTaskTransformSpec getTransformSpec()
+  public CompactionTransformSpec getTransformSpec()
   {
     return transformSpec;
   }
@@ -538,7 +538,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
       @Nullable final DimensionsSpec dimensionsSpec,
-      @Nullable final ClientCompactionTaskTransformSpec transformSpec,
+      @Nullable final CompactionTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final ServiceMetricEvent.Builder metricBuilder,
@@ -661,7 +661,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       Interval totalInterval,
       Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments,
       @Nullable DimensionsSpec dimensionsSpec,
-      @Nullable ClientCompactionTaskTransformSpec transformSpec,
+      @Nullable CompactionTransformSpec transformSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nonnull ClientCompactionTaskGranularitySpec granularitySpec,
       boolean needMultiValuedColumns
@@ -1153,7 +1153,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     @Nullable
     private DimensionsSpec dimensionsSpec;
     @Nullable
-    private ClientCompactionTaskTransformSpec transformSpec;
+    private CompactionTransformSpec transformSpec;
     @Nullable
     private AggregatorFactory[] metricsSpec;
     @Nullable
@@ -1209,7 +1209,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return this;
     }
 
-    public Builder transformSpec(ClientCompactionTaskTransformSpec transformSpec)
+    public Builder transformSpec(CompactionTransformSpec transformSpec)
     {
       this.transformSpec = transformSpec;
       return this;

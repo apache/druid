@@ -30,6 +30,7 @@ import com.google.common.io.Closeables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -37,7 +38,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.hadoop.conf.Configurable;
@@ -159,9 +159,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         }
         List<Interval> intervals = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
             Utils.openInputStream(groupByJob, intervalInfoPath),
-            new TypeReference<List<Interval>>()
-            {
-            }
+            new TypeReference<>() {}
         );
         config.setGranularitySpec(
             new UniformGranularitySpec(
@@ -414,7 +412,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       try {
         HadoopDruidIndexerConfig.JSON_MAPPER
-            .writerWithType(Long.class)
+            .writerFor(Long.class)
             .writeValue(out, aggregate.estimateCardinalityRound());
       }
       finally {
@@ -432,7 +430,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         final OutputStream out = Utils.makePathAndOutputStream(context, outPath, config.isOverwriteFiles());
 
         try {
-          HadoopDruidIndexerConfig.JSON_MAPPER.writerWithType(
+          HadoopDruidIndexerConfig.JSON_MAPPER.writerFor(
               new TypeReference<List<Interval>>()
               {
               }

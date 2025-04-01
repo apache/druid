@@ -25,13 +25,22 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class DimensionSchemaUtilsTest
 {
+
+  @Before
+  public void setup()
+  {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
 
   @Test
   public void testSchemaScalars()
@@ -179,19 +188,28 @@ public class DimensionSchemaUtilsTest
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.LONG_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]", t.getMessage());
+    Assert.assertEquals(
+        "Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]",
+        t.getMessage()
+    );
 
     t = Assert.assertThrows(
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.DOUBLE_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]", t.getMessage());
+    Assert.assertEquals(
+        "Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]",
+        t.getMessage()
+    );
 
     t = Assert.assertThrows(
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.FLOAT_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals("Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]", t.getMessage());
+    Assert.assertEquals(
+        "Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]",
+        t.getMessage()
+    );
   }
 
   @Test

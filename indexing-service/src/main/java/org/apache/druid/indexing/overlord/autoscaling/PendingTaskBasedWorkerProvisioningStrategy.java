@@ -117,7 +117,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         config,
         workerConfigRef,
         provisioningSchedulerConfig,
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -178,7 +178,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       final Collection<String> workerNodeIds = getWorkerNodeIDs(
           Collections2.transform(
               workers,
-              new Function<ImmutableWorkerInfo, Worker>()
+              new Function<>()
               {
                 @Override
                 public Worker apply(ImmutableWorkerInfo input)
@@ -378,7 +378,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         final Collection<String> laziestWorkerIps =
             Collections2.transform(
                 runner.markWorkersLazy(isLazyWorker, maxWorkersToTerminate),
-                new Function<Worker, String>()
+                new Function<>()
                 {
                   @Override
                   public String apply(Worker zkWorker)
@@ -482,10 +482,16 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     int parallelIndexTaskCapacity = task.getType().equals(ParallelIndexSupervisorTask.TYPE)
                                     ? task.getTaskResource().getRequiredCapacity()
                                     : 0;
+    int taskCapacity = task.getTaskResource().getRequiredCapacity();
+
+    final Map<String, Integer> typeSpecificCapacity = new HashMap<>(immutableWorker.getCurrCapacityUsedByTaskType());
+    typeSpecificCapacity.merge(task.getType(), taskCapacity, Integer::sum);
+
     return new ImmutableWorkerInfo(
         immutableWorker.getWorker(),
         immutableWorker.getCurrCapacityUsed() + 1,
         immutableWorker.getCurrParallelIndexCapacityUsed() + parallelIndexTaskCapacity,
+        typeSpecificCapacity,
         Sets.union(
             immutableWorker.getAvailabilityGroups(),
             Sets.newHashSet(

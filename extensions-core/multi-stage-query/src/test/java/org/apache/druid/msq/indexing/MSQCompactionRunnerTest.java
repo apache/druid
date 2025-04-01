@@ -26,14 +26,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -70,13 +69,12 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -102,9 +100,13 @@ public class MSQCompactionRunnerTest
   private static final GranularityType QUERY_GRANULARITY = GranularityType.HOUR;
 
   private static final StringDimensionSchema STRING_DIMENSION = new StringDimensionSchema("string_dim", null, false);
-  private static final StringDimensionSchema MV_STRING_DIMENSION = new StringDimensionSchema("mv_string_dim", null, null);
+  private static final StringDimensionSchema MV_STRING_DIMENSION = new StringDimensionSchema(
+      "mv_string_dim",
+      null,
+      null
+  );
   private static final LongDimensionSchema LONG_DIMENSION = new LongDimensionSchema("long_dim");
-  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", 4);
+  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", 5);
   private static final AutoTypeColumnSchema AUTO_DIMENSION = new AutoTypeColumnSchema("auto_dim", null);
   private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(
       STRING_DIMENSION,
@@ -129,15 +131,12 @@ public class MSQCompactionRunnerTest
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
   private static final List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
-  private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, TestExprMacroTable.INSTANCE, null);
+  private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(
+      JSON_MAPPER,
+      TestExprMacroTable.INSTANCE,
+      null
+  );
   private static final List<String> PARTITION_DIMENSIONS = Collections.singletonList(STRING_DIMENSION.getName());
-
-
-  @BeforeClass
-  public static void setupClass()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void testMultipleDisjointCompactionIntervalsAreInvalid()
@@ -200,8 +199,9 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
-                                                                                                     INTERVAL_DATASCHEMAS
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
+        compactionTask,
+        INTERVAL_DATASCHEMAS
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
@@ -222,8 +222,9 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
-                                                                                                     INTERVAL_DATASCHEMAS
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
+        compactionTask,
+        INTERVAL_DATASCHEMAS
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
@@ -551,8 +552,8 @@ public class MSQCompactionRunnerTest
       @Nullable AggregatorFactory[] metricsSpec
   )
   {
-    ClientCompactionTaskTransformSpec transformSpec =
-        new ClientCompactionTaskTransformSpec(dimFilter);
+    CompactionTransformSpec transformSpec =
+        new CompactionTransformSpec(dimFilter);
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
         null

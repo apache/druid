@@ -101,7 +101,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.standardMinutes(1), config.getRepeatDelay());
     Assert.assertEquals(Duration.standardMinutes(5), config.getHostTimeout());
     Assert.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
-    Assert.assertEquals(1, config.getBatchSize());
+    Assert.assertNull(config.getBatchSize());
   }
 
   @Test
@@ -118,7 +118,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.standardMinutes(20), config.getRepeatDelay());
     Assert.assertEquals(Duration.standardMinutes(10), config.getHostTimeout());
     Assert.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
-    Assert.assertEquals(100, config.getBatchSize());
+    Assert.assertEquals(Integer.valueOf(100), config.getBatchSize());
   }
 
   @Test
@@ -168,7 +168,8 @@ public class DruidCoordinatorConfigTest
         Period.parse("PT12H").toStandardDuration(),
         true,
         Period.parse("PT60M").toStandardDuration(),
-        500
+        500,
+        Period.days(2)
     );
     CoordinatorKillConfigs killConfigs = createKillConfig().unusedSegments(inputConfig).build();
 
@@ -542,7 +543,8 @@ public class DruidCoordinatorConfigTest
           unusedSegments == null ? null : unusedSegments.getDurationToRetain(),
           unusedSegments == null ? null : unusedSegments.isIgnoreDurationToRetain(),
           unusedSegments == null ? null : unusedSegments.getBufferPeriod(),
-          unusedSegments == null ? null : unusedSegments.getMaxSegments()
+          unusedSegments == null ? null : unusedSegments.getMaxSegments(),
+          unusedSegments == null ? null : unusedSegments.getMaxInterval()
       );
     }
   }

@@ -26,6 +26,7 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import java.util.Map;
@@ -64,6 +65,11 @@ public class MSQSpec
   public Query<?> getQuery()
   {
     return query;
+  }
+
+  public QueryContext getContext()
+  {
+    return query.context();
   }
 
   @JsonProperty("columnMappings")

@@ -25,7 +25,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.NestedDataColumnHandlerV4;
+import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -98,7 +98,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<Object>()
+    return new ObjectStrategy<>()
     {
       @Override
       public int compare(Object o1, Object o2)
@@ -206,7 +206,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     return new ObjectStrategyComplexTypeStrategy<>(
         getObjectStrategy(),
         ColumnType.ofComplex(TYPE_NAME),
-        new Hash.Strategy<Object>()
+        new Hash.Strategy<>()
         {
           @Override
           public int hashCode(Object o)
@@ -234,13 +234,13 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public DimensionHandler getColumnHandler(String columnName)
     {
-      return new NestedDataColumnHandlerV4(columnName);
+      return new NestedCommonFormatColumnHandler(columnName, null);
     }
 
     @Override
     public DimensionSchema getColumnSchema(String columnName)
     {
-      return new NestedDataColumnSchema(columnName, 4);
+      return new NestedDataColumnSchema(columnName, 5);
     }
 
     @Override

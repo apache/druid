@@ -73,7 +73,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     ).sum();
 
     if (numCancelledLoads > 0 || numQueuedDrops > 0) {
-      log.info("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
+      log.debug("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
     }
 
     return params;

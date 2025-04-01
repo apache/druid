@@ -21,7 +21,7 @@ package org.apache.druid.msq.dart.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
-import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -84,7 +84,7 @@ public class DartControllerContext implements ControllerContext
   private final ObjectMapper jsonMapper;
   private final DruidNode selfNode;
   private final DartWorkerClient workerClient;
-  private final BrokerServerView serverView;
+  private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
   private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
@@ -95,7 +95,7 @@ public class DartControllerContext implements ControllerContext
       final DruidNode selfNode,
       final DartWorkerClient workerClient,
       final MemoryIntrospector memoryIntrospector,
-      final BrokerServerView serverView,
+      final TimelineServerView serverView,
       final ServiceEmitter emitter
   )
   {
@@ -140,7 +140,7 @@ public class DartControllerContext implements ControllerContext
         );
 
     final int maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStagesWithDefault(
-        querySpec.getQuery().context(),
+        querySpec.getContext(),
         DEFAULT_MAX_CONCURRENT_STAGES
     );
 
@@ -225,7 +225,7 @@ public class DartControllerContext implements ControllerContext
       final ControllerQueryKernelConfig queryKernelConfig
   )
   {
-    final QueryContext queryContext = querySpec.getQuery().context();
+    final QueryContext queryContext = querySpec.getContext();
     return new QueryKitSpec(
         queryKit,
         queryId,

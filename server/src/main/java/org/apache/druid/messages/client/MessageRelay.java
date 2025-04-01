@@ -148,7 +148,7 @@ public class MessageRelay<MessageType> implements Closeable
 
       Futures.addCallback(
           future,
-          new FutureCallback<MessageBatch<MessageType>>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(final MessageBatch<MessageType> result)

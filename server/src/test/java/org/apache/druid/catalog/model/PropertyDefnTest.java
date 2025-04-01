@@ -117,10 +117,10 @@ public class PropertyDefnTest
   @Test
   public void testClusterKeyList()
   {
-    ListPropertyDefn<ClusterKeySpec> prop = new ListPropertyDefn<ClusterKeySpec>(
+    ListPropertyDefn<ClusterKeySpec> prop = new ListPropertyDefn<>(
         "prop",
         "cluster key list",
-        new TypeReference<List<ClusterKeySpec>>() { }
+        new TypeReference<>() {}
     );
     assertEquals("prop", prop.name());
     assertEquals("cluster key list", prop.typeName());

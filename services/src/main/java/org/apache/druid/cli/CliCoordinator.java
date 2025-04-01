@@ -130,6 +130,7 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
@@ -288,6 +289,9 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
                   .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
                   .toProvider(HeartbeatSupplier.class);
+              binder.bind(LocalTmpStorageConfig.class)
+                    .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("coordinator"))
+                    .in(LazySingleton.class);
             }
 
             binder.bind(CoordinatorCustomDutyGroups.class)
@@ -302,7 +306,8 @@ public class CliCoordinator extends ServerRunnable
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
               @EscalatedGlobal HttpClient httpClient,
-              Lifecycle lifecycle
+              Lifecycle lifecycle,
+              CoordinatorConfigManager coordinatorConfigManager
           )
           {
             final ExecutorService callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
@@ -312,7 +317,8 @@ public class CliCoordinator extends ServerRunnable
                 factory.create(1, "Master-PeonExec--%d"),
                 callBackExec,
                 config.getHttpLoadQueuePeonConfig(),
-                httpClient
+                httpClient,
+                coordinatorConfigManager::getCurrentDynamicConfig
             );
           }
         }
@@ -361,13 +367,13 @@ public class CliCoordinator extends ServerRunnable
           return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);
         }
         List<String> coordinatorCustomDutyGroupNames = jsonMapper.readValue(props.getProperty(
-            "druid.coordinator.dutyGroups"), new TypeReference<List<String>>() {});
+            "druid.coordinator.dutyGroups"), new TypeReference<>() {});
         for (String coordinatorCustomDutyGroupName : coordinatorCustomDutyGroupNames) {
           String dutyListProperty = StringUtils.format("druid.coordinator.%s.duties", coordinatorCustomDutyGroupName);
           if (Strings.isNullOrEmpty(props.getProperty(dutyListProperty))) {
             throw new IAE("Coordinator custom duty group given without any duty for group %s", coordinatorCustomDutyGroupName);
           }
-          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<List<String>>() {});
+          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<>() {});
           List<CoordinatorCustomDuty> coordinatorCustomDuties = new ArrayList<>();
           for (String dutyName : dutyForGroup) {
             final String dutyPropertyBase = StringUtils.format(
@@ -451,7 +457,7 @@ public class CliCoordinator extends ServerRunnable
       final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder =
           DruidBinders.queryRunnerFactoryBinder(binder);
       queryFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class);
-      DruidBinders.queryLogicBinder(binder);
+      DruidBinders.queryBinder(binder);
       binder.bind(SegmentMetadataQueryRunnerFactory.class).in(LazySingleton.class);
 
       binder.bind(GenericQueryMetricsFactory.class).to(DefaultGenericQueryMetricsFactory.class);

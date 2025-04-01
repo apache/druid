@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.firstlast.last;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
@@ -404,7 +403,7 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) target.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(times[i], result.lhs.longValue());
-      Assert.assertEquals(NullHandling.nullToEmptyIfNeeded(VALUES[i]), result.rhs);
+      Assert.assertEquals(VALUES[i], result.rhs);
     }
   }
 
@@ -419,7 +418,7 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) target.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(times[rows[i]], result.lhs.longValue());
-      Assert.assertEquals(NullHandling.nullToEmptyIfNeeded(VALUES[rows[i]]), result.rhs);
+      Assert.assertEquals(VALUES[rows[i]], result.rhs);
     }
   }
 

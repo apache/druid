@@ -97,7 +97,15 @@ then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
 
-DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-0}
+if [ -z "${KUBERNETES_SERVICE_HOST}" ]
+then
+  # Running outside kubernetes, use IP addresses
+  DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-1}
+else
+  # Running in kubernetes, so use canonical names
+  DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-0}
+fi
+
 if [ "${DRUID_SET_HOST_IP}" = "1" ]
 then
     setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
@@ -153,4 +161,8 @@ fi
 # If TASK_JSON is not set, CliPeon will pull the task.json file from deep storage.
 mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
 
-exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon $@
+if [ -n "$TASK_ID" ]; then
+    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon --taskId "${TASK_ID}" "$@"
+else
+    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon "$@"
+fi

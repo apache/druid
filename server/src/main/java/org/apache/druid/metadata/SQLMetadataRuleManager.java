@@ -336,6 +336,10 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     final String ruleString;
     try {
       ruleString = jsonMapper.writeValueAsString(newRules);
+      if (ruleString.equals(jsonMapper.writeValueAsString(rules.get().get(dataSource)))) {
+        log.info("Retention rules unchanged for datasource[%s] with rules[%s]", dataSource, ruleString);
+        return true;
+      }
       log.info("Updating datasource[%s] with rules[%s] as per [%s]", dataSource, ruleString, auditInfo);
     }
     catch (JsonProcessingException e) {

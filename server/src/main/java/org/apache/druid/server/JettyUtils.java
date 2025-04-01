@@ -33,9 +33,13 @@ public class JettyUtils
    * Concatenate URI parts, in a way that is useful for proxy servlets.
    *
    * @param base               base part of the uri, like http://example.com (no trailing slash)
-   * @param encodedPath        encoded path, like you would get from HttpServletRequest's getRequestURI
+   * @param encodedPath        encoded path, like you would get from HttpServletRequest's getRequestURI. Must start with
+   *                           a slash.
    * @param encodedQueryString encoded query string, like you would get from HttpServletRequest's getQueryString
+   *
+   * @return rewritten target URI, or null if the URI cannot be rewritten
    */
+  @Nullable
   public static String concatenateForRewrite(
       final String base,
       final String encodedPath,
@@ -43,6 +47,10 @@ public class JettyUtils
   )
   {
     // Query string and path are already encoded, no need for anything fancy beyond string concatenation.
+
+    if (!encodedPath.startsWith("/")) {
+      return null;
+    }
 
     final StringBuilder url = new StringBuilder(base).append(encodedPath);
 

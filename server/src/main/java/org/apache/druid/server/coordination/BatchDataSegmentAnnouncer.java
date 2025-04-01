@@ -73,7 +73,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final Object lock = new Object();
   private final AtomicLong counter = new AtomicLong(0);
 
-  private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<SegmentZNode>();
+  private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<>();
   private final ConcurrentMap<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
@@ -348,27 +348,12 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       synchronized (lock) {
         Iterable<DataSegmentChangeRequest> segments = Iterables.transform(
             segmentLookup.keySet(),
-            new Function<DataSegment, DataSegmentChangeRequest>()
-            {
-              @Nullable
-              @Override
-              public SegmentChangeRequestLoad apply(DataSegment input)
-              {
-                return new SegmentChangeRequestLoad(input);
-              }
-            }
+            SegmentChangeRequestLoad::new
         );
 
         Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
             taskSinkSchema.values(),
-            new Function<SegmentSchemas, DataSegmentChangeRequest>()
-            {
-              @Override
-              public SegmentSchemasChangeRequest apply(SegmentSchemas input)
-              {
-                return new SegmentSchemasChangeRequest(input);
-              }
-            }
+            SegmentSchemasChangeRequest::new
         );
         Iterable<DataSegmentChangeRequest> changeRequestIterables = Iterables.concat(segments, sinkSchema);
         SettableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = SettableFuture.create();
@@ -433,9 +418,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       try {
         return jsonMapper.readValue(
             bytes,
-            new TypeReference<Set<DataSegment>>()
-            {
-            }
+            new TypeReference<>() {}
         );
       }
       catch (Exception e) {

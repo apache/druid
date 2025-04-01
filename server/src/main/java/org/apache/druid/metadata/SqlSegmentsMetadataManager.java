@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -162,6 +163,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private final Object pollLock = new Object();
 
   private final ObjectMapper jsonMapper;
+  private final ObjectReader segmentReader;
   private final Duration periodicPollDelay;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
@@ -259,6 +261,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   )
   {
     this.jsonMapper = jsonMapper;
+    this.segmentReader = jsonMapper.readerFor(DataSegment.class);
     this.periodicPollDelay = config.get().getPollDuration().toStandardDuration();
     this.dbTables = dbTables;
     this.connector = connector;
@@ -736,7 +739,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<String> segmentIds)
+  public int markAsUsedNonOvershadowedSegments(final String dataSource, final Set<SegmentId> segmentIds)
   {
     try {
       Pair<List<DataSegment>, SegmentTimeline> unusedSegmentsAndTimeline = connector
@@ -772,7 +775,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private List<DataSegment> retrieveUnusedSegments(
       final String dataSource,
-      final Set<String> segmentIds,
+      final Set<SegmentId> segmentIds,
       final Handle handle
   )
   {
@@ -780,11 +783,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         .forHandle(handle, connector, dbTables.get(), jsonMapper)
         .retrieveSegmentsById(dataSource, segmentIds);
 
-    final Set<String> unknownSegmentIds = new HashSet<>(segmentIds);
+    final Set<SegmentId> unknownSegmentIds = new HashSet<>(segmentIds);
     final List<DataSegment> unusedSegments = new ArrayList<>();
     for (DataSegmentPlus entry : retrievedSegments) {
       final DataSegment segment = entry.getDataSegment();
-      unknownSegmentIds.remove(segment.getId().toString());
+      unknownSegmentIds.remove(segment.getId());
       if (Boolean.FALSE.equals(entry.getUsed())) {
         unusedSegments.add(segment);
       }
@@ -820,7 +823,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, true)
+                                    .markSegments(segmentIds, true, DateTimes.nowUtc())
     );
   }
 
@@ -831,7 +834,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       return connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegmentsUnused(dataSource, Intervals.ETERNITY)
+                                      .markSegmentsUnused(dataSource, Intervals.ETERNITY, DateTimes.nowUtc())
       );
     }
     catch (RuntimeException e) {
@@ -851,7 +854,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final int numSegments = connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegments(Collections.singletonList(segmentId), false)
+                                      .markSegments(List.of(segmentId), false, DateTimes.nowUtc())
       );
 
       return numSegments > 0;
@@ -868,7 +871,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, false)
+                                    .markSegments(segmentIds, false, DateTimes.nowUtc())
     );
   }
 
@@ -884,7 +887,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       return connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegmentsUnused(dataSource, interval, versions)
+                                      .markSegmentsUnused(dataSource, interval, versions, DateTimes.nowUtc())
       );
     }
     catch (Exception e) {
@@ -1048,7 +1051,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
             .setFetchSize(connector.getStreamingFetchSize())
             .map((index, r, ctx) -> {
               try {
-                DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                DataSegment segment = segmentReader.readValue(r.getBytes("payload"));
                 return replaceWithExistingSegmentIfPresent(segment);
               }
               catch (IOException e) {
@@ -1093,7 +1096,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
-        new TransactionCallback<List<DataSegment>>()
+        new TransactionCallback<>()
         {
           @Override
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
@@ -1251,7 +1254,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column
     return connector.inReadOnlyTransaction(
-        new TransactionCallback<List<Interval>>()
+        new TransactionCallback<>()
         {
           @Override
           public List<Interval> inTransaction(Handle handle, TransactionStatus status)
@@ -1272,7 +1275,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .bind("end", maxEndTime.toString())
                 .bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString())
                 .map(
-                    new BaseResultSetMapper<Interval>()
+                    new BaseResultSetMapper<>()
                     {
                       @Override
                       protected Interval mapInternal(int index, Map<String, Object> row)

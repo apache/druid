@@ -47,13 +47,44 @@ public @interface DecoupledTestConfig
    */
   IgnoreQueriesReason ignoreExpectedQueriesReason() default IgnoreQueriesReason.NONE;
 
+  /**
+   * Ignores defaults mode for the given reason
+   */
+  IgnoreDefaultsReson ignoreDefaultsMode() default IgnoreDefaultsReson.NONE;
+
+  enum IgnoreDefaultsReson
+  {
+    NONE,
+    /**
+     * Decoupled mode avoids unnesting "" in defaults mode
+     *
+     * <pre>
+     * new Object[]{"a", "[\"a\",\"b\"]"},
+     * new Object[]{"a", ""}
+     * </pre>
+     */
+    UNNEST_EMPTY_DIFFERENCE,
+    /**
+     *
+     */
+    UNNEST_ARRAY_ISSUE
+  }
+
   enum IgnoreQueriesReason
   {
     NONE,
     /**
      * An extra ScanQuery to service a Project and/or Filter was added.
      */
-    UNNEST_EXTRA_SCANQUERY;
+    UNNEST_EXTRA_SCANQUERY,
+    /**
+     * Occurs in tandem with {@link NotYetSupported.Modes#PREDICATE_NOT_SUPPORTED}.
+     */
+    PREDICATE_NOT_SUPPORTED,
+    /**
+     * Not really different plan.
+     */
+    EQUIV_PLAN;
 
     public boolean isPresent()
     {
@@ -172,6 +203,4 @@ public @interface DecoupledTestConfig
       return this != NONE;
     }
   }
-
-  boolean separateDefaultModeTest() default false;
 }

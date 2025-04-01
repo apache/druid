@@ -19,11 +19,12 @@
 import type { Column } from 'druid-query-toolkit';
 import { C, F, SqlColumn, SqlExpression, SqlQuery, SqlStar } from 'druid-query-toolkit';
 
-import { filterMap, mapRecordIfChanged } from '../../../utils';
+import { filterMap, filterOrReturn, mapRecordOrReturn } from '../../../utils';
 
 import { ExpressionMeta } from './expression-meta';
 import { Measure } from './measure';
-import type { ParameterDefinition, Parameters, ParameterValues } from './parameter';
+import type { OptionValue, ParameterDefinition, Parameters, ParameterValues } from './parameter';
+import { evaluateFunctor } from './parameter';
 
 function expressionWithinColumns(ex: SqlExpression, columns: readonly Column[]): boolean {
   const usedColumns = ex.getUsedColumnNames();
@@ -223,7 +224,7 @@ export class QuerySource {
     );
   }
 
-  public transformToBaseColumns(expression: SqlExpression): SqlExpression {
+  public transformExpressionToBaseColumns(expression: SqlExpression): SqlExpression {
     const sourceToBaseSubstitutions = this.getSourceToBaseSubstitutions();
     return expression.walk(ex => {
       if (ex instanceof SqlColumn) {
@@ -328,15 +329,44 @@ export class QuerySource {
   public restrictParameterValues(
     parameterValues: ParameterValues,
     parameters: Parameters,
+    where: SqlExpression,
   ): ParameterValues {
-    return mapRecordIfChanged(parameterValues, (parameterValue, k) =>
-      this.restrictParameterValue(parameterValue, parameters[k]),
-    );
+    return mapRecordOrReturn(parameterValues, (parameterValue, k) => {
+      const parameter = parameters[k];
+      if (!parameter) return;
+      return this.restrictParameterValue(parameterValue, parameter, where, parameterValues);
+    });
   }
 
-  private restrictParameterValue(parameterValue: any, parameter: ParameterDefinition): any {
+  private restrictParameterValue(
+    parameterValue: any,
+    parameter: ParameterDefinition,
+    where: SqlExpression,
+    parameterValues: ParameterValues,
+  ): any {
     if (typeof parameterValue !== 'undefined') {
       switch (parameter.type) {
+        case 'number': {
+          if (typeof parameter.min === 'number') {
+            parameterValue = Math.max(parameterValue, parameter.min);
+          }
+          if (typeof parameter.max === 'number') {
+            parameterValue = Math.min(parameterValue, parameter.max);
+          }
+          return parameterValue;
+        }
+
+        case 'option': {
+          const options = evaluateFunctor(parameter.options, parameterValues, this, where);
+          if (!options || !options.includes(parameterValue as OptionValue)) return;
+          return parameterValue as OptionValue;
+        }
+
+        case 'options': {
+          const options = evaluateFunctor(parameter.options, {}, this, where) || [];
+          return filterOrReturn<OptionValue>(parameterValue, v => options.includes(v));
+        }
+
         case 'expression':
           if (!this.validateExpressionMeta(parameterValue)) return;
           break;
@@ -345,19 +375,13 @@ export class QuerySource {
           if (!this.validateMeasure(parameterValue)) return;
           break;
 
-        case 'expressions': {
-          const valid = parameterValue.filter((v: ExpressionMeta) =>
+        case 'expressions':
+          return filterOrReturn<ExpressionMeta>(parameterValue, v =>
             this.validateExpressionMeta(v),
           );
-          if (valid.length !== parameterValue.length) return valid;
-          break;
-        }
 
-        case 'measures': {
-          const valid = parameterValue.filter((v: Measure) => this.validateMeasure(v));
-          if (valid.length !== parameterValue.length) return valid;
-          break;
-        }
+        case 'measures':
+          return filterOrReturn<Measure>(parameterValue, v => this.validateMeasure(v));
 
         default:
           break;

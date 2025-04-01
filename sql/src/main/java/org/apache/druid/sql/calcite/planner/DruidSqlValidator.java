@@ -951,8 +951,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   {
     try {
       SqlVisitor<Void> visitor =
-          new SqlBasicVisitor<Void>() {
-            @Override public Void visit(SqlCall call)
+          new SqlBasicVisitor<>()
+          {
+            @Override
+            public Void visit(SqlCall call)
             {
               if (callPredicate.test(call)) {
                 throw new Util.FoundOne(call);

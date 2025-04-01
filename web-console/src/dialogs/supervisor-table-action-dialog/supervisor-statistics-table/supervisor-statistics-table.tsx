@@ -76,16 +76,18 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
 
     const formatNumber = isRate ? formatRate : formatInteger;
     const formatData = isRate ? formatByteRate : formatBytes;
-    const bytes = c.processedBytes ? ` (${formatData(c.processedBytes)})` : '';
-    return (
+    return c.processedBytes ? (
       <div>
-        <div>{`Processed: ${formatNumber(c.processed)}${bytes}`}</div>
+        <div>{`Input: ${formatData(c.processedBytes)}`}</div>
+        {Boolean(c.processed) && <div>{`Processed: ${formatNumber(c.processed)}`}</div>}
         {Boolean(c.processedWithError) && (
-          <div>Processed with error: {formatNumber(c.processedWithError)}</div>
+          <div>{`Processed with error: ${formatNumber(c.processedWithError)}`}</div>
         )}
-        {Boolean(c.thrownAway) && <div>Thrown away: {formatNumber(c.thrownAway)}</div>}
-        {Boolean(c.unparseable) && <div>Unparseable: {formatNumber(c.unparseable)}</div>}
+        {Boolean(c.thrownAway) && <div>{`Thrown away: ${formatNumber(c.thrownAway)}`}</div>}
+        {Boolean(c.unparseable) && <div>{`Unparseable: ${formatNumber(c.unparseable)}`}</div>}
       </div>
+    ) : (
+      <div>No activity</div>
     );
   }
 

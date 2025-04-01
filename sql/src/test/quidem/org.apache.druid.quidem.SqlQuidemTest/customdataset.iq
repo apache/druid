@@ -1,0 +1,13 @@
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/sampledataset
+!set outputformat mysql
+
+
+select count(1) from "rollup-tutorial";
++--------+
+| EXPR$0 |
++--------+
+|      5 |
++--------+
+(1 row)
+
+!ok

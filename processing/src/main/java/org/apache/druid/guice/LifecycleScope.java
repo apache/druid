@@ -57,7 +57,7 @@ public class LifecycleScope implements Scope
   @Override
   public <T> Provider<T> scope(final Key<T> key, final Provider<T> unscoped)
   {
-    return new Provider<T>()
+    return new Provider<>()
     {
       private volatile T value = null;
 

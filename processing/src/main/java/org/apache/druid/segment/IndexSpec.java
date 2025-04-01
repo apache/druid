@@ -22,8 +22,6 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -32,7 +30,6 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -163,16 +160,6 @@ public class IndexSpec
   public CompressionStrategy getJsonCompression()
   {
     return jsonCompression;
-  }
-
-  public Map<String, Object> asMap(ObjectMapper objectMapper)
-  {
-    return objectMapper.convertValue(
-        this,
-        new TypeReference<Map<String, Object>>()
-        {
-        }
-    );
   }
 
   @Override

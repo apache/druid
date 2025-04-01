@@ -32,7 +32,10 @@ import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class EqualDistributionWithAffinityWorkerSelectStrategyTest
 {
@@ -40,7 +43,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTask()
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost1", "localhost2", "localhost3")), false)
+        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost1", "localhost2", "localhost3")), false),
+        null
     );
 
     NoopTask noopTask = NoopTask.forDatasource("foo");
@@ -85,7 +89,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTaskWithNulls()
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-            new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
+            new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false),
+            null
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -115,7 +120,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   public void testIsolation()
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-            new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
+            new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false),
+            null
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
@@ -139,12 +145,147 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   {
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
-        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
+        new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false),
+        null
     );
     final WorkerSelectStrategy strategy2 = objectMapper.readValue(
         objectMapper.writeValueAsBytes(strategy),
         WorkerSelectStrategy.class
     );
     Assert.assertEquals(strategy, strategy2);
+  }
+
+  @Test
+  public void testFindWorkerForTaskWithGlobalLimits()
+  {
+    Map<String, Integer> taskLimits = new HashMap<>();
+    taskLimits.put("noop", 2);
+
+    Map<String, Integer> capacityUsed = new HashMap<>();
+    capacityUsed.put("noop", 1);
+    EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
+        null,
+        new TaskLimits(taskLimits, null)
+    );
+
+    NoopTask noopTask = NoopTask.forDatasource("foo");
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        ImmutableMap.of(
+            "localhost0",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            ),
+            "localhost1",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                0,
+                capacityUsed,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            )
+        ),
+        noopTask
+    );
+    Assert.assertNotNull(worker);
+
+    ImmutableWorkerInfo worker1 = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        ImmutableMap.of(
+            "localhost0",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                0,
+                capacityUsed,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            ),
+            "localhost1",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                0,
+                capacityUsed,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            )
+        ),
+        noopTask
+    );
+
+    Assert.assertNull(worker1);
+
+  }
+
+  @Test
+  public void testFindWorkerForTaskWithGlobalRatios()
+  {
+    Map<String, Double> taskRatios = new HashMap<>();
+    taskRatios.put("noop", 0.5);
+
+    Map<String, Integer> capacityUsed = new HashMap<>();
+    capacityUsed.put("noop", 1);
+    EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
+        null,
+        new TaskLimits(null, taskRatios)
+    );
+
+    NoopTask noopTask = NoopTask.forDatasource("foo");
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        ImmutableMap.of(
+            "localhost0",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            ),
+            "localhost1",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                0,
+                capacityUsed,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            )
+        ),
+        noopTask
+    );
+    Assert.assertNotNull(worker);
+
+    ImmutableWorkerInfo worker1 = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        ImmutableMap.of(
+            "localhost0",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                0,
+                capacityUsed,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            ),
+            "localhost1",
+            new ImmutableWorkerInfo(
+                new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+                0,
+                capacityUsed,
+                Set.of(),
+                Set.of(),
+                DateTimes.nowUtc()
+            )
+        ),
+        noopTask
+    );
+
+    Assert.assertNull(worker1);
+
   }
 }

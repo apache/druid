@@ -25,17 +25,13 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
-import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
-import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -45,7 +41,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -140,7 +135,7 @@ public class CompactionRunSimulator
 
     // Unlimited task slots to ensure that simulator does not skip any interval
     final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
-        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null)
+        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
@@ -192,7 +187,7 @@ public class CompactionRunSimulator
   /**
    * Dummy overlord client that returns empty results for all APIs.
    */
-  private static class ReadOnlyOverlordClient implements OverlordClient
+  private static class ReadOnlyOverlordClient extends NoopOverlordClient
   {
     final OverlordClient delegate;
 
@@ -248,68 +243,6 @@ public class CompactionRunSimulator
     public ListenableFuture<Void> cancelTask(String taskId)
     {
       return Futures.immediateVoidFuture();
-    }
-
-    // Unsupported methods as these are not used by the CompactionScheduler / CompactSegments duty
-
-    @Override
-    public ListenableFuture<URI> findCurrentLeader()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<Integer> killPendingSegments(String dataSource, Interval interval)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
-    {
-      return this;
     }
   }
 }

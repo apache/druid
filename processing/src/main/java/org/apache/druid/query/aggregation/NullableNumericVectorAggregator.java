@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -68,7 +68,7 @@ public class NullableNumericVectorAggregator implements VectorAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, NullHandling.IS_NULL_BYTE);
+    buf.put(position, TypeStrategies.IS_NULL_BYTE);
     delegate.init(buf, position + Byte.BYTES);
   }
 
@@ -132,9 +132,9 @@ public class NullableNumericVectorAggregator implements VectorAggregator
   public Object get(ByteBuffer buf, int position)
   {
     switch (buf.get(position)) {
-      case NullHandling.IS_NULL_BYTE:
+      case TypeStrategies.IS_NULL_BYTE:
         return null;
-      case NullHandling.IS_NOT_NULL_BYTE:
+      case TypeStrategies.IS_NOT_NULL_BYTE:
         return delegate.get(buf, position + Byte.BYTES);
       default:
         // Corrupted byte?
@@ -156,14 +156,14 @@ public class NullableNumericVectorAggregator implements VectorAggregator
 
   private void doAggregate(ByteBuffer buf, int position, int start, int end)
   {
-    buf.put(position, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position, TypeStrategies.IS_NOT_NULL_BYTE);
     delegate.aggregate(buf, position + Byte.BYTES, start, end);
   }
 
   private void doAggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
     for (int i = 0; i < numRows; i++) {
-      buf.put(positions[i] + positionOffset, NullHandling.IS_NOT_NULL_BYTE);
+      buf.put(positions[i] + positionOffset, TypeStrategies.IS_NOT_NULL_BYTE);
     }
 
     delegate.aggregate(buf, numRows, positions, rows, positionOffset + Byte.BYTES);

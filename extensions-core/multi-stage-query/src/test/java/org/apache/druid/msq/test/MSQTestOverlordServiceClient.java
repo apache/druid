@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Injector;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskStatus;
@@ -48,6 +47,7 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -104,7 +104,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
           workerMemoryParameters,
           loadedSegmentMetadata,
           cTask.getTaskLockType(),
-          cTask.getQuerySpec().getQuery().context()
+          cTask.getQuerySpec().getContext()
       );
 
       inMemoryControllerTask.put(cTask.getId(), cTask);
@@ -137,7 +137,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       throw new ISE(e, "Unable to run");
     }
     finally {
-      if (controller != null && queryListener != null) {
+      if (queryListener != null && queryListener.reportMap != null) {
         reports.put(controller.queryId(), queryListener.getReportMap());
       }
     }

@@ -86,9 +86,7 @@ public class SegmentLockTryAcquireAction implements TaskAction<List<LockResult>>
   @Override
   public TypeReference<List<LockResult>> getReturnTypeReference()
   {
-    return new TypeReference<List<LockResult>>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

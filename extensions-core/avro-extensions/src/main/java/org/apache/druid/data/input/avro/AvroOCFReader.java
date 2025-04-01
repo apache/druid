@@ -92,7 +92,7 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
       datumReader.setExpected(readerSchema);
       closer.register(dataFileReader);
 
-      return new CloseableIterator<GenericRecord>()
+      return new CloseableIterator<>()
       {
         @Override
         public boolean hasNext()

@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.scheduledbatch.ScheduledBatchSupervisorSpec;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
 
 import java.util.List;
 
@@ -38,7 +38,6 @@ public class SupervisorModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.supervisor", SupervisorStateManagerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.supervisor.compaction", CompactionSupervisorConfig.class);
   }
 
   @Override
@@ -47,7 +46,8 @@ public class SupervisorModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
-                new NamedType(CompactionSupervisorSpec.class, CompactionSupervisorSpec.TYPE)
+                new NamedType(CompactionSupervisorSpec.class, CompactionSupervisorSpec.TYPE),
+                new NamedType(ScheduledBatchSupervisorSpec.class, ScheduledBatchSupervisorSpec.TYPE)
             )
     );
   }

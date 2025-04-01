@@ -51,7 +51,7 @@ public class DoubleLeastPostAggregatorTest
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
@@ -74,7 +74,7 @@ public class DoubleLeastPostAggregatorTest
     final String aggName = "rows";
     DoubleLeastPostAggregator leastPostAggregator;
     CountAggregator agg = new CountAggregator();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =

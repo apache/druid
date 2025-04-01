@@ -719,7 +719,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
               e -> (e != null && e.getMessage() != null
                     && e.getMessage().contains("Failed to update the metadata Store."
                                                + " The new start metadata is ahead of last commited end state.")),
-              RetryUtils.DEFAULT_MAX_TRIES
+              // Do not retry here since the TransactionalSegmentPublisher itself performs required retries
+              1
           );
         }
         catch (Exception e) {

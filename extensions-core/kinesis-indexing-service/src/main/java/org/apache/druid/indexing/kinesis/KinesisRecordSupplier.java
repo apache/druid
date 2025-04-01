@@ -225,8 +225,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
                 null
             );
 
-            recordsResult = null;
-
             recordBufferOfferWaitMillis = recordBufferOfferTimeout;
             while (!records.offer(
                 new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(currRecord, 0),
@@ -412,7 +410,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
 
   private final boolean backgroundFetchEnabled;
   private volatile boolean closed = false;
-  private AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
+  private final AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
@@ -873,7 +871,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
    * {@link #GET_SEQUENCE_NUMBER_RECORD_COUNT} records and return the first sequence number from the result set.
    * This method is thread safe as it does not depend on the internal state of the supplier (it doesn't use the
    * {@link PartitionResource} which have been assigned to the supplier), and the Kinesis client is thread safe.
-   *
+   * <p>
    * When there are no records at the offset corresponding to the ShardIteratorType,
    *    If shard is closed, return custom EOS sequence marker
    *    While getting the earliest sequence number, return a custom marker corresponding to TRIM_HORIZON
@@ -973,7 +971,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
 
       // If no more new data after offsetToUse, it means there is no lag for now.
       // So report lag points as 0L.
-      if (recordsResult.getRecords().size() == 0) {
+      if (recordsResult.getRecords().isEmpty()) {
         return 0L;
       } else {
         recordsResult = getRecordsForLag(iteratorType, offsetToUse, partition);
@@ -992,10 +990,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
             offsetToUse
     ).getShardIterator();
 
-    GetRecordsResult recordsResult = kinesis.getRecords(
-            new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
+    return kinesis.getRecords(
+        new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
     );
-    return recordsResult;
   }
 
   /**
@@ -1011,7 +1008,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
   /**
    * This method must be called before a seek operation ({@link #seek}, {@link #seekToLatest}, or
    * {@link #seekToEarliest}).
-   *
+   * <p>
    * When called, it will nuke the {@link #scheduledExec} that is shared by all {@link PartitionResource}, filters
    * records from the buffer for partitions which will have a seek operation performed, and stops background fetch for
    * each {@link PartitionResource} to prepare for the seek. If background fetch is not currently running, the
@@ -1060,6 +1057,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     records = newQ;
 
     // restart fetching threads
-    partitionResources.values().forEach(x -> x.stopBackgroundFetch());
+    partitionResources.values().forEach(PartitionResource::stopBackgroundFetch);
   }
 }

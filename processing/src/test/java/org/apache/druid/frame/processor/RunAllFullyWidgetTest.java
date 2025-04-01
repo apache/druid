@@ -637,7 +637,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
 
       Futures.addCallback(
           future,
-          new FutureCallback<Optional<ProcessorAndCallback<T>>>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(Optional<ProcessorAndCallback<T>> result)

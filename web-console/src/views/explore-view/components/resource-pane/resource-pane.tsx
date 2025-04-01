@@ -32,7 +32,7 @@ import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import { useState } from 'react';
 
-import { ClearableInput } from '../../../../components';
+import { ClearableInput, SplitterLayout } from '../../../../components';
 import { caseInsensitiveContains, columnToIcon, filterMap } from '../../../../utils';
 import { DragHelper } from '../../drag-helper';
 import type { Measure, QuerySource } from '../../models';
@@ -70,6 +70,7 @@ interface MeasureEditorOpenOn {
 export interface ResourcePaneProps {
   querySource: QuerySource;
   onQueryChange: (newQuery: SqlQuery, rename: Rename | undefined) => void;
+  where: SqlExpression;
   onFilter?: (column: Column) => void;
   onShowColumn(column: Column): void;
   onShowMeasure(measure: Measure): void;
@@ -77,7 +78,8 @@ export interface ResourcePaneProps {
 }
 
 export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
-  const { querySource, onQueryChange, onFilter, onShowColumn, onShowMeasure, runSqlQuery } = props;
+  const { querySource, onQueryChange, where, onFilter, onShowColumn, onShowMeasure, runSqlQuery } =
+    props;
   const [columnSearch, setColumnSearch] = useState('');
 
   const [columnEditorOpenOn, setColumnEditorOpenOn] = useState<ColumnEditorOpenOn | undefined>();
@@ -97,209 +99,227 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
       <ClearableInput
         className="search-input"
         value={columnSearch}
-        onChange={setColumnSearch}
+        onValueChange={setColumnSearch}
         placeholder="Search"
       />
-      <div className="list-header column-list-header">
-        Columns
-        <ButtonGroup className="header-buttons" minimal>
-          <Button
-            icon={IconNames.PLUS}
-            title="Add column"
-            onClick={() => setColumnEditorOpenOn({})}
-          />
-          <Popover
-            content={
-              <Menu>
-                <MenuItem
-                  text="Make nice columns titles"
-                  onClick={() => applyUtil(makeNiceTitle)}
-                />
-                <MenuItem
-                  text="Uppercase column names"
-                  onClick={() => applyUtil(x => x.toUpperCase())}
-                />
-                <MenuItem
-                  text="Lowercase column names"
-                  onClick={() => applyUtil(x => x.toLowerCase())}
-                />
-              </Menu>
-            }
-          >
-            <Button icon={IconNames.MORE} />
-          </Popover>
-        </ButtonGroup>
-      </div>
-      <div className="column-resource-list">
-        {filterMap(querySource.columns, (column, i) => {
-          const columnName = column.name;
-          const isNestedColumn = column.nativeType === 'COMPLEX<json>';
-          if (!caseInsensitiveContains(columnName, columnSearch)) return;
-          return (
-            <Popover
-              className="column-resource"
-              key={i}
-              position="right"
-              content={
-                <Menu>
-                  {isNestedColumn ? (
+      <SplitterLayout
+        vertical
+        percentage
+        secondaryInitialSize={25}
+        primaryMinSize={20}
+        secondaryMinSize={20}
+        splitterSize={2}
+      >
+        <div className="resource-sub-pane">
+          <div className="list-header column-list-header">
+            Columns
+            <ButtonGroup className="header-buttons" minimal>
+              <Button
+                icon={IconNames.PLUS}
+                data-tooltip="Add column"
+                onClick={() => setColumnEditorOpenOn({})}
+              />
+              <Popover
+                content={
+                  <Menu>
                     <MenuItem
-                      icon={IconNames.EXPAND_ALL}
-                      text="Expand nested column"
-                      onClick={() =>
-                        setNestedColumnEditorOpenOn(
-                          querySource.getSourceExpressionForColumn(columnName),
-                        )
-                      }
+                      text="Make nice columns titles"
+                      onClick={() => applyUtil(makeNiceTitle)}
                     />
-                  ) : (
-                    <>
-                      {onFilter && (
+                    <MenuItem
+                      text="Uppercase column names"
+                      onClick={() => applyUtil(x => x.toUpperCase())}
+                    />
+                    <MenuItem
+                      text="Lowercase column names"
+                      onClick={() => applyUtil(x => x.toLowerCase())}
+                    />
+                  </Menu>
+                }
+              >
+                <Button icon={IconNames.MORE} data-tooltip="More column options" />
+              </Popover>
+            </ButtonGroup>
+          </div>
+          <div className="resource-list">
+            {filterMap(querySource.columns, (column, i) => {
+              const columnName = column.name;
+              const isNestedColumn = column.nativeType === 'COMPLEX<json>';
+              if (!caseInsensitiveContains(columnName, columnSearch)) return;
+              return (
+                <Popover
+                  className="column-resource"
+                  key={i}
+                  position="right"
+                  content={
+                    <Menu>
+                      {isNestedColumn ? (
                         <MenuItem
-                          icon={IconNames.FILTER}
-                          text="Filter"
-                          onClick={() => onFilter(column)}
+                          icon={IconNames.EXPAND_ALL}
+                          text="Expand nested column"
+                          onClick={() =>
+                            setNestedColumnEditorOpenOn(
+                              querySource.getSourceExpressionForColumn(columnName),
+                            )
+                          }
                         />
+                      ) : (
+                        <>
+                          {onFilter && (
+                            <MenuItem
+                              icon={IconNames.FILTER}
+                              text="Filter"
+                              onClick={() => onFilter(column)}
+                            />
+                          )}
+                          <MenuItem
+                            icon={IconNames.EYE_OPEN}
+                            text="Show"
+                            onClick={() => onShowColumn(column)}
+                          />
+                          <MenuDivider />
+                        </>
                       )}
+                      <MenuItem
+                        icon={IconNames.EDIT}
+                        text="Edit"
+                        onClick={() =>
+                          setColumnEditorOpenOn({
+                            expression: querySource.getSourceExpressionForColumn(columnName),
+                          })
+                        }
+                      />
+                      <MenuItem
+                        icon={IconNames.DUPLICATE}
+                        text="Duplicate"
+                        onClick={() =>
+                          setColumnEditorOpenOn({
+                            columnToDuplicate: columnName,
+                            expression: querySource
+                              .getSourceExpressionForColumn(columnName)
+                              .as(querySource.getAvailableName(columnName)),
+                          })
+                        }
+                      />
+                      <MenuItem
+                        icon={IconNames.TRASH}
+                        text="Delete"
+                        intent={Intent.DANGER}
+                        onClick={() =>
+                          onQueryChange(querySource.deleteColumn(columnName), undefined)
+                        }
+                      />
+                    </Menu>
+                  }
+                >
+                  <div
+                    className={Classes.MENU_ITEM}
+                    draggable={!isNestedColumn}
+                    onDragStart={e => {
+                      e.dataTransfer.effectAllowed = 'all';
+                      DragHelper.dragColumn = column;
+                      DragHelper.createDragGhost(e.dataTransfer, columnName);
+                    }}
+                  >
+                    <Icon
+                      className={Classes.MENU_ITEM_ICON}
+                      icon={columnToIcon(column) || IconNames.BLANK}
+                      data-tooltip={`${columnName}\nSQL type: ${column.sqlType}\nNative type: ${column.nativeType}`}
+                    />
+                    <div className={classNames(Classes.FILL, Classes.TEXT_OVERFLOW_ELLIPSIS)}>
+                      {columnName}
+                    </div>
+                  </div>
+                </Popover>
+              );
+            })}
+          </div>
+        </div>
+        <div className="resource-sub-pane">
+          <div className="list-header measure-list-header">
+            Measures
+            <ButtonGroup className="header-buttons" minimal>
+              <Button
+                icon={IconNames.PLUS}
+                data-tooltip="Add measure"
+                onClick={() => setMeasureEditorOpenOn({})}
+              />
+            </ButtonGroup>
+          </div>
+          <div className="resource-list">
+            {filterMap(querySource.measures, (measure, i) => {
+              const measureName = measure.name;
+              if (!caseInsensitiveContains(measureName, columnSearch)) return;
+              return (
+                <Popover
+                  className="measure-resource"
+                  key={i}
+                  position="right"
+                  content={
+                    <Menu>
                       <MenuItem
                         icon={IconNames.EYE_OPEN}
                         text="Show"
-                        onClick={() => onShowColumn(column)}
+                        onClick={() => onShowMeasure(measure)}
                       />
                       <MenuDivider />
-                    </>
-                  )}
-                  <MenuItem
-                    icon={IconNames.EDIT}
-                    text="Edit"
-                    onClick={() =>
-                      setColumnEditorOpenOn({
-                        expression: querySource.getSourceExpressionForColumn(columnName),
-                      })
-                    }
-                  />
-                  <MenuItem
-                    icon={IconNames.DUPLICATE}
-                    text="Duplicate"
-                    onClick={() =>
-                      setColumnEditorOpenOn({
-                        columnToDuplicate: columnName,
-                        expression: querySource
-                          .getSourceExpressionForColumn(columnName)
-                          .as(querySource.getAvailableName(columnName)),
-                      })
-                    }
-                  />
-                  <MenuItem
-                    icon={IconNames.TRASH}
-                    text="Delete"
-                    intent={Intent.DANGER}
-                    onClick={() => onQueryChange(querySource.deleteColumn(columnName), undefined)}
-                  />
-                </Menu>
-              }
-            >
-              <div
-                className={Classes.MENU_ITEM}
-                draggable={!isNestedColumn}
-                onDragStart={e => {
-                  e.dataTransfer.effectAllowed = 'all';
-                  DragHelper.dragColumn = column;
-                  DragHelper.createDragGhost(e.dataTransfer, columnName);
-                }}
-              >
-                <Icon
-                  className={Classes.MENU_ITEM_ICON}
-                  icon={columnToIcon(column) || IconNames.BLANK}
-                  data-tooltip={`${columnName}\nSQL type: ${column.sqlType}\nNative type: ${column.nativeType}`}
-                />
-                <div className={classNames(Classes.FILL, Classes.TEXT_OVERFLOW_ELLIPSIS)}>
-                  {columnName}
-                </div>
-              </div>
-            </Popover>
-          );
-        })}
-      </div>
-      <div className="list-header measure-list-header">
-        Measures
-        <ButtonGroup className="header-buttons" minimal>
-          <Button
-            icon={IconNames.PLUS}
-            title="Add measure"
-            onClick={() => setMeasureEditorOpenOn({})}
-          />
-        </ButtonGroup>
-      </div>
-      <div className="measure-resource-list">
-        {filterMap(querySource.measures, (measure, i) => {
-          const measureName = measure.name;
-          if (!caseInsensitiveContains(measureName, columnSearch)) return;
-          return (
-            <Popover
-              className="measure-resource"
-              key={i}
-              position="right"
-              content={
-                <Menu>
-                  <MenuItem
-                    icon={IconNames.EYE_OPEN}
-                    text="Show"
-                    onClick={() => onShowMeasure(measure)}
-                  />
-                  <MenuDivider />
-                  <MenuItem
-                    icon={IconNames.EDIT}
-                    text="Edit"
-                    onClick={() =>
-                      setMeasureEditorOpenOn({
-                        measure,
-                      })
-                    }
-                  />
-                  <MenuItem
-                    icon={IconNames.DUPLICATE}
-                    text="Duplicate"
-                    onClick={() =>
-                      setMeasureEditorOpenOn({
-                        measureToDuplicate: measureName,
-                        measure: measure.changeAs(querySource.getAvailableName(measureName)),
-                      })
-                    }
-                  />
-                  <MenuItem
-                    icon={IconNames.TRASH}
-                    text="Delete"
-                    intent={Intent.DANGER}
-                    onClick={() => onQueryChange(querySource.deleteMeasure(measureName), undefined)}
-                  />
-                </Menu>
-              }
-            >
-              <div
-                className={Classes.MENU_ITEM}
-                draggable
-                onDragStart={e => {
-                  e.dataTransfer.effectAllowed = 'all';
-                  DragHelper.dragMeasure = measure.toAggregateBasedMeasure();
-                  DragHelper.createDragGhost(e.dataTransfer, measure.name);
-                }}
-              >
-                <Icon className={Classes.MENU_ITEM_ICON} icon={IconNames.PULSE} />
-                <div className={classNames(Classes.FILL, Classes.TEXT_OVERFLOW_ELLIPSIS)}>
-                  {measureName}
-                </div>
-              </div>
-            </Popover>
-          );
-        })}
-      </div>
+                      <MenuItem
+                        icon={IconNames.EDIT}
+                        text="Edit"
+                        onClick={() =>
+                          setMeasureEditorOpenOn({
+                            measure,
+                          })
+                        }
+                      />
+                      <MenuItem
+                        icon={IconNames.DUPLICATE}
+                        text="Duplicate"
+                        onClick={() =>
+                          setMeasureEditorOpenOn({
+                            measureToDuplicate: measureName,
+                            measure: measure.changeAs(querySource.getAvailableName(measureName)),
+                          })
+                        }
+                      />
+                      <MenuItem
+                        icon={IconNames.TRASH}
+                        text="Delete"
+                        intent={Intent.DANGER}
+                        onClick={() =>
+                          onQueryChange(querySource.deleteMeasure(measureName), undefined)
+                        }
+                      />
+                    </Menu>
+                  }
+                >
+                  <div
+                    className={Classes.MENU_ITEM}
+                    draggable
+                    onDragStart={e => {
+                      e.dataTransfer.effectAllowed = 'all';
+                      DragHelper.dragMeasure = measure.toAggregateBasedMeasure();
+                      DragHelper.createDragGhost(e.dataTransfer, measure.name);
+                    }}
+                  >
+                    <Icon className={Classes.MENU_ITEM_ICON} icon={IconNames.PULSE} />
+                    <div className={classNames(Classes.FILL, Classes.TEXT_OVERFLOW_ELLIPSIS)}>
+                      {measureName}
+                    </div>
+                  </div>
+                </Popover>
+              );
+            })}
+          </div>
+        </div>
+      </SplitterLayout>
       {columnEditorOpenOn && (
         <ColumnDialog
           initExpression={columnEditorOpenOn.expression}
           columnToDuplicate={columnEditorOpenOn.columnToDuplicate}
           onApply={onQueryChange}
           querySource={querySource}
+          where={where}
           runSqlQuery={runSqlQuery}
           onClose={() => setColumnEditorOpenOn(undefined)}
         />
@@ -319,6 +339,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
           measureToDuplicate={measureEditorOpenOn.measureToDuplicate}
           onApply={onQueryChange}
           querySource={querySource}
+          where={where}
           runSqlQuery={runSqlQuery}
           onClose={() => setMeasureEditorOpenOn(undefined)}
         />

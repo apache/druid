@@ -122,7 +122,7 @@ public class TieredBrokerHostSelectorTest
           @Override
           public LinkedHashMap<String, String> getTierToBrokerMap()
           {
-            return new LinkedHashMap<String, String>(
+            return new LinkedHashMap<>(
                 ImmutableMap.of(
                     "hot", "hotBroker",
                     "medium", "mediumBroker",

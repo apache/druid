@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -394,6 +393,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             sqlStatementResult.getQueryId(),
             null,
             ResultFormat.OBJECTLINES.name(),
+            null,
             SqlStatementResourceTest.makeOkRequest()
         ),
         objectMapper
@@ -407,6 +407,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             sqlStatementResult.getQueryId(),
             0L,
             ResultFormat.OBJECTLINES.name(),
+            null,
             SqlStatementResourceTest.makeOkRequest()
         ),
         objectMapper
@@ -420,6 +421,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             sqlStatementResult.getQueryId(),
             2L,
             ResultFormat.OBJECTLINES.name(),
+            null,
             SqlStatementResourceTest.makeOkRequest()
         ),
         objectMapper
@@ -486,6 +488,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         null,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
 
@@ -493,6 +496,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         0L,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
 
@@ -500,6 +504,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         1L,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
 
@@ -507,6 +512,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         2L,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
 
@@ -514,6 +520,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         3L,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
 
@@ -521,6 +528,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         4L,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
   }
@@ -566,6 +574,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                   sqlStatementResult.getQueryId(),
                   null,
                   resultFormat.name(),
+                  null,
                   SqlStatementResourceTest.makeOkRequest()
               ), objectMapper
           )
@@ -578,6 +587,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                   sqlStatementResult.getQueryId(),
                   0L,
                   resultFormat.name(),
+                  null,
                   SqlStatementResourceTest.makeOkRequest()
               ), objectMapper
           )
@@ -617,6 +627,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         null,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
 
@@ -624,6 +635,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         0L,
         ResultFormat.ARRAY.name(),
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
   }
@@ -683,7 +695,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         MSQTestOverlordServiceClient.CREATED_TIME,
         null,
         MSQTestOverlordServiceClient.DURATION,
-        new ResultSetInformation(NullHandling.sqlCompatible() ? 6L : 5L, 0L, null, "foo1", null, null),
+        new ResultSetInformation(6L, 0L, null, "foo1", null, null),
         null
     );
     assertSqlStatementResult(expected, actual);
@@ -695,6 +707,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Response resultsResponse = resource.doGetResults(
         actual.getQueryId(),
         0L,
+        null,
         null,
         SqlStatementResourceTest.makeOkRequest()
     );
@@ -726,7 +739,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         MSQTestOverlordServiceClient.CREATED_TIME,
         null,
         MSQTestOverlordServiceClient.DURATION,
-        new ResultSetInformation(NullHandling.sqlCompatible() ? 6L : 5L, 0L, null, "foo1", null, null),
+        new ResultSetInformation(6L, 0L, null, "foo1", null, null),
         null
     );
     assertSqlStatementResult(expected, actual);
@@ -738,6 +751,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Response resultsResponse = resource.doGetResults(
         actual.getQueryId(),
         0L,
+        null,
         null,
         SqlStatementResourceTest.makeOkRequest()
     );

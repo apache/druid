@@ -146,7 +146,7 @@ public class TaskLockbox
         }
       }
       // Sort locks by version, so we add them back in the order they were acquired.
-      final Ordering<Pair<Task, TaskLock>> byVersionOrdering = new Ordering<Pair<Task, TaskLock>>()
+      final Ordering<Pair<Task, TaskLock>> byVersionOrdering = new Ordering<>()
       {
         @Override
         public int compare(Pair<Task, TaskLock> left, Pair<Task, TaskLock> right)
@@ -183,7 +183,7 @@ public class TaskLockbox
                                       ? savedTaskLock.withPriority(task.getPriority())
                                       : savedTaskLock;
 
-        final TaskLockPosse taskLockPosse = verifyAndCreateOrFindLockPosse(
+        final TaskLockPosse taskLockPosse = reacquireLockOnStartup(
             task,
             savedTaskLockWithPriority
         );
@@ -192,15 +192,11 @@ public class TaskLockbox
 
           if (savedTaskLockWithPriority.getVersion().equals(taskLock.getVersion())) {
             taskLockCount++;
-            log.info(
-                "Reacquired lock[%s] for task: %s",
-                taskLock,
-                task.getId()
-            );
+            log.info("Reacquired lock[%s] for task[%s].", taskLock, task.getId());
           } else {
             taskLockCount++;
             log.info(
-                "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
+                "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task[%s].",
                 savedTaskLockWithPriority.getInterval(),
                 savedTaskLockWithPriority.getVersion(),
                 taskLock.getVersion(),
@@ -210,7 +206,7 @@ public class TaskLockbox
         } else {
           failedToReacquireLockTaskGroups.add(task.getGroupId());
           log.error(
-              "Could not reacquire lock on interval[%s] version[%s] for task: %s from group %s.",
+              "Could not reacquire lock on interval[%s] version[%s] for task[%s], groupId[%s].",
               savedTaskLockWithPriority.getInterval(),
               savedTaskLockWithPriority.getVersion(),
               task.getId(),
@@ -253,38 +249,28 @@ public class TaskLockbox
   }
 
   /**
-   * This method is called only in {@link #syncFromStorage()} and verifies the given task and the taskLock have the same
-   * groupId, dataSource, and priority.
+   * Reacquire lock during {@link #syncFromStorage()}.
+   *
+   * @return null if the lock could not be reacquired.
    */
   @VisibleForTesting
   @Nullable
-  protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+  protected TaskLockPosse reacquireLockOnStartup(Task task, TaskLock taskLock)
   {
+    if (!taskMatchesLock(task, taskLock)) {
+      log.warn(
+          "Task[datasource: %s, groupId: %s, priority: %s] does not match"
+          + " TaskLock[datasource: %s, groupId: %s, priority: %s].",
+          task.getDataSource(), task.getGroupId(), task.getPriority(),
+          taskLock.getDataSource(), taskLock.getGroupId(), taskLock.getNonNullPriority()
+      );
+      return null;
+    }
+
     giant.lock();
 
     try {
-      Preconditions.checkArgument(
-          task.getGroupId().equals(taskLock.getGroupId()),
-          "lock groupId[%s] is different from task groupId[%s]",
-          taskLock.getGroupId(),
-          task.getGroupId()
-      );
-      Preconditions.checkArgument(
-          task.getDataSource().equals(taskLock.getDataSource()),
-          "lock dataSource[%s] is different from task dataSource[%s]",
-          taskLock.getDataSource(),
-          task.getDataSource()
-      );
       final int taskPriority = task.getPriority();
-      final int lockPriority = taskLock.getNonNullPriority();
-
-      Preconditions.checkArgument(
-          lockPriority == taskPriority,
-          "lock priority[%s] is different from task priority[%s]",
-          lockPriority,
-          taskPriority
-      );
-
       final LockRequest request;
       switch (taskLock.getGranularity()) {
         case SEGMENT:
@@ -313,20 +299,29 @@ public class TaskLockbox
           );
           break;
         default:
-          throw new ISE("Unknown lockGranularity[%s]", taskLock.getGranularity());
+          throw DruidException.defensive("Unknown lockGranularity[%s]", taskLock.getGranularity());
       }
 
       return createOrFindLockPosse(request, task, false);
     }
     catch (Exception e) {
-      log.error(e,
-                "Could not reacquire lock for task: %s from metadata store", task.getId()
-      );
+      log.error(e, "Could not reacquire lock for task[%s] from metadata store", task.getId());
       return null;
     }
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Returns true if the datasource, groupId and priority of the given Task
+   * match that of the TaskLock.
+   */
+  private boolean taskMatchesLock(Task task, TaskLock taskLock)
+  {
+    return task.getGroupId().equals(taskLock.getGroupId())
+        && task.getDataSource().equals(taskLock.getDataSource())
+        && task.getPriority() == taskLock.getNonNullPriority();
   }
 
   /**
@@ -479,7 +474,7 @@ public class TaskLockbox
       boolean reduceMetadataIO
   )
   {
-    log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
+    log.debug("Allocating [%d] segments for datasource[%s], interval[%s]", requests.size(), dataSource, interval);
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
@@ -751,13 +746,15 @@ public class TaskLockbox
   {
     return metadataStorageCoordinator.allocatePendingSegment(
         request.getDataSource(),
-        request.getSequenceName(),
-        request.getPreviousSegmentId(),
         request.getInterval(),
-        request.getPartialShardSpec(),
-        version,
         request.isSkipSegmentLineageCheck(),
-        allocatorId
+        new SegmentCreateRequest(
+            request.getSequenceName(),
+            request.getPreviousSegmentId(),
+            version,
+            request.getPartialShardSpec(),
+            allocatorId
+        )
     );
   }
 
@@ -1135,11 +1132,11 @@ public class TaskLockbox
 
         if (match) {
           // Remove task from live list
-          log.info("Removing task[%s] from TaskLock[%s]", task.getId(), taskLock);
+          log.debug("Removing task[%s] from TaskLock[%s]", task.getId(), taskLock);
           final boolean removed = taskLockPosse.removeTask(task);
 
           if (taskLockPosse.isTasksEmpty()) {
-            log.info("TaskLock[%s] is now empty.", taskLock);
+            log.debug("TaskLock[%s] is now empty.", taskLock);
             possesHolder.remove(taskLockPosse);
           }
           if (possesHolder.isEmpty()) {
@@ -1818,7 +1815,6 @@ public class TaskLockbox
             action.getPreviousSegmentId(),
             acquiredLock == null ? lockRequest.getVersion() : acquiredLock.getVersion(),
             action.getPartialShardSpec(),
-            null,
             ((PendingSegmentAllocatingTask) task).getTaskAllocatorId()
         );
       }

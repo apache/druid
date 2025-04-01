@@ -48,7 +48,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import {
   ClearableInput,
-  ENABLE_DISABLE_OPTIONS_TEXT,
+  ENABLED_DISABLED_OPTIONS_TEXT,
   LearnMore,
   Loader,
   MenuBoolean,
@@ -694,7 +694,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     text="Force segment sort by time"
                     value={forceSegmentSortByTime}
                     onValueChange={v => changeForceSegmentSortByTime(Boolean(v))}
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
                   />
                 </Menu>
@@ -833,7 +833,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 className="column-filter-control"
                 value={columnSearch}
                 placeholder="Search columns"
-                onChange={setColumnSearch}
+                onValueChange={setColumnSearch}
               />
             </div>
           )}

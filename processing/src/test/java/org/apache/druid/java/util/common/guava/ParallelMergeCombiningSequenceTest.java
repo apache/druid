@@ -985,15 +985,16 @@ public class ParallelMergeCombiningSequenceTest
   {
     List<IntPair> pairs = lazyGenerate ? null : generateOrderedPairs(size);
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<IntPair> make()
           {
-            return new Iterator<IntPair>()
+            return new Iterator<>()
             {
               int mergeKey = 0;
               int rowCounter = 0;
+
               @Override
               public boolean hasNext()
               {
@@ -1046,15 +1047,16 @@ public class ParallelMergeCombiningSequenceTest
     final long startDelayMillis = ThreadLocalRandom.current().nextLong(startDelayStartMillis, startDelayEndMillis);
     final long delayUntil = System.nanoTime() + TimeUnit.NANOSECONDS.convert(startDelayMillis, TimeUnit.MILLISECONDS);
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<IntPair> make()
           {
-            return new Iterator<IntPair>()
+            return new Iterator<>()
             {
               int mergeKey = 0;
               int rowCounter = 0;
+
               @Override
               public boolean hasNext()
               {
@@ -1130,10 +1132,11 @@ public class ParallelMergeCombiningSequenceTest
             {
               // we got yielder, decrement so we expect it to be incremented again on cleanup
               explodedIteratorMakerCleanup.decrementAndGet();
-              return new Iterator<IntPair>()
+              return new Iterator<>()
               {
                 int mergeKey = 0;
                 int rowCounter = 0;
+
                 @Override
                 public boolean hasNext()
                 {

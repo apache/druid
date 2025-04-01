@@ -114,25 +114,6 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
     return baseIntBuffers;
   }
 
-  public static CompressedColumnarIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (versionFromBuffer == VERSION) {
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
-      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
-      return new CompressedColumnarIntsSupplier(
-          totalSize,
-          sizePer,
-          GenericIndexed.read(buffer, DecompressingByteBufferObjectStrategy.of(order, compression)),
-          compression
-      );
-    }
-
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
   public static CompressedColumnarIntsSupplier fromByteBuffer(
       ByteBuffer buffer,
       ByteOrder order,
@@ -173,12 +154,12 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
         buffer.remaining(),
         chunkFactor,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   final IntBuffer myBuffer = buffer.asReadOnlyBuffer();
                   final ByteBuffer retVal = compression
@@ -241,12 +222,12 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
         list.size(),
         chunkFactor,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   private final ByteBuffer retVal = compression
                       .getCompressor()

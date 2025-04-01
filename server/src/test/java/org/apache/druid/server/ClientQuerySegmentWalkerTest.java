@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.client.DirectDruidClient;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -42,6 +41,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -552,7 +552,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null))
+                                               null)),
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -624,7 +625,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null))
+                                               null)),
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -801,7 +803,8 @@ public class ClientQuerySegmentWalkerTest
                                            JoinType.INNER,
                                            null,
                                            ExprMacroTable.nil(),
-                                           null
+                                           null,
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -1516,7 +1519,7 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
@@ -1542,7 +1545,7 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
@@ -1702,7 +1705,6 @@ public class ClientQuerySegmentWalkerTest
                     .build(),
                 conglomerate,
                 schedulerForTest,
-                new GroupByQueryConfig(),
                 injector
             ),
             ClusterOrLocal.CLUSTER

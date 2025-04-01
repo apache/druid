@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
@@ -127,7 +126,6 @@ public class SqlBaseBenchmark
   private static final String STORAGE_FRAME_COLUMNAR = "FRAME_COLUMNAR";
 
   static {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
     HllSketchModule.registerSerde();
     SketchModule.registerSerde();
