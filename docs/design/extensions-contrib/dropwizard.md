@@ -116,13 +116,6 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/dr
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
-  "query/node/backpressure": {
-    "dimensions": [
-      "server"
-    ],
-    "type": "timer",
-    "timeUnit": "MILLISECONDS"
-  },
   "query/segment/time": {
     "dimensions": [],
     "type": "timer",
