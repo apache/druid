@@ -119,7 +119,6 @@ public class ExternalDataSource implements DataSource
   @Override
   public boolean isProcessable()
   {
-    // FIXME return false seemed illogical
     return true;
   }
 

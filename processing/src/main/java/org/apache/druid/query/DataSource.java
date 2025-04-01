@@ -26,7 +26,6 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
-
 import javax.annotation.Nullable;
 
 import java.util.List;
@@ -55,7 +54,8 @@ import java.util.stream.Collectors;
 public interface DataSource extends Cacheable
 {
   byte JOIN_OPERATION_CACHE_ID = 0x1;
-  byte TABLE_DATA_SOURCE_CACHE_ID = 2;
+  byte TABLE_DATA_SOURCE_CACHE_ID = 0x2;
+  byte NOOP_CACHE_ID = 0x71;
 
   /**
    * Returns the names of all table datasources involved in this query. Does not include names for non-tables, like
@@ -85,29 +85,22 @@ public interface DataSource extends Cacheable
    * Decides if this datasource can be accessed globally.
    *
    * This means that all servers have a full copy of this datasource.
-   * True for things like inline, lookup, etc, or for queries of those.
-   * <p>
-   * Currently this is coupled with joinability - if this returns true then the query engine expects there exists a
-   * {@link org.apache.druid.segment.join.JoinableFactory} which might build a
-   * {@link org.apache.druid.segment.join.Joinable} for this datasource directly. If a subquery 'inline' join is
-   * required to join this datasource on the right hand side, then this value must be false for now.
-   * <p>
-   * In the future, instead of directly using this method, the query planner and engine should consider
-   * {@link org.apache.druid.segment.join.JoinableFactory#isDirectlyJoinable(DataSource)} when determining if the
-   * right hand side is directly joinable, which would allow decoupling this property from joins.
+   *
+   * Examples: inline table, lookup.
    */
   boolean isGlobal();
 
   /**
    * Communicates that this {@link DataSource} can be directly used to run a {@link Query}.
    * <p>
-   * Processable examples are: Tables / Inline datasources.
+   * A Processable datasource could pack the necessary logic into the {@link DataSource#createSegmentMapFunction(Query)}.
+   *
+   * Processable examples are: {@link TableDataSource}, {@link InlineDataSource}, {@link FilteredDataSource}.
    * Non-processable ones are those which need further pre-processing before running them.
+   * examples are: {@link QueryDataSource} and join which are not supported directly.
    * </p>
-   * Processing boundaries are identified {@link ExecutionVertex}.
+   * Processing boundaries could be identified with {@link ExecutionVertex}.
    */
-  //FIXME: maybe this should renamed to "canBeReadDirectly"
-  // the need seems to be to have a flag which communicates that it could be read directly.
   boolean isProcessable();
 
   /**

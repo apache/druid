@@ -21,6 +21,7 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
@@ -77,6 +78,6 @@ public class NoopDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return null;
+    return new CacheKeyBuilder(DataSource.NOOP_CACHE_ID).build();
   }
 }
