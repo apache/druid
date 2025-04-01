@@ -65,7 +65,13 @@ public class NoopSegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public DatasourceSegmentCache getDatasource(String dataSource)
+  public <T> T readCacheForDataSource(String dataSource, Action<T> readAction)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <T> T writeCacheForDataSource(String dataSource, Action<T> writeAction)
   {
     throw new UnsupportedOperationException();
   }
