@@ -4,7 +4,6 @@
   "query/node/time" : { "dimensions" : ["server"], "type" : "timer"},
   "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer"},
   "query/node/bytes" : { "dimensions" : ["server"], "type" : "count"},
-  "query/node/backpressure": { "dimensions" : ["server"], "type" : "timer"},
 
   "query/segment/time" : { "dimensions" : [], "type" : "timer"},
   "query/wait/time" : { "dimensions" : [], "type" : "timer"},
