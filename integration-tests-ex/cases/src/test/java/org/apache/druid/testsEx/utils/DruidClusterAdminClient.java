@@ -215,7 +215,7 @@ public class DruidClusterAdminClient
                 .exec(new ExecStartResultCallback(stdout, stderr))
                 .awaitCompletion();
 
-    return new Pair<>(stdout.toString(StandardCharsets.UTF_8.name()), stderr.toString(StandardCharsets.UTF_8.name()));
+    return new Pair<>(stdout.toString(StandardCharsets.UTF_8), stderr.toString(StandardCharsets.UTF_8));
   }
 
   public void restartDockerContainer(String serviceName)

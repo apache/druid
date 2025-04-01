@@ -19,9 +19,7 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -41,7 +39,6 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.avatica.DartDruidMeta;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.TempDirProducer;
@@ -90,12 +87,9 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
   }
 
   @Override
-  public SqlEngine createEngine(
-      QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper,
-      Injector injector)
+  public Class<? extends SqlEngine> getSqlEngineClass()
   {
-    return injector.getInstance(DartSqlEngine.class);
+    return DartSqlEngine.class;
   }
 
   static class DartTestCoreModule implements DruidModule

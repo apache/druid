@@ -19,15 +19,17 @@
 
 package org.apache.druid.msq.quidem;
 
+import org.apache.druid.quidem.DruidQuidemCommandHandler;
 import org.apache.druid.quidem.DruidQuidemTestBase;
 import org.apache.druid.quidem.ProjectPathUtils;
+
 import java.io.File;
 
 public class MSQQuidemTest extends DruidQuidemTestBase
 {
   public MSQQuidemTest()
   {
-    super();
+    super(new DruidQuidemCommandHandler());
   }
 
   @Override
