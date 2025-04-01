@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { InputGroup } from '@blueprintjs/core';
+import { InputGroup, Intent } from '@blueprintjs/core';
 import { useState } from 'react';
 
-function utcParseDate(dateString: string): Date | undefined {
+function isoParseDate(dateString: string): Date | undefined {
   const dateParts = dateString.split(/[-T:. ]/g);
 
   // Extract the individual date and time components
@@ -44,7 +44,7 @@ function utcParseDate(dateString: string): Date | undefined {
   const millisecond = parseInt(dateParts[6], 10);
   if (millisecond >= 1000) return;
 
-  const value = Date.UTC(year, month - 1, day, hour, minute, second); // Month is zero-based
+  const value = Date.UTC(year, month - 1, day, hour, minute, second, millisecond); // Month is zero-based
   if (isNaN(value)) return;
 
   return new Date(value);
@@ -61,26 +61,42 @@ function formatDate(date: Date): string {
 export interface UtcDateInputProps {
   date: Date;
   onChange(newDate: Date): void;
+  onIssue(): void;
 }
 
-export function UtcDateInput(props: UtcDateInputProps) {
-  const { date, onChange } = props;
-  const [dateString, setDateString] = useState<string | undefined>();
+export function IsoDateInput(props: UtcDateInputProps) {
+  const { date, onChange, onIssue } = props;
+  const [invalidDateString, setInvalidDateString] = useState<string | undefined>();
+  const [customDateString, setCustomDateString] = useState<string | undefined>();
+  const [focused, setFocused] = useState<boolean>(false);
 
   return (
     <InputGroup
+      className="iso-date-input"
       placeholder="yyyy-MM-dd HH:mm:ss"
-      value={dateString ?? formatDate(date)}
+      intent={!focused && invalidDateString ? Intent.DANGER : undefined}
+      value={
+        invalidDateString ??
+        (customDateString && isoParseDate(customDateString)?.valueOf() === date.valueOf()
+          ? customDateString
+          : undefined) ??
+        formatDate(date)
+      }
       onChange={e => {
-        const v = normalizeDateString(e.target.value);
-        const parsedDate = utcParseDate(v);
-        if (parsedDate && formatDate(parsedDate) === v) {
+        const normalizedDateString = normalizeDateString(e.target.value);
+        const parsedDate = isoParseDate(normalizedDateString);
+        if (parsedDate) {
           onChange(parsedDate);
-          setDateString(undefined);
+          setInvalidDateString(undefined);
+          setCustomDateString(normalizedDateString);
         } else {
-          setDateString(v);
+          onIssue();
+          setInvalidDateString(normalizedDateString);
+          setCustomDateString(undefined);
         }
       }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
     />
   );
 }

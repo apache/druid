@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.simulate;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Maps;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -54,11 +55,14 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   private volatile DataSourcesSnapshot snapshot;
   private volatile boolean pollingStarted;
 
-  public void addSegment(DataSegment segment)
+  public boolean addSegment(DataSegment segment)
   {
     allSegments.put(segment.getId().toString(), segment);
-    usedSegments.put(segment.getId().toString(), segment);
+    boolean added = usedSegments.put(segment.getId().toString(), segment) != null;
+
     invalidateDatasourcesSnapshot();
+
+    return added;
   }
 
   public void removeSegment(DataSegment segment)
@@ -66,6 +70,16 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     allSegments.remove(segment.getId().toString());
     usedSegments.remove(segment.getId().toString());
     invalidateDatasourcesSnapshot();
+  }
+
+  public Set<DataSegment> getAllUnusedSegments()
+  {
+    return Set.copyOf(Maps.difference(allSegments, usedSegments).entriesOnlyOnLeft().values());
+  }
+
+  public Set<DataSegment> getAllSegments()
+  {
+    return Set.copyOf(allSegments.values());
   }
 
   @Override
@@ -104,9 +118,9 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds)
+  public int markAsUsedNonOvershadowedSegments(String dataSource, Set<SegmentId> segmentIds)
   {
-    return markNonOvershadowedSegmentsAsUsed(dataSource, segment -> segmentIds.contains(segment.getId().toString()));
+    return markNonOvershadowedSegmentsAsUsed(dataSource, segment -> segmentIds.contains(segment.getId()));
   }
 
   @Override

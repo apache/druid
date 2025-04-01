@@ -42,6 +42,7 @@ import {
   formatStartDuration,
   groupBy,
   lookupBy,
+  minBy,
   tickFormatWithTimezone,
   timezoneAwareTicks,
 } from '../../../../utils';
@@ -63,7 +64,7 @@ const EXTEND_X_SCALE_DOMAIN_BY = 1;
 
 export const OTHER_VALUE = 'Other';
 const OTHER_COLOR = '#666666';
-const COLORS = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d'];
+const COLORS = ['#00BD84', '#F78228', '#8A81F3', '#EB57A3', '#7CCE21', '#FFC213', '#B97800'];
 
 // ---------------------------------------
 
@@ -73,7 +74,7 @@ export interface RangeDatum {
   start: number;
   end: number;
   measure: number;
-  stack: string | undefined;
+  facet: string | undefined;
 }
 
 export interface StackedRangeDatum extends RangeDatum {
@@ -126,7 +127,7 @@ export interface ContinuousChartRenderProps {
    * If stacking is used then the stack bars should be ordered bottom to top.
    */
   data: RangeDatum[];
-  stacks: string[] | undefined;
+  facets: string[] | undefined;
 
   /**
    * The granularity that was used for bucketing.
@@ -161,7 +162,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
 ) {
   const {
     data,
-    stacks,
+    facets,
     granularity,
 
     markType,
@@ -199,10 +200,10 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const stackedData: StackedRangeDatum[] = useMemo(() => {
-    const effectiveStacks = stacks || ['undefined'];
-    const stackToIndex = lookupBy(
-      effectiveStacks,
-      s => s,
+    const effectiveFacet = facets || ['undefined'];
+    const facetToIndex = lookupBy(
+      effectiveFacet,
+      f => f,
       (_, i) => i,
     );
 
@@ -211,7 +212,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
       const diffStart = b.start - a.start;
       if (diffStart) return diffStart;
 
-      return stackToIndex[String(a.stack)] - stackToIndex[String(b.stack)];
+      return facetToIndex[String(a.facet)] - facetToIndex[String(b.facet)];
     });
 
     if (markType === 'line') {
@@ -230,18 +231,26 @@ export const ContinuousChartRender = function ContinuousChartRender(
         return withOffset;
       });
     }
-  }, [data, stacks, markType]);
+  }, [data, facets, markType]);
 
-  function findStackedDatum(time: number, measure: number): StackedRangeDatum | undefined {
+  function findStackedDatum(
+    time: number,
+    measure: number,
+    isStacked: boolean,
+  ): StackedRangeDatum | undefined {
     const dataInRange = stackedData.filter(d => d.start <= time && time < d.end);
     if (!dataInRange.length) return;
-    return (
-      dataInRange.find(r => r.offset <= measure && measure < r.measure + r.offset) ||
-      dataInRange[dataInRange.length - 1]
-    );
+    if (isStacked) {
+      return (
+        dataInRange.find(r => r.offset <= measure && measure < r.measure + r.offset) ||
+        dataInRange[dataInRange.length - 1]
+      );
+    } else {
+      return minBy(dataInRange, r => Math.abs(r.measure - measure));
+    }
   }
 
-  const stackColorizer = useMemo(() => {
+  const facetColorizer = useMemo(() => {
     const s = scaleOrdinal(COLORS);
     return (v: string) => (v === OTHER_VALUE ? OTHER_COLOR : s(v));
   }, []);
@@ -342,7 +351,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
         setSelectionIfNeeded({
           start: start.valueOf(),
           end: end.valueOf(),
-          selectedDatum: findStackedDatum(time, measure),
+          selectedDatum: findStackedDatum(time, measure, markType !== 'line'),
         });
       } else {
         setSelection(undefined);
@@ -389,40 +398,43 @@ export const ContinuousChartRender = function ContinuousChartRender(
     }
   });
 
-  const byStack = useMemo(() => {
+  const byFacet = useMemo(() => {
     if (markType === 'bar' || !stackedData.length) return [];
+    const isStacked = markType !== 'line';
 
-    const effectiveStacks = stacks || ['undefined'];
-    const numStacks = effectiveStacks.length;
+    const effectiveFacets = facets || ['undefined'];
+    const numFacets = effectiveFacets.length;
 
-    // Fill in 0s and make sure that the stacks are in the same order
+    // Fill in 0s and make sure that the facets are in the same order
     const fullTimeIntervals = groupBy(
       stackedData,
       d => String(d.start),
       dataForStart => {
-        if (numStacks === 1) return [dataForStart[0]];
-        const stackToDatum = lookupBy(dataForStart, d => d.stack!);
-        return effectiveStacks.map(
-          (stack, stackIndex) =>
-            stackToDatum[stack] || {
+        if (numFacets === 1) return [dataForStart[0]];
+        const facetToDatum = lookupBy(dataForStart, d => d.facet!);
+        return effectiveFacets.map(
+          (facet, facetIndex) =>
+            facetToDatum[facet] || {
               ...dataForStart[0],
-              stack,
+              facet,
               measure: 0,
-              offset: Math.max(
-                0,
-                ...filterMap(effectiveStacks.slice(0, stackIndex), s => stackToDatum[s]).map(
-                  d => d.offset + d.measure,
-                ),
-              ),
+              offset: isStacked
+                ? Math.max(
+                    0,
+                    ...filterMap(effectiveFacets.slice(0, facetIndex), s => facetToDatum[s]).map(
+                      d => d.offset + d.measure,
+                    ),
+                  )
+                : 0,
             },
         );
       },
     );
 
     // Add nulls to mark gaps in data
-    const seriesForStack: Record<string, (StackedRangeDatum | null)[]> = {};
-    for (const stack of effectiveStacks) {
-      seriesForStack[stack] = [];
+    const seriesForFacet: Record<string, (StackedRangeDatum | null)[]> = {};
+    for (const stack of effectiveFacets) {
+      seriesForFacet[stack] = [];
     }
 
     let lastDatum: StackedRangeDatum | undefined;
@@ -430,19 +442,19 @@ export const ContinuousChartRender = function ContinuousChartRender(
       const datum = fullTimeInterval[0];
 
       if (lastDatum && lastDatum.start !== datum.end) {
-        for (const stack of effectiveStacks) {
-          seriesForStack[stack].push(null);
+        for (const facet of effectiveFacets) {
+          seriesForFacet[facet].push(null);
         }
       }
 
-      for (let i = 0; i < numStacks; i++) {
-        seriesForStack[effectiveStacks[i]].push(fullTimeInterval[i]);
+      for (let i = 0; i < numFacets; i++) {
+        seriesForFacet[effectiveFacets[i]].push(fullTimeInterval[i]);
       }
       lastDatum = datum;
     }
 
-    return Object.values(seriesForStack);
-  }, [markType, stackedData, stacks]);
+    return Object.values(seriesForFacet);
+  }, [markType, stackedData, facets]);
 
   if (innerStage.isInvalid()) return;
 
@@ -531,7 +543,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
       title,
       text: (
         <>
-          {selectedDatum?.stack && <div>{selectedDatum?.stack}</div>}
+          {selectedDatum?.facet && <div>{selectedDatum?.facet}</div>}
           <div>{info}</div>
           {selection.finalized && (
             <div className="button-bar">
@@ -605,13 +617,13 @@ export const ContinuousChartRender = function ContinuousChartRender(
                 if (!r) return;
                 return (
                   <rect
-                    key={`${stackedRow.start}/${stackedRow.end}/${stackedRow.stack}`}
+                    key={`${stackedRow.start}/${stackedRow.end}/${stackedRow.facet}`}
                     className="mark-bar"
                     {...r}
                     style={
-                      typeof stackedRow.stack !== 'undefined'
+                      typeof stackedRow.facet !== 'undefined'
                         ? {
-                            fill: stackColorizer(stackedRow.stack),
+                            fill: facetColorizer(stackedRow.facet),
                           }
                         : undefined
                     }
@@ -625,17 +637,17 @@ export const ContinuousChartRender = function ContinuousChartRender(
               />
             )}
             {markType === 'area' &&
-              byStack.map(ds => {
-                const stack = ds[0]!.stack;
+              byFacet.map(ds => {
+                const facet = ds[0]!.facet;
                 return (
                   <path
-                    key={String(stack)}
+                    key={String(facet)}
                     className="mark-area"
                     d={areaFn(ds)!}
                     style={
-                      typeof stack !== 'undefined'
+                      typeof facet !== 'undefined'
                         ? {
-                            fill: stackColorizer(stack),
+                            fill: facetColorizer(facet),
                           }
                         : undefined
                     }
@@ -643,17 +655,17 @@ export const ContinuousChartRender = function ContinuousChartRender(
                 );
               })}
             {(markType === 'area' || markType === 'line') &&
-              byStack.map(ds => {
-                const stack = ds[0]!.stack;
+              byFacet.map(ds => {
+                const facet = ds[0]!.facet;
                 return (
                   <path
-                    key={String(stack)}
+                    key={String(facet)}
                     className="mark-line"
                     d={lineFn(ds)!}
                     style={
-                      typeof stack !== 'undefined'
+                      typeof facet !== 'undefined'
                         ? {
-                            stroke: stackColorizer(stack),
+                            stroke: facetColorizer(facet),
                           }
                         : undefined
                     }
@@ -661,22 +673,22 @@ export const ContinuousChartRender = function ContinuousChartRender(
                 );
               })}
             {(markType === 'area' || markType === 'line') &&
-              byStack.flatMap(ds =>
+              byFacet.flatMap(ds =>
                 filterMap(ds, (d, i) => {
                   if (!d || ds[i - 1] || ds[i + 1]) return; // Not a single point
                   const x = timeScale((d.start + d.end) / 2);
                   return (
                     <line
-                      key={`single_${i}_${d.stack}`}
+                      key={`single_${i}_${d.facet}`}
                       className="single-point"
                       x1={x}
                       x2={x}
                       y1={measureScale(d.measure + d.offset)}
                       y2={measureScale(d.offset)}
                       style={
-                        typeof d.stack !== 'undefined'
+                        typeof d.facet !== 'undefined'
                           ? {
-                              stroke: stackColorizer(d.stack),
+                              stroke: facetColorizer(d.facet),
                             }
                           : undefined
                       }
@@ -690,9 +702,9 @@ export const ContinuousChartRender = function ContinuousChartRender(
                 {...datumToCxCy(selection.selectedDatum)}
                 r={3}
                 style={
-                  typeof selection.selectedDatum.stack !== 'undefined'
+                  typeof selection.selectedDatum.facet !== 'undefined'
                     ? {
-                        fill: stackColorizer(selection.selectedDatum.stack),
+                        fill: facetColorizer(selection.selectedDatum.facet),
                       }
                     : undefined
                 }

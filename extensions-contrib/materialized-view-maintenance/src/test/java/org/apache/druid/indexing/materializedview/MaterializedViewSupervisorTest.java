@@ -56,6 +56,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -113,7 +114,8 @@ public class MaterializedViewSupervisorTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

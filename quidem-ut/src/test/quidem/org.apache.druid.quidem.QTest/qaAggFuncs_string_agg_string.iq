@@ -1,0 +1,3753 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs&numMergeBuffers=3
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A01 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg('AAAAAAAAAA', '|') AS col;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(tab0s0, '|') AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0 IS NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, '|') || '-CCCCCCCCCC' AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA-CCCCCCCCCC |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT 'CCCCCCCCCC-' || string_agg(tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| CCCCCCCCCC-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, ',') || '-' || string_agg(tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                 |
++-------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT concat(string_agg(tab0s0, ','), '-', string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                 |
++-------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(tab0s0, '|'), '-CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA-CCCCCCCCCC |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat('CCCCCCCCCC-', string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| CCCCCCCCCC-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(tab0s0, ','), string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAAAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_format('%s-%s', string_agg(tab0s0, ','), string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                 |
++-------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT char_length(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A14 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A15 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A16 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lower(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A17 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_long(string_agg(tab0s0, '|'), 16) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A18 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('|A' IN string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|  11 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A19 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('|A' IN string_agg(tab0s0, '|')
+                FROM 12) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|  22 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A20 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(tab0s0, '|'), 'A10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A21 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(tab0s0, '|'), 'B10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A22 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(tab0s0, '|'), 'A10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A23 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(tab0s0, '|'), 'B10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A24 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(tab0s0, '|'), 'AAAAAAAAAA|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A25 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(tab0s0, '|'), 'aaaaaaaaaa|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A26 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(tab0s0, '|'), 'aaaaaaaaaa|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A27 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(tab0s0, '|'), 'BBBBBBBBBB|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A28 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(tab0s0, '|'), 'AAAAAAAAAA', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A29 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(tab0s0, '|'), 'aaaaaaaaaa', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A30 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(tab0s0, '|'), '|AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|  11 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A31 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(tab0s0, '|'), '|aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A32 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(tab0s0, '|'), 12) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++--------------------------------------------------------+
+| col                                                    |
++--------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++--------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A33 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(tab0s0, '|'), 12, 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A34 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH
+            FROM string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A35 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING
+            FROM string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A36 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING
+            FROM string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A37 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH 'A'
+            FROM string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------+
+| col                                           |
++-----------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++-----------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A38 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING 'A'
+            FROM string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A39 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING 'A'
+            FROM string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A40 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A41 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(tab0s0, '|'), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------+
+| col                                           |
++-----------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++-----------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A42 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A43 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(tab0s0, '|'), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A44 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A45 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(tab0s0, '|'), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A46 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT upper(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A47 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT reverse(string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A48 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0s0, '|'), -1) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A49 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0s0, '|'), 0) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A50 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0s0, '|'), 2) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAAAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A51 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A52 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 11, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A53 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 75) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+|           AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A54 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 75, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| CCCCCCCCCCAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A55 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A56 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 11, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A57 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 75) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA           |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A58 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 75, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAACCCCCCCCCC |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A59 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(t0.tab0s0, '|') AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
+size
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A60 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(t0.tab0s0, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
+size
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A61 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(t0.tab0s0, '|') AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
+size
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A62 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(t0.tab0s0, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
+size
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A01 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT 'AAAAAAAAAA', '|') AS col;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT tab0s0, '|') AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0 IS NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT tab0s0, '|') || '-CCCCCCCCCC' AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| AAAAAAAAAA-CCCCCCCCCC |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT 'CCCCCCCCCC-' || string_agg(DISTINCT tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| CCCCCCCCCC-AAAAAAAAAA |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT tab0s0, ',') || '-' || string_agg(tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT concat(string_agg(tab0s0, ','), '-', string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(DISTINCT tab0s0, '|'), '-CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| AAAAAAAAAA-CCCCCCCCCC |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat('CCCCCCCCCC-', string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| CCCCCCCCCC-AAAAAAAAAA |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(tab0s0, ','), string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAAAAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_format('%s-%s', string_agg(DISTINCT tab0s0, ','), string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT char_length(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A14 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A15 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A16 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lower(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| aaaaaaaaaa |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A17 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_long(string_agg(DISTINCT tab0s0, '|'), 16) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++--------------+
+| col          |
++--------------+
+| 733007751850 |
++--------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A18 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('A' IN string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A19 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('A' IN string_agg(DISTINCT tab0s0, '|')
+                FROM 2) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A20 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(DISTINCT tab0s0, '|'), 'A10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A21 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(DISTINCT tab0s0, '|'), 'B10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A22 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(DISTINCT tab0s0, '|'), 'A10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A23 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(DISTINCT tab0s0, '|'), 'B10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A24 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(DISTINCT tab0s0, '|'), 'AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A25 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(DISTINCT tab0s0, '|'), 'aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A26 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(DISTINCT tab0s0, '|'), 'aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A27 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(DISTINCT tab0s0, '|'), 'BBBBBBBBBB') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A28 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(DISTINCT tab0s0, '|'), 'AAAAAAAAAA', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| CCCCCCCCCC |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A29 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(DISTINCT tab0s0, '|'), 'aaaaaaaaaa', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A30 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(DISTINCT tab0s0, '|'), 'AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A31 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(DISTINCT tab0s0, '|'), 'aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A32 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(DISTINCT tab0s0, '|'), 10) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+| A   |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A33 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(DISTINCT tab0s0, '|'), 10, 100) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+| A   |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A34 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH
+            FROM string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A35 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING
+            FROM string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A36 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING
+            FROM string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A37 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH 'A'
+            FROM string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A38 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING 'A'
+            FROM string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A39 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING 'A'
+            FROM string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A40 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A41 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(DISTINCT tab0s0, '|'), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A42 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A43 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(DISTINCT tab0s0, '|'), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A44 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A45 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(DISTINCT tab0s0, '|'), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A46 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT upper(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A47 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT reverse(string_agg(DISTINCT tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A48 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(DISTINCT tab0s0, '|'), -1) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A49 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(DISTINCT tab0s0, '|'), 0) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A50 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(DISTINCT tab0s0, '|'), 2) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| AAAAAAAAAAAAAAAAAAAA |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A51 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|'), 5) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A52 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|'), 5, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A53 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|'), 20) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+|           AAAAAAAAAA |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A54 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|'), 20, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| CCCCCCCCCCAAAAAAAAAA |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A55 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|'), 5) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A56 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|'), 5, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A57 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|'), 20) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| AAAAAAAAAA           |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A58 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|'), 20, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| AAAAAAAAAACCCCCCCCCC |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A59 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT t0.tab0s0, '|') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0s0 IS NOT NULL);
++-----+
+| LEN |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A60 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT t0.tab0s0, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A61 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT t0.tab0s0, '|') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0s0);
++-----+
+| LEN |
++-----+
+|  10 |
+|  10 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A62 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT t0.tab0s0, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
++-----+
+| col |
++-----+
+|  10 |
+|  10 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A01 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT 'AAAAAAAAAA', '|', 100000) AS col;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT tab0s0, '|', 100000) AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, '|', 100000) AS col
+FROM test_agg_funcs
+WHERE tab0s0 IS NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT tab0s0, '|', 100000) || '-CCCCCCCCCC' AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| AAAAAAAAAA-CCCCCCCCCC |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT 'CCCCCCCCCC-' || string_agg(DISTINCT tab0s0, '|', 100000) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| CCCCCCCCCC-AAAAAAAAAA |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT tab0s0, ',', 100000) || '-' || string_agg(tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT concat(string_agg(tab0s0, ','), '-', string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(DISTINCT tab0s0, '|', 100000), '-CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| AAAAAAAAAA-CCCCCCCCCC |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat('CCCCCCCCCC-', string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------+
+| col                   |
++-----------------------+
+| CCCCCCCCCC-AAAAAAAAAA |
++-----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(tab0s0, ','), string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAAAAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_format('%s-%s', string_agg(DISTINCT tab0s0, ',', 100000), string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT char_length(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A14 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A15 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A16 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lower(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| aaaaaaaaaa |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A17 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_long(string_agg(DISTINCT tab0s0, '|', 100000), 16) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++--------------+
+| col          |
++--------------+
+| 733007751850 |
++--------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A18 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('A' IN string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A19 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('A' IN string_agg(DISTINCT tab0s0, '|', 100000)
+                FROM 2) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A20 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(DISTINCT tab0s0, '|', 100000), 'A10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A21 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(DISTINCT tab0s0, '|', 100000), 'B10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A22 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(DISTINCT tab0s0, '|', 100000), 'A10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A23 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(DISTINCT tab0s0, '|', 100000), 'B10') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A24 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(DISTINCT tab0s0, '|', 100000), 'AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A25 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(DISTINCT tab0s0, '|', 100000), 'aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A26 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(DISTINCT tab0s0, '|', 100000), 'aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A27 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(DISTINCT tab0s0, '|', 100000), 'BBBBBBBBBB') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A28 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(DISTINCT tab0s0, '|', 100000), 'AAAAAAAAAA', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| CCCCCCCCCC |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A29 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(DISTINCT tab0s0, '|', 100000), 'aaaaaaaaaa', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A30 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(DISTINCT tab0s0, '|', 100000), 'AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A31 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(DISTINCT tab0s0, '|', 100000), 'aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A32 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(DISTINCT tab0s0, '|', 100000), 10) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+| A   |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A33 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(DISTINCT tab0s0, '|', 100000), 10, 100) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+| A   |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A34 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH
+            FROM string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A35 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING
+            FROM string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A36 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING
+            FROM string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A37 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH 'A'
+            FROM string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A38 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING 'A'
+            FROM string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A39 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING 'A'
+            FROM string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A40 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A41 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(DISTINCT tab0s0, '|', 100000), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A42 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A43 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(DISTINCT tab0s0, '|', 100000), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A44 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A45 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(DISTINCT tab0s0, '|', 100000), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A46 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT upper(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A47 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT reverse(string_agg(DISTINCT tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A48 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(DISTINCT tab0s0, '|', 100000), -1) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A49 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(DISTINCT tab0s0, '|', 100000), 0) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A50 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(DISTINCT tab0s0, '|', 100000), 2) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| AAAAAAAAAAAAAAAAAAAA |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A51 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|', 100000), 5) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A52 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|', 100000), 5, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A53 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|', 100000), 20) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+|           AAAAAAAAAA |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A54 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT tab0s0, '|', 100000), 20, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| CCCCCCCCCCAAAAAAAAAA |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A55 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|', 100000), 5) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A56 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|', 100000), 5, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| AAAAA |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A57 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|', 100000), 20) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| AAAAAAAAAA           |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A58 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0s0, '|', 100000), 20, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++----------------------+
+| col                  |
++----------------------+
+| AAAAAAAAAACCCCCCCCCC |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A59 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT t0.tab0s0, '|', 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0s0 IS NOT NULL);
++-----+
+| LEN |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A60 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT t0.tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
++-----+
+| col |
++-----+
+|  21 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A61 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT t0.tab0s0, '|', 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0s0);
++-----+
+| LEN |
++-----+
+|  10 |
+|  10 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A62 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT t0.tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
++-----+
+| col |
++-----+
+|  10 |
+|  10 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A01 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg('AAAAAAAAAA', '|', 100000) AS col;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(tab0s0, '|', 100000) AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, '|', 100000) AS col
+FROM test_agg_funcs
+WHERE tab0s0 IS NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, '|', 100000) || '-CCCCCCCCCC' AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA-CCCCCCCCCC |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT 'CCCCCCCCCC-' || string_agg(tab0s0, '|', 100000) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| CCCCCCCCCC-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, ',', 100000) || '-' || string_agg(tab0s0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                 |
++-------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT concat(string_agg(tab0s0, ','), '-', string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                 |
++-------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(tab0s0, '|', 100000), '-CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA-CCCCCCCCCC |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat('CCCCCCCCCC-', string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------+
+| col                                                                          |
++------------------------------------------------------------------------------+
+| CCCCCCCCCC-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT textcat(string_agg(tab0s0, ',', 100000), string_agg(tab0s0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAAAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT string_format('%s-%s', string_agg(tab0s0, ','), string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                 |
++-------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA,AAAAAAAAAA-AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT char_length(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A14 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A15 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT character_length(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 131 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A16 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lower(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa|aaaaaaaaaa |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A17 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_long(string_agg(tab0s0, '|', 100000), 16) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A18 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('|A' IN string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|  11 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A19 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT position('|A' IN string_agg(tab0s0, '|', 100000)
+                FROM 12) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|  22 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A20 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(tab0s0, '|', 100000), 'A10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A21 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(tab0s0, '|', 100000), 'B10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A22 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(tab0s0, '|', 100000), 'A10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A23 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(tab0s0, '|', 100000), 'B10\|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A24 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(tab0s0, '|', 100000), 'AAAAAAAAAA|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A25 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(tab0s0, '|', 100000), 'aaaaaaaaaa|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A26 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(tab0s0, '|', 100000), 'aaaaaaaaaa|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A27 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(tab0s0, '|', 100000), 'BBBBBBBBBB|') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A28 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(tab0s0, '|', 100000), 'AAAAAAAAAA', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC|CCCCCCCCCC |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A29 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT replace(string_agg(tab0s0, '|', 100000), 'aaaaaaaaaa', 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A30 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(tab0s0, '|', 100000), '|AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|  11 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A31 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(tab0s0, '|', 100000), '|aaaaaaaaaa') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A32 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(tab0s0, '|', 100000), 12) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++--------------------------------------------------------+
+| col                                                    |
++--------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++--------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A33 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT substring(string_agg(tab0s0, '|', 100000), 12, 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A34 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH
+            FROM string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A35 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING
+            FROM string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A36 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING
+            FROM string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A37 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(BOTH 'A'
+            FROM string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------+
+| col                                           |
++-----------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++-----------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A38 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(LEADING 'A'
+            FROM string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A39 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT trim(TRAILING 'A'
+            FROM string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A40 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A41 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT btrim(string_agg(tab0s0, '|', 100000), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------+
+| col                                           |
++-----------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++-----------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A42 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A43 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT ltrim(string_agg(tab0s0, '|', 100000), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| |AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A44 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A45 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rtrim(string_agg(tab0s0, '|', 100000), 'A') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++---------------------------------------------------------+
+| col                                                     |
++---------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA| |
++---------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A46 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT upper(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A47 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT reverse(string_agg(tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------------------------------------------------------------+
+| col                                                               |
++-------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A48 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0s0, '|', 100000), -1) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A49 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0s0, '|', 100000), 0) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A50 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0s0, '|', 100000), 2) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAAAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A51 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|', 100000), 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A52 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|', 100000), 11, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A53 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|', 100000), 75) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+|           AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A54 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|', 100000), 75, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| CCCCCCCCCCAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A55 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|', 100000), 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A56 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|', 100000), 11, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A57 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|', 100000), 75) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA           |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A58 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|', 100000), 75, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAACCCCCCCCCC |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A59 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(t0.tab0s0, '|', 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0s0 IS NOT NULL);
++-------+
+| LEN   |
++-------+
+| 42767 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A60 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(t0.tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
++-------+
+| col   |
++-------+
+| 42767 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A61 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(t0.tab0s0, '|', 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0s0);
++-------+
+| LEN   |
++-------+
+| 21383 |
+| 21383 |
+|       |
++-------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A62 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT length(string_agg(t0.tab0s0, '|', 100000)) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
++-------+
+| col   |
++-------+
+| 21383 |
+| 21383 |
+|       |
++-------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 249 Positive tests: 241 Negative tests: 8
+#-------------------------------------------------------------------------
