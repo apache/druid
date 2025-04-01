@@ -96,7 +96,8 @@ public class DataSegmentPlusTest
                 ImmutableList.of(new CountAggregatorFactory("cnt")),
                 new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
                 MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)
+                MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                null
             ),
             TEST_VERSION,
             1

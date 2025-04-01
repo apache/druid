@@ -134,6 +134,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
@@ -1169,6 +1170,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private List<Interval> expectedDestinationIntervals = null;
 
+    private List<AggregateProjectionMetadata> expectedProjections = null;
+
     private IngestTester()
     {
       // nothing to do
@@ -1207,6 +1210,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public IngestTester addExpectedAggregatorFactory(AggregatorFactory aggregatorFactory)
     {
       expectedAggregatorFactories.add(aggregatorFactory);
+      return this;
+    }
+
+    public IngestTester setExpectedProjections(List<AggregateProjectionMetadata> expectedProjections)
+    {
+      this.expectedProjections = expectedProjections;
       return this;
     }
 
@@ -1315,6 +1324,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
               expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
               queryableIndex.getMetadata().getAggregators()
           );
+
+          if (expectedProjections != null) {
+            Assert.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+          }
 
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
             // transforming rows for sketch assertions

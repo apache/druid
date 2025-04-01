@@ -25,17 +25,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * An annotation to specify node types that a {@link com.google.inject.Module} can be loaded on.
- * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}. If both {@link LoadScope}
- * and {@link ExcludeScope} are set, {@link ExcludeScope} takes precedence
+ * An annotation to exlcude specific node types that a {@link com.google.inject.Module} can be loaded on.
+ * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}. If both {@link ExcludeScope}
+ * and {@link LoadScope} are set, {@link ExcludeScope} takes precedence.
  * <p>
- * A module not decorated with this annotation or {@link ExcludeScope} will be loaded on every node role.
+ * A module not decorated with this annotation or {@link LoadScope} will be loaded on every node role.
  *
- * @see ExcludeScope to specify node roles which a module should NOT be loaded on
+ * @see LoadScope for specifying the exact set of node roles to load on
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface LoadScope
+public @interface ExcludeScope
 {
   String[] roles();
 }

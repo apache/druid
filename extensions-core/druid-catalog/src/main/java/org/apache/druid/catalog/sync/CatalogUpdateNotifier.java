@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.http.CatalogListenerResource;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.sync.RestUpdateSender.RestSender;
@@ -37,8 +38,6 @@ import org.apache.druid.server.DruidNode;
 import org.joda.time.Duration;
 
 import javax.inject.Inject;
-
-import java.util.Collections;
 import java.util.function.Supplier;
 
 /**
@@ -68,7 +67,7 @@ public class CatalogUpdateNotifier implements CatalogUpdateListener
     long timeoutMs = TIMEOUT_MS;
     this.smileMapper = smileMapper;
     Supplier<Iterable<DruidNode>> nodeSupplier = new ListeningNodeSupplier(
-        Collections.singletonList(NodeRole.BROKER),
+        ImmutableList.of(NodeRole.BROKER, NodeRole.OVERLORD),
         discoveryProvider);
     RestSender restSender = RestUpdateSender.httpClientSender(httpClient, Duration.millis(timeoutMs));
     RestUpdateSender sender = new RestUpdateSender(

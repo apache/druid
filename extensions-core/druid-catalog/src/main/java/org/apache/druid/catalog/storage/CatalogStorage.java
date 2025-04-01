@@ -29,14 +29,13 @@ import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
+import org.apache.druid.catalog.sync.CatalogSource;
 import org.apache.druid.catalog.sync.CatalogUpdateListener;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogSource;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogUpdateProvider;
+import org.apache.druid.catalog.sync.CatalogUpdateProvider;
 import org.apache.druid.guice.annotations.Json;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-
 import java.util.List;
 
 /**

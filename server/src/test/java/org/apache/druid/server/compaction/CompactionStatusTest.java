@@ -34,6 +34,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -105,41 +106,34 @@ public class CompactionStatusTest
   @Test
   public void testFindPartitionsSpecFromConfigWithDeprecatedMaxRowsPerSegmentAndMaxTotalRowsReturnGivenValues()
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "datasource",
-        null,
-        null,
-        100,
-        null,
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            1000L,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    final DataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource("datasource")
+                                              .withMaxRowsPerSegment(100)
+                                              .withTuningConfig(
+                                            new UserCompactionTaskQueryTuningConfig(
+                                                null,
+                                                null,
+                                                null,
+                                                1000L,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null
+                                            )
+                                        )
+                                              .build();
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
         CompactionStatus.findPartitionsSpecFromConfig(
@@ -192,7 +186,7 @@ public class CompactionStatusTest
   {
     verifyCompactionStatusIsPendingBecause(
         null,
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         "not compacted yet"
     );
   }
@@ -201,8 +195,8 @@ public class CompactionStatusTest
   public void testStatusWhenLastCompactionStateIsEmpty()
   {
     verifyCompactionStatusIsPendingBecause(
-        new CompactionState(null, null, null, null, null, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        new CompactionState(null, null, null, null, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         "'partitionsSpec' mismatch: required['dynamic' with 5,000,000 rows], current[null]"
     );
   }
@@ -213,9 +207,9 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
 
     final CompactionState lastCompactionState
-        = new CompactionState(currentPartitionsSpec, null, null, null, null, null);
+        = new CompactionState(currentPartitionsSpec, null, null, null, null, null, null);
     final DataSourceCompactionConfig compactionConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
 
     verifyCompactionStatusIsPendingBecause(
         lastCompactionState,
@@ -238,9 +232,10 @@ public class CompactionStatusTest
         null,
         null,
         currentIndexSpec,
+        null,
         null
     );
-    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, null))
@@ -276,9 +271,10 @@ public class CompactionStatusTest
         null,
         null,
         currentIndexSpec,
-        currentGranularitySpec
+        currentGranularitySpec,
+        null
     );
-    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
@@ -306,9 +302,10 @@ public class CompactionStatusTest
         null,
         null,
         currentIndexSpec,
-        currentGranularitySpec
+        currentGranularitySpec,
+        null
     );
-    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
@@ -348,10 +345,10 @@ public class CompactionStatusTest
       PartitionsSpec partitionsSpec
   )
   {
-    return DataSourceCompactionConfig.builder()
-                                     .forDataSource(TestDataSource.WIKI)
-                                     .withTuningConfig(createTuningConfig(partitionsSpec, null))
-                                     .build();
+    return InlineSchemaDataSourceCompactionConfig.builder()
+                                                 .forDataSource(TestDataSource.WIKI)
+                                                 .withTuningConfig(createTuningConfig(partitionsSpec, null))
+                                                 .build();
   }
 
   private static UserCompactionTaskQueryTuningConfig createTuningConfig(
