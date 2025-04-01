@@ -19,9 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -51,7 +49,6 @@ import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ResourceAction;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -144,7 +141,6 @@ public class OverlordCompactionResource
   @GET
   @Path("/status/datasources")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
   public Response getAllCompactionSnapshots(
       @Context HttpServletRequest request
   )
@@ -154,27 +150,16 @@ public class OverlordCompactionResource
         final List<AutoCompactionSnapshot> allSnapshots =
             List.copyOf(scheduler.getAllCompactionSnapshots().values());
         return new CompactionStatusResponse(
-            filterByAuthorizedDatasources(
+            AuthorizationUtils.filterByAuthorizedDatasources(
                 request,
                 allSnapshots,
-                AutoCompactionSnapshot::getDataSource
+                AutoCompactionSnapshot::getDataSource,
+                authorizerMapper
             )
         );
       });
     } else {
-      return buildResponse(
-          Futures.transform(
-              coordinatorClient.getCompactionSnapshots(null),
-              response -> new CompactionStatusResponse(
-                  filterByAuthorizedDatasources(
-                      request,
-                      response.getLatestStatus(),
-                      AutoCompactionSnapshot::getDataSource
-                  )
-              ),
-              MoreExecutors.directExecutor()
-          )
-      );
+      return buildResponse(coordinatorClient.getCompactionSnapshots(null));
     }
   }
 
@@ -217,10 +202,11 @@ public class OverlordCompactionResource
   {
     if (scheduler.isEnabled()) {
       return ServletResourceUtils.buildReadResponse(() -> {
-        final List<CompactionSupervisorSpec> configs = filterByAuthorizedDatasources(
+        final List<CompactionSupervisorSpec> configs = AuthorizationUtils.filterByAuthorizedDatasources(
             request,
             supervisorManager.getAllCompactionSupervisors(),
-            supervisor -> supervisor.getSpec().getDataSource()
+            supervisor -> supervisor.getSpec().getDataSource(),
+            authorizerMapper
         );
         return new CompactionConfigsResponse(
             configs.stream()
@@ -230,10 +216,11 @@ public class OverlordCompactionResource
       });
     } else {
       return ServletResourceUtils.buildReadResponse(() -> {
-        final List<DataSourceCompactionConfig> configs = filterByAuthorizedDatasources(
+        final List<DataSourceCompactionConfig> configs = AuthorizationUtils.filterByAuthorizedDatasources(
             request,
             configManager.getCurrentCompactionConfig().getCompactionConfigs(),
-            DataSourceCompactionConfig::getDataSource
+            DataSourceCompactionConfig::getDataSource,
+            authorizerMapper
         );
         return new CompactionConfigsResponse(configs);
       });
@@ -416,38 +403,5 @@ public class OverlordCompactionResource
                   )
                   .limit(count == null ? Integer.MAX_VALUE : count)
                   .collect(Collectors.toList());
-  }
-
-  private <T> List<T> filterByAuthorizedDatasources(
-      final HttpServletRequest request,
-      List<T> resources,
-      Function<T, String> getDatasource
-  )
-  {
-    final Function<T, Iterable<ResourceAction>> raGenerator =
-        entry -> List.of(createDatasourceResourceAction(getDatasource.apply(entry), request));
-
-    return Lists.newArrayList(
-        AuthorizationUtils.filterAuthorizedResources(
-            request,
-            resources,
-            raGenerator,
-            authorizerMapper
-        )
-    );
-  }
-
-  private static ResourceAction createDatasourceResourceAction(
-      String dataSource,
-      HttpServletRequest request
-  )
-  {
-    switch (request.getMethod()) {
-      case "GET":
-      case "HEAD":
-        return AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource);
-      default:
-        return AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(dataSource);
-    }
   }
 }
