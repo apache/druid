@@ -180,7 +180,7 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
   private void ensureSegmentsCount(int numExpectedSegments)
   {
     ITRetryUtil.retryUntilEquals(
-        () -> coordinator.getFullSegmentsMetadata(fullDatasourceName),
+        () -> coordinator.getFullSegmentsMetadata(fullDatasourceName).size(),
         numExpectedSegments,
         "Segment count"
     );
