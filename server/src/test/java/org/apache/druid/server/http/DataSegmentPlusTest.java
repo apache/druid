@@ -132,7 +132,7 @@ public class DataSegmentPlusTest
     Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), segmentObjectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, segmentObjectMap.get("binaryVersion"));
     Assert.assertEquals(1, segmentObjectMap.get("size"));
-    Assert.assertEquals(7, ((Map) segmentObjectMap.get("lastCompactionState")).size());
+    Assert.assertEquals(6, ((Map) segmentObjectMap.get("lastCompactionState")).size());
 
     // verify extra metadata
     Assert.assertEquals(createdDateStr, objectMap.get("createdDate"));
