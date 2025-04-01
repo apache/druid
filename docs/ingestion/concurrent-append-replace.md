@@ -143,3 +143,10 @@ Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you u
 - dynamic partitioning with append to existing set to `false`
 
 </details>
+
+## Known limitations
+
+Do not use concurrent append and replace on a datasource if any one of the following is true:
+
+- The datasource has mixed granularity of data in any interval. For example, if an interval has both DAY and WEEK granularity data, using concurrent append and replace may result in data loss or duplication.
+- The datasource has a compaction config which compacts data into more granular chunks. For example, a datasource that has MONTH data ingested into it and is configured to compact it into DAY granularity might suffer data losses or duplication.
