@@ -42,6 +42,7 @@ public class PolicyModuleTest
   {
     Properties properties = new Properties();
     PolicyEnforcer policyEnforcer = Guice.createInjector(
+        binder -> binder.bind(Properties.class).toInstance(properties),
         new DruidGuiceExtensions(),
         new ConfigModule(),
         new PolicyModule()
