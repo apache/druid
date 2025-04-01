@@ -88,7 +88,6 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
-import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
@@ -150,7 +149,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionRowWithMetricAndRowWithoutMetricShouldPreserveExistingMetricsUsingAggregatorWithDifferentReturnType() throws Exception
   {
     // added = null, count = 2, sum_added = 62, quantilesDoublesSketch = 2, thetaSketch = 2, HLLSketchBuild = 2
@@ -247,7 +245,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionRowWithMetricAndRowWithoutMetricShouldPreserveExistingMetrics() throws Exception
   {
     // added = null, count = 2, sum_added = 62, quantilesDoublesSketch = 2, thetaSketch = 2, HLLSketchBuild = 2
@@ -351,7 +348,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test()
-  @Ignore
   public void testAutoCompactionOnlyRowsWithoutMetricShouldAddNewMetrics() throws Exception
   {
     // added = 31, count = null, sum_added = null
@@ -417,7 +413,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionWithMetricColumnSameAsInputColShouldOverwriteInputWithMetrics(CompactionEngine engine)
       throws Exception
   {
@@ -473,7 +468,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionOnlyRowsWithMetricShouldPreserveExistingMetrics() throws Exception
   {
     // added = null, count = 2, sum_added = 62
@@ -537,7 +531,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionPreservesCreateBitmapIndexInDimensionSchema(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -574,7 +567,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionRollsUpMultiValueDimensionsWithoutUnnest(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -621,7 +613,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionDutySubmitAndVerifyCompaction() throws Exception
   {
     loadData(INDEX_TASK);
@@ -672,7 +663,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyCanUpdateCompactionConfig(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -738,7 +728,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyCanDeleteCompactionConfig(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -763,7 +752,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionDutyCanUpdateTaskSlots() throws Exception
   {
     // Set compactionTaskSlotRatio to 0 to prevent any compaction
@@ -828,7 +816,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrue(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -956,7 +943,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrueThenFalse(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -1080,7 +1066,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingFalse() throws Exception
   {
     loadData(INDEX_TASK);
@@ -1145,7 +1130,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndMixedVersion(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -1184,7 +1168,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndExistingCompactedSegmentsHaveSameSegmentGranularity(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -1217,7 +1200,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndExistingCompactedSegmentsHaveDifferentSegmentGranularity(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -1251,7 +1233,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndSmallerSegmentGranularityCoveringMultipleSegmentsInTimelineAndDropExistingTrue(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -1316,7 +1297,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityAndSmallerSegmentGranularityCoveringMultipleSegmentsInTimelineAndDropExistingFalse() throws Exception
   {
     loadData(INDEX_TASK);
@@ -1394,7 +1374,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityFinerAndNotAlignWithSegment() throws Exception
   {
     updateCompactionTaskSlot(1, 1);
@@ -1446,7 +1425,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithSegmentGranularityCoarserAndNotAlignWithSegment(CompactionEngine engine) throws Exception
   {
     updateCompactionTaskSlot(1, 1);
@@ -1495,7 +1473,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test()
-  @Ignore
   public void testAutoCompactionDutyWithRollup() throws Exception
   {
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
@@ -1533,7 +1510,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithQueryGranularity(CompactionEngine engine) throws Exception
   {
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
@@ -1571,7 +1547,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "engine")
-  @Ignore
   public void testAutoCompactionDutyWithDimensionsSpec(CompactionEngine engine) throws Exception
   {
     // Index data with dimensions "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
@@ -1622,7 +1597,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test(dataProvider = "useSupervisors")
-  @Ignore
   public void testAutoCompactionDutyWithFilter(boolean useSupervisors) throws Exception
   {
     updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null));
@@ -1733,7 +1707,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  @Ignore
   public void testAutoCompactionDutyWithOverlappingInterval() throws Exception
   {
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
@@ -2020,6 +1993,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null)
       );
     } else {
+      // Perform a dummy update of task slots to force the coordinator to refresh its compaction config
+      final ClusterCompactionConfig clusterConfig = compactionResource.getClusterConfig();
+      compactionResource.updateCompactionTaskSlot(
+          clusterConfig.getCompactionTaskSlotRatio(),
+          clusterConfig.getMaxCompactionTaskSlots()
+      );
+
       forceTriggerAutoCompaction(numExpectedSegmentsAfterCompaction);
     }
   }

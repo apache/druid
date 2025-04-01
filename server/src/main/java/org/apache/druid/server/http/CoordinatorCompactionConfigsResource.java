@@ -79,6 +79,10 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
+    if (compactionTaskSlotRatio == null && maxCompactionTaskSlots == null) {
+      return ServletResourceUtils.buildUpdateResponse(() -> true);
+    }
+
     final ClusterCompactionConfig currentConfig = configManager.getCurrentCompactionConfig().clusterConfig();
     final ClusterCompactionConfig updatedClusterConfig = new ClusterCompactionConfig(
         Configs.valueOrDefault(compactionTaskSlotRatio, currentConfig.getCompactionTaskSlotRatio()),

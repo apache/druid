@@ -34,6 +34,8 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -164,6 +166,18 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         }
       }
     };
+  }
+
+  @LifecycleStart
+  public synchronized void start()
+  {
+    // Do nothing
+  }
+
+  @LifecycleStop
+  public synchronized void stop()
+  {
+    executor.shutdownNow();
   }
 
   @Override
