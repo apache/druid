@@ -172,7 +172,8 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
           true,
           1000,
           3,
-          "waiting for queries to complete");
+          "Query has completed"
+      );
 
       BytesFullResponseHolder response = responseRef.get();
 

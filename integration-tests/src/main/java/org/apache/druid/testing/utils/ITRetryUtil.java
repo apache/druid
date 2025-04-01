@@ -70,7 +70,7 @@ public class ITRetryUtil
       String taskMessage
   )
   {
-    retryUntilEquals(callable, expectedValue, DEFAULT_RETRY_COUNT, DEFAULT_RETRY_COUNT, taskMessage);
+    retryUntilEquals(callable, expectedValue, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, taskMessage);
   }
 
   @SuppressForbidden(reason = "System#out")
@@ -87,26 +87,24 @@ public class ITRetryUtil
     T lastValue = null;
 
     final Stopwatch stopwatch = Stopwatch.createStarted();
-    LOG.info("Waiting until [%s] is [%s]:", taskMessage, expectedValue);
+    LOG.info("Waiting until [%s] is [%s]", taskMessage, expectedValue);
 
-    System.out.println();
     for (; currentTry <= retryCount; ++currentTry) {
       try {
-        // Print a '.' for every attempt
-        System.out.print(".");
         final T currentValue = callable.call();
 
         if (Objects.equals(expectedValue, currentValue)) {
-          System.out.println();
-          LOG.info(
-              "[%s] is [%s] (after [%,d] millis, [%d/%d] attempts)",
-              taskMessage, expectedValue, stopwatch.millisElapsed(), currentTry + 1, retryCount
+          System.out.printf(
+              "Done after [%,d] millis, [%d/%d] attempts.%n",
+              stopwatch.millisElapsed(), currentTry + 1, retryCount
           );
           return;
         } else if (!Objects.equals(lastValue, currentValue)) {
-          System.out.printf("%nValue changed to [%s]%n", currentValue);
+          System.out.printf("updated to [%s]", currentValue);
         }
 
+        // Print a '.' for every retry
+        System.out.print(".");
         lastValue = currentValue;
       }
       catch (Exception e) {
