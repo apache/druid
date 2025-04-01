@@ -97,13 +97,13 @@ public class QueryDataSource implements DataSource
   @Override
   public boolean isGlobal()
   {
-    return false;
+    return query.getDataSource().isGlobal();
   }
 
   @Override
   public boolean isProcessable()
   {
-    return false;
+    return isGlobal();
   }
 
   @Override
