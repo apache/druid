@@ -1766,13 +1766,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           jsonMapper.writeValueAsString(entry.getValue())
       );
     }
-    final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for loading index task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
+    final String taskId = indexer.submitTask(taskSpec);
+    LOG.info("Submitted task[%s] to load data", taskId);
+    indexer.waitUntilTaskCompletes(taskId);
 
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Load"
+        "Verify segments are loaded"
     );
   }
 
@@ -1954,7 +1954,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     waitForAllTasksToCompleteForDataSource(fullDatasourceName);
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Compaction"
+        "Verify segments are loaded"
     );
     verifySegmentsCount(numExpectedSegmentsAfterCompaction);
   }
@@ -1962,12 +1962,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private void verifySegmentsCount(int numExpectedSegments)
   {
     ITRetryUtil.retryUntilTrue(
-        () -> {
-          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
-          return metadataSegmentCount == numExpectedSegments;
-        },
-        "Compaction segment count check"
+        () -> numExpectedSegments == coordinator.getSegments(fullDatasourceName).size(),
+        StringUtils.format("Verify segment count is [%d]", numExpectedSegments)
     );
   }
 
@@ -1975,13 +1971,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     Set<String> expectedIntervalsSet = new HashSet<>(expectedIntervals);
     ITRetryUtil.retryUntilTrue(
-        () -> {
-          final Set<String> actualIntervals = new HashSet<>(coordinator.getSegmentIntervals(fullDatasourceName));
-          System.out.println("ACTUAL: " + actualIntervals);
-          System.out.println("EXPECTED: " + expectedIntervalsSet);
-          return actualIntervals.equals(expectedIntervalsSet);
-        },
-        "Compaction interval check"
+        () -> Set.copyOf(coordinator.getSegmentIntervals(fullDatasourceName)).equals(expectedIntervalsSet),
+        StringUtils.format("Verify segment intervals are [%s]", expectedIntervals)
     );
   }
 
