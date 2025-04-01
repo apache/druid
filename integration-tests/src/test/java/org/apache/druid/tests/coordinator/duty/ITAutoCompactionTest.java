@@ -1772,7 +1772,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Verify segments are loaded"
+        "Segments are loaded"
     );
   }
 
@@ -1954,25 +1954,27 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     waitForAllTasksToCompleteForDataSource(fullDatasourceName);
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Verify segments are loaded"
+        "Segments are loaded"
     );
     verifySegmentsCount(numExpectedSegmentsAfterCompaction);
   }
 
   private void verifySegmentsCount(int numExpectedSegments)
   {
-    ITRetryUtil.retryUntilTrue(
-        () -> numExpectedSegments == coordinator.getSegments(fullDatasourceName).size(),
-        StringUtils.format("Verify segment count is [%d]", numExpectedSegments)
+    ITRetryUtil.retryUntilEquals(
+        () -> coordinator.getSegments(fullDatasourceName).size(),
+        numExpectedSegments,
+        "Segment count"
     );
   }
 
   private void checkCompactionIntervals(List<String> expectedIntervals)
   {
-    Set<String> expectedIntervalsSet = new HashSet<>(expectedIntervals);
-    ITRetryUtil.retryUntilTrue(
-        () -> Set.copyOf(coordinator.getSegmentIntervals(fullDatasourceName)).equals(expectedIntervalsSet),
-        StringUtils.format("Verify segment intervals are [%s]", expectedIntervals)
+    final Set<String> expectedIntervalsSet = new HashSet<>(expectedIntervals);
+    ITRetryUtil.retryUntilEquals(
+        () -> Set.copyOf(coordinator.getSegmentIntervals(fullDatasourceName)),
+        expectedIntervalsSet,
+        "Segment intervals"
     );
   }
 

@@ -19,11 +19,9 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -58,6 +56,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Integration Test to verify behaviour when there is a lock contention between
@@ -180,22 +179,10 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void ensureSegmentsCount(int numExpectedSegments)
   {
-    ITRetryUtil.retryUntilTrue(
-        () -> {
-          List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
-          StringBuilder sb = new StringBuilder();
-          segments.forEach(
-              seg -> sb.append("{")
-                       .append(seg.getId())
-                       .append(", ")
-                       .append(seg.getSize())
-                       .append("}, ")
-          );
-          LOG.info("Found Segments: %s", sb);
-          LOG.info("Current metadata segment count: %d, expected: %d", segments.size(), numExpectedSegments);
-          return segments.size() == numExpectedSegments;
-        },
-        "Segment count check"
+    ITRetryUtil.retryUntilEquals(
+        () -> coordinator.getFullSegmentsMetadata(fullDatasourceName),
+        numExpectedSegments,
+        "Segment count"
     );
   }
 
@@ -255,7 +242,7 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
   {
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Loading"
+        "Segments are loaded"
     );
   }
 
@@ -266,23 +253,15 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
   private void ensureLockedIntervals(Interval... intervals)
   {
     final LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(fullDatasourceName, 0, null, null);
-    final List<Interval> lockedIntervals = new ArrayList<>();
-    ITRetryUtil.retryUntilTrue(
-        () -> {
-          lockedIntervals.clear();
-
-          Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(ImmutableList.of(lockFilterPolicy));
-          if (allIntervals.containsKey(fullDatasourceName)) {
-            lockedIntervals.addAll(allIntervals.get(fullDatasourceName));
-          }
-
-          LOG.info("Locked intervals: %s", lockedIntervals);
-          return intervals.length == lockedIntervals.size();
-        },
-        "Verify Locked Intervals"
+    final Set<Interval> expectedLockedIntervals = Arrays.stream(intervals).collect(Collectors.toSet());
+    ITRetryUtil.retryUntilEquals(
+        () -> Set.copyOf(
+            indexer.getLockedIntervals(List.of(lockFilterPolicy))
+                   .getOrDefault(fullDatasourceName, List.of())
+        ),
+        expectedLockedIntervals,
+        "Locked intervals"
     );
-
-    Assert.assertEquals(lockedIntervals, Arrays.asList(intervals));
   }
 
   /**
@@ -339,9 +318,9 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void ensureCompactionTaskCount(int expectedCount)
   {
-    LOG.info("Verifying compaction task count. Expected: %d", expectedCount);
-    ITRetryUtil.retryUntilTrue(
-        () -> getCompactionTaskCount() == expectedCount,
+    ITRetryUtil.retryUntilEquals(
+        this::getCompactionTaskCount,
+        expectedCount,
         "Compaction Task Count"
     );
   }
@@ -382,24 +361,14 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void ensureRowCount(long totalRows)
   {
-    LOG.info("Verifying Row Count. Expected: %s", totalRows);
-    ITRetryUtil.retryUntilTrue(
-        () ->
-            totalRows == this.queryHelper.countRows(
-                fullDatasourceName,
-                Intervals.ETERNITY,
-                name -> new LongSumAggregatorFactory(name, "count")
-            ),
-        StringUtils.format(
-            "dataSource[%s] consumed [%,d] events, expected [%,d]",
+    ITRetryUtil.retryUntilEquals(
+        () -> queryHelper.countRows(
             fullDatasourceName,
-            this.queryHelper.countRows(
-                fullDatasourceName,
-                Intervals.ETERNITY,
-                name -> new LongSumAggregatorFactory(name, "count")
-            ),
-            totalRows
-        )
+            Intervals.ETERNITY,
+            name -> new LongSumAggregatorFactory(name, "count")
+        ),
+        totalRows,
+        "Total row count in datasource"
     );
   }
 

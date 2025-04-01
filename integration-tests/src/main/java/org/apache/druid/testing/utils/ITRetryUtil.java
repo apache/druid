@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -38,15 +39,14 @@ public class ITRetryUtil
 
   public static void retryUntilTrue(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, true, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, true, task);
   }
 
   public static void retryUntilFalse(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, false, task);
   }
 
-  @SuppressForbidden(reason = "System#out")
   public static void retryUntil(
       Callable<Boolean> callable,
       boolean expectedValue,
@@ -55,23 +55,59 @@ public class ITRetryUtil
       String taskMessage
   )
   {
+    retryUntilEquals(
+        callable,
+        expectedValue,
+        delayInMillis,
+        retryCount,
+        taskMessage
+    );
+  }
+
+  public static <T> void retryUntilEquals(
+      Callable<T> callable,
+      T expectedValue,
+      String taskMessage
+  )
+  {
+    retryUntilEquals(callable, expectedValue, DEFAULT_RETRY_COUNT, DEFAULT_RETRY_COUNT, taskMessage);
+  }
+
+  @SuppressForbidden(reason = "System#out")
+  public static <T> void retryUntilEquals(
+      Callable<T> callable,
+      T expectedValue,
+      long delayInMillis,
+      int retryCount,
+      String taskMessage
+  )
+  {
     int currentTry = 0;
     Exception lastException = null;
+    T lastValue = null;
 
     final Stopwatch stopwatch = Stopwatch.createStarted();
-    LOG.info(
-        "Starting task[%s] with max retries[%d] and delay [%s] millis.",
-        taskMessage, retryCount, delayInMillis
-    );
+    LOG.info("Waiting until [%s] is [%s]:", taskMessage, expectedValue);
 
+    System.out.println();
     for (; currentTry <= retryCount; ++currentTry) {
       try {
         // Print a '.' for every attempt
         System.out.print(".");
-        if (callable.call() == expectedValue) {
-          LOG.info("Finished task[%s] in [%d] millis.", taskMessage, stopwatch.millisElapsed());
+        final T currentValue = callable.call();
+
+        if (Objects.equals(expectedValue, currentValue)) {
+          System.out.println();
+          LOG.info(
+              "Finished task[%s] after [%d] attempts in [%,d] millis.",
+              taskMessage, currentTry + 1, stopwatch.millisElapsed()
+          );
           return;
+        } else if (!Objects.equals(lastValue, currentValue)) {
+          System.out.printf("%nValue changed to [%s]%n", currentValue);
         }
+
+        lastValue = currentValue;
       }
       catch (Exception e) {
         // just continue retrying if there is an exception (it may be transient!) but save the last:
