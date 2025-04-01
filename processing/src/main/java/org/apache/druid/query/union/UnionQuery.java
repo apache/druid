@@ -269,7 +269,7 @@ public class UnionQuery implements Query<Object>
     @Override
     public byte[] getCacheKey()
     {
-      return delegate.getCacheKey();
+      return null;
     }
   }
 

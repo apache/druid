@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +119,9 @@ public class TableDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return getName().getBytes(StandardCharsets.UTF_8);
+    return new CacheKeyBuilder(DataSource.TABLE_DATA_SOURCE_CACHE_ID)
+        .appendString(getName())
+        .build();
   }
 
   @Override

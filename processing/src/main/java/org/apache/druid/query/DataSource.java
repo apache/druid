@@ -54,6 +54,9 @@ import java.util.stream.Collectors;
 })
 public interface DataSource extends Cacheable
 {
+  byte JOIN_OPERATION_CACHE_ID = 0x1;
+  byte TABLE_DATA_SOURCE_CACHE_ID = 2;
+
   /**
    * Returns the names of all table datasources involved in this query. Does not include names for non-tables, like
    * lookups or inline datasources.

@@ -77,6 +77,6 @@ public class NoopDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[]{};
+    return null;
   }
 }

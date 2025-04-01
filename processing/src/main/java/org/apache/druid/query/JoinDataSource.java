@@ -301,7 +301,7 @@ public class JoinDataSource implements DataSource
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder keyBuilder;
-    keyBuilder = new CacheKeyBuilder(JoinableFactoryWrapper.JOIN_OPERATION);
+    keyBuilder = new CacheKeyBuilder(DataSource.JOIN_OPERATION_CACHE_ID);
     keyBuilder.appendCacheable(leftFilter);
     keyBuilder.appendCacheable(conditionAnalysis);
     keyBuilder.appendCacheable(joinType);
