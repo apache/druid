@@ -99,8 +99,8 @@ public class ITRetryUtil
         if (Objects.equals(expectedValue, currentValue)) {
           System.out.println();
           LOG.info(
-              "Finished task[%s] after [%d] attempts in [%,d] millis.",
-              taskMessage, currentTry + 1, stopwatch.millisElapsed()
+              "[%s] is [%s] (after [%,d] millis, [%d/%d] attempts)",
+              taskMessage, expectedValue, stopwatch.millisElapsed(), currentTry + 1, retryCount
           );
           return;
         } else if (!Objects.equals(lastValue, currentValue)) {
