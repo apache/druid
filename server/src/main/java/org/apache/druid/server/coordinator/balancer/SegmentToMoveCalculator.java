@@ -248,7 +248,7 @@ public class SegmentToMoveCalculator
 
     final int numSegmentsToMove = maxCountDifference.getKey() / 2;
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of datasource[%s] in tier[%s] to fix gap between min[%,d] and max[%,d].",
           numSegmentsToMove, mostUnbalancedDatasource, tier, minNumSegments, maxNumSegments
       );
@@ -290,7 +290,7 @@ public class SegmentToMoveCalculator
                                   ? 0 : (int) (differenceInUsageBytes / averageSegmentSize) / 2;
 
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of avg size [%,d MB] in tier[%s] to fix"
           + " disk usage gap between min[%d GB][%.1f%%] and max[%d GB][%.1f%%].",
           numSegmentsToMove, ((long) averageSegmentSize) >> 20, tier,

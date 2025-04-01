@@ -27,6 +27,6 @@ its tasks as Kubernetes Jobs instead of sending them to workers (middle managers
 
 Documentation
 =============
-More detailed documentation about how to configure and use the extension is available [here](../../docs/development/extensions-contrib/k8s-jobs.md)
+More detailed documentation about how to configure and use the extension is available [here](../../docs/development/extensions-core/k8s-jobs.md)
 
 

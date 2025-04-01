@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -47,7 +46,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, NullHandling.IS_NULL_BYTE);
+    buf.put(position, TypeStrategies.IS_NULL_BYTE);
   }
 
   @Override

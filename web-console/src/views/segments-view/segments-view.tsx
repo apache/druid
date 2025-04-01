@@ -62,6 +62,7 @@ import {
   compact,
   countBy,
   filterMap,
+  findMap,
   formatBytes,
   formatInteger,
   getApiArray,
@@ -515,18 +516,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   ) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-        enableComparisons={enableComparisons}
-      >
-        {valueFn(row.value)}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          enableComparisons={enableComparisons}
+        >
+          {valueFn(row.value)}
+        </TableFilterableCell>
+      );
+    };
   }
 
   renderSegmentsTable() {
@@ -579,7 +581,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE}
+        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE || page > 0}
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
@@ -1004,7 +1006,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   render() {
-    const { capabilities, onFiltersChange } = this.props;
+    const { capabilities, filters, onFiltersChange } = this.props;
     const {
       segmentTableActionDialogId,
       datasourceTableActionDialogId,
@@ -1047,7 +1049,16 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             label="Show segment timeline"
             onChange={() =>
               this.setState({
-                showSegmentTimeline: showSegmentTimeline ? undefined : { capabilities },
+                showSegmentTimeline: showSegmentTimeline
+                  ? undefined
+                  : {
+                      capabilities,
+                      datasource: findMap(filters, filter =>
+                        filter.id === 'datasource' && /^=[^=|]+$/.exec(String(filter.value))
+                          ? filter.value.slice(1)
+                          : undefined,
+                      ),
+                    },
               })
             }
             disabled={!capabilities.hasSqlOrCoordinatorAccess()}

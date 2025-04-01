@@ -31,7 +31,7 @@ public class QTest extends DruidQuidemTestBase
 {
   public QTest()
   {
-    super();
+    super(new DruidQuidemCommandHandler());
   }
 
   @Override

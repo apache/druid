@@ -401,7 +401,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @LifecycleStop
   public void stop()
   {
-    log.debug("Stopping KubernetesTaskRunner");
+    log.info("Stopping KubernetesTaskRunner");
     // Stop managing the running k8s jobs
     exec.shutdownNow();
     cleanupExecutor.shutdownNow();

@@ -24,15 +24,7 @@ import ReactTable from 'react-table';
 import type { Execution } from '../../../druid-models';
 import { SMALL_TABLE_PAGE_SIZE } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
-import {
-  clamp,
-  downloadUrl,
-  formatBytes,
-  formatInteger,
-  pluralIfNeeded,
-  tickIcon,
-  wait,
-} from '../../../utils';
+import { clamp, formatBytes, formatInteger, pluralIfNeeded, tickIcon } from '../../../utils';
 
 import './destination-pages-pane.scss';
 
@@ -77,6 +69,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
   const destination = execution.destination;
   const pages = execution.destinationPages;
   if (!pages) return null;
+  const numPages = pages.length;
   const id = Api.encodePath(execution.id);
 
   const numTotalRows = destination?.numTotalRows;
@@ -85,23 +78,21 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     return UrlBaser.base(
       `/druid/v2/sql/statements/${id}/results?${
         pageIndex < 0 ? '' : `page=${pageIndex}&`
-      }resultFormat=${desiredResultFormat}`,
+      }resultFormat=${desiredResultFormat}&filename=${getPageFilename(pageIndex)}`,
     );
   }
 
-  function getPageFilename(pageIndex: number, numPages: number) {
+  function getFilenamePageInfo(pageIndex: number) {
+    if (pageIndex < 0) return 'all_data';
     const numPagesString = String(numPages);
     const pageNumberString = String(pageIndex + 1).padStart(numPagesString.length, '0');
-    return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
+    return `page_${pageNumberString}_of_${numPagesString}`;
   }
 
-  async function downloadAllData() {
-    if (!pages) return;
-    downloadUrl(getResultUrl(-1), `${id}_all_data.${desiredExtension}`);
-    await wait(100);
+  function getPageFilename(pageIndex: number) {
+    return `${id}_${getFilenamePageInfo(pageIndex)}.${desiredExtension}`;
   }
 
-  const numPages = pages.length;
   return (
     <div className="destination-pages-pane">
       <p>
@@ -133,14 +124,13 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             rightIcon={IconNames.CARET_DOWN}
           />
         </Popover>{' '}
-        {pages.length > 1 && (
-          <Button
-            intent={Intent.PRIMARY}
-            icon={IconNames.DOWNLOAD}
-            text="Download all data (concatenated)"
-            onClick={() => void downloadAllData()}
-          />
-        )}
+        <AnchorButton
+          intent={Intent.PRIMARY}
+          icon={IconNames.DOWNLOAD}
+          text="Download all data (concatenated)"
+          href={getResultUrl(-1)}
+          download
+        />
       </p>
       <ReactTable
         data={pages}
@@ -184,7 +174,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 text="Download"
                 minimal
                 href={getResultUrl(value)}
-                download={getPageFilename(value, numPages)}
+                download
               />
             ),
           },

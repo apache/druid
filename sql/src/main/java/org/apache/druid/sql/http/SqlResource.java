@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
@@ -304,7 +305,7 @@ public class SqlResource
         @Override
         public void recordFailure(Exception e)
         {
-          if (sqlQuery.queryContext().isDebug()) {
+          if (QueryLifecycle.shouldLogStackTrace(e, sqlQuery.queryContext())) {
             log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
           } else {
             log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);

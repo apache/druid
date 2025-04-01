@@ -78,6 +78,7 @@ public class KillUnusedSegmentsTest
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final Interval YEAR_OLD = new Interval(Period.days(1), NOW.minusDays(365));
   private static final Interval MONTH_OLD = new Interval(Period.days(1), NOW.minusDays(30));
+  private static final Interval FIFTEEN_DAY_OLD = new Interval(Period.days(1), NOW.minusDays(15));
   private static final Interval DAY_OLD = new Interval(Period.days(1), NOW.minusDays(1));
   private static final Interval HOUR_OLD = new Interval(Period.days(1), NOW.minusHours(1));
   private static final Interval NEXT_DAY = new Interval(Period.days(1), NOW.plusDays(1));
@@ -110,7 +111,7 @@ public class KillUnusedSegmentsTest
   public void setup()
   {
     connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.millis(1), false);
+    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.millis(1), null);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         TestHelper.makeJsonMapper(),
         Suppliers.ofInstance(config),
@@ -602,6 +603,55 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, YEAR_OLD);
+  }
+
+  @Test
+  public void testMaxIntervalToKillOverridesDurationToRetain()
+  {
+    configBuilder.withDurationToRetain(Period.hours(6).toStandardDuration())
+            .withMaxIntervalToKill(Period.days(20));
+
+    initDuty();
+
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(29));
+    CoordinatorRunStats newDatasourceStats = runDutyAndGetStats();
+
+    // For a new datasource, the duration to retain is used to determine kill interval
+    Assert.assertEquals(1, newDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, MONTH_OLD);
+
+    // For a datasource where kill has already happened, maxIntervalToKill is used
+    // if it leads to a smaller kill interval than durationToRetain
+    createAndAddUnusedSegment(DS1, FIFTEEN_DAY_OLD, VERSION, NOW.minusDays(14));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusHours(2));
+    CoordinatorRunStats oldDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, oldDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, FIFTEEN_DAY_OLD);
+  }
+
+  @Test
+  public void testDurationToRetainOverridesMaxIntervalToKill()
+  {
+    configBuilder.withDurationToRetain(Period.days(20).toStandardDuration())
+            .withMaxIntervalToKill(Period.days(350));
+
+    initDuty();
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(29));
+    CoordinatorRunStats newDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, newDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
+
+    // For a datasource where (now - durationToRetain) < (lastKillTime(year old segment) + maxInterval)
+    // Fifteen day old segment will be rejected
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(29));
+    createAndAddUnusedSegment(DS1, FIFTEEN_DAY_OLD, VERSION, NOW.minusDays(14));
+    CoordinatorRunStats oldDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, oldDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, MONTH_OLD);
   }
 
   @Test

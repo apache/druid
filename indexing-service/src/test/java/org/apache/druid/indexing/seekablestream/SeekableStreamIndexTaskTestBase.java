@@ -123,6 +123,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
@@ -595,7 +596,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
             derby.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         objectMapper,
         derby.metadataTablesConfigSupplier().get(),
@@ -609,7 +611,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         taskStorage,
         metadataStorageCoordinator,
         emitter,
-        new SupervisorManager(null)
+        new SupervisorManager(OBJECT_MAPPER, null)
         {
           @Override
           public boolean checkPointDataSourceMetadata(
