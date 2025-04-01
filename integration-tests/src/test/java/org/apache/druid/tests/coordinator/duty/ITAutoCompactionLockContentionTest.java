@@ -27,8 +27,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -310,19 +310,12 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
         .withSkipOffsetFromLatest(Period.ZERO)
         .withMaxRowsPerSegment(Specs.MAX_ROWS_PER_SEGMENT)
         .build();
-    compactionResource.updateCompactionTaskSlot(0.5, 10);
+    compactionResource.updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, null, null));
     compactionResource.submitCompactionConfig(dataSourceCompactionConfig);
 
-    // Wait for compaction config to persist
-    Thread.sleep(2000);
-
     // Verify that the compaction config is updated correctly.
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
     DataSourceCompactionConfig observedCompactionConfig
-        = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
-    Assert.assertEquals(observedCompactionConfig, dataSourceCompactionConfig);
-
-    observedCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
+        = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
     Assert.assertEquals(observedCompactionConfig, dataSourceCompactionConfig);
   }
 

@@ -112,6 +112,7 @@ public class CoordinatorCompactionResource
   @POST
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
   public Response simulateWithClusterConfigUpdate(
       ClusterCompactionConfig updatePayload

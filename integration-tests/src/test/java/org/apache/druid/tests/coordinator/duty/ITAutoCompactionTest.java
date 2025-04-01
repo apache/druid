@@ -1956,7 +1956,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     compactionResource.deleteDataSourceCompactionConfig(fullDatasourceName);
 
     // Verify that the compaction config is updated correctly.
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
+    DruidCompactionConfig compactionConfig = DruidCompactionConfig
+        .empty().withDatasourceConfigs(compactionResource.getAllCompactionConfigs());
     DataSourceCompactionConfig foundDataSourceCompactionConfig
         = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
     Assert.assertNull(foundDataSourceCompactionConfig);
@@ -1999,17 +2000,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction) throws Exception
   {
-    // Perform a dummy update of task slots to force the coordinator to refresh its compaction config
-    final ClusterCompactionConfig clusterConfig = compactionResource.getClusterConfig();
-    compactionResource.updateCompactionTaskSlot(
-        clusterConfig.getCompactionTaskSlotRatio(),
-        clusterConfig.getMaxCompactionTaskSlots() + 10
-    );
-    compactionResource.updateCompactionTaskSlot(
-        clusterConfig.getCompactionTaskSlotRatio(),
-        clusterConfig.getMaxCompactionTaskSlots()
-    );
-
     compactionResource.forceTriggerAutoCompaction();
     waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
   }
@@ -2111,11 +2101,25 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots) throws Exception
   {
-    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots);
-    // Verify that the compaction config is updated correctly.
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
-    Assert.assertEquals(compactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
-    Assert.assertEquals(compactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    final ClusterCompactionConfig oldConfig = compactionResource.getClusterConfig();
+    compactionResource.updateClusterConfig(
+        new ClusterCompactionConfig(
+            compactionTaskSlotRatio,
+            maxCompactionTaskSlots,
+            oldConfig.getCompactionPolicy(),
+            oldConfig.isUseSupervisors(),
+            oldConfig.getEngine()
+        )
+    );
+
+    // Verify that the compaction config is updated correctly
+    final ClusterCompactionConfig updatedConfig = compactionResource.getClusterConfig();
+    Assert.assertEquals(updatedConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
+    Assert.assertEquals(updatedConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    LOG.info(
+        "Updated compactionTaskSlotRatio[%s] and maxCompactionTaskSlots[%d]",
+        compactionTaskSlotRatio, maxCompactionTaskSlots
+    );
   }
 
   private void getAndAssertCompactionStatus(
