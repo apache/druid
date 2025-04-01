@@ -41,6 +41,11 @@ import java.util.stream.Collectors;
 public class SegmentToMoveCalculator
 {
   /**
+   * Maximum number of balancer threads that can be passed to {@link #computeMaxSegmentsToMovePerTier}.
+   */
+  public static final int MAX_BALANCER_THREADS = 100;
+
+  /**
    * At least this number of segments must be picked for moving in every cycle
    * to keep the cluster well-balanced.
    */
@@ -132,7 +137,7 @@ public class SegmentToMoveCalculator
   )
   {
     Preconditions.checkArgument(
-        numBalancerThreads > 0 && numBalancerThreads <= 100,
+        numBalancerThreads > 0 && numBalancerThreads <= MAX_BALANCER_THREADS,
         "Number of balancer threads must be in range (0, 100]."
     );
     if (totalSegments <= 0) {
