@@ -64,7 +64,7 @@ const EXTEND_X_SCALE_DOMAIN_BY = 1;
 
 export const OTHER_VALUE = 'Other';
 const OTHER_COLOR = '#666666';
-const COLORS = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d'];
+const COLORS = ['#00BD84', '#F78228', '#8A81F3', '#EB57A3', '#7CCE21', '#FFC213', '#B97800'];
 
 // ---------------------------------------
 

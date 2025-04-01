@@ -21,6 +21,7 @@ package org.apache.druid.metadata.segment.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -80,11 +81,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * For cache usage modes, see {@link UsageMode}.
  * <p>
  * The map {@link #datasourceToSegmentCache} contains the cache for each datasource.
- * Items are only added to this map and never removed. This is to avoid handling
- * race conditions where a thread has invoked {@link #getDatasource} but hasn't
- * acquired a lock on the returned cache yet while another thread sees this cache
- * as empty and cleans it up. The first thread would then end up using a stopped
- * cache, resulting in errors.
+ * If the cache for a datasource is empty, the sync thread removes it from the map.
  */
 @ThreadSafe
 public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
@@ -251,12 +248,66 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public DatasourceSegmentCache getDatasource(String dataSource)
+  public <T> T readCacheForDataSource(String dataSource, Action<T> readAction)
   {
     verifyCacheIsUsableAndAwaitSync();
-    return getCacheForDatasource(dataSource);
+    try (final HeapMemoryDatasourceSegmentCache datasourceCache = getCacheWithReference(dataSource)) {
+      return datasourceCache.withReadLock(
+          () -> {
+            try {
+              return readAction.perform(datasourceCache);
+            }
+            catch (Exception e) {
+              Throwables.throwIfUnchecked(e);
+              throw new RuntimeException(e);
+            }
+          }
+      );
+    }
   }
 
+  @Override
+  public <T> T writeCacheForDataSource(String dataSource, Action<T> writeAction)
+  {
+    verifyCacheIsUsableAndAwaitSync();
+    try (final HeapMemoryDatasourceSegmentCache datasourceCache = getCacheWithReference(dataSource)) {
+      return datasourceCache.withWriteLock(
+          () -> {
+            try {
+              return writeAction.perform(datasourceCache);
+            }
+            catch (Exception e) {
+              Throwables.throwIfUnchecked(e);
+              throw new RuntimeException(e);
+            }
+          }
+      );
+    }
+  }
+
+  /**
+   * Returns the (existing or new) cache instance for the given datasource and
+   * acquires a single reference to it, which must be closed after the cache
+   * has been read or updated.
+   */
+  private HeapMemoryDatasourceSegmentCache getCacheWithReference(String dataSource)
+  {
+    return datasourceToSegmentCache.compute(
+        dataSource,
+        (ds, existingCache) -> {
+          final HeapMemoryDatasourceSegmentCache newCache
+              = existingCache == null ? new HeapMemoryDatasourceSegmentCache(ds) : existingCache;
+          newCache.acquireReference();
+          return newCache;
+        }
+    );
+  }
+
+  /**
+   * Returns the (existing or new) cache instance for the given datasource.
+   * Similar to {@link #getCacheWithReference} but does not acquire references
+   * that need to be closed. This method should be called only by the sync thread.
+   */
   private HeapMemoryDatasourceSegmentCache getCacheForDatasource(String dataSource)
   {
     return datasourceToSegmentCache.computeIfAbsent(dataSource, HeapMemoryDatasourceSegmentCache::new);
@@ -460,16 +511,36 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    */
   private void markCacheSynced()
   {
-    datasourceToSegmentCache.forEach((dataSource, cache) -> {
+    final Set<String> cachedDatasources = Set.copyOf(datasourceToSegmentCache.keySet());
+
+    for (String dataSource : cachedDatasources) {
+      final HeapMemoryDatasourceSegmentCache cache = datasourceToSegmentCache.getOrDefault(
+          dataSource,
+          new HeapMemoryDatasourceSegmentCache(dataSource)
+      );
       final CacheStats stats = cache.markCacheSynced();
 
-      if (!cache.isEmpty()) {
+      if (cache.isEmpty()) {
+        // If the cache is empty and not currently in use, remove it from the map
+        datasourceToSegmentCache.compute(
+            dataSource,
+            (ds, existingCache) -> {
+              if (existingCache != null && existingCache.isEmpty()
+                  && !existingCache.isBeingUsedByTransaction()) {
+                emitMetric(dataSource, Metric.DELETED_DATASOURCES, 1L);
+                return null;
+              } else {
+                return existingCache;
+              }
+            }
+        );
+      } else {
         emitMetric(dataSource, Metric.CACHED_INTERVALS, stats.getNumIntervals());
         emitMetric(dataSource, Metric.CACHED_USED_SEGMENTS, stats.getNumUsedSegments());
         emitMetric(dataSource, Metric.CACHED_UNUSED_SEGMENTS, stats.getNumUnusedSegments());
         emitMetric(dataSource, Metric.CACHED_PENDING_SEGMENTS, stats.getNumPendingSegments());
       }
-    });
+    }
   }
 
   /**

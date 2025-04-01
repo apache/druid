@@ -395,6 +395,7 @@ kerberos
 keystore
 keytool
 keytab
+kubeconfig
 kubernetes
 kubexit
 k8s
@@ -424,6 +425,7 @@ microbatches
 misconfiguration
 misconfigured
 mostAvailableSize
+multipart
 multitenancy
 multitenant
 MVDs
