@@ -26,6 +26,9 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
+
+import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -144,5 +147,6 @@ public interface DataSource extends Cacheable
    * @return the cache key to be used as part of query cache key
    */
   @Override
+  @Nullable
   byte[] getCacheKey();
 }

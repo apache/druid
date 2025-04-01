@@ -41,8 +41,6 @@ import java.util.List;
 /**
  * Represents the native engine's execution vertex.
  *
- * Most likely due to evolutional purposes there are some concepts which went
- * beyond their inital design:
  *
  * Multiple queries might be executed in one stage: <br/>
  * The GroupBy query could be collapsed at exection time).

@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -310,6 +309,7 @@ public class CacheKeyBuilder
     size += item.byteSize();
   }
 
+  @Nullable
   public byte[] build()
   {
     if (invalidKey) {
