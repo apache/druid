@@ -1993,19 +1993,23 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null)
       );
     } else {
-      // Perform a dummy update of task slots to force the coordinator to refresh its compaction config
-      final ClusterCompactionConfig clusterConfig = compactionResource.getClusterConfig();
-      compactionResource.updateCompactionTaskSlot(
-          clusterConfig.getCompactionTaskSlotRatio(),
-          clusterConfig.getMaxCompactionTaskSlots()
-      );
-
       forceTriggerAutoCompaction(numExpectedSegmentsAfterCompaction);
     }
   }
 
   private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction) throws Exception
   {
+    // Perform a dummy update of task slots to force the coordinator to refresh its compaction config
+    final ClusterCompactionConfig clusterConfig = compactionResource.getClusterConfig();
+    compactionResource.updateCompactionTaskSlot(
+        clusterConfig.getCompactionTaskSlotRatio(),
+        clusterConfig.getMaxCompactionTaskSlots() + 10
+    );
+    compactionResource.updateCompactionTaskSlot(
+        clusterConfig.getCompactionTaskSlotRatio(),
+        clusterConfig.getMaxCompactionTaskSlots()
+    );
+
     compactionResource.forceTriggerAutoCompaction();
     waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
   }
