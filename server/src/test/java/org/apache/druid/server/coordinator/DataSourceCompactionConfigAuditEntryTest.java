@@ -34,7 +34,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   
   private final DataSourceCompactionConfigAuditEntry firstEntry = new DataSourceCompactionConfigAuditEntry(
       new ClusterCompactionConfig(0.1, 9, null, null, null),
-      DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+      InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
       auditInfo,
       DateTimes.nowUtc()
   );
@@ -44,7 +44,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 9, null, null, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -57,7 +57,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.2, 9, null, null, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -66,7 +66,7 @@ public class DataSourceCompactionConfigAuditEntryTest
 
     secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 10, null, null, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -79,7 +79,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 9, null, null, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
         auditInfo,
         DateTimes.nowUtc()
     );

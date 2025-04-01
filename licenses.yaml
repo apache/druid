@@ -5038,6 +5038,22 @@ libraries:
 
 ---
 
+name: GraalVM
+license_category: binary
+license_name: Universal Permissive License, Version 1.0
+license_file_path: licenses/bin/graal.UPL
+version: 22.3.5
+module: core
+libraries:
+  - org.graalvm.js: js
+  - org.graalvm.js: js-scriptengine
+  - org.graalvm.regex: regex
+  - org.graalvm.sdk: graal-sdk
+  - org.graalvm.js: js-scriptengine
+  - org.graalvm.truffle: truffle-api
+
+---
+
 name: jakarta.el
 license_category: binary
 module: core
