@@ -51,6 +51,13 @@ spec:
             - containerPort: 8100
               name: "druid-port"
               protocol: "TCP"
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "2400000000"
+            requests:
+              cpu: "1000m"
+              memory: "2400000000"
       hostname: "id-3e70afe5cd823dfc7dd308eea616426b"
       restartPolicy: "Never"
   ttlSecondsAfterFinished: 172800
