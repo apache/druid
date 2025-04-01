@@ -38,6 +38,7 @@ interface ModuleComponentProps<P> {
   timezone: Timezone;
   where: SqlExpression;
   setWhere(where: SqlExpression): void;
+  moduleWhere: SqlExpression;
   parameterValues: P;
   setParameterValues: (parameters: Partial<P>) => void;
   runSqlQuery(

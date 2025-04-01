@@ -108,6 +108,7 @@ export type TypedParameterDefinition<Type extends keyof ParameterTypes> = TypedE
   placeholder?: string;
   defined?: ModuleFunctor<boolean>;
   visible?: ModuleFunctor<boolean>;
+  legacyName?: string;
 };
 
 export type ParameterDefinition =
@@ -157,7 +158,11 @@ export function inflateParameterValues(
   parameters: Parameters,
 ): ParameterValues {
   return mapRecord(parameters, (parameter, parameterName) =>
-    inflateParameterValue(parameterValues?.[parameterName], parameter),
+    inflateParameterValue(
+      parameterValues?.[parameterName] ??
+        (parameter.legacyName ? parameterValues?.[parameter.legacyName] : undefined),
+      parameter,
+    ),
   );
 }
 

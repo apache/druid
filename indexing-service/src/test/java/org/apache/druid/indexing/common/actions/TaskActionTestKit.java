@@ -66,7 +66,7 @@ public class TaskActionTestKit extends ExternalResource
   private SegmentMetadataCache segmentMetadataCache;
   private BlockingExecutorService metadataCachePollExec;
 
-  private boolean useSegmentMetadataCache = new SegmentsMetadataManagerConfig(null, null).isUseCache();
+  private boolean useSegmentMetadataCache = false;
   private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
 
   public TaskLockbox getTaskLockbox()
@@ -182,13 +182,17 @@ public class TaskActionTestKit extends ExternalResource
   private SqlSegmentMetadataTransactionFactory setupTransactionFactory(ObjectMapper objectMapper)
   {
     metadataCachePollExec = new BlockingExecutorService("test-cache-poll-exec");
+    SegmentMetadataCache.UsageMode cacheMode
+        = useSegmentMetadataCache
+          ? SegmentMetadataCache.UsageMode.ALWAYS
+          : SegmentMetadataCache.UsageMode.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), useSegmentMetadataCache)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
-        new NoopServiceEmitter()
+        NoopServiceEmitter.instance()
     );
 
     final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
@@ -199,7 +203,8 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector,
         leaderSelector,
-        segmentMetadataCache
+        segmentMetadataCache,
+        NoopServiceEmitter.instance()
     )
     {
       @Override
@@ -222,6 +227,6 @@ public class TaskActionTestKit extends ExternalResource
     taskActionToolbox = null;
     segmentMetadataCache.stopBeingLeader();
     segmentMetadataCache.stop();
-    useSegmentMetadataCache = new SegmentsMetadataManagerConfig(null, null).isUseCache();
+    useSegmentMetadataCache = false;
   }
 }

@@ -95,6 +95,7 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -114,6 +115,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
@@ -122,6 +124,8 @@ public class SqlStatementResource
 {
 
   public static final String RESULT_FORMAT = "__resultFormat";
+  public static final String CONTENT_DISPOSITION_RESPONSE_HEADER = "Content-Disposition";
+  private static final Pattern FILENAME_PATTERN = Pattern.compile("^[^/:*?><\\\\\"|\0\n\r]*$");
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
   private final ObjectMapper jsonMapper;
@@ -277,6 +281,7 @@ public class SqlStatementResource
       @PathParam("id") final String queryId,
       @QueryParam("page") Long page,
       @QueryParam("resultFormat") String resultFormat,
+      @QueryParam("filename") String filename,
       @Context final HttpServletRequest req
   )
   {
@@ -309,10 +314,12 @@ public class SqlStatementResource
       );
       throwIfQueryIsNotSuccessful(queryId, statusPlus);
 
+      final String contentDispositionHeaderValue = filename != null ? StringUtils.format("attachment; filename=\"%s\"", validateFilename(filename)) : null;
+
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
       if (!signature.isPresent() || MSQControllerTask.isIngestion(msqControllerTask.getQuerySpec())) {
         // Since it's not a select query, nothing to return.
-        return Response.ok().build();
+        return addContentDisposition(Response.ok(), contentDispositionHeaderValue).build();
       }
 
       // returning results
@@ -321,18 +328,20 @@ public class SqlStatementResource
       results = getResultYielder(queryId, page, msqControllerTask, closer);
       if (!results.isPresent()) {
         // no results, return empty
-        return Response.ok().build();
+        return addContentDisposition(Response.ok(), contentDispositionHeaderValue).build();
       }
 
       ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec());
-      return Response.ok((StreamingOutput) outputStream -> resultPusher(
+      final Response.ResponseBuilder responseBuilder = Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
           closer,
           results,
           new CountingOutputStream(outputStream),
           preferredFormat
-      )).build();
+      ));
+
+      return addContentDisposition(responseBuilder, contentDispositionHeaderValue).build();
     }
 
 
@@ -974,6 +983,42 @@ public class SqlStatementResource
                               )
                           );
     }
+  }
+
+  private static Response.ResponseBuilder addContentDisposition(
+      Response.ResponseBuilder responseBuilder,
+      String contentDisposition
+  )
+  {
+    if (contentDisposition != null) {
+      responseBuilder.header(CONTENT_DISPOSITION_RESPONSE_HEADER, contentDisposition);
+    }
+    return responseBuilder;
+  }
+
+  /**
+   * Validates that a filename is valid. Filenames are considered to be valid if it is:
+   * <ul>
+   *   <li>Not empty.</li>
+   *   <li>Not longer than 255 characters.</li>
+   *   <li>Does not contain the characters `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `\0`, `\n`, or `\r`.</li>
+   * </ul>
+   */
+  @VisibleForTesting
+  static String validateFilename(@NotNull String filename)
+  {
+    if (filename.isEmpty()) {
+      throw InvalidInput.exception("Filename cannot be empty.");
+    }
+
+    if (filename.length() > 255) {
+      throw InvalidInput.exception("Filename cannot be longer than 255 characters.");
+    }
+
+    if (!FILENAME_PATTERN.matcher(filename).matches()) {
+      throw InvalidInput.exception("Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \0, \n, or \r)");
+    }
+    return filename;
   }
 
   private <T> T contactOverlord(final ListenableFuture<T> future, String queryId)
