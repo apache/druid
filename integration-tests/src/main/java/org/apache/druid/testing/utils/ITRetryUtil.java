@@ -20,6 +20,7 @@
 package org.apache.druid.testing.utils;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.concurrent.Callable;
@@ -55,11 +56,19 @@ public class ITRetryUtil
     int currentTry = 0;
     Exception lastException = null;
 
-    while (true) {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    LOG.info(
+        "Starting task[%s] with max retries[%d] and delay [%s] millis.",
+        taskMessage, retryCount, delayInMillis
+    );
+
+    for (; currentTry <= retryCount; ++currentTry) {
       try {
-        LOG.info("Trying attempt[%d/%d]...", currentTry, retryCount);
-        if (currentTry > retryCount || callable.call() == expectedValue) {
-          break;
+        // Print a '.' for every attempt
+        System.out.print(".");
+        if (callable.call() == expectedValue) {
+          LOG.info("Finished task[%s] in [%d] millis.", taskMessage, stopwatch.millisElapsed());
+          return;
         }
       }
       catch (Exception e) {
@@ -67,37 +76,27 @@ public class ITRetryUtil
         lastException = e;
       }
 
-      LOG.info(
-          "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
-          currentTry,
-          retryCount,
-          taskMessage,
-          delayInMillis
-      );
       try {
         Thread.sleep(delayInMillis);
       }
       catch (InterruptedException e) {
         // Ignore
       }
-      currentTry++;
     }
 
-    if (currentTry > retryCount) {
-      if (lastException != null) {
-        throw new ISE(
-            lastException,
-            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
-            retryCount,
-            taskMessage
-        );
-      } else {
-        throw new ISE(
-            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
-            retryCount,
-            taskMessage
-        );
-      }
+    if (lastException != null) {
+      throw new ISE(
+          lastException,
+          "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+          retryCount,
+          taskMessage
+      );
+    } else {
+      throw new ISE(
+          "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+          retryCount,
+          taskMessage
+      );
     }
   }
 

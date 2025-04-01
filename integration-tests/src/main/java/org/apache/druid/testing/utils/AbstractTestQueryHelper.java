@@ -125,7 +125,6 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public void testQueriesFromString(String url, String str) throws Exception
   {
-    LOG.info("Starting query tests using\n%s", str);
     List<QueryResultType> queries =
         jsonMapper.readValue(
             str,
@@ -136,11 +135,10 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   private void testQueries(String url, List<QueryResultType> queries) throws Exception
   {
-    LOG.info("Running queries, url [%s]", url);
+    LOG.info("Testing [%d] queries from url[%s]", queries.size(), url);
 
-    boolean failed = false;
+    int queryIndex = 0;
     for (QueryResultType queryWithResult : queries) {
-      LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
       QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
           result,
@@ -161,7 +159,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
             resultsComparison.getErrorMessage()
         );
       } else {
-        LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
+        LOG.info("Results Verified for Query [%d]", queryIndex++);
       }
     }
   }
