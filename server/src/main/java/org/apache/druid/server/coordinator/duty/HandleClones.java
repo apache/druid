@@ -8,8 +8,8 @@ import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class HandleClones implements CoordinatorDuty
 {
@@ -20,14 +20,16 @@ public class HandleClones implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
-    Map<String, ServerHolder> historicalMap = new HashMap<>(); // TODO: redo
-    params.getDruidCluster().getHistoricals().forEach((tier, historicals) -> {
-      historicals.forEach(
-          historical -> {
-            historicalMap.put(historical.getServer().getHost(), historical);
-          }
-      );
-    });
+    // TODO: clean up
+    Map<String, ServerHolder> historicalMap = params.getDruidCluster()
+                                                    .getHistoricals()
+                                                    .values()
+                                                    .stream()
+                                                    .flatMap(Collection::stream)
+                                                    .collect(Collectors.toMap(
+                                                        serverHolder -> serverHolder.getServer().getHost(),
+                                                        serverHolder -> serverHolder
+                                                    ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       String sourceHistoricalName = entry.getKey();
@@ -38,14 +40,14 @@ public class HandleClones implements CoordinatorDuty
 
       for (DataSegment segment : sourceServer.getServedSegments()) {
         if (!targetServer.getServedSegments().contains(segment)) {
-          log.warn("Cloning load of [%s] from [%s] to [%s]", segment, sourceServer, targetServer);
+          log.info("Cloning load of [%s] from [%s] to [%s]", segment, sourceServer, targetServer);
           targetServer.getPeon().loadSegment(segment, SegmentAction.LOAD, null);
         }
       }
 
       for (DataSegment segment : targetServer.getServedSegments()) {
         if (!sourceServer.getServedSegments().contains(segment)) {
-          log.warn("Cloning drop of [%s] from [%s] to [%s]", segment, sourceServer, targetServer);
+          log.info("Cloning drop of [%s] from [%s] to [%s]", segment, sourceServer, targetServer);
           targetServer.getPeon().dropSegment(segment, null);
         }
       }
