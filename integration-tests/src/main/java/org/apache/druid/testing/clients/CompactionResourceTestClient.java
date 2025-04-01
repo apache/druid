@@ -22,6 +22,7 @@ package org.apache.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.indexing.overlord.http.CompactionConfigsResponse;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -158,7 +159,11 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    return jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
+    final CompactionConfigsResponse payload = jsonMapper.readValue(
+        response.getContent(),
+        new TypeReference<>() {}
+    );
+    return payload.getCompactionConfigs();
   }
 
   public DataSourceCompactionConfig getDataSourceCompactionConfig(String dataSource) throws Exception
