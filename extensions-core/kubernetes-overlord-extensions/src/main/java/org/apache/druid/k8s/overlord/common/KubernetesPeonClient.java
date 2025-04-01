@@ -33,6 +33,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -46,8 +47,26 @@ public class KubernetesPeonClient
 
   private final KubernetesClientApi clientApi;
   private final String namespace;
+  private final boolean overlordMaybeInAnotherNamespace;
+  private final String overlordNamespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
+
+  public KubernetesPeonClient(
+      KubernetesClientApi clientApi,
+      String namespace,
+      @Nullable String overlordNamespace,
+      boolean debugJobs,
+      ServiceEmitter emitter
+  )
+  {
+    this.clientApi = clientApi;
+    this.namespace = namespace;
+    this.overlordNamespace = overlordNamespace;
+    this.debugJobs = debugJobs;
+    this.emitter = emitter;
+    this.overlordMaybeInAnotherNamespace = overlordNamespace != null;
+  }
 
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
@@ -56,10 +75,7 @@ public class KubernetesPeonClient
       ServiceEmitter emitter
   )
   {
-    this.clientApi = clientApi;
-    this.namespace = namespace;
-    this.debugJobs = debugJobs;
-    this.emitter = emitter;
+    this(clientApi, namespace, null, debugJobs, emitter);
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -182,11 +198,31 @@ public class KubernetesPeonClient
 
   public List<Job> getPeonJobs()
   {
+    if (overlordMaybeInAnotherNamespace) {
+      return getPeonJobsWithOverlordNamespaceKeyLabels();
+    }
+    return getPeonJobsWithoutOverlordNamespaceKeyLabels();
+  }
+
+  private List<Job> getPeonJobsWithoutOverlordNamespaceKeyLabels()
+  {
     return clientApi.executeRequest(client -> client.batch()
                                                     .v1()
                                                     .jobs()
                                                     .inNamespace(namespace)
                                                     .withLabel(DruidK8sConstants.LABEL_KEY)
+                                                    .list()
+                                                    .getItems());
+  }
+
+  private List<Job> getPeonJobsWithOverlordNamespaceKeyLabels()
+  {
+    return clientApi.executeRequest(client -> client.batch()
+                                                    .v1()
+                                                    .jobs()
+                                                    .inNamespace(namespace)
+                                                    .withLabel(DruidK8sConstants.LABEL_KEY)
+                                                    .withLabel(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, overlordNamespace)
                                                     .list()
                                                     .getItems());
   }
