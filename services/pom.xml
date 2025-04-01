@@ -238,9 +238,14 @@
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi</artifactId>
         </dependency>
-<dependency>
+ <dependency>
     <groupId>org.graalvm.polyglot</groupId>
     <artifactId>polyglot</artifactId>
+     <version>${graaljs.version}</version>
+ </dependency>
+<dependency>
+    <groupId>org.graalvm.js</groupId>
+    <artifactId>js-scriptengine</artifactId>
     <version>${graaljs.version}</version>
 </dependency>
 <dependency>
