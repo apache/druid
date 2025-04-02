@@ -30,7 +30,7 @@ This tutorial demonstrates how to apply rollup during ingestion and highlights i
 
 ## Prerequisites
 
-Before proceeding, download Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+Before proceeding, download Druid as described in [Quickstart (local)](./index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
 You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first. 
 
@@ -52,7 +52,7 @@ The data contains packet and byte counts from a source IP address to a destinati
 {"timestamp":"2018-01-02T21:35:45Z","srcIP":"7.7.7.7", "dstIP":"8.8.8.8","packets":12,"bytes":2818}
 ```
 
-Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to ingest the data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
+Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md#extern-function) function to ingest the data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
 ```sql
 INSERT INTO "rollup_tutorial"

@@ -2789,7 +2789,8 @@ public class MSQReplaceTest extends MSQTestBase
         metricsSpec,
         null,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        null
     );
 
   }

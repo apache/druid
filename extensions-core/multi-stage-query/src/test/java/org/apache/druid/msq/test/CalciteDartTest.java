@@ -25,7 +25,6 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -74,7 +73,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @Disabled("this case currently stalls")
   public void testSelectFromFooLimit2()
   {
     testBuilder()
@@ -88,6 +86,18 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @Test
+  public void testCount()
+  {
+    testBuilder()
+        .sql("SELECT count(1) from foo")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {6L}
+            )
+        )
+        .run();
+  }
 
   @Test
   public void testSelectDim1FromFoo11()

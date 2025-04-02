@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.http.CatalogListenerResource;
 import org.apache.druid.catalog.storage.CatalogStorage;
 

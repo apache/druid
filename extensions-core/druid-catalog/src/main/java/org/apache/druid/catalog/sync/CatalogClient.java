@@ -26,7 +26,6 @@ import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogSource;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.annotations.Json;
@@ -41,7 +40,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;

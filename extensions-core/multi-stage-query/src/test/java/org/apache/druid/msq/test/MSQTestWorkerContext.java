@@ -151,7 +151,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public int maxConcurrentStages()
   {
-    return 1;
+    return 2;
   }
 
   @Override
