@@ -20,7 +20,7 @@ on:
 
 jobs:
   run-unit-tests:
-    name: "unit tests"
+    name: "unit tests(main)"
     strategy:
       fail-fast: false
       matrix:
@@ -30,10 +30,10 @@ jobs:
       script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
       jdk: 17
       artifact_prefix: "unit-test-reports"
-      key: ${{ matrix.pattern }}
+      key: "test-jdk17-[${{ matrix.pattern }}]"
 
   reporting-unit-test-failures:
-    name: "report-unit-test-failures"
+    name: "test-report"
     needs: run-unit-tests
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +56,7 @@ jobs:
           truncate_stack_traces: false
 
   reporting-jacoco-coverage-failures:
-    name: "report-jacoco-coverage-failures"
+    name: "coverage-jacoco"
     needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
     if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
@@ -77,4 +77,4 @@ jobs:
     with:
       script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
       jdk: ${{ matrix.jdk }}
-      key: "${{matrix.jdk}}:${{ matrix.pattern }}"
+      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
