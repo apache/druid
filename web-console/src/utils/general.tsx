@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Classes, Intent } from '@blueprintjs/core';
+import { Classes, Icon, Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
@@ -708,3 +708,7 @@ export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean):
   const e = eq || ((a, b) => a === b);
   return xs.find(_ => e(_, x)) ? xs.filter(d => !e(d, x)) : xs.concat([x]);
 }
+
+export const EXPERIMENTAL_ICON = (
+  <Icon icon={IconNames.LAB_TEST} intent={Intent.WARNING} data-tooltip="Experimental" />
+);

@@ -160,13 +160,20 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'turboLoadingNodes',
     type: 'string-array',
+    experimental: true,
     info: (
       <>
-        [Experimental] List of Historical servers to place in turbo loading mode. These servers use a larger
-        thread-pool to load segments faster but at the cost of query performance. For servers
-        specified in <Code>turboLoadingNodes</Code>,{' '}
-        <Code>druid.coordinator.loadqueuepeon.http.batchSize</Code> is ignored and the coordinator
-        uses the value of the respective <Code>numLoadingThreads</Code> instead. Please use this config with caution. All servers should eventually be removed from this list once the segment loading on the respective historicals is finished.
+        <p>
+          List of Historical servers to place in turbo loading mode. These servers use a larger
+          thread-pool to load segments faster but at the cost of query performance. For servers
+          specified in <Code>turboLoadingNodes</Code>,{' '}
+          <Code>druid.coordinator.loadqueuepeon.http.batchSize</Code> is ignored and the coordinator
+          uses the value of the respective <Code>numLoadingThreads</Code> instead.
+        </p>
+        <p>
+          Please use this config with caution. All servers should eventually be removed from this
+          list once the segment loading on the respective historicals is finished.
+        </p>
       </>
     ),
   },
