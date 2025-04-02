@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
+import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+spec:
+  containers:
+    - command:
+        - sleep
+        - "3600"
+      image: one
+      name: primary
+      startupProbe:
+        httpGet:
+          port: 8100
+          path: /status/health
+      livenessProbe:
+        httpGet:
+          port: 8100
+          path: /status/health
+      readinessProbe:
+        httpGet:
+          port: 8100
+          path: /status/health
+      env:
+        - name: "druid_monitoring_monitors"
+          value: '["org.apache.druid.java.util.metrics.JvmMonitor", "org.apache.druid.server.metrics.TaskCountStatsMonitor"]'

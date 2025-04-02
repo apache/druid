@@ -20,7 +20,9 @@
 package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -28,6 +30,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -53,6 +56,8 @@ public class CompactionState
   private final IndexSpec indexSpec;
   private final GranularitySpec granularitySpec;
   private final List<AggregatorFactory> metricsSpec;
+  @Nullable
+  private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
   public CompactionState(
@@ -61,7 +66,8 @@ public class CompactionState
       @JsonProperty("metricsSpec") List<AggregatorFactory> metricsSpec,
       @JsonProperty("transformSpec") CompactionTransformSpec transformSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
-      @JsonProperty("granularitySpec") GranularitySpec granularitySpec
+      @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -70,6 +76,7 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
+    this.projections = projections;
   }
 
   @JsonProperty
@@ -108,6 +115,14 @@ public class CompactionState
     return granularitySpec;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -123,13 +138,22 @@ public class CompactionState
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
-           Objects.equals(metricsSpec, that.metricsSpec);
+           Objects.equals(metricsSpec, that.metricsSpec) &&
+           Objects.equals(projections, that.projections);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionsSpec, dimensionsSpec, transformSpec, indexSpec, granularitySpec, metricsSpec);
+    return Objects.hash(
+        partitionsSpec,
+        dimensionsSpec,
+        transformSpec,
+        indexSpec,
+        granularitySpec,
+        metricsSpec,
+        projections
+    );
   }
 
   @Override
@@ -142,6 +166,7 @@ public class CompactionState
            ", indexSpec=" + indexSpec +
            ", granularitySpec=" + granularitySpec +
            ", metricsSpec=" + metricsSpec +
+           ", projections=" + projections +
            '}';
   }
 
@@ -151,7 +176,8 @@ public class CompactionState
       List<AggregatorFactory> metricsSpec,
       CompactionTransformSpec transformSpec,
       IndexSpec indexSpec,
-      GranularitySpec granularitySpec
+      GranularitySpec granularitySpec,
+      @Nullable List<AggregateProjectionSpec> projections
   )
   {
     CompactionState compactionState = new CompactionState(
@@ -160,7 +186,8 @@ public class CompactionState
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        projections
     );
 
     return segments -> segments

@@ -33,10 +33,11 @@ public class SqlQueryWithResults extends AbstractQueryWithResults<SqlQuery>
   @JsonCreator
   public SqlQueryWithResults(
       @JsonProperty("query") SqlQuery query,
+      @JsonProperty("description") String description,
       @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
   )
   {
-    super(query, expectedResults, Collections.emptyList());
+    super(query, description, expectedResults, Collections.emptyList());
   }
 
 }

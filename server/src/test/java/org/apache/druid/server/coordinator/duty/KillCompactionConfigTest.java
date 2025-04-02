@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -79,7 +80,8 @@ public class KillCompactionConfigTest
     coordinatorConfigManager = new CoordinatorConfigManager(
         mockJacksonConfigManager,
         mockConnector,
-        mockConnectorConfig
+        mockConnectorConfig,
+        null
     );
   }
 
@@ -146,37 +148,27 @@ public class KillCompactionConfigTest
   {
     String inactiveDatasourceName = "inactive_datasource";
     String activeDatasourceName = "active_datasource";
-    DataSourceCompactionConfig inactiveDatasourceConfig = new DataSourceCompactionConfig(
-        inactiveDatasourceName,
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    DataSourceCompactionConfig inactiveDatasourceConfig =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(inactiveDatasourceName)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period(3600))
+                                              .withGranularitySpec(
+                                            new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                                        )
+                                              .withTaskContext(ImmutableMap.of("key", "val"))
+                                              .build();
 
-    DataSourceCompactionConfig activeDatasourceConfig = new DataSourceCompactionConfig(
-        activeDatasourceName,
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    DataSourceCompactionConfig activeDatasourceConfig
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(activeDatasourceName)
+                                                .withInputSegmentSizeBytes(500L)
+                                                .withSkipOffsetFromLatest(new Period(3600))
+                                                .withGranularitySpec(
+                                              new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                                          )
+                                                .withTaskContext(ImmutableMap.of("key", "val"))
+                                                .build();
     DruidCompactionConfig originalCurrentConfig = DruidCompactionConfig.empty().withDatasourceConfigs(
             ImmutableList.of(inactiveDatasourceConfig, activeDatasourceConfig)
     );
@@ -247,21 +239,16 @@ public class KillCompactionConfigTest
   public void testRunRetryForRetryableException()
   {
     String inactiveDatasourceName = "inactive_datasource";
-    DataSourceCompactionConfig inactiveDatasourceConfig = new DataSourceCompactionConfig(
-        inactiveDatasourceName,
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    DataSourceCompactionConfig inactiveDatasourceConfig =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(inactiveDatasourceName)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period(3600))
+                                              .withGranularitySpec(
+                                            new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                                        )
+                                              .withTaskContext(ImmutableMap.of("key", "val"))
+                                              .build();
 
     DruidCompactionConfig originalCurrentConfig = DruidCompactionConfig.empty().withDatasourceConfigs(
         ImmutableList.of(inactiveDatasourceConfig)
