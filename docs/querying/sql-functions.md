@@ -1333,9 +1333,10 @@ Computes a [Bloom filter](../development/extensions-core/bloom-filter.md) from v
   `numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
-The following example returns a Base64-encoded Bloom filter representing the set of devices ,`agent_category`, used in Albania:
+The following example returns a Base64-encoded Bloom filter representing the set of devices, `agent_category`, used in Albania:
 
 ```sql
 SELECT "country",
@@ -1362,7 +1363,8 @@ Returns true if an expression is contained in a Base64-encoded [Bloom filter](..
 * **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `true` when a device type, `agent_category`, exists in the Bloom filter representing the set of devices used in Albania:
 
@@ -1912,7 +1914,8 @@ To enable support for a complex data type, load the [corresponding extension](..
 * **Syntax:** `DECODE_BASE64_COMPLEX(dataType, expr)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns a Theta sketch complex type from a Base64-encoded string representation of the sketch:
 
