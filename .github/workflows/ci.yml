@@ -65,9 +65,9 @@ jobs:
       artifacts_to_download: "unit-test-reports-*"
       key: "jacoco-coverage-report"
 
-  run-unit-tests:
+  run-unit-tests-all-jdk:
     needs: reporting-unit-test-failures
-    name: "unit tests"
+    name: "unit tests(all jdk)"
     if: !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' )
     strategy:
       matrix:
@@ -77,5 +77,4 @@ jobs:
     with:
       script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
       jdk: ${{ matrix.jdk }}
-      artifact_prefix: "unit-test-reports"
-      key: ${{ matrix.pattern }}
+      key: "${{matrix.jdk}}:${{ matrix.pattern }}"
