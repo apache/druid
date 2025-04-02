@@ -17,11 +17,6 @@ name: "CI"
 
 on:
   workflow_call:
-    inputs:
-      jdk:
-        required: false
-        type: string
-        default: '17'
 
 jobs:
   run-unit-tests:
@@ -29,13 +24,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        Dtest: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
+        pattern: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.Dtest }}' -Dmaven.test.failure.ignore=true
-      jdk: ${{ inputs.jdk }}
+      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      jdk: 17
       artifact_prefix: "unit-test-reports"
-      key: ${{ matrix.Dtest }}
+      key: ${{ matrix.pattern }}
 
   reporting-unit-test-failures:
     name: "report-unit-test-failures"
@@ -64,8 +59,23 @@ jobs:
     name: "report-jacoco-coverage-failures"
     needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
-    if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
+    if: !cancelled() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip')
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"
       key: "jacoco-coverage-report"
+
+  run-unit-tests:
+    needs: reporting-unit-test-failures
+    name: "unit tests"
+    if: !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' )
+    strategy:
+      matrix:
+        pattern: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
+        jdk: [ "17", "21.0.4" ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
+      jdk: ${{ matrix.jdk }}
+      artifact_prefix: "unit-test-reports"
+      key: ${{ matrix.pattern }}
