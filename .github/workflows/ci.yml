@@ -70,6 +70,7 @@ jobs:
     name: "unit tests(all jdk)"
     if: ${{ !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' ) }}
     strategy:
+      fail-fast: false
       matrix:
         pattern: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
         jdk: [ "11", "21.0.4" ]
