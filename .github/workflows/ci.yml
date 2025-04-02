@@ -63,7 +63,7 @@ jobs:
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"
-      key: "jacoco-coverage-report"
+      key: "coverage-jacoco"
 
   run-unit-tests-all-jdk:
     needs: reporting-unit-test-failures
@@ -72,7 +72,7 @@ jobs:
     strategy:
       matrix:
         pattern: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
-        jdk: [ "17", "21.0.4" ]
+        jdk: [ "11", "21.0.4" ]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
