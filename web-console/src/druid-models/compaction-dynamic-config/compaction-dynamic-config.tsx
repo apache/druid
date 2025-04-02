@@ -70,11 +70,13 @@ export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] 
   },
   {
     name: 'compactionPolicy.type',
+    label: 'Compaction search policy',
     type: 'string',
     suggestions: ['newestSegmentFirst'],
     info: (
       <>
-        Currently, the only supported policy is <Code>newestSegmentFirst</Code>, which prioritizes segments with more recent intervals for compaction.
+        Currently, the only supported policy is <Code>newestSegmentFirst</Code>, which prioritizes
+        segments with more recent intervals for compaction.
       </>
     ),
   },
