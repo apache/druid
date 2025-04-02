@@ -61,7 +61,7 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
     
     try {
       //noinspection unchecked
-      queryClient.query(getQueryURL(broker), query);
+      queryClient.query(getQueryURL(broker), query, "Is datasource loaded");
       return true;
     }
     catch (Exception e) {
@@ -84,7 +84,7 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
 
     try {
       //noinspection unchecked
-      queryClient.query(getQueryURL(broker), query);
+      queryClient.query(getQueryURL(broker), query, "Is time column present");
       return true;
     }
     catch (Exception e) {
