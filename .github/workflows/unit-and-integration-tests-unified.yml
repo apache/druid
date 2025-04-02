@@ -192,13 +192,13 @@ jobs:
         run: echo "::set-output name=isApproved::true"
 
   unit-tests-unapproved:
-    name: "unit tests - PR unapproved - (jdk17)"
+    name: "unit tests - PR unapproved"
     uses: ./.github/workflows/ci.yml
     needs: [check-approval]
     if: ${{ needs.check-approval.outputs.approved != 'true' }}
 
   unit-tests-approved:
-    name: "unit tests - PR approved - (jdk17)"
+    name: "unit tests - PR approved"
     uses: ./.github/workflows/ci.yml
     needs: [check-approval]
     if: ${{ needs.check-approval.outputs.approved == 'true' }}
