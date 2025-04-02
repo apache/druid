@@ -19,12 +19,29 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import com.google.gson.internal.JavaVersion;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.sql.hook.DruidHook;
 import org.junit.Test;
 
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 public class DruidHookTest
 {
+  @Test
+  public void failOnJdk11()
+  {
+    int v = JavaVersion.getMajorJavaVersion();
+    assertNotEquals(11, v);
+  }
+
+  @Test
+  public void failOnJdk21()
+  {
+    int v = JavaVersion.getMajorJavaVersion();
+    assertNotEquals(21, v);
+  }
+
   @Test
   public void testHookKeyEquals()
   {
