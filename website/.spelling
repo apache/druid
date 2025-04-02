@@ -18,6 +18,8 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+BrowserOnly
+docusaurus
 1M
 100MiB
 32-bit
