@@ -59,7 +59,7 @@ jobs:
     name: "report-jacoco-coverage-failures"
     needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
-    if: !cancelled() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip')
+    if: ${{ !cancelled() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"
@@ -68,7 +68,7 @@ jobs:
   run-unit-tests-all-jdk:
     needs: reporting-unit-test-failures
     name: "unit tests(all jdk)"
-    if: !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' )
+    if: ${{ !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' ) }}
     strategy:
       matrix:
         pattern: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
