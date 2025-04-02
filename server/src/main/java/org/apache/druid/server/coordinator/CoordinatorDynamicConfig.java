@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.http.SegmentLoadingMode;
@@ -422,7 +423,10 @@ public class CoordinatorDynamicConfig
    */
   public static int getDefaultBalancerComputeThreads()
   {
-    return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+    return Math.min(
+        Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2),
+        SegmentToMoveCalculator.MAX_BALANCER_THREADS
+    );
   }
 
   private static class Defaults

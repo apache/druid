@@ -160,7 +160,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16.17.0
+          node-version: 18.0.0
 
       - name: docs
         run: |

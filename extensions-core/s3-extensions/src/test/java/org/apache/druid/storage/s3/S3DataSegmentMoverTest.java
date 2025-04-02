@@ -201,7 +201,7 @@ public class S3DataSegmentMoverTest
 
     private MockAmazonS3Client()
     {
-      super(new AmazonS3Client(), new NoopServerSideEncryption());
+      super(new AmazonS3Client(), new NoopServerSideEncryption(), new S3TransferConfig());
     }
 
     public boolean didMove()

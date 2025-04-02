@@ -19,7 +19,7 @@
 
 # Druid doc builder
 
-This website was created with [Docusaurus](https://docusaurus.io/).
+This website was created with [Docusaurus 3](https://docusaurus.io/).
 
 To view documentation run:
 
@@ -49,9 +49,9 @@ as part of the the above `npm` commands.
 ## Variables
 
 Documentation pages can refer to a number of special variables using the
-`{{var}}` syntax:
+`\{\{var}}` syntax:
 
-* `DRUIDVERSION` - the version of Druid in which the page appears. Allows
+* `\{\{DRUIDVERSION}}` - the version of Druid in which the page appears. Allows
 creating links to files of the same version on GitHub.
 
 The variables are not replaced when running the web site locally using the
