@@ -34,9 +34,18 @@ export const COMPACTION_DYNAMIC_CONFIG_DEFAULT_MAX = 2147483647;
 export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] = [
   {
     name: 'useSupervisors',
+    label: 'Use supervisors (experimental)',
     type: 'boolean',
     defaultValue: false,
-    info: 'Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.',
+    info: (
+      <>
+        <p>
+          Whether compaction should be run on Overlord using supervisors instead of Coordinator
+          duties.
+        </p>
+        <p>Supervisor based compaction is an experimental feature.</p>
+      </>
+    ),
   },
   {
     name: 'engine',

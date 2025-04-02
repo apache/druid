@@ -31,7 +31,7 @@ import {
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { getDruidErrorMessage } from '../../utils';
+import { getDruidErrorMessage, wait } from '../../utils';
 
 export interface CompactionDynamicConfigDialogProps {
   onClose(): void;
@@ -51,7 +51,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
     initQuery: null,
     processQuery: async (_, cancelToken) => {
       try {
-        const configResp = await Api.instance.get('/druid/v1/indexer/compaction/config/cluster', {
+        const configResp = await Api.instance.get('/druid/indexer/v1/compaction/config/cluster', {
           cancelToken,
         });
         setDynamicConfig(configResp.data || {});
@@ -70,20 +70,28 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
   async function saveConfig() {
     if (!dynamicConfig) return;
     try {
-      await Api.instance.post('/druid/v1/indexer/compaction/config/cluster', dynamicConfig);
+      await Api.instance.post('/druid/indexer/v1/compaction/config/cluster', dynamicConfig);
     } catch (e) {
       AppToaster.show({
         icon: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not save compaction dynamic config: ${getDruidErrorMessage(e)}`,
       });
+      return;
     }
 
     AppToaster.show({
       message: 'Saved compaction dynamic config',
       intent: Intent.SUCCESS,
     });
+
     onClose();
+
+    // Reload the page also because the datasources page pulls from different APIs depending on the setting of supervisor based compaction
+    if (location.hash.includes('#datasources')) {
+      await wait(1000); // Wait for a second to give the user time to read the toast
+      location.reload();
+    }
   }
 
   return (
