@@ -19,17 +19,17 @@ public class HandleClones implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
+    final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
     // TODO: clean up
-    Map<String, ServerHolder> historicalMap = params.getDruidCluster()
-                                                    .getHistoricals()
-                                                    .values()
-                                                    .stream()
-                                                    .flatMap(Collection::stream)
-                                                    .collect(Collectors.toMap(
-                                                        serverHolder -> serverHolder.getServer().getHost(),
-                                                        serverHolder -> serverHolder
-                                                    ));
+    final Map<String, ServerHolder> historicalMap = params.getDruidCluster()
+                                                          .getHistoricals()
+                                                          .values()
+                                                          .stream()
+                                                          .flatMap(Collection::stream)
+                                                          .collect(Collectors.toMap(
+                                                              serverHolder -> serverHolder.getServer().getHost(),
+                                                              serverHolder -> serverHolder
+                                                          ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       String sourceHistoricalName = entry.getKey();
@@ -38,14 +38,14 @@ public class HandleClones implements CoordinatorDuty
       String targetHistorical = entry.getValue();
       ServerHolder targetServer = historicalMap.get(targetHistorical);
 
-      for (DataSegment segment : sourceServer.getServedSegments()) {
+      for (DataSegment segment : sourceServer.getProjectedSegments().getSegments()) {
         if (!targetServer.getServedSegments().contains(segment)) {
           log.info("Cloning load of [%s] from [%s] to [%s]", segment, sourceServer, targetServer);
           targetServer.getPeon().loadSegment(segment, SegmentAction.LOAD, null);
         }
       }
 
-      for (DataSegment segment : targetServer.getServedSegments()) {
+      for (DataSegment segment : targetServer.getProjectedSegments().getSegments()) {
         if (!sourceServer.getServedSegments().contains(segment)) {
           log.info("Cloning drop of [%s] from [%s] to [%s]", segment, sourceServer, targetServer);
           targetServer.getPeon().dropSegment(segment, null);

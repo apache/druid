@@ -26,7 +26,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Maintains a count of segments for each datasource and interval.
@@ -38,17 +40,20 @@ public class SegmentCountsPerInterval
   private final Map<String, Object2IntMap<Interval>> datasourceIntervalToSegmentCount = new HashMap<>();
   private final Object2IntMap<Interval> intervalToTotalSegmentCount = new Object2IntOpenHashMap<>();
   private final Object2IntMap<String> datasourceToTotalSegmentCount = new Object2IntOpenHashMap<>();
+  private final Set<DataSegment> segments = new HashSet<>();
 
   public void addSegment(DataSegment segment)
   {
     updateCountInInterval(segment, 1);
     totalSegmentBytes += segment.getSize();
+    segments.add(segment);
   }
 
   public void removeSegment(DataSegment segment)
   {
     updateCountInInterval(segment, -1);
     totalSegmentBytes -= segment.getSize();
+    segments.remove(segment);
   }
 
   public int getTotalSegmentCount()
@@ -59,6 +64,11 @@ public class SegmentCountsPerInterval
   public long getTotalSegmentBytes()
   {
     return totalSegmentBytes;
+  }
+
+  public Set<DataSegment> getSegments()
+  {
+    return segments;
   }
 
   public Object2IntMap<String> getDatasourceToTotalSegmentCount()
