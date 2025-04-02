@@ -38,9 +38,10 @@ import java.util.Properties;
 public class PolicyModuleTest
 {
   @Test
-  public void testDefaultNoopPolicyEnforcer()
+  public void testConfigNoopPolicyEnforcer()
   {
     Properties properties = new Properties();
+    properties.setProperty("druid.policy.enforcer.type", "none");
     PolicyEnforcer policyEnforcer = Guice.createInjector(
         binder -> binder.bind(Properties.class).toInstance(properties),
         new DruidGuiceExtensions(),

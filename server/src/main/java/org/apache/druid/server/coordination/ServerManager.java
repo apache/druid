@@ -26,6 +26,7 @@ import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,7 +54,6 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
@@ -195,8 +195,10 @@ public class ServerManager implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    if (!(theQuery instanceof SegmentMetadataQuery) && !policyEnforcer.validate(dataSourceFromQuery)) {
-      throw new ISE("Failed security validation with dataSource [%s]", dataSourceFromQuery);
+    if (!dataSourceFromQuery.validate(policyEnforcer)) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build("Failed security validation with dataSource [%s]", dataSourceFromQuery);
     }
 
     if (maybeTimeline.isPresent()) {

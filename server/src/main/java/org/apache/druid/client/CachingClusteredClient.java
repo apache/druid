@@ -39,11 +39,11 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -73,7 +73,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.QueryResource;
@@ -206,8 +205,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
   )
   {
     Query<T> query = queryPlus.getQuery();
-    if (!(query instanceof SegmentMetadataQuery) && !policyEnforcer.validate(query.getDataSource())) {
-      throw new ISE("Failed security validation with dataSource [%s]", query.getDataSource());
+    if (!query.getDataSource().validate(policyEnforcer)) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build("Failed security validation with dataSource [%s]", query.getDataSource());
     }
 
     final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext)

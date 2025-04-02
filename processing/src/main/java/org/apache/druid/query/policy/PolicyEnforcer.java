@@ -26,8 +26,13 @@ import org.apache.druid.query.DataSource;
 
 /**
  * A mechanism for enforcing policies on data sources in Druid queries.
+ * <p>
+ * Note: The {@code PolicyEnforcer} is intended to serve as a sanity checker and not as a primary authorization mechanism.
+ * It should not be used to implement security rules. Instead, it acts as a last line of defense to verify that
+ * security policies have been implemented correctly and to prevent incorrect policy usage.
+ * </p>
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopPolicyEnforcer.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(value = NoopPolicyEnforcer.class, name = "none"),
     @JsonSubTypes.Type(value = RestrictAllTablesPolicyEnforcer.class, name = "restrictAllTables"),
@@ -37,7 +42,10 @@ public interface PolicyEnforcer
 {
 
   /**
-   * Validate a data source against the policy enforcer.
+   * Validate a {@link DataSource} against the policy enforcer. The data source must be authorized and include an
+   * attached {@link Policy}, if applicable. The enforcer will validate it before executing any queries on the data
+   * source.
+   *
    * @param ds data source to validate
    * @return true if the data source is valid according to the policy enforcer, false otherwise
    */

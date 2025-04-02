@@ -33,8 +33,8 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -46,7 +46,6 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -113,20 +112,21 @@ public class CachingClusteredClientFunctionalityTest
                                                   .aggregators(ImmutableList.of(new CountAggregatorFactory("rows")))
                                                   .context(ImmutableMap.of("uncoveredIntervalsLimit", 3))
                                                   .build();
-    final SegmentMetadataQuery segmentMetadataQuery = Druids.newSegmentMetadataQueryBuilder()
-                                                            .dataSource("test")
-                                                            .intervals("2015-01-02/2015-01-03")
-                                                            .build();
+    // query failed, expecting a restriction on dataSource
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> runQuery(client, timeseriesQuery, ResponseContext.createEmpty())
+    );
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assert.assertEquals("Failed security validation with dataSource [test]", e.getMessage());
+
     final RestrictedDataSource restricted = RestrictedDataSource.create(
         TableDataSource.create("test"),
         NoRestrictionPolicy.instance()
     );
-    // query failed, expecting a restriction on dataSource
-    ISE e = Assert.assertThrows(ISE.class, () -> runQuery(client, timeseriesQuery, ResponseContext.createEmpty()));
-    Assert.assertEquals("Failed security validation with dataSource [test]", e.getMessage());
-    //
-    runQuery(client, segmentMetadataQuery, ResponseContext.createEmpty());
-    runQuery(client, timeseriesQuery.withDataSource(restricted), ResponseContext.createEmpty());
+    final TimeseriesQuery timeseriesQueryWithRestriction = (TimeseriesQuery) timeseriesQuery.withDataSource(restricted);
+    runQuery(client, timeseriesQueryWithRestriction, ResponseContext.createEmpty());
   }
 
   @Test

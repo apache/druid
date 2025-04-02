@@ -40,7 +40,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -77,7 +76,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -607,8 +605,6 @@ public class ServerManagerTest
   {
     conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
         SearchQuery.class,
-        factory,
-        SegmentMetadataQuery.class,
         factory
     ));
     policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of("NoRestrictionPolicy"));
@@ -619,18 +615,15 @@ public class ServerManagerTest
         TableDataSource.create("test"),
         NoRestrictionPolicy.instance()
     ), interval, Granularities.ALL);
-    SegmentMetadataQuery segmentMetadataQuery = Druids.newSegmentMetadataQueryBuilder()
-                                                      .dataSource("test")
-                                                      .intervals(interval.toString())
-                                                      .build();
 
-    ISE e = Assert.assertThrows(
-        ISE.class,
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> serverManager.getQueryRunnerForIntervals(query, ImmutableList.of(interval))
     );
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
     Assert.assertEquals("Failed security validation with dataSource [test]", e.getMessage());
     Assert.assertNotNull(serverManager.getQueryRunnerForIntervals(queryOnRestricted, ImmutableList.of(interval)));
-    Assert.assertNotNull(serverManager.getQueryRunnerForIntervals(segmentMetadataQuery, ImmutableList.of(interval)));
   }
 
   private void waitForTestVerificationAndCleanup(Future future)
