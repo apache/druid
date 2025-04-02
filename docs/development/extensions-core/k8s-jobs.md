@@ -752,7 +752,7 @@ When we have task pods running in multiple namespaces, it will be difficult to t
 After configuration, you can witness the change from `coordinatorissuedcompactdataso-0e74d5132781cc950eecf04--1-vbx6t` to `yourtaskprefix-0e74d5132781cc950eecf04--1-vbx6t` by either doing `kubectl get pods` or by viewing the "Location" column under the web console.
 
 When configuring the `druid.indexer.runner.k8sTaskPodNamePrefix`, you should note that:
-- The prefix will cut off at 30 characters, as the task pod names must respect a 63-character limit in Kubernetes.
+- The prefix will cut off at 30 characters, as the task pod names must respect a character limit of 63 in Kubernetes.
 - Special characters `: - . _` will be ignored.
 - The prefix will be converted to lowercase.
 
