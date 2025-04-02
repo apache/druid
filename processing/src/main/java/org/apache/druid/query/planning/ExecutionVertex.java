@@ -401,8 +401,8 @@ public class ExecutionVertex
   private DataSource getTopDataSource()
   {
     Query<?> q = topQuery;
-    while(q.mayCollapseQueryDataSource()) {
-      q = ((QueryDataSource)q.getDataSource()).getQuery();
+    while (q.mayCollapseQueryDataSource()) {
+      q = ((QueryDataSource) q.getDataSource()).getQuery();
     }
     return q.getDataSource();
   }
