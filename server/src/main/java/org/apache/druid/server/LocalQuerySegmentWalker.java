@@ -28,7 +28,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -96,13 +95,6 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    if (dataSourceFromQuery instanceof QueryDataSource) {
-      // is this a possible bug?  dataSourceFromQuery is QueryDataSource ; query is GBY with canPerformSubquery
-      // FIXME: let's not fix this
-      // throw DruidException.defensive("This might not work correctly");
-    }
-
-    // segmentMapFn will ignore all DS maps as QDS will return identity
     final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
         .createSegmentMapFunction(query);
 

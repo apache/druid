@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.SegmentReference;
@@ -109,7 +110,7 @@ public class QueryDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    return Function.identity();
+    throw DruidException.defensive("Creating a segmentMapFunction for a QueryDataSource is not supported [%s].", query);
   }
 
   @Override
