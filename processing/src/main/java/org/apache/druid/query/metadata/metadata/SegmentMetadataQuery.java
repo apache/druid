@@ -30,10 +30,13 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
@@ -74,7 +77,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     @Override
     public byte[] getCacheKey()
     {
-      return new byte[] {(byte) this.ordinal()};
+      return new byte[]{(byte) this.ordinal()};
     }
   }
 
@@ -107,7 +110,13 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
     this.analysisTypes = analysisTypes;
-    if (!(dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource)) {
+    if (dataSource instanceof RestrictedDataSource) {
+      Policy policy = ((RestrictedDataSource) dataSource).getPolicy();
+      // Only no-restriction policy is allowed for segment metadata queries.
+      if (!(policy instanceof NoRestrictionPolicy)) {
+        throw InvalidInput.exception("DataSource[%s] is restricted with policy[%s].", dataSource, policy);
+      }
+    } else if (!(dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource)) {
       throw InvalidInput.exception("Invalid dataSource type [%s]. "
                                    + "SegmentMetadataQuery only supports table or union datasources.", dataSource);
     }
@@ -116,9 +125,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     // of truth for consumers of this class variable. The defaults are to preserve backwards compatibility.
     // In a future release, 28.0+, we can remove the deprecated property lenientAggregatorMerge.
     if (lenientAggregatorMerge != null && aggregatorMergeStrategy != null) {
-      throw InvalidInput.exception("Both lenientAggregatorMerge [%s] and aggregatorMergeStrategy [%s] parameters cannot be set."
-                                   + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.",
-                                   lenientAggregatorMerge, aggregatorMergeStrategy);
+      throw InvalidInput.exception(
+          "Both lenientAggregatorMerge [%s] and aggregatorMergeStrategy [%s] parameters cannot be set. Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.",
+          lenientAggregatorMerge,
+          aggregatorMergeStrategy
+      );
     }
     if (lenientAggregatorMerge != null) {
       this.aggregatorMergeStrategy = lenientAggregatorMerge
