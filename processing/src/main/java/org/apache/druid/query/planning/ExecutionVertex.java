@@ -33,6 +33,7 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import java.util.ArrayList;
@@ -304,6 +305,15 @@ public class ExecutionVertex
     return hasJoin;
   }
 
+  /**
+   * Answers if the given column is coming from the base datasource or not.
+   *
+   * Retained for backward compatibility for now. The approach taken here relies
+   * on join prefixes - which might classify the output of a
+   * {@link VirtualColumn} to be coming from the base datasource. <br/>
+   * An alternate approach would be to analyze these during the segmentmap
+   * function creation.
+   */
   public boolean isBaseColumn(String columnName)
   {
     for (String prefix : joinPrefixes) {
