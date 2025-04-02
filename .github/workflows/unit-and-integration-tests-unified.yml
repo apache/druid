@@ -196,16 +196,12 @@ jobs:
     uses: ./.github/workflows/ci.yml
     needs: [check-approval]
     if: ${{ needs.check-approval.outputs.approved != 'true' }}
-    with:
-      jdk: 17
 
   unit-tests-approved:
     name: "unit tests - PR approved - (jdk17)"
     uses: ./.github/workflows/ci.yml
     needs: [check-approval]
     if: ${{ needs.check-approval.outputs.approved == 'true' }}
-    with:
-      jdk: 17
 
   standard-its:
     needs: [build, unit-tests-unapproved, check-approval]
