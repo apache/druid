@@ -889,7 +889,7 @@ public class DruidQuery
    */
   private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {
-    ExecutionVertex ev = ExecutionVertex.ofIllegal(dataSource);
+    ExecutionVertex ev = ExecutionVertex.ofDataSource(dataSource);
     return ev.isTableBased();
   }
 
@@ -925,7 +925,7 @@ public class DruidQuery
       return true;
     }
 
-    ExecutionVertex ev = ExecutionVertex.ofIllegal(dataSource);
+    ExecutionVertex ev = ExecutionVertex.ofDataSource(dataSource);
     if (ev.isProcessable() && ev.isTableBased()) {
       // Always OK: queries on concrete tables (regular Druid datasources) use segment-based cursors
       // (IncrementalIndex or QueryableIndex). These clip query interval to data interval, making wide query

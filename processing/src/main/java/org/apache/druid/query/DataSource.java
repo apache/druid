@@ -26,6 +26,7 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
+
 import javax.annotation.Nullable;
 
 import java.util.List;

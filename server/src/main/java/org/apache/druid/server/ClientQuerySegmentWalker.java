@@ -304,7 +304,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
-    // FIXME: ideally this should be: clusterClient.couldExecute(ev)?
     return ev.canRunQueryUsingLocalWalker();
   }
 
@@ -315,7 +314,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
-    // FIXME: ideally this should be: clusterClient.couldExecute(ev)?
     return ev.canRunQueryUsingClusterWalker();
   }
 

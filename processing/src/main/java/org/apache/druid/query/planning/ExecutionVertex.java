@@ -39,22 +39,52 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents the native engine's execution vertex.
+ * Represents the native engine's execution vertex - the execution unit it may execute in one go.
  *
+ * This minimal Vertex a single {@link Query} with an input {@link DataSource}.
  *
- * Multiple queries might be executed in one stage: <br/>
- * The GroupBy query could be collapsed at exection time).
+ * However there might be more complicated cases.
  *
- * Dag of datasources: <br/>
- * an execution may process an entire dag of datasource in some cases
- * (joindatasource) ; or collapse some into the execution (filter)
+ * Multiple queries could be executed in one stage: <br/>
+ * the GroupBy query could be collapsed at execution time.
+ *
+ * For example: <br/>
+ * SELECT COUNT(*) FROM (SELECT string_first_added FROM druid.wikipedia_first_last GROUP BY 1)
+ *
+ * Will have 2 groupby queries; but they will be executed together.
+ *
+ * There could be a DAG of datasources: <br/>
+ * an execution may process a complex dag of datasources when
+ * {@link JoinDataSource}-es are present.
+ *
+ * For example: <br/>
+ * SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)
+ * inserts an UnnestDataSource into the query plan to execute the unnest operation.
+ *
+ * In case of a set of join-s:
+ * SELECT t1.dim1 FROM foo t1 JOIN foo t2 ON (t1.dim1=t2.dim2) JOIN foo t3 ON (t1.dim1=t3.dim2)
+ * There will be 2 JoinDataSource objects.
+ * <pre>
+ * Query
+ *   JoinDataSource       - foo t3
+ *     JoinDataSource     - foo t2
+ *       TableDataSource  - foo t1
+ * <pre>
+ * Which will be executed together - as the JoinDataSource-es are applied via segment mapping.
+ *
+ * Every vertex has a base datasource - which could benefit from the advanced filtering techniques the cursors / walkers may provide.
  */
 public class ExecutionVertex
 {
+  /** The top level query this vertex is describing. */
   protected final Query<?> topQuery;
+  /** The base datasource which will be read during the execution.  */
   protected final DataSource baseDataSource;
+  /** The effective {@link QuerySegmentSpec} of this vertex - this might be more restrictive that what the {@link Query} has.*/
   protected final QuerySegmentSpec querySegmentSpec;
+  /** Retained for compatibility with earlier implementation. See {@link #isBaseColumn(String)} */
   protected final List<String> joinPrefixes;
+  /** Retained for compatibility with earlier implementation. */
   protected boolean allRightsAreGlobal;
 
   private ExecutionVertex(ExecutionVertexExplorer explorer)
@@ -66,22 +96,37 @@ public class ExecutionVertex
     this.allRightsAreGlobal = explorer.allRightsAreGlobal;
   }
 
+  /**
+   * Identifies the vertex for the given query.
+   */
   public static ExecutionVertex of(Query<?> query)
   {
     ExecutionVertexExplorer explorer = new ExecutionVertexExplorer(query);
     return new ExecutionVertex(explorer);
   }
 
+  /**
+   * The base datasource input of this vertex.
+   */
   public DataSource getBaseDataSource()
   {
     return baseDataSource;
   }
 
+  /**
+   * Decides if this vertex is directly executable.
+   *
+   * A vertex is directly executable if it can be executed without any further processing.
+   * See also: {@link DataSource#isProcessable()}.
+   */
   public boolean isProcessable()
   {
     return getBaseDataSource().isProcessable() && allRightsAreGlobal;
   }
 
+  /**
+   * The vertex directly reads real tables.
+   */
   public boolean isTableBased()
   {
     return baseDataSource instanceof TableDataSource
@@ -91,6 +136,9 @@ public class ExecutionVertex
                 .allMatch(ds -> ds instanceof TableDataSource));
   }
 
+  /**
+   * Explores the vertex and collects all details.
+   */
   static class ExecutionVertexExplorer extends ExecutionVertexShuttle
   {
     boolean discoveringBase = true;
@@ -182,7 +230,13 @@ public class ExecutionVertex
     }
   }
 
-  public static ExecutionVertex ofIllegal(DataSource dataSource)
+  /**
+   * Builds the {@link ExecutionVertex} around a {@link DataSource}.
+   *
+   * Kept for backward compatibility reasons - incorporating
+   * {@link ExecutionVertex} into Filtration will make this obsolete.
+   */
+  public static ExecutionVertex ofDataSource(DataSource dataSource)
   {
     ScanQuery query = Druids
         .newScanQueryBuilder()
@@ -225,20 +279,29 @@ public class ExecutionVertex
     return querySegmentSpec;
   }
 
+  /**
+   * Decides if the query can be executed using the cluster walker.
+   */
   public boolean canRunQueryUsingClusterWalker()
   {
     return isProcessable() && isTableBased();
   }
 
+  /**
+   * Decides if the query can be executed using the local walker.
+   */
   public boolean canRunQueryUsingLocalWalker()
   {
     return isProcessable() && !isTableBased();
   }
 
-  public boolean isJoin()
+  /**
+   * Decides if the execution time segment mapping function will be expensive.
+   */
+  public boolean isSegmentMapFunctionExpensive()
   {
-    return !joinPrefixes.isEmpty();
-
+    boolean hasJoin = !joinPrefixes.isEmpty();
+    return hasJoin;
   }
 
   public boolean isBaseColumn(String columnName)
@@ -251,11 +314,15 @@ public class ExecutionVertex
     return true;
   }
 
+  @SuppressWarnings("rawtypes")
   public Query buildQueryWithBaseDataSource(DataSource newBaseDataSource)
   {
     return new ReplaceBaseDataSource(baseDataSource, newBaseDataSource).traverse(topQuery);
   }
 
+  /**
+   * Replaces the base datasource of the given query.
+   */
   static class ReplaceBaseDataSource extends ExecutionVertexShuttle
   {
     private DataSource newBaseDataSource;

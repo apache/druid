@@ -102,7 +102,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
       // throw DruidException.defensive("This might not work correctly");
     }
 
-    // segmentMapFn will ignore all DS maps ass QDS will return identity
+    // segmentMapFn will ignore all DS maps as QDS will return identity
     final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
         .createSegmentMapFunction(query);
 

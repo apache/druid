@@ -340,7 +340,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
         );
 
     if (broadcastInputs.isEmpty()) {
-      if (ExecutionVertex.of(query).isJoin()) {
+      if (ExecutionVertex.of(query).isSegmentMapFunctionExpensive()) {
         // Joins may require significant computation to compute the segmentMapFn. Offload it to a processor.
         return new SimpleSegmentMapFnProcessor(query);
       } else {

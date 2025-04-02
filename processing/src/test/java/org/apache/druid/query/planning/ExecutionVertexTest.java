@@ -80,7 +80,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -94,7 +94,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -115,7 +115,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -130,7 +130,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(unionDataSource, ev.getBaseDataSource());
     Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -145,7 +145,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -161,7 +161,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
     Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -175,7 +175,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(LOOKUP_LOOKYLOO, ev.getBaseDataSource());
     Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -189,7 +189,7 @@ public class ExecutionVertexTest
     Assert.assertFalse(ev.isTableBased());
     Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -203,7 +203,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(INLINE, ev.getBaseDataSource());
     Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
   }
 
@@ -248,7 +248,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
     Assert.assertFalse(ev.isBaseColumn("2.foo"));
@@ -294,7 +294,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
     Assert.assertFalse(ev.isBaseColumn("2.foo"));
@@ -345,7 +345,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertTrue(ev.isBaseColumn("1.foo"));
     Assert.assertTrue(ev.isBaseColumn("2.foo"));
@@ -392,7 +392,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertTrue(ev.isBaseColumn("1.foo"));
     Assert.assertTrue(ev.isBaseColumn("2.foo"));
@@ -424,7 +424,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
   }
@@ -455,7 +455,7 @@ public class ExecutionVertexTest
         ),
         analysis1.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
   }
@@ -483,7 +483,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
     Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertTrue(ev.isBaseColumn("1.foo"));
   }
@@ -524,7 +524,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
   }
@@ -548,7 +548,7 @@ public class ExecutionVertexTest
     Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
     Assert.assertThrows(DruidException.class, () -> ev.getBaseTableDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
-    Assert.assertFalse(ev.isJoin());
+    Assert.assertFalse(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertTrue(ev.isBaseColumn("1.foo"));
   }
@@ -578,7 +578,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
   }
@@ -608,7 +608,7 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-    Assert.assertTrue(ev.isJoin());
+    Assert.assertTrue(ev.isSegmentMapFunctionExpensive());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
   }
