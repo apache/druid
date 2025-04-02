@@ -262,6 +262,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 A successful request returns an HTTP `200 OK` message code and an empty response body.
 
+## View automatic compaction configuration
+
 ### Get all automatic compaction configurations
 
 Retrieves all automatic compaction configurations. Returns a `compactionConfigs` object containing the active automatic compaction configurations of all datasources.
@@ -870,10 +872,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ## [Experimental] Unified Compaction APIs
 
-The section describes the new unified compaction APIs which can be used regardless of whether compaction supervisors are enabled or not in the compaction dynamic config.
+This section describes the new unified compaction APIs which can be used regardless of whether compaction supervisors are enabled (i.e. `useSupervisors` is `true`) or not in the compaction dynamic config.
 
-- If `useSupervisors` is `false`, the APIs read or write the compaction dynamic config, same as the Coordinator-based compaction APIs above.
-- If `useSupervisors` is `true`, the APIs read or write the corresponding compaction supervisors. In conjunction with the APIs described below, the supervisor APIs may also be used to read or write the compaction supervisors as they offer greater flexibility and also serve information related to supervisor and task statuses.
+- If compaction supervisors are disabled, the APIs read or write the compaction dynamic config, same as the Coordinator-based compaction APIs above.
+- If compaction supervisors are enabled, the APIs read or write the corresponding compaction supervisors. In conjunction with the APIs described below, the supervisor APIs may also be used to read or write the compaction supervisors as they offer greater flexibility and also serve information related to supervisor and task statuses.
 
 ### Update cluster-level compaction config
 
@@ -970,8 +972,6 @@ Content-Type: application/json
 #### Sample response
 
 A successful request returns an HTTP `200 OK` message code and an empty response body.
-
-## View automatic compaction configuration
 
 ### Get cluster-level compaction config
 
