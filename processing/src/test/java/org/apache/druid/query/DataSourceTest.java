@@ -35,6 +35,7 @@ import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -223,6 +224,14 @@ public class DataSourceTest
     );
     ISE e3 = Assert.assertThrows(ISE.class, () -> restrictedDataSource.withPolicies(policyWasNotChecked));
     Assert.assertEquals("Missing policy check result for table [table1]", e3.getMessage());
+  }
+
+  @Test
+  public void testValidate_onInlineDataSource()
+  {
+    InlineDataSource inlineDataSource = InlineDataSource.fromIterable(ImmutableList.of(), RowSignature.empty());
+    Assert.assertTrue(inlineDataSource.validate(NoopPolicyEnforcer.instance()));
+    Assert.assertTrue(inlineDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
   }
 
   @Test
