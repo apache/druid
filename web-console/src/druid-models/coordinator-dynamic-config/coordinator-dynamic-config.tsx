@@ -162,7 +162,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     type: 'string-array',
     info: (
       <>
-        List of Historical servers to place in turbo loading mode. These servers use a larger
+        [Experimental] List of Historical servers to place in turbo loading mode. These servers use a larger
         thread-pool to load segments faster but at the cost of query performance. For servers
         specified in <Code>turboLoadingNodes</Code>,{' '}
         <Code>druid.coordinator.loadqueuepeon.http.batchSize</Code> is ignored and the coordinator
