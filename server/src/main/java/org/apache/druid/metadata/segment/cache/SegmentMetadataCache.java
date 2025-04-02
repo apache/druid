@@ -65,9 +65,28 @@ public interface SegmentMetadataCache
   boolean isSyncedForRead();
 
   /**
-   * Returns the cache for the given datasource.
+   * Performs a thread-safe read action on the cache for the given datasource.
+   * Read actions can be concurrent with other reads but are mutually exclusive
+   * from other write actions on the same datasource.
    */
-  DatasourceSegmentCache getDatasource(String dataSource);
+  <T> T readCacheForDataSource(String dataSource, Action<T> readAction);
+
+  /**
+   * Performs a thread-safe write action on the cache for the given datasource.
+   * Write actions are mutually exclusive from other writes or reads on the same
+   * datasource.
+   */
+  <T> T writeCacheForDataSource(String dataSource, Action<T> writeAction);
+
+  /**
+   * Represents a thread-safe read or write action performed on the cache within
+   * required locks.
+   */
+  @FunctionalInterface
+  interface Action<T>
+  {
+    T perform(DatasourceSegmentCache dataSourceCache) throws Exception;
+  }
 
   /**
    * Cache usage modes.

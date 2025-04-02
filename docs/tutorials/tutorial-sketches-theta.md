@@ -60,7 +60,7 @@ In this tutorial, you will learn how to do the following:
 
 ## Prerequisites
 
-Before proceeding, download Druid as described in the [single-machine quickstart](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+Before proceeding, download Druid as described in the [single-machine quickstart](./index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
 It's helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 
@@ -97,8 +97,7 @@ date,uid,show,episode
 
 ## Ingest data using Theta sketches
 
-Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to ingest the sample data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
-
+Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md#extern-function) function to ingest the sample data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
 ```sql
 INSERT INTO "ts_tutorial"

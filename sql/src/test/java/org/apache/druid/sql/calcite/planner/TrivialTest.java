@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import org.apache.druid.catalog.MetadataCatalog;
+import org.apache.druid.catalog.NullMetadataCatalog;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
@@ -40,6 +42,12 @@ public class TrivialTest
     public boolean ingestRequiresExistingTable()
     {
       return true;
+    }
+
+    @Override
+    public MetadataCatalog getMetadataCatalog()
+    {
+      return NullMetadataCatalog.INSTANCE;
     }
 
     @Override

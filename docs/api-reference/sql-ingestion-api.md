@@ -379,7 +379,8 @@ print(response.text)
 
 The response shows an example report for a query.
 
-<details><summary>View the response</summary>
+<details>
+<summary>View the response</summary>
 
 ```json
 {
