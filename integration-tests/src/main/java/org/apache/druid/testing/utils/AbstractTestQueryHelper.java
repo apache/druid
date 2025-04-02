@@ -139,7 +139,8 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
     int queryIndex = 0;
     for (QueryResultType queryWithResult : queries) {
-      List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
+      List<Map<String, Object>> result =
+          queryClient.query(url, queryWithResult.getQuery(), queryWithResult.getDescription());
       QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
           result,
           queryWithResult.getExpectedResults(),
@@ -159,7 +160,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
             resultsComparison.getErrorMessage()
         );
       } else {
-        LOG.info("Results Verified for Query [%d]", queryIndex++);
+        LOG.info("Results Verified for Query[%d: %s]", queryIndex++, queryWithResult.getDescription());
       }
     }
   }
@@ -174,7 +175,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
                                   .intervals(Collections.singletonList(interval))
                                   .build();
 
-    List<Map<String, Object>> results = queryClient.query(getQueryURL(broker), query);
+    List<Map<String, Object>> results = queryClient.query(getQueryURL(broker), query, "Get row count");
     if (results.isEmpty()) {
       return 0;
     } else {
