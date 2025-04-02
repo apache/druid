@@ -41,6 +41,7 @@ import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -113,7 +114,7 @@ public class OverlordCompactionResourceTest
         new CompactionSupervisorManager(taskMaster, auditManager)
     );
 
-    wikiConfig = DataSourceCompactionConfig
+    wikiConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTaskPriority(random.nextInt(100))
