@@ -81,10 +81,9 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
-    final DataSource dataSourceFromQuery = query.getDataSource();
 
     if (!ev.canRunQueryUsingLocalWalker()) {
-      throw new IAE("Cannot query dataSource locally: %s", dataSourceFromQuery);
+      throw new IAE("Cannot query dataSource locally: %s", ev.getBaseDataSource());
     }
 
     // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
@@ -95,8 +94,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
-        .createSegmentMapFunction(query);
+    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction();
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

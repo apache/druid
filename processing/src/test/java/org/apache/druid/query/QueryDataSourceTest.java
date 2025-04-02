@@ -21,10 +21,10 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -32,7 +32,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
-import java.util.function.Function;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QueryDataSourceTest
 {
@@ -172,15 +172,8 @@ public class QueryDataSourceTest
   @Test
   public void test_withSegmentMapFunction()
   {
-    Function<SegmentReference, SegmentReference> parentsegmentMapFunction = queryDataSource.createSegmentMapFunction(
-        groupByQuery
-    );
-
-    Function<SegmentReference, SegmentReference> childsegmentMapFunction = queryOnTableDataSource.createSegmentMapFunction(
-        groupByQuery
-    );
-    // The segment functions should both be identity functions and equal
-    Assert.assertEquals(parentsegmentMapFunction, childsegmentMapFunction);
+    assertThrows(DruidException.class, () -> queryDataSource.createSegmentMapFunction(groupByQuery));
+    assertThrows(DruidException.class, () -> queryOnTableDataSource.createSegmentMapFunction(groupByQuery));
   }
 
 

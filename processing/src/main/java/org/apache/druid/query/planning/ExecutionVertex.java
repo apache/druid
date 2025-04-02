@@ -33,11 +33,13 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Represents the native engine's execution vertex - the execution unit it may execute in one go.
@@ -382,5 +384,26 @@ public class ExecutionVertex
   public int hashCode()
   {
     throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Assembles the segment mapping function which should be applied to the input segments.
+   */
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction()
+  {
+    DataSource topDataSource = getTopDataSource();
+    return topDataSource.createSegmentMapFunction(topQuery);
+  }
+
+  /**
+   * Returns the first datasource which is not collapsible by the topQuery.
+   */
+  private DataSource getTopDataSource()
+  {
+    Query<?> q = topQuery;
+    while(q.mayCollapseQueryDataSource()) {
+      q = ((QueryDataSource)q.getDataSource()).getQuery();
+    }
+    return q.getDataSource();
   }
 }
