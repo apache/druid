@@ -467,8 +467,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         "Segment count"
     );
     ITRetryUtil.retryUntilEquals(
-        () -> coordinator.getAvailableSegments(dataSource + config.getExtraDatasourceNameSuffix())
-                         .stream().filter(DataSegment::isTombstone).count(),
+        () -> (int) coordinator.getAvailableSegments(dataSource + config.getExtraDatasourceNameSuffix())
+                               .stream().filter(DataSegment::isTombstone).count(),
         numExpectedTombstones,
         "Tombstone count"
     );

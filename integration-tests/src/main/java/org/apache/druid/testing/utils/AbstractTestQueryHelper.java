@@ -165,7 +165,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   }
 
   @SuppressWarnings("unchecked")
-  public int countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
+  public long countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
