@@ -1336,7 +1336,7 @@ Computes a [Bloom filter](../development/extensions-core/bloom-filter.md) from v
 <details>
 <summary>Example</summary>
 
-The following example returns a Base64-encoded Bloom filter representing the set of devices ,`agent_category`, used in Albania:
+The following example returns a Base64-encoded Bloom filter representing the set of devices, `agent_category`, used in Albania:
 
 ```sql
 SELECT "country",
