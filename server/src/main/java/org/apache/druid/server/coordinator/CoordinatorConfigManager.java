@@ -173,14 +173,7 @@ public class CoordinatorConfigManager
       AuditInfo auditInfo
   )
   {
-    UnaryOperator<DruidCompactionConfig> callable = current -> {
-      if (config.getEngine() == CompactionEngine.MSQ) {
-        throw InvalidInput.exception(
-            "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.");
-      } else {
-        return current.withDatasourceConfig(config);
-      }
-    };
+    UnaryOperator<DruidCompactionConfig> callable = current -> current.withDatasourceConfig(config);
     return updateConfigHelper(callable, auditInfo);
   }
 

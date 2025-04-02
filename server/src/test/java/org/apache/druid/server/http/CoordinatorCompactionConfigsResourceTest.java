@@ -175,7 +175,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     Assert.assertEquals(
-        "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.",
+        "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
   }
@@ -326,7 +326,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     Assert.assertEquals(
-        "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.",
+        "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
   }

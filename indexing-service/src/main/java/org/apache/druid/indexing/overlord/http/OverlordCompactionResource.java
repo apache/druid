@@ -46,7 +46,6 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
-import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Interval;
@@ -166,7 +165,7 @@ public class OverlordCompactionResource
   @GET
   @Path("/status/datasources/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getDatasourceCompactionSnapshot(
       @PathParam("dataSource") String dataSource
   )
@@ -345,7 +344,7 @@ public class OverlordCompactionResource
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response simulateRunWithConfigUpdate(
       ClusterCompactionConfig updatePayload
   )

@@ -23,6 +23,8 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -107,9 +109,14 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-    return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.updateDatasourceCompactionConfig(newConfig, auditInfo)
-    );
+    return ServletResourceUtils.buildUpdateResponse(() -> {
+      if (newConfig.getEngine() == CompactionEngine.MSQ) {
+        throw InvalidInput.exception(
+            "MSQ engine is supported only with supervisor-based compaction on the Overlord."
+        );
+      }
+      return configManager.updateDatasourceCompactionConfig(newConfig, auditInfo);
+    });
   }
 
   @GET
