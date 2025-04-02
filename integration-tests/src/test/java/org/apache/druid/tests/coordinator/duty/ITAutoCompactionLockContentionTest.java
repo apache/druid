@@ -320,16 +320,16 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
   private void ensureCompactionTaskCount(int expectedCount)
   {
     ITRetryUtil.retryUntilEquals(
-        this::getCompactionTaskCount,
+        this::getNumberOfCompletedCompactionTasks,
         expectedCount,
-        "Compaction task count"
+        "Number of completed compaction tasks"
     );
   }
 
   /**
    * Gets the number of complete compaction tasks.
    */
-  private int getCompactionTaskCount()
+  private int getNumberOfCompletedCompactionTasks()
   {
     List<TaskResponseObject> incompleteTasks = indexer
         .getUncompletedTasksForDataSource(fullDatasourceName);
