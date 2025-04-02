@@ -20,6 +20,7 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.indexer.TaskState;
@@ -58,11 +59,11 @@ public class SegmentLoadStatusFetcherTest
   @Test
   public void testSingleVersionWaitsForLoadCorrectly() throws Exception
   {
-    @SuppressWarnings("unchecked")
-    ListenableFuture<SqlTaskStatus> mockFuture = mock(ListenableFuture.class);
     brokerClient = mock(BrokerClient.class);
 
-    doReturn(mock(ListenableFuture.class)).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
+    SqlTaskStatus dummyStatus = new SqlTaskStatus("dummy-id", TaskState.RUNNING, null);
+    when(brokerClient.submitSqlTask(any(ClientSqlQuery.class))).thenReturn(Futures.immediateFuture(dummyStatus));
+
     doAnswer(new Answer<ListenableFuture<SqlTaskStatus>>()
     {
       int timesInvoked = 0;
@@ -84,8 +85,7 @@ public class SegmentLoadStatusFetcherTest
             timesInvoked >= 5 ? TaskState.SUCCESS : TaskState.RUNNING,
             null
         );
-        when(mockFuture.get()).thenReturn(taskStatus);
-        return mockFuture;
+        return Futures.immediateFuture(taskStatus);
       }
     }).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
@@ -104,11 +104,11 @@ public class SegmentLoadStatusFetcherTest
   @Test
   public void testMultipleVersionWaitsForLoadCorrectly() throws Exception
   {
-    @SuppressWarnings("unchecked")
-    ListenableFuture<SqlTaskStatus> mockFuture = mock(ListenableFuture.class);
     brokerClient = mock(BrokerClient.class);
 
-    doReturn(mock(ListenableFuture.class)).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
+    SqlTaskStatus dummyStatus = new SqlTaskStatus("dummy-id", TaskState.RUNNING, null);
+    when(brokerClient.submitSqlTask(any(ClientSqlQuery.class))).thenReturn(Futures.immediateFuture(dummyStatus));
+
     when(brokerClient.submitSqlTask(any(ClientSqlQuery.class))).thenAnswer(new Answer<ListenableFuture<SqlTaskStatus>>()
     {
       int timesInvoked = 0;
@@ -131,8 +131,7 @@ public class SegmentLoadStatusFetcherTest
             TaskState.SUCCESS,
             null
         );
-        when(mockFuture.get()).thenReturn(taskStatus);
-        return mockFuture;
+        return Futures.immediateFuture(taskStatus);
       }
     });
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
@@ -151,11 +150,11 @@ public class SegmentLoadStatusFetcherTest
   @Test
   public void triggerCancellationFromAnotherThread() throws Exception
   {
-    @SuppressWarnings("unchecked")
-    ListenableFuture<SqlTaskStatus> mockFuture = mock(ListenableFuture.class);
     brokerClient = mock(BrokerClient.class);
 
-    doReturn(mock(ListenableFuture.class)).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
+    SqlTaskStatus dummyStatus = new SqlTaskStatus("dummy-id", TaskState.RUNNING, null);
+    when(brokerClient.submitSqlTask(any(ClientSqlQuery.class))).thenReturn(Futures.immediateFuture(dummyStatus));
+
     doAnswer(new Answer<ListenableFuture<SqlTaskStatus>>()
     {
       int timesInvoked = 0;
@@ -180,9 +179,7 @@ public class SegmentLoadStatusFetcherTest
                 TaskState.SUCCESS,
                 null
         );
-        when(mockFuture.get()).thenReturn(taskStatus);
-
-        return mockFuture;
+        return Futures.immediateFuture(taskStatus);
       }
     }).when(brokerClient).submitSqlTask(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
