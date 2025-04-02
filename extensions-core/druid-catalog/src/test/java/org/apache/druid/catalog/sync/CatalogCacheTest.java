@@ -146,9 +146,14 @@ public class CatalogCacheTest
     // Third cache, managed by the receiver.
     CachedMetadataCatalog cache3 = new CachedMetadataCatalog(storage, storage.schemaRegistry(), jsonMapper);
     storage.register(cache3);
-    CatalogUpdateReceiver receiver = new CatalogUpdateReceiver(cache3);
-    receiver.start();
-    assertEquals(3, cache3.tableNames(TableId.DRUID_SCHEMA).size());
-    assertNotNull(cache3.getTable(table3.id()));
+    CatalogUpdateReceiver receiver = new CatalogUpdateReceiver(cache3, new CatalogClientConfig(null, null, null));
+    try {
+      receiver.start();
+      assertEquals(3, cache3.tableNames(TableId.DRUID_SCHEMA).size());
+      assertNotNull(cache3.getTable(table3.id()));
+    }
+    finally {
+      receiver.stop();
+    }
   }
 }

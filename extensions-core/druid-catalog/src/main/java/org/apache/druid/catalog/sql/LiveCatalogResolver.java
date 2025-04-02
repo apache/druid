@@ -20,13 +20,13 @@
 package org.apache.druid.catalog.sql;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
-import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -39,7 +39,6 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -199,6 +198,12 @@ public class LiveCatalogResolver implements CatalogResolver
   public boolean ingestRequiresExistingTable()
   {
     return false;
+  }
+
+  @Override
+  public MetadataCatalog getMetadataCatalog()
+  {
+    return catalog;
   }
 
   @Override

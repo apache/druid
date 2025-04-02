@@ -204,10 +204,11 @@ public class DruidCoordinator
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
     this.compactionStatusTracker = compactionStatusTracker;
-    this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+
+    this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
   }
 
   public boolean isLeader()

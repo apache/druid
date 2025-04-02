@@ -27,6 +27,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -283,7 +284,7 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void submitAndVerifyCompactionConfig() throws Exception
   {
-    final DataSourceCompactionConfig dataSourceCompactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig dataSourceCompactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(fullDatasourceName)
         .withSkipOffsetFromLatest(Period.ZERO)
