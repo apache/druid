@@ -74,7 +74,7 @@ export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] 
     suggestions: ['newestSegmentFirst'],
     info: (
       <>
-        This must always be <Code>newestSegmentFirst</Code>
+        Currently, the only supported policy is <Code>newestSegmentFirst</Code>, which prioritizes segments with more recent intervals for compaction.
       </>
     ),
   },
