@@ -34,7 +34,8 @@ export const COMPACTION_DYNAMIC_CONFIG_DEFAULT_MAX = 2147483647;
 export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] = [
   {
     name: 'useSupervisors',
-    label: 'Use supervisors (experimental)',
+    label: 'Use supervisors',
+    experimental: true,
     type: 'boolean',
     defaultValue: false,
     info: (
