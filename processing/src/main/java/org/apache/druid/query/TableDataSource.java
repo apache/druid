@@ -37,7 +37,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 @JsonTypeName("table")
-public class TableDataSource implements DataSource
+public class TableDataSource extends LeafDataSource
 {
   private final String name;
 
@@ -66,22 +66,6 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public List<DataSource> getChildren()
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public DataSource withChildren(List<DataSource> children)
-  {
-    if (!children.isEmpty()) {
-      throw new IAE("Cannot accept children");
-    }
-
-    return this;
-  }
-
-  @Override
   public boolean isCacheable(boolean isBroker)
   {
     return true;
@@ -97,12 +81,6 @@ public class TableDataSource implements DataSource
   public boolean isProcessable()
   {
     return true;
-  }
-
-  @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
-  {
-    return Function.identity();
   }
 
   @Override

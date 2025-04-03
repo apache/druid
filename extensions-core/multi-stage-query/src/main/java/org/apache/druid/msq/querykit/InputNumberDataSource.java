@@ -22,16 +22,10 @@ package org.apache.druid.msq.querykit;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.Query;
-import org.apache.druid.segment.SegmentReference;
-
+import org.apache.druid.query.LeafDataSource;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Represents an input number, i.e., a positional index into
@@ -44,7 +38,7 @@ import java.util.function.Function;
  * join tree.
  */
 @JsonTypeName("inputNumber")
-public class InputNumberDataSource implements DataSource
+public class InputNumberDataSource extends LeafDataSource
 {
   private final int inputNumber;
 
@@ -58,22 +52,6 @@ public class InputNumberDataSource implements DataSource
   public Set<String> getTableNames()
   {
     return Collections.emptySet();
-  }
-
-  @Override
-  public List<DataSource> getChildren()
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public DataSource withChildren(final List<DataSource> children)
-  {
-    if (!children.isEmpty()) {
-      throw new IAE("Cannot accept children");
-    }
-
-    return this;
   }
 
   @Override
@@ -96,17 +74,10 @@ public class InputNumberDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
-  {
-    return Function.identity();
-  }
-
-  @Override
   public byte[] getCacheKey()
   {
     return null;
   }
-
 
   @JsonProperty
   public int getInputNumber()
