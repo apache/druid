@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.compaction.CompactionTriggerResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
@@ -36,6 +37,7 @@ import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class CoordinatorCompactionResourceTest
 {
@@ -151,5 +153,22 @@ public class CoordinatorCompactionResourceTest
         ((ErrorResponse) responseEntity).getUnderlyingException(),
         DruidExceptionMatcher.invalidInput().expectMessageIs("No DataSource specified")
     );
+  }
+
+  @Test
+  public void testForceTriggerCompaction()
+  {
+    EasyMock.expect(mock.runCompactSegmentsDuty())
+            .andReturn(new CompactionTriggerResponse(Set.of()));
+    EasyMock.replay(mock);
+
+    final Response response = new CoordinatorCompactionResource(mock)
+        .forceTriggerCompaction();
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    Assert.assertTrue(response.getEntity() instanceof CompactionTriggerResponse);
+
+    final CompactionTriggerResponse payload = (CompactionTriggerResponse) response.getEntity();
+    Assert.assertTrue(payload.getSubmittedTaskIds().isEmpty());
   }
 }
