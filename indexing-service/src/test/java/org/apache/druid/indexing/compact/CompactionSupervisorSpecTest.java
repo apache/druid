@@ -28,6 +28,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,7 +63,7 @@ public class CompactionSupervisorSpecTest
   {
     testSerde(
         new CompactionSupervisorSpec(
-            DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+            InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
             false,
             scheduler
         )
@@ -74,7 +75,7 @@ public class CompactionSupervisorSpecTest
   {
     testSerde(
         new CompactionSupervisorSpec(
-            DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+            InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
             true,
             scheduler
         )
@@ -88,7 +89,7 @@ public class CompactionSupervisorSpecTest
            .thenReturn(CompactionConfigValidationResult.failure("bad spec"));
     Assert.assertEquals(
         "Compaction supervisor spec is invalid. Reason[bad spec].", new CompactionSupervisorSpec(
-            new DataSourceCompactionConfig.Builder().forDataSource("datasource").build(),
+            new InlineSchemaDataSourceCompactionConfig.Builder().forDataSource("datasource").build(),
             false,
             scheduler
         ).createSupervisor().getStatus().getPayload().getMessage()
@@ -109,7 +110,7 @@ public class CompactionSupervisorSpecTest
   public void testGetIdAndDataSources()
   {
     final CompactionSupervisorSpec activeSpec = new CompactionSupervisorSpec(
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         false,
         scheduler
     );
@@ -124,9 +125,9 @@ public class CompactionSupervisorSpecTest
     Mockito.when(scheduler.isRunning()).thenReturn(true);
 
     final DataSourceCompactionConfig spec
-        = DataSourceCompactionConfig.builder()
-                                    .forDataSource(TestDataSource.WIKI)
-                                    .build();
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(TestDataSource.WIKI)
+                                                .build();
     final CompactionSupervisorSpec activeSpec
         = new CompactionSupervisorSpec(spec, false, scheduler);
 
@@ -144,9 +145,9 @@ public class CompactionSupervisorSpecTest
   public void testStartStopSupervisorWhenSchedulerStopped()
   {
     final DataSourceCompactionConfig spec
-        = DataSourceCompactionConfig.builder()
-                                    .forDataSource(TestDataSource.WIKI)
-                                    .build();
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(TestDataSource.WIKI)
+                                                .build();
     final CompactionSupervisorSpec activeSpec
         = new CompactionSupervisorSpec(spec, false, scheduler);
 
@@ -166,9 +167,9 @@ public class CompactionSupervisorSpecTest
     Mockito.when(scheduler.isRunning()).thenReturn(true);
 
     final DataSourceCompactionConfig spec
-        = DataSourceCompactionConfig.builder()
-                                    .forDataSource(TestDataSource.WIKI)
-                                    .build();
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(TestDataSource.WIKI)
+                                                .build();
     final CompactionSupervisorSpec suspendedSpec
         = new CompactionSupervisorSpec(spec, true, scheduler);
 
@@ -185,7 +186,7 @@ public class CompactionSupervisorSpecTest
   public void testCreateSuspendedSpec()
   {
     final CompactionSupervisorSpec activeSpec = new CompactionSupervisorSpec(
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         false,
         scheduler
     );
@@ -202,7 +203,7 @@ public class CompactionSupervisorSpecTest
   public void testCreateRunningSpec()
   {
     final CompactionSupervisorSpec suspendedSpec = new CompactionSupervisorSpec(
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         true,
         scheduler
     );

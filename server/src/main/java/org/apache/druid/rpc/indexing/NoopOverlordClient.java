@@ -31,8 +31,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
-import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -134,12 +132,6 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(String dataSource)
   {
     throw new UnsupportedOperationException();
@@ -174,12 +166,6 @@ public class NoopOverlordClient implements OverlordClient
 
   @Override
   public ListenableFuture<SegmentUpdateResponse> markSegmentAsUnused(SegmentId segmentId)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
   {
     throw new UnsupportedOperationException();
   }

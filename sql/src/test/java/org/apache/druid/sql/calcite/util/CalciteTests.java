@@ -291,7 +291,11 @@ public class CalciteTests
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return QueryFrameworkUtils.createMockQueryLifecycleFactory(walker, conglomerate);
+    return QueryFrameworkUtils.createMockQueryLifecycleFactory(
+        walker,
+        conglomerate,
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
   }
 
   public static SqlStatementFactory createSqlStatementFactory(
@@ -394,6 +398,15 @@ public class CalciteTests
         )
     );
     return provider;
+  }
+
+  public static SystemSchema createMockSystemSchema(
+      final DruidSchema druidSchema,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    return createMockSystemSchema(druidSchema, new TestTimelineServerView(walker.getSegments()), authorizerMapper);
   }
 
   public static SystemSchema createMockSystemSchema(

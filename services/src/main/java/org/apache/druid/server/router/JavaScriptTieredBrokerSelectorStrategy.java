@@ -24,14 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.overlord.setup.JavaScriptUtil;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.Query;
-
-import javax.script.Compilable;
-import javax.script.Invocable;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 
 public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
 {
@@ -57,22 +52,10 @@ public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
     this.function = fn;
   }
 
-  private SelectorFunction compileSelectorFunction()
-  {
-    final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
-    try {
-      ((Compilable) engine).compile("var apply = " + function).eval();
-      return ((Invocable) engine).getInterface(SelectorFunction.class);
-    }
-    catch (ScriptException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Override
   public Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query)
   {
-    fnSelector = fnSelector == null ? compileSelectorFunction() : fnSelector;
+    fnSelector = fnSelector == null ? JavaScriptUtil.compileSelectorFunction(SelectorFunction.class, function) : fnSelector;
     return Optional.fromNullable(fnSelector.apply(config, query));
   }
 

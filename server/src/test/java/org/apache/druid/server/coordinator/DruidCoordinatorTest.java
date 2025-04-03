@@ -175,7 +175,7 @@ public class DruidCoordinatorTest
   {
     return new MetadataManager(
         null,
-        new CoordinatorConfigManager(configManager, null, null),
+        new CoordinatorConfigManager(configManager, null, null, null),
         segmentsMetadataManager,
         null,
         metadataRuleManager,

@@ -38,6 +38,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -77,8 +78,10 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -159,6 +162,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Nullable
   private final ClientCompactionTaskGranularitySpec granularitySpec;
   @Nullable
+  private final List<AggregateProjectionSpec> projections;
+  @Nullable
   private final CompactionTuningConfig tuningConfig;
   @Nullable
   private final CompactionRunner compactionRunner;
@@ -181,6 +186,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JsonProperty("compactionRunner") final CompactionRunner compactionRunner,
@@ -234,6 +240,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     } else {
       this.granularitySpec = granularitySpec;
     }
+    this.projections = projections;
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     // Note: The default compactionRunnerType used here should match the default runner used in CompactSegments#run
@@ -395,6 +402,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   @JsonProperty
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
+  }
+
+  @JsonProperty
   public CompactionRunner getCompactionRunner()
   {
     return compactionRunner;
@@ -511,6 +524,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         transformSpec,
         metricsSpec,
         granularitySpec,
+        projections,
         getMetricBuilder(),
         this.identifyMultiValuedDimensions()
     );
@@ -530,7 +544,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * Generate dataschema for segments in each interval.
    *
    * @throws IOException if an exception occurs whie retrieving used segments to
-   * determine schemas.
+   *                     determine schemas.
    */
   @VisibleForTesting
   static Map<Interval, DataSchema> createDataSchemasForIntervals(
@@ -541,6 +555,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable final CompactionTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable final List<AggregateProjectionSpec> projections,
       final ServiceMetricEvent.Builder metricBuilder,
       boolean needMultiValuedColumns
   ) throws IOException
@@ -607,6 +622,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             granularitySpec == null
             ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
             : granularitySpec.withSegmentGranularity(segmentGranularityToUse),
+            projections,
             needMultiValuedColumns
         );
         intervalDataSchemaMap.put(interval, dataSchema);
@@ -633,6 +649,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           transformSpec,
           metricsSpec,
           granularitySpec,
+          projections,
           needMultiValuedColumns
       );
       return Collections.singletonMap(segmentProvider.interval, dataSchema);
@@ -664,6 +681,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable CompactionTransformSpec transformSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nonnull ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable List<AggregateProjectionSpec> projections,
       boolean needMultiValuedColumns
   )
   {
@@ -674,6 +692,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         granularitySpec.getQueryGranularity() == null,
         dimensionsSpec == null,
         metricsSpec == null,
+        projections == null,
         needMultiValuedColumns
     );
 
@@ -725,6 +744,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     } else {
       finalMetricsSpec = metricsSpec;
     }
+    final List<AggregateProjectionSpec> projectionSpecs;
+    if (projections != null) {
+      projectionSpecs = projections;
+    } else {
+      projectionSpecs = existingSegmentAnalyzer.getProjections();
+    }
 
     return new CombinedDataSchema(
         dataSource,
@@ -733,6 +758,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         finalMetricsSpec,
         uniformGranularitySpec,
         transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
+        projectionSpecs,
         existingSegmentAnalyzer.getMultiValuedDimensions()
     );
   }
@@ -807,6 +833,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final boolean needQueryGranularity;
     private final boolean needDimensionsSpec;
     private final boolean needMetricsSpec;
+    private final boolean needProjections;
     private final boolean needMultiValuedDimensions;
 
     // For processRollup:
@@ -822,6 +849,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     // For processMetricsSpec:
     private final Set<List<AggregatorFactory>> aggregatorFactoryLists = new HashSet<>();
     private Set<String> multiValuedDimensions;
+    // For processProjections
+    private Map<String, AggregateProjectionSpec> projections;
 
     ExistingSegmentAnalyzer(
         final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segmentsIterable,
@@ -829,6 +858,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         final boolean needQueryGranularity,
         final boolean needDimensionsSpec,
         final boolean needMetricsSpec,
+        final boolean needProjections,
         final boolean needMultiValuedDimensions
     )
     {
@@ -837,6 +867,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.needQueryGranularity = needQueryGranularity;
       this.needDimensionsSpec = needDimensionsSpec;
       this.needMetricsSpec = needMetricsSpec;
+      this.needProjections = needProjections;
       this.needMultiValuedDimensions = needMultiValuedDimensions;
     }
 
@@ -880,6 +911,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             processDimensionsSpec(index);
             processMetricsSpec(index);
             processMultiValuedDimensions(index);
+            processProjections(index);
           }
         }
       }
@@ -964,6 +996,18 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
 
       return mergedAggregators;
+    }
+
+    @Nullable
+    public List<AggregateProjectionSpec> getProjections()
+    {
+      if (!needProjections) {
+        throw new ISE("Not computing projections");
+      }
+      if (projections == null || projections.isEmpty()) {
+        return null;
+      }
+      return ImmutableList.copyOf(projections.values());
     }
 
     public Set<String> getMultiValuedDimensions()
@@ -1086,6 +1130,65 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
     }
 
+
+    /**
+     * gets set of projections out of {@link Metadata#getProjections()} contained in a {@link QueryableIndex}. If
+     * a projection name already exists, it will be replaced with the schema of projections from this
+     * {@link QueryableIndex}.
+     */
+    private void processProjections(final QueryableIndex index)
+    {
+      if (!needProjections) {
+        return;
+      }
+      Metadata metadata = index.getMetadata();
+      if (metadata != null && metadata.getProjections() != null && !metadata.getProjections().isEmpty()) {
+        projections = new HashMap<>();
+        for (AggregateProjectionMetadata projectionMetadata : metadata.getProjections()) {
+          final AggregateProjectionMetadata.Schema schema = projectionMetadata.getSchema();
+          final QueryableIndex projectionIndex = Preconditions.checkNotNull(
+              index.getProjectionQueryableIndex(schema.getName())
+          );
+          final List<DimensionSchema> columnSchemas = Lists.newArrayListWithExpectedSize(schema.getGroupingColumns().size());
+          for (String groupingColumn : schema.getGroupingColumns()) {
+            if (groupingColumn.equals(schema.getTimeColumnName())) {
+              columnSchemas.add(
+                  projectionIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME)
+                                 .getColumnFormat()
+                                 .getColumnSchema(groupingColumn)
+              );
+            } else {
+              final DimensionSchema columnSchema = projectionIndex.getColumnHolder(groupingColumn)
+                                                                  .getColumnFormat()
+                                                                  .getColumnSchema(groupingColumn);
+              // rewrite string dimensions to always use MultiValueHandling.ARRAY since it preserves the exact order of
+              // the row regardless of the mode the initial ingest was using
+              if (columnSchema instanceof StringDimensionSchema) {
+                columnSchemas.add(
+                    new StringDimensionSchema(
+                        columnSchema.getName(),
+                        DimensionSchema.MultiValueHandling.ARRAY,
+                        columnSchema.hasBitmapIndex()
+                    )
+                );
+              } else {
+                columnSchemas.add(columnSchema);
+              }
+            }
+          }
+          projections.put(
+              schema.getName(),
+              new AggregateProjectionSpec(
+                  schema.getName(),
+                  schema.getVirtualColumns(),
+                  columnSchemas,
+                  schema.getAggregators()
+              )
+          );
+        }
+      }
+    }
+
     private boolean isMultiValuedDimension(final QueryableIndex index, final String col)
     {
       ColumnCapabilities columnCapabilities = index.getColumnCapabilities(col);
@@ -1165,6 +1268,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     @Nullable
     private Map<String, Object> context;
     private CompactionRunner compactionRunner;
+    @Nullable
+    private List<AggregateProjectionSpec> projections;
 
     public Builder(
         String dataSource,
@@ -1251,6 +1356,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return this;
     }
 
+    public Builder projections(@Nullable List<AggregateProjectionSpec> projections)
+    {
+      this.projections = projections;
+      return this;
+    }
+
     public CompactionTask build()
     {
       return new CompactionTask(
@@ -1266,6 +1377,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           metricsSpec,
           segmentGranularity,
           granularitySpec,
+          projections,
           tuningConfig,
           context,
           compactionRunner,

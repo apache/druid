@@ -87,7 +87,7 @@ class SingleContainerTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .build();
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,

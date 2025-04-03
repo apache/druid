@@ -91,7 +91,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     this.config = config;
     this.dataSource = config.getDataSource();
     this.searchPolicy = searchPolicy;
-    this.queue = new PriorityQueue<>(searchPolicy);
+    this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
 
     populateQueue(timeline, skipIntervals);
   }
