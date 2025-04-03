@@ -137,6 +137,10 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("dutyRunTime", "coordinator/time");
     public static final CoordinatorStat GROUP_RUN_TIME
         = CoordinatorStat.toDebugAndEmit("groupRunTime", "coordinator/global/time");
+    public static final CoordinatorStat CLONE_LOAD
+        = CoordinatorStat.toDebugAndEmit("cloneLoad", "coordinator/clone/load");
+    public static final CoordinatorStat CLONE_DROP
+        = CoordinatorStat.toDebugAndEmit("cloneDrop", "coordinator/clone/drop");
   }
 
   public static class Kill
