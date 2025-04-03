@@ -38,7 +38,11 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
-import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import {
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
@@ -350,29 +354,34 @@ ORDER BY
   }
 
   componentDidMount(): void {
-    const { capabilities } = this.props;
-    const { visibleColumns } = this.state;
-    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+    this.fetchData();
   }
 
   componentWillUnmount(): void {
     this.serviceQueryManager.terminate();
   }
 
+  private readonly fetchData = () => {
+    const { capabilities } = this.props;
+    const { visibleColumns } = this.state;
+    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+  };
+
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      >
-        {row.value}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        >
+          {row.value}
+        </TableFilterableCell>
+      );
+    };
   }
 
   renderServicesTable() {
@@ -417,6 +426,16 @@ ORDER BY
           {
             Header: 'Type',
             show: visibleColumns.shown('Type'),
+            Filter: suggestibleFilterInput([
+              'coordinator',
+              'overlord',
+              'router',
+              'broker',
+              'historical',
+              'indexer',
+              'middle_manager',
+              'peon',
+            ]),
             accessor: 'service_type',
             width: 150,
             Cell: this.renderFilterableCell('service_type'),
@@ -823,6 +842,7 @@ ORDER BY
                 visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
+            onClose={this.fetchData}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>

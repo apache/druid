@@ -24,12 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -65,7 +65,9 @@ public class JoinDataSourceTest
       JoinType.LEFT,
       null,
       ExprMacroTable.nil(),
-      null
+      null,
+      JoinAlgorithm.BROADCAST
+
   );
   private final JoinDataSource joinTableToTable = JoinDataSource.create(
       fooTable,
@@ -75,7 +77,9 @@ public class JoinDataSourceTest
       JoinType.LEFT,
       null,
       ExprMacroTable.nil(),
-      null
+      null,
+      JoinAlgorithm.BROADCAST
+
   );
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -182,7 +186,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         TrueDimFilter.instance(),
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     final JoinDataSource deserialized = (JoinDataSource) jsonMapper.readValue(
@@ -206,7 +211,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         TrueDimFilter.instance(),
         ExprMacroTable.nil(),
-        null
+        null,
+        JoinAlgorithm.BROADCAST
     );
   }
 
@@ -221,7 +227,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         TrueDimFilter.instance(),
         ExprMacroTable.nil(),
-        null
+        null,
+        JoinAlgorithm.BROADCAST
     );
     Assert.assertEquals(TrueDimFilter.instance(), dataSource.getLeftFilter());
   }
@@ -237,7 +244,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        null
+        null,
+        JoinAlgorithm.BROADCAST
     );
     Assert.assertEquals(dataSource.getVirtualColumnCandidates(), ImmutableSet.of("x"));
   }
@@ -253,7 +261,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        NOOP_JOINABLE_FACTORY_WRAPPER
+        NOOP_JOINABLE_FACTORY_WRAPPER,
+        JoinAlgorithm.BROADCAST
     );
 
     Optional<byte[]> cacheKey = Optional.ofNullable(dataSource.getCacheKey());
@@ -274,7 +283,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     JoinDataSource joinDataSource1 = JoinDataSource.create(
@@ -285,7 +295,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();
@@ -309,7 +320,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     JoinDataSource joinDataSource1 = JoinDataSource.create(
@@ -320,7 +332,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();
@@ -344,7 +357,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     JoinDataSource joinDataSource1 = JoinDataSource.create(
@@ -355,7 +369,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();
@@ -379,7 +394,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     JoinDataSource joinDataSource1 = JoinDataSource.create(
@@ -390,7 +406,8 @@ public class JoinDataSourceTest
         JoinType.INNER,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();
@@ -414,7 +431,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     JoinDataSource joinDataSource1 = JoinDataSource.create(
@@ -425,7 +443,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();
@@ -451,7 +470,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        null
+        null,
+        JoinAlgorithm.BROADCAST
     );
     DataSourceAnalysis analysis = dataSource.getAnalysis();
     Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
@@ -475,9 +495,33 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        null
+        null,
+        JoinAlgorithm.BROADCAST
     );
     DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+  }
+
+  @Test
+  public void testGetAnalysisWithRestrictedDS()
+  {
+    RestrictedDataSource left = RestrictedDataSource.create(
+        new TableDataSource("table1"),
+        NoRestrictionPolicy.instance()
+    );
+    JoinDataSource dataSource = JoinDataSource.create(
+        left,
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+    DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals(left, analysis.getBaseDataSource());
     Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
   }
 
@@ -485,7 +529,6 @@ public class JoinDataSourceTest
   public void test_computeJoinDataSourceCacheKey_keyChangesWithBaseFilter()
   {
     JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-    NullHandling.initializeForTests();
     final InDimFilter expectedInDimFilter = new InDimFilter("dimTest", Arrays.asList("good", "bad"), null);
 
     JoinDataSource joinDataSource = JoinDataSource.create(
@@ -496,7 +539,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         expectedInDimFilter,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     JoinDataSource joinDataSource1 = JoinDataSource.create(
@@ -507,7 +551,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();
@@ -531,7 +576,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();

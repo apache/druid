@@ -818,7 +818,7 @@ public class SuperSorterTest
     }
 
     frames.forEach(
-        new Consumer<Frame>()
+        new Consumer<>()
         {
           private int i;
 

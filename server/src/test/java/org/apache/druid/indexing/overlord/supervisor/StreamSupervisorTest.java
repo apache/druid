@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.concurrent.Future;
 
 public class StreamSupervisorTest
 {
@@ -99,5 +100,75 @@ public class StreamSupervisorTest
         "Supervisor does not have the feature to handoff task groups early implemented",
         ex.getMessage()
     );
+  }
+
+  @Test
+  public void testDefaultStopAsync()
+  {
+    // Create an instance of stream supervisor without overriding stopAsync().
+    final StreamSupervisor streamSupervisor = new StreamSupervisor()
+    {
+      private SupervisorStateManager.State state = SupervisorStateManager.BasicState.RUNNING;
+
+      @Override
+      public void start()
+      {
+
+      }
+
+      @Override
+      public void stop(boolean stopGracefully)
+      {
+        state = SupervisorStateManager.BasicState.STOPPING;
+      }
+
+      @Override
+      public SupervisorReport getStatus()
+      {
+        return null;
+      }
+
+      @Override
+      public SupervisorStateManager.State getState()
+      {
+        return state;
+      }
+
+      @Override
+      public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
+      {
+
+      }
+
+      @Override
+      public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
+      {
+
+      }
+
+      @Override
+      public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
+      {
+
+      }
+
+      @Override
+      public LagStats computeLagStats()
+      {
+        return null;
+      }
+
+      @Override
+      public int getActiveTaskGroupsCount()
+      {
+        return 0;
+      }
+    };
+
+    Future<Void> stopAsyncFuture = streamSupervisor.stopAsync();
+    Assert.assertTrue(stopAsyncFuture.isDone());
+
+    // stop should be called by stopAsync
+    Assert.assertEquals(SupervisorStateManager.BasicState.STOPPING, streamSupervisor.getState());
   }
 }

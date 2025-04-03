@@ -22,14 +22,18 @@ package org.apache.druid.common.utils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -146,5 +150,54 @@ public class IdUtils
     objects.add(now.toString());
 
     return String.join("_", objects);
+  }
+
+  /**
+   * Tries to parse the serialized ID as a {@link SegmentId} of the given datasource.
+   *
+   * @throws DruidException if the segment ID could not be parsed.
+   */
+  public static SegmentId getValidSegmentId(String dataSource, String serializedSegmentId)
+  {
+    final SegmentId parsedSegmentId = SegmentId.tryParse(dataSource, serializedSegmentId);
+    if (parsedSegmentId == null) {
+      throw InvalidInput.exception(
+          "Could not parse segment ID[%s] for datasource[%s]",
+          serializedSegmentId, dataSource
+      );
+    } else {
+      return parsedSegmentId;
+    }
+  }
+
+  /**
+   * Tries to parse the given serialized IDs as {@link SegmentId}s of the given
+   * datasource.
+   *
+   * @return Set containing valid segment IDs.
+   * @throws DruidException if any of the given segment IDs is invalid
+   */
+  public static Set<SegmentId> getValidSegmentIds(String dataSource, Set<String> serializedIds)
+  {
+    final Set<SegmentId> validSegmentIds = new HashSet<>();
+    final Set<String> invalidIds = new HashSet<>();
+
+    for (String id : serializedIds) {
+      final SegmentId validId = SegmentId.tryParse(dataSource, id);
+      if (validId == null) {
+        invalidIds.add(id);
+      } else {
+        validSegmentIds.add(validId);
+      }
+    }
+
+    if (!invalidIds.isEmpty()) {
+      throw InvalidInput.exception(
+          "Could not parse segment IDs[%s] for datasource[%s]",
+          invalidIds, dataSource
+      );
+    }
+
+    return validSegmentIds;
   }
 }

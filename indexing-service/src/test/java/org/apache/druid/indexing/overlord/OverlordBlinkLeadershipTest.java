@@ -36,7 +36,7 @@ public class OverlordBlinkLeadershipTest
   private RemoteTaskRunnerTestUtils rtrUtils;
   private final TestRemoteTaskRunnerConfig remoteTaskRunnerConfig = new TestRemoteTaskRunnerConfig(new Period("PT5M"));
   private final DefaultWorkerBehaviorConfig defaultWorkerBehaviourConfig = DefaultWorkerBehaviorConfig.defaultConfig();
-  private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier = new Supplier<WorkerBehaviorConfig>()
+  private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier = new Supplier<>()
   {
     @Override
     public DefaultWorkerBehaviorConfig get()

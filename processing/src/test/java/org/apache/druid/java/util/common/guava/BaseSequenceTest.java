@@ -51,12 +51,12 @@ public class BaseSequenceTest
   {
     final AtomicInteger closedCounter = new AtomicInteger(0);
     Sequence<Integer> seq = new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<Integer> make()
           {
-            return new Iterator<Integer>()
+            return new Iterator<>()
             {
               @Override
               public boolean hasNext()
@@ -92,7 +92,7 @@ public class BaseSequenceTest
   private static <T> Sequence<T> makeBaseSequence(final Iterable<T> iterable)
   {
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<T> make()

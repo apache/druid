@@ -47,7 +47,6 @@ exports[`HeaderBar matches snapshot 1`] = `
               <Blueprint5.Tag
                 active={false}
                 fill={false}
-                interactive={false}
                 large={false}
                 minimal={true}
                 round={false}
@@ -168,8 +167,16 @@ exports[`HeaderBar matches snapshot 1`] = `
             active={false}
             disabled={false}
             href="#explore"
-            icon="compass"
-            label="(experimental)"
+            icon="map"
+            labelElement={
+              <Blueprint5.Icon
+                autoLoad={true}
+                data-tooltip="Experimental"
+                icon="lab-test"
+                intent="warning"
+                tagName="span"
+              />
+            }
             multiline={false}
             popoverProps={{}}
             selected={false}

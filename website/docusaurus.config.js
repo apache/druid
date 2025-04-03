@@ -60,9 +60,6 @@ module.exports={
         "theme": {
           "customCss": "./src/css/customTheme.css"
         },
-        "gtag": {
-          "trackingID": "UA-131010415-1"
-        }
       }
     ]
   ],
@@ -158,7 +155,7 @@ module.exports={
     "image": "img/druid_nav.png",
     "footer": {
       "links": [],
-      "copyright": "Copyright © 2023 Apache Software Foundation",
+      "copyright": "Copyright © 2025 Apache Software Foundation",
       "logo": {
         "src": "img/favicon.png"
       }

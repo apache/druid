@@ -81,7 +81,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
   // This is only used for classpath isolation in the runTask isolation stuff, so it shooouuullldddd be ok.
   /** {@link #buildClassLoader(TaskToolbox)} has outdated javadocs referencing this field, TODO update */
   @SuppressWarnings("unused")
-  protected static final Predicate<URL> IS_DRUID_URL = new Predicate<URL>()
+  protected static final Predicate<URL> IS_DRUID_URL = new Predicate<>()
   {
     @Override
     public boolean apply(@Nullable URL input)

@@ -37,7 +37,7 @@ public class DataSourceCompactionConfigHistoryTest
 {
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
   private final DataSourceCompactionConfig wikiCompactionConfig
-      = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+      = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
 
   private DataSourceCompactionConfigHistory wikiAuditHistory;
 
@@ -94,7 +94,7 @@ public class DataSourceCompactionConfigHistoryTest
   public void testAddDeleteAnotherDatasourceConfigShouldNotAddToHistory()
   {
     final DataSourceCompactionConfig koalaCompactionConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build();
 
     wikiAuditHistory.add(
         DruidCompactionConfig.empty().withDatasourceConfig(koalaCompactionConfig),
@@ -146,10 +146,10 @@ public class DataSourceCompactionConfigHistoryTest
 
 
     final DataSourceCompactionConfig updatedWikiConfig
-        = DataSourceCompactionConfig.builder()
-                                    .forDataSource(TestDataSource.WIKI)
-                                    .withSkipOffsetFromLatest(Period.hours(5))
-                                    .build();
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(TestDataSource.WIKI)
+                                                .withSkipOffsetFromLatest(Period.hours(5))
+                                                .build();
     wikiAuditHistory.add(
         DruidCompactionConfig.empty().withDatasourceConfig(updatedWikiConfig),
         auditInfo,
@@ -177,7 +177,7 @@ public class DataSourceCompactionConfigHistoryTest
     wikiAuditHistory.add(originalConfig, auditInfo, DateTimes.nowUtc());
 
     final DruidCompactionConfig updatedConfig = originalConfig.withClusterConfig(
-        new ClusterCompactionConfig(0.2, null, null, null)
+        new ClusterCompactionConfig(0.2, null, null, null, null)
     );
     wikiAuditHistory.add(updatedConfig, auditInfo, DateTimes.nowUtc());
 

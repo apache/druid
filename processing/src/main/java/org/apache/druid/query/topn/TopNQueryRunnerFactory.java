@@ -62,7 +62,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
   public QueryRunner<Result<TopNResultValue>> createRunner(final Segment segment)
   {
     final TopNQueryEngine queryEngine = new TopNQueryEngine(computationBufferPool);
-    return new QueryRunner<Result<TopNResultValue>>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<Result<TopNResultValue>> run(

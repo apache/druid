@@ -38,11 +38,11 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.Query;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.io.IOException;
@@ -193,7 +193,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
 
   private Function<SegmentReference, SegmentReference> createSegmentMapFunction()
   {
-    return inlineChannelData(query.getDataSource()).createSegmentMapFunction(query, new AtomicLong());
+    return inlineChannelData(query.getDataSource()).createSegmentMapFunction(query);
   }
 
   DataSource inlineChannelData(final DataSource originalDataSource)

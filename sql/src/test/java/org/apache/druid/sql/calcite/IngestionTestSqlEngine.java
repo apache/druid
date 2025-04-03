@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -37,8 +38,7 @@ import java.util.Map;
 
 public class IngestionTestSqlEngine implements SqlEngine
 {
-  public static final IngestionTestSqlEngine INSTANCE = new IngestionTestSqlEngine();
-
+  @Inject
   private IngestionTestSqlEngine()
   {
   }

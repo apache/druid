@@ -84,7 +84,7 @@ public class GuavaUtilsTest
         for (int i = 0; i < taskCount; i++) {
           final CountDownLatch latch = new CountDownLatch(1);
           latches.add(latch);
-          ListenableFuture<Object> future = exc.submit(new Callable<Object>()
+          ListenableFuture<Object> future = exc.submit(new Callable<>()
           {
             @Override
             public Object call() throws RuntimeException, InterruptedException

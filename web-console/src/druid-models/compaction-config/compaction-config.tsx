@@ -31,6 +31,10 @@ export interface CompactionConfig {
   inputSegmentSizeBytes?: number;
 }
 
+export interface CompactionConfigs {
+  compactionConfigs: CompactionConfig[];
+}
+
 export const NOOP_INPUT_SEGMENT_SIZE_BYTES = 100000000000000;
 
 export function compactionConfigHasLegacyInputSegmentSizeBytesSet(

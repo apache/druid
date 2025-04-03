@@ -84,7 +84,7 @@ public class NumberedShardSpecTest
 
     final List<PartitionChunk<String>> chunks = Lists.transform(
         specs,
-        new Function<ShardSpec, PartitionChunk<String>>()
+        new Function<>()
         {
           @Override
           public PartitionChunk<String> apply(ShardSpec shardSpec)

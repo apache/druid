@@ -145,7 +145,7 @@ public abstract class AbstractIndexerTest
     coordinator.unloadSegmentsForDataSource(dataSource);
     ITRetryUtil.retryUntilFalse(
         () -> coordinator.areSegmentsLoaded(dataSource),
-        "Segment Unloading"
+        "Segments are loaded"
     );
     coordinator.deleteSegmentsDataSource(dataSource, interval);
     waitForAllTasksToCompleteForDataSource(dataSource);
@@ -154,8 +154,8 @@ public abstract class AbstractIndexerTest
   protected void waitForAllTasksToCompleteForDataSource(final String dataSource)
   {
     ITRetryUtil.retryUntilTrue(
-        () -> (indexer.getUncompletedTasksForDataSource(dataSource).size() == 0),
-        StringUtils.format("Waiting for all tasks of [%s] to complete", dataSource)
+        () -> indexer.getUncompletedTasksForDataSource(dataSource).isEmpty(),
+        StringUtils.format("All tasks of [%s] have finished", dataSource)
     );
   }
 

@@ -22,6 +22,8 @@ import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 import type { Column, ReactTableFunction } from 'react-table';
 
+import { filterMap, toggle } from '../utils';
+
 import {
   combineModeAndNeedle,
   FILTER_MODES,
@@ -29,7 +31,7 @@ import {
   filterModeToIcon,
   filterModeToTitle,
   parseFilterModeAndNeedle,
-} from './react-table-utils';
+} from './react-table-filters';
 
 interface FilterRendererProps {
   column: Column;
@@ -111,6 +113,57 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
       }}
     />
   );
+}
+
+export function suggestibleFilterInput(suggestions: string[]) {
+  return function SuggestibleFilterInput({ filter, onChange, key, ...rest }: FilterRendererProps) {
+    let valuesFilteredOn: string[] | undefined;
+    if (filter) {
+      const modeAndNeedle = parseFilterModeAndNeedle(filter, true);
+      if (modeAndNeedle && modeAndNeedle.mode === '=') {
+        valuesFilteredOn = modeAndNeedle.needleParts;
+      }
+    }
+    return (
+      <Popover
+        key={key}
+        placement="bottom-start"
+        minimal
+        content={
+          <Menu>
+            {filterMap(suggestions, (suggestion, i) => {
+              return (
+                <MenuItem
+                  key={i}
+                  icon={
+                    valuesFilteredOn
+                      ? valuesFilteredOn.includes(suggestion)
+                        ? IconNames.MINUS
+                        : IconNames.PLUS
+                      : IconNames.EQUALS
+                  }
+                  text={suggestion}
+                  onClick={() =>
+                    onChange(
+                      combineModeAndNeedle(
+                        '=',
+                        valuesFilteredOn
+                          ? toggle(valuesFilteredOn, suggestion).join('|')
+                          : suggestion,
+                        true,
+                      ),
+                    )
+                  }
+                />
+              );
+            })}
+          </Menu>
+        }
+      >
+        <GenericFilterInput filter={filter} onChange={onChange} {...rest} />
+      </Popover>
+    );
+  };
 }
 
 export function BooleanFilterInput({ filter, onChange, key }: FilterRendererProps) {

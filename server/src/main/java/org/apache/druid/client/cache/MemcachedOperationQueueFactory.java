@@ -36,7 +36,7 @@ public class MemcachedOperationQueueFactory implements OperationQueueFactory
   @Override
   public BlockingQueue<Operation> create()
   {
-    return new BytesBoundedLinkedQueue<Operation>(maxQueueSize)
+    return new BytesBoundedLinkedQueue<>(maxQueueSize)
     {
       @Override
       public long getBytesSize(Operation operation)

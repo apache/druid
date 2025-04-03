@@ -26,12 +26,18 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -45,7 +51,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -129,10 +134,11 @@ public class DataSegmentTest
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
             ),
-            ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
-            ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
-            ImmutableMap.of(),
-            ImmutableMap.of()
+            ImmutableList.of(new CountAggregatorFactory("count")),
+            new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+            MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
+            MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+            null
         ),
         TEST_VERSION,
         1
@@ -196,8 +202,9 @@ public class DataSegmentTest
             null,
             null,
             null,
-            ImmutableMap.of(),
-            ImmutableMap.of()
+            MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
+            MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+            null
         ),
         TEST_VERSION,
         1
@@ -345,10 +352,11 @@ public class DataSegmentTest
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-        ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
-        ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
-        Collections.singletonMap("test", "map"),
-        Collections.singletonMap("test2", "map2")
+        ImmutableList.of(new CountAggregatorFactory("count")),
+        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+        MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class),
+        MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class),
+        null
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")
@@ -376,13 +384,12 @@ public class DataSegmentTest
         "bar",
         "foo"
     )));
-    List<Object> metricsSpec = ImmutableList.of(ImmutableMap.of("type", "count", "name", "count"));
-    Map<String, Object> transformSpec = ImmutableMap.of(
-        "filter",
-        ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")
+    List<AggregatorFactory> metricsSpec = ImmutableList.of(new CountAggregatorFactory("count"));
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(
+        new SelectorDimFilter("dim1", "foo", null)
     );
-    Map<String, Object> indexSpec = Collections.singletonMap("test", "map");
-    Map<String, Object> granularitySpec = Collections.singletonMap("test2", "map");
+    IndexSpec indexSpec = MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class);
+    GranularitySpec granularitySpec = MAPPER.convertValue(Map.of("test2", "map"), GranularitySpec.class);
 
     final CompactionState compactionState = new CompactionState(
         dynamicPartitionsSpec,
@@ -390,7 +397,8 @@ public class DataSegmentTest
         metricsSpec,
         transformSpec,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        null
     );
 
     final Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFunction =
@@ -400,7 +408,8 @@ public class DataSegmentTest
             metricsSpec,
             transformSpec,
             indexSpec,
-            granularitySpec
+            granularitySpec,
+            null
         );
 
     final DataSegment segment1 = DataSegment.builder()
@@ -430,7 +439,7 @@ public class DataSegmentTest
                                             .interval(Intervals.of("2012-01-01/2012-01-02"))
                                             .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                             .shardSpec(new TombstoneShardSpec())
-                                            .loadSpec(Collections.singletonMap(
+                                            .loadSpec(Map.of(
                                                 "type",
                                                 DataSegment.TOMBSTONE_LOADSPEC_TYPE
                                             ))
@@ -444,7 +453,7 @@ public class DataSegmentTest
                                             .interval(Intervals.of("2012-01-01/2012-01-02"))
                                             .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                             .shardSpec(getShardSpec(7))
-                                            .loadSpec(Collections.singletonMap(
+                                            .loadSpec(Map.of(
                                                 "type",
                                                 "foo"
                                             ))

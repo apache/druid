@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql;
 
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.http.SqlQuery;
@@ -51,21 +51,21 @@ public class HttpStatement extends DirectStatement
     super(
         lifecycleToolbox,
         SqlQueryPlus.builder(sqlQuery)
-          .auth(AuthorizationUtils.authenticationResultFromRequest(req))
-          .build(),
+                    .auth(AuthorizationUtils.authenticationResultFromRequest(req))
+                    .build(),
         req.getRemoteAddr()
     );
     this.req = req;
   }
 
   @Override
-  protected Function<Set<ResourceAction>, Access> authorizer()
+  protected Function<Set<ResourceAction>, AuthorizationResult> authorizer()
   {
     return resourceActions ->
-      AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          resourceActions,
-          sqlToolbox.plannerFactory.getAuthorizerMapper()
-    );
+        AuthorizationUtils.authorizeAllResourceActions(
+            req,
+            resourceActions,
+            sqlToolbox.plannerFactory.getAuthorizerMapper()
+        );
   }
 }

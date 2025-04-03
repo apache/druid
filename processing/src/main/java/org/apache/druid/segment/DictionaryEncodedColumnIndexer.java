@@ -78,7 +78,7 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
   @Override
   public CloseableIndexed<ActualType> getSortedIndexedValues()
   {
-    return new CloseableIndexed<ActualType>()
+    return new CloseableIndexed<>()
     {
       @Override
       public int size()

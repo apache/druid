@@ -21,7 +21,11 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -33,51 +37,63 @@ import java.util.Objects;
  */
 public class ClusterCompactionConfig
 {
-  private final Double compactionTaskSlotRatio;
-  private final Integer maxCompactionTaskSlots;
-  private final Boolean useAutoScaleSlots;
+  private static final CompactionCandidateSearchPolicy DEFAULT_COMPACTION_POLICY
+      = new NewestSegmentFirstPolicy(null);
+
+  private final double compactionTaskSlotRatio;
+  private final int maxCompactionTaskSlots;
+  private final boolean useSupervisors;
+  private final CompactionEngine engine;
   private final CompactionCandidateSearchPolicy compactionPolicy;
 
   @JsonCreator
   public ClusterCompactionConfig(
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
-      @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy
+      @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy,
+      @JsonProperty("useSupervisors") @Nullable Boolean useSupervisors,
+      @JsonProperty("engine") @Nullable CompactionEngine engine
   )
   {
-    this.compactionTaskSlotRatio = compactionTaskSlotRatio;
-    this.maxCompactionTaskSlots = maxCompactionTaskSlots;
-    this.useAutoScaleSlots = useAutoScaleSlots;
-    this.compactionPolicy = compactionPolicy;
+    this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
+    this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, Integer.MAX_VALUE);
+    this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
+    this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
+    this.useSupervisors = Configs.valueOrDefault(useSupervisors, false);
+
+    if (!this.useSupervisors && this.engine == CompactionEngine.MSQ) {
+      throw InvalidInput.exception("MSQ Compaction engine can be used only with compaction supervisors.");
+    }
   }
 
-  @Nullable
   @JsonProperty
-  public Double getCompactionTaskSlotRatio()
+  public double getCompactionTaskSlotRatio()
   {
     return compactionTaskSlotRatio;
   }
 
-  @Nullable
   @JsonProperty
-  public Integer getMaxCompactionTaskSlots()
+  public int getMaxCompactionTaskSlots()
   {
     return maxCompactionTaskSlots;
   }
 
-  @Nullable
-  @JsonProperty
-  public Boolean getUseAutoScaleSlots()
-  {
-    return useAutoScaleSlots;
-  }
-
-  @Nullable
   @JsonProperty
   public CompactionCandidateSearchPolicy getCompactionPolicy()
   {
     return compactionPolicy;
+  }
+
+  @JsonProperty
+  public boolean isUseSupervisors()
+  {
+    return useSupervisors;
+  }
+
+  @JsonProperty
+  public CompactionEngine getEngine()
+  {
+    return engine;
   }
 
   @Override
@@ -92,8 +108,9 @@ public class ClusterCompactionConfig
     ClusterCompactionConfig that = (ClusterCompactionConfig) o;
     return Objects.equals(compactionTaskSlotRatio, that.compactionTaskSlotRatio)
            && Objects.equals(maxCompactionTaskSlots, that.maxCompactionTaskSlots)
-           && Objects.equals(useAutoScaleSlots, that.useAutoScaleSlots)
-           && Objects.equals(compactionPolicy, that.compactionPolicy);
+           && Objects.equals(compactionPolicy, that.compactionPolicy)
+           && Objects.equals(useSupervisors, that.useSupervisors)
+           && Objects.equals(engine, that.engine);
   }
 
   @Override
@@ -102,8 +119,21 @@ public class ClusterCompactionConfig
     return Objects.hash(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
-        useAutoScaleSlots,
-        compactionPolicy
+        compactionPolicy,
+        useSupervisors,
+        engine
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ClusterCompactionConfig{" +
+           "compactionTaskSlotRatio=" + compactionTaskSlotRatio +
+           ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
+           ", useSupervisors=" + useSupervisors +
+           ", engine=" + engine +
+           ", compactionPolicy=" + compactionPolicy +
+           '}';
   }
 }

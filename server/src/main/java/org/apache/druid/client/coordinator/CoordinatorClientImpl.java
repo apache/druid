@@ -36,11 +36,13 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -118,9 +120,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
           holder -> JacksonUtils.readValue(
               jsonMapper,
               holder.getContent(),
-              new TypeReference<Iterable<ImmutableSegmentLoadInfo>>()
-              {
-              }
+              new TypeReference<>() {}
           )
       );
       FutureUtils.getUnchecked(segments, true).forEach(retVal::add);
@@ -143,7 +143,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
                 .jsonContent(jsonMapper, intervals),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSegment>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -157,7 +157,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
                 .jsonContent(jsonMapper, dataSources),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSourceInformation>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -198,7 +198,28 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Set<String>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
+  {
+    final StringBuilder pathBuilder = new StringBuilder("/druid/coordinator/v1/compaction/status");
+    if (dataSource != null && !dataSource.isEmpty()) {
+      pathBuilder.append("?").append("dataSource=").append(StringUtils.urlEncode(dataSource));
+    }
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, pathBuilder.toString()),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(
+            jsonMapper,
+            holder.getContent(),
+            CompactionStatusResponse.class
+        )
     );
   }
 }

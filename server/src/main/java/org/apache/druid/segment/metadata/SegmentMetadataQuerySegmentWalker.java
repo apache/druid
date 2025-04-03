@@ -142,7 +142,11 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
     final TimelineLookup<String, SegmentLoadInfo> timelineLookup = timelineConverter.apply(timeline);
 
     QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
-    Set<Pair<SegmentDescriptor, SegmentLoadInfo>> segmentAndServers = computeSegmentsToQuery(timelineLookup, query, toolChest);
+    Set<Pair<SegmentDescriptor, SegmentLoadInfo>> segmentAndServers = computeSegmentsToQuery(
+        timelineLookup,
+        query,
+        toolChest
+    );
 
     queryPlus = queryPlus.withQueryMetrics(toolChest);
     queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentAndServers.size()).emit(emitter);
@@ -181,7 +185,8 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
       QueryPlus<T> queryPlus,
       ResponseContext responseContext,
       long maxQueuedBytesPerServer,
-      List<SegmentDescriptor> segmentDescriptors)
+      List<SegmentDescriptor> segmentDescriptors
+  )
   {
     return serverRunner.run(
         queryPlus.withQuery(
@@ -207,7 +212,10 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
     List<TimelineObjectHolder<String, SegmentLoadInfo>> timelineObjectHolders =
         intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList());
 
-    final List<TimelineObjectHolder<String, SegmentLoadInfo>> serversLookup = toolChest.filterSegments(query, timelineObjectHolders);
+    final List<TimelineObjectHolder<String, SegmentLoadInfo>> serversLookup = toolChest.filterSegments(
+        query,
+        timelineObjectHolders
+    );
 
     Set<Pair<SegmentDescriptor, SegmentLoadInfo>> segmentAndServers = new HashSet<>();
     for (TimelineObjectHolder<String, SegmentLoadInfo> holder : serversLookup) {
@@ -252,8 +260,6 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
 
   private <T> Sequence<T> merge(Query<T> query, List<Sequence<T>> sequencesByInterval)
   {
-    return Sequences
-          .simple(sequencesByInterval)
-          .flatMerge(seq -> seq, query.getResultOrdering());
+    return Sequences.simple(sequencesByInterval).flatMerge(seq -> seq, query.getResultOrdering());
   }
 }

@@ -87,7 +87,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     final List<String> finalDims = Lists.newArrayList(
         Iterables.filter(
             row.getDimensions(),
-            new Predicate<String>()
+            new Predicate<>()
             {
               @Override
               public boolean apply(String input)

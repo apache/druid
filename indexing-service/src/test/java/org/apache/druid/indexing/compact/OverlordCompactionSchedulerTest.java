@@ -51,11 +51,11 @@ import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
@@ -72,6 +72,7 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class OverlordCompactionSchedulerTest
 {
@@ -90,8 +91,7 @@ public class OverlordCompactionSchedulerTest
     );
   }
 
-  private CompactionSupervisorConfig supervisorConfig;
-  private DruidCompactionConfig compactionConfig;
+  private AtomicReference<ClusterCompactionConfig> compactionConfig;
   private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
 
   private TaskMaster taskMaster;
@@ -128,8 +128,7 @@ public class OverlordCompactionSchedulerTest
     serviceEmitter = new StubServiceEmitter();
     segmentsMetadataManager = new TestSegmentsMetadataManager();
 
-    supervisorConfig = new CompactionSupervisorConfig(true, null);
-    compactionConfig = DruidCompactionConfig.empty();
+    compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(null, null, null, true, null));
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
 
     initScheduler();
@@ -144,9 +143,8 @@ public class OverlordCompactionSchedulerTest
         taskMaster,
         new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, () -> defaultWorkerConfig),
         segmentsMetadataManager,
-        () -> compactionConfig,
+        () -> DruidCompactionConfig.empty().withClusterConfig(compactionConfig.get()),
         new CompactionStatusTracker(OBJECT_MAPPER),
-        supervisorConfig,
         coordinatorOverlordServiceConfig,
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         serviceEmitter,
@@ -155,50 +153,96 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testStartStopWhenSchedulerIsEnabled()
+  public void testBecomeLeader_triggersStart_ifEnabled()
   {
-    supervisorConfig = new CompactionSupervisorConfig(true, null);
+    Assert.assertTrue(scheduler.isEnabled());
+
+    Assert.assertFalse(scheduler.isRunning());
+    Assert.assertFalse(executor.hasPendingTasks());
+
+    scheduler.becomeLeader();
+    runScheduledJob();
+
+    Assert.assertTrue(scheduler.isRunning());
+  }
+
+  @Test
+  public void testBecomeLeader_doesNotTriggerStart_ifDisabled()
+  {
+    disableScheduler();
+    Assert.assertFalse(scheduler.isEnabled());
+
     Assert.assertFalse(scheduler.isRunning());
 
-    scheduler.start();
-    Assert.assertTrue(scheduler.isRunning());
-    Assert.assertTrue(executor.hasPendingTasks());
-    scheduler.stop();
-    Assert.assertFalse(scheduler.isRunning());
-    Assert.assertTrue(executor.hasPendingTasks());
+    scheduler.becomeLeader();
+    runScheduledJob();
 
-    scheduler.start();
-    Assert.assertTrue(scheduler.isRunning());
-    scheduler.stop();
     Assert.assertFalse(scheduler.isRunning());
   }
 
   @Test
-  public void testStartStopWhenScheduledIsDisabled()
+  public void testStopBeingLeader_triggersStop()
   {
-    supervisorConfig = new CompactionSupervisorConfig(false, null);
-    initScheduler();
+    Assert.assertFalse(scheduler.isRunning());
 
+    scheduler.becomeLeader();
+    runScheduledJob();
+    Assert.assertTrue(scheduler.isRunning());
+
+    scheduler.stopBeingLeader();
+    Assert.assertTrue(scheduler.isRunning());
+
+    runScheduledJob();
     Assert.assertFalse(scheduler.isRunning());
-    scheduler.start();
-    Assert.assertFalse(scheduler.isRunning());
-    Assert.assertFalse(executor.hasPendingTasks());
-    scheduler.stop();
-    Assert.assertFalse(scheduler.isRunning());
-    Assert.assertFalse(executor.hasPendingTasks());
   }
 
   @Test
-  public void testSegmentsAreNotPolledWhenSchedulerIsDisabled()
+  public void testDisablingScheduler_triggersStop()
   {
-    supervisorConfig = new CompactionSupervisorConfig(false, null);
-    initScheduler();
+    // Start scheduler
+    scheduler.becomeLeader();
+    runScheduledJob();
+    Assert.assertTrue(scheduler.isRunning());
+
+    // Disable scheduler to trigger stop
+    disableScheduler();
+    Assert.assertFalse(scheduler.isEnabled());
+    Assert.assertTrue(scheduler.isRunning());
+
+    // Scheduler finally stops in the next schedule cycle
+    runScheduledJob();
+    Assert.assertFalse(scheduler.isRunning());
+  }
+
+  @Test
+  public void testEnablingScheduler_triggersStart()
+  {
+    disableScheduler();
+
+    // Becoming leader does not trigger start since scheduler is disabled
+    scheduler.becomeLeader();
+    runScheduledJob();
+    Assert.assertFalse(scheduler.isRunning());
+
+    // Enable the schduler to trigger start
+    enableScheduler();
+    Assert.assertFalse(scheduler.isRunning());
+
+    // Scheduler finally starts in the next schedule cycle
+    runScheduledJob();
+    Assert.assertTrue(scheduler.isRunning());
+  }
+
+  @Test
+  public void testSegmentsAreNotPolled_ifSupervisorsAreDisabled()
+  {
+    disableScheduler();
 
     verifySegmentPolling(false);
   }
 
   @Test
-  public void testSegmentsArePolledWhenRunningInStandaloneMode()
+  public void testSegmentsArePolled_whenRunningInStandaloneMode()
   {
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
     initScheduler();
@@ -207,7 +251,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testSegmentsAreNotPolledWhenRunningInCoordinatorMode()
+  public void testSegmentsAreNotPolled_whenRunningInCoordinatorMode()
   {
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(true, "overlord");
     initScheduler();
@@ -217,10 +261,12 @@ public class OverlordCompactionSchedulerTest
 
   private void verifySegmentPolling(boolean enabled)
   {
-    scheduler.start();
+    scheduler.becomeLeader();
+    runScheduledJob();
     Assert.assertEquals(enabled, segmentsMetadataManager.isPollingDatabasePeriodically());
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
+    runScheduledJob();
     Assert.assertFalse(segmentsMetadataManager.isPollingDatabasePeriodically());
   }
 
@@ -235,7 +281,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testMsqCompactionConfigWithOneMaxTasksIsInvalid()
   {
-    final DataSourceCompactionConfig datasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig datasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withEngine(CompactionEngine.MSQ)
@@ -251,18 +297,18 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testStartCompactionForDatasource()
+  public void testStartCompaction()
   {
     final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100);
     wikiSegments.forEach(segmentsMetadataManager::addSegment);
 
-    scheduler.start();
+    scheduler.becomeLeader();
     scheduler.startCompaction(
         TestDataSource.WIKI,
-        DataSourceCompactionConfig.builder()
-                                  .forDataSource(TestDataSource.WIKI)
-                                  .withSkipOffsetFromLatest(Period.seconds(0))
-                                  .build()
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(TestDataSource.WIKI)
+                                              .withSkipOffsetFromLatest(Period.seconds(0))
+                                              .build()
     );
 
     executor.finishNextPendingTask();
@@ -292,22 +338,22 @@ public class OverlordCompactionSchedulerTest
     serviceEmitter.verifyValue(Stats.Compaction.SUBMITTED_TASKS.getMetricName(), 1L);
     serviceEmitter.verifyValue(Stats.Compaction.COMPACTED_BYTES.getMetricName(), 100_000_000L);
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
   }
 
   @Test
-  public void testStopCompactionForDatasource()
+  public void testStopCompaction()
   {
     final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100);
     wikiSegments.forEach(segmentsMetadataManager::addSegment);
 
-    scheduler.start();
+    scheduler.becomeLeader();
     scheduler.startCompaction(
         TestDataSource.WIKI,
-        DataSourceCompactionConfig.builder()
-                                  .forDataSource(TestDataSource.WIKI)
-                                  .withSkipOffsetFromLatest(Period.seconds(0))
-                                  .build()
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(TestDataSource.WIKI)
+                                              .withSkipOffsetFromLatest(Period.seconds(0))
+                                              .build()
     );
     scheduler.stopCompaction(TestDataSource.WIKI);
 
@@ -315,17 +361,22 @@ public class OverlordCompactionSchedulerTest
 
     Mockito.verify(taskQueue, Mockito.never()).add(ArgumentMatchers.any());
 
-    Assert.assertNull(scheduler.getCompactionSnapshot(TestDataSource.WIKI));
+    Assert.assertEquals(
+        AutoCompactionSnapshot.builder(TestDataSource.WIKI)
+                              .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
+                              .build(),
+        scheduler.getCompactionSnapshot(TestDataSource.WIKI)
+    );
     Assert.assertTrue(scheduler.getAllCompactionSnapshots().isEmpty());
 
     serviceEmitter.verifyNotEmitted(Stats.Compaction.SUBMITTED_TASKS.getMetricName());
     serviceEmitter.verifyNotEmitted(Stats.Compaction.COMPACTED_BYTES.getMetricName());
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
   }
 
   @Test
-  public void testRunSimulation()
+  public void testSimulateRun()
   {
     final List<DataSegment> wikiSegments = CreateDataSegments
         .ofDatasource(TestDataSource.WIKI)
@@ -335,17 +386,19 @@ public class OverlordCompactionSchedulerTest
         .eachOfSizeInMb(100);
     wikiSegments.forEach(segmentsMetadataManager::addSegment);
 
-    scheduler.start();
+    scheduler.becomeLeader();
+    runScheduledJob();
+
     scheduler.startCompaction(
         TestDataSource.WIKI,
-        DataSourceCompactionConfig.builder()
-                                  .forDataSource(TestDataSource.WIKI)
-                                  .withSkipOffsetFromLatest(Period.seconds(0))
-                                  .build()
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(TestDataSource.WIKI)
+                                              .withSkipOffsetFromLatest(Period.seconds(0))
+                                              .build()
     );
 
     final CompactionSimulateResult simulateResult = scheduler.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(null, null, null, null)
+        new ClusterCompactionConfig(null, null, null, null, null)
     );
     Assert.assertEquals(1, simulateResult.getCompactionStates().size());
     final Table pendingCompactionTable = simulateResult.getCompactionStates().get(CompactionStatus.State.PENDING);
@@ -370,11 +423,26 @@ public class OverlordCompactionSchedulerTest
     scheduler.stopCompaction(TestDataSource.WIKI);
 
     final CompactionSimulateResult simulateResultWhenDisabled = scheduler.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(null, null, null, null)
+        new ClusterCompactionConfig(null, null, null, null, null)
     );
     Assert.assertTrue(simulateResultWhenDisabled.getCompactionStates().isEmpty());
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
+  }
+
+  private void disableScheduler()
+  {
+    compactionConfig.set(new ClusterCompactionConfig(null, null, null, false, null));
+  }
+
+  private void enableScheduler()
+  {
+    compactionConfig.set(new ClusterCompactionConfig(null, null, null, true, null));
+  }
+
+  private void runScheduledJob()
+  {
+    executor.finishNextPendingTask();
   }
 
 }

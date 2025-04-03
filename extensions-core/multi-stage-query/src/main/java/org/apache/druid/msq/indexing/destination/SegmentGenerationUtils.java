@@ -29,9 +29,11 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -51,8 +53,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.utils.CollectionUtils;
@@ -82,7 +82,7 @@ public final class SegmentGenerationUtils
     final boolean forceSegmentSortByTime =
         MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
 
-    final Pair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
+    final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
             querySignature,
             queryClusterBy,
@@ -100,6 +100,7 @@ public final class SegmentGenerationUtils
                      .withDimensions(dimensionsAndAggregators.lhs)
                      .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
                      .withGranularity(makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withProjections(destination.getProjections())
                      .build();
   }
 
@@ -195,7 +196,7 @@ public final class SegmentGenerationUtils
     );
   }
 
-  private static Pair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
+  private static NonnullPair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
       final List<String> contextSegmentSortOrder,
@@ -328,7 +329,7 @@ public final class SegmentGenerationUtils
       dimensionsSpecBuilder.setForceSegmentSortByTime(forceSegmentSortByTime ? null : false);
     }
 
-    return Pair.of(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);
+    return new NonnullPair<>(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);
   }
 
   /**

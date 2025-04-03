@@ -77,6 +77,7 @@ public @interface NotYetSupported
   enum Modes
   {
     // @formatter:off
+    NOT_ENOUGH_RULES(DruidException.class, "There are not enough rules to produce a node"),
     DISTINCT_AGGREGATE_NOT_SUPPORTED(DruidException.class, "DISTINCT is not supported"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
@@ -107,6 +108,12 @@ public @interface NotYetSupported
     Pattern getPattern()
     {
       return Pattern.compile(regex, Pattern.MULTILINE | Pattern.DOTALL);
+    }
+
+    @Override
+    public String toString()
+    {
+      return name() + "{" + regex + "}";
     }
   };
 

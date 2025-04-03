@@ -454,7 +454,7 @@ public class RemoteTaskRunnerTest
     final Set<String> runningTasks = Sets.newHashSet(
         Iterables.transform(
             remoteTaskRunner.getRunningTasks(),
-            new Function<RemoteTaskRunnerWorkItem, String>()
+            new Function<>()
             {
               @Override
               public String apply(RemoteTaskRunnerWorkItem input)
@@ -632,7 +632,7 @@ public class RemoteTaskRunnerTest
         new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
         new TestProvisioningStrategy<>(),
         httpClient,
-        new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null), null)
+        new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null, null), null)
     );
     Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
   }
@@ -721,7 +721,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)
@@ -742,7 +742,7 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)
@@ -761,7 +761,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)
@@ -782,7 +782,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)

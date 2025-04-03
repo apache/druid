@@ -47,10 +47,12 @@ import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -65,8 +67,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -166,6 +166,14 @@ public class DataSourcePlan
           filterFields,
           broadcast
       );
+    } else if (dataSource instanceof RestrictedDataSource) {
+      return forRestricted(
+          (RestrictedDataSource) dataSource,
+          querySegmentSpecIntervals(querySegmentSpec),
+          filter,
+          filterFields,
+          broadcast
+      );
     } else if (dataSource instanceof ExternalDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forExternal((ExternalDataSource) dataSource, broadcast);
@@ -212,10 +220,11 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof JoinDataSource) {
-      final JoinAlgorithm preferredJoinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      JoinDataSource joinDataSource = (JoinDataSource) dataSource;
+      final JoinAlgorithm preferredJoinAlgorithm = joinDataSource.getJoinAlgorithm();
       final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
           preferredJoinAlgorithm,
-          ((JoinDataSource) dataSource)
+          joinDataSource
       );
 
       switch (deducedJoinAlgorithm) {
@@ -223,7 +232,7 @@ public class DataSourcePlan
           return forBroadcastHashJoin(
               queryKitSpec,
               queryContext,
-              (JoinDataSource) dataSource,
+              joinDataSource,
               querySegmentSpec,
               filter,
               filterFields,
@@ -234,7 +243,7 @@ public class DataSourcePlan
         case SORT_MERGE:
           return forSortMergeJoin(
               queryKitSpec,
-              (JoinDataSource) dataSource,
+              joinDataSource,
               querySegmentSpec,
               minStageNumber,
               broadcast
@@ -329,7 +338,7 @@ public class DataSourcePlan
 
   /**
    * Checks if the sortMerge algorithm can execute a particular join condition.
-   *
+   * <p>
    * One check: join condition on two tables "table1" and "table2" is of the form
    * table1.columnA = table2.columnA && table1.columnB = table2.columnB && ....
    */
@@ -360,6 +369,24 @@ public class DataSourcePlan
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter, filterFields)),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        null
+    );
+  }
+
+  private static DataSourcePlan forRestricted(
+      final RestrictedDataSource dataSource,
+      final List<Interval> intervals,
+      @Nullable final DimFilter filter,
+      @Nullable final Set<String> filterFields,
+      final boolean broadcast
+  )
+  {
+    return new DataSourcePlan(
+        (broadcast && dataSource.isGlobal())
+        ? dataSource
+        : new RestrictedInputNumberDataSource(0, dataSource.getPolicy()),
+        Collections.singletonList(new TableInputSpec(dataSource.getBase().getName(), intervals, filter, filterFields)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
     );
@@ -573,7 +600,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
-    final DataSourceAnalysis analysis = dataSource.getAnalysis();
+    final DataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKitSpec,
@@ -615,7 +642,8 @@ public class DataSourcePlan
           clause.getJoinType(),
           // First JoinDataSource (i == 0) involves the base table, so we need to propagate the base table filter.
           i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null,
-          dataSource.getJoinableFactoryWrapper()
+          dataSource.getJoinableFactoryWrapper(),
+          clause.getJoinAlgorithm()
       );
       inputSpecs.addAll(clausePlan.getInputSpecs());
       clausePlan.getBroadcastInputs().intStream().forEach(n -> broadcastInputs.add(n + shift));
@@ -763,10 +791,10 @@ public class DataSourcePlan
   /**
    * Verify that the provided {@link QuerySegmentSpec} is a {@link MultipleIntervalSegmentSpec} with
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
-   *
+   * <p>
    * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
    * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
-   *
+   * <p>
    * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
    * the SQL layer avoids "intervals" in other cases. See
    * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.

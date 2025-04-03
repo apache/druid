@@ -26,9 +26,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,8 +94,10 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyAttemptsForJob(2, 2, "taskId", "rootError"));
     assertFaultSerde(UnknownFault.forMessage(null));
     assertFaultSerde(UnknownFault.forMessage("the message"));
+    assertFaultSerde(new WorkerFailedFault("the worker task", null));
     assertFaultSerde(new WorkerFailedFault("the worker task", "the error msg"));
-    assertFaultSerde(new WorkerRpcFailedFault("the worker task"));
+    assertFaultSerde(new WorkerRpcFailedFault("the worker task", null));
+    assertFaultSerde(new WorkerRpcFailedFault("the worker task", "the error msg"));
     assertFaultSerde(new NotEnoughTemporaryStorageFault(250, 2));
   }
 

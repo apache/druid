@@ -337,7 +337,7 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     @Override
     public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
     {
-      return new ColumnValueSelector<Object>()
+      return new ColumnValueSelector<>()
       {
         @Override
         public double getDouble()

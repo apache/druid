@@ -67,7 +67,7 @@ public class Announcer
   private final List<Announceable> toUpdate = new ArrayList<>();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new ConcurrentHashMap<>();
-  private final List<String> parentsIBuilt = new CopyOnWriteArrayList<String>();
+  private final List<String> parentsIBuilt = new CopyOnWriteArrayList<>();
 
   // Used for testing
   private Set<String> addedChildren;
@@ -228,7 +228,7 @@ public class Announcer
           cache.getListenable().addListener(
               new PathChildrenCacheListener()
               {
-                private final AtomicReference<Set<String>> pathsLost = new AtomicReference<Set<String>>(null);
+                private final AtomicReference<Set<String>> pathsLost = new AtomicReference<>(null);
 
                 @Override
                 public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception

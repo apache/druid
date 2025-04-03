@@ -245,7 +245,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     runningTasks.put(task.getId(), new TaskDetails(task));
     Futures.addCallback(
         future,
-        new FutureCallback<TaskStatus>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(TaskStatus result)

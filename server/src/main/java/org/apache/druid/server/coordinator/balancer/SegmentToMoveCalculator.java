@@ -41,6 +41,11 @@ import java.util.stream.Collectors;
 public class SegmentToMoveCalculator
 {
   /**
+   * Maximum number of balancer threads that can be passed to {@link #computeMaxSegmentsToMovePerTier}.
+   */
+  public static final int MAX_BALANCER_THREADS = 100;
+
+  /**
    * At least this number of segments must be picked for moving in every cycle
    * to keep the cluster well-balanced.
    */
@@ -132,7 +137,7 @@ public class SegmentToMoveCalculator
   )
   {
     Preconditions.checkArgument(
-        numBalancerThreads > 0 && numBalancerThreads <= 100,
+        numBalancerThreads > 0 && numBalancerThreads <= MAX_BALANCER_THREADS,
         "Number of balancer threads must be in range (0, 100]."
     );
     if (totalSegments <= 0) {
@@ -248,7 +253,7 @@ public class SegmentToMoveCalculator
 
     final int numSegmentsToMove = maxCountDifference.getKey() / 2;
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of datasource[%s] in tier[%s] to fix gap between min[%,d] and max[%,d].",
           numSegmentsToMove, mostUnbalancedDatasource, tier, minNumSegments, maxNumSegments
       );
@@ -290,7 +295,7 @@ public class SegmentToMoveCalculator
                                   ? 0 : (int) (differenceInUsageBytes / averageSegmentSize) / 2;
 
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of avg size [%,d MB] in tier[%s] to fix"
           + " disk usage gap between min[%d GB][%.1f%%] and max[%d GB][%.1f%%].",
           numSegmentsToMove, ((long) averageSegmentSize) >> 20, tier,

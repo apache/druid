@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.firstlast;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -60,7 +60,7 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
     buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
-        NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
+        TypeStrategies.IS_NULL_BYTE
     );
     buf.putLong(position + VALUE_OFFSET, 0L);
   }
@@ -70,7 +70,7 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
   public Object get(ByteBuffer buf, int position)
   {
     long time = buf.getLong(position);
-    if (buf.get(position + NULLITY_OFFSET) == NullHandling.IS_NULL_BYTE) {
+    if (buf.get(position + NULLITY_OFFSET) == TypeStrategies.IS_NULL_BYTE) {
       return new SerializablePairLongLong(time, null);
     }
     return new SerializablePairLongLong(time, buf.getLong(position + VALUE_OFFSET));
@@ -80,7 +80,7 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
   protected void putValue(ByteBuffer buf, int position, long time, Long value)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NOT_NULL_BYTE);
     buf.putLong(position + VALUE_OFFSET, value);
   }
 
@@ -88,7 +88,7 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
   protected void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NOT_NULL_BYTE);
     buf.putLong(position + VALUE_OFFSET, valueSelector.getLongVector()[index]);
   }
 
@@ -96,15 +96,7 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
   protected void putNull(ByteBuffer buf, int position, long time)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
-    buf.putLong(position + VALUE_OFFSET, 0L);
-  }
-
-  @Override
-  protected void putDefaultValue(ByteBuffer buf, int position, long time)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NULL_BYTE);
     buf.putLong(position + VALUE_OFFSET, 0L);
   }
 

@@ -276,7 +276,7 @@ public class RunAllFullyWidget<T, ResultType>
 
         Futures.addCallback(
             future,
-            new FutureCallback<T>()
+            new FutureCallback<>()
             {
               @Override
               public void onSuccess(T result)

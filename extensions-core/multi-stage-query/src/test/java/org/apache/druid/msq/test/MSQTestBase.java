@@ -40,7 +40,6 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -50,7 +49,6 @@ import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.GuiceInjectors;
@@ -136,6 +134,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
@@ -162,6 +161,7 @@ import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
@@ -184,6 +184,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -236,6 +237,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
+import static org.apache.druid.sql.calcite.util.CalciteTests.RESTRICTED_DATASOURCE;
 import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
@@ -272,9 +274,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
-                  .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
+                  .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())
                   .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
                   .build();
+
+  public static final Map<String, Object> SUPERUSER_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.SUPER_USER_AUTH_RESULT.getIdentity())
+                  .buildKeepingLast();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
@@ -317,8 +325,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String DURABLE_STORAGE = "durable_storage";
   public static final String DEFAULT = "default";
   public static final String PARALLEL_MERGE = "parallel_merge";
-
-  public final boolean useDefault = NullHandling.replaceWithDefault();
+  public static final String SUPERUSER = "superuser";
 
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
@@ -350,37 +357,39 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
+      return DruidModuleCollection.of(
+          super.getCoreModule(),
+          new HllSketchModule(),
+          new LocalMsqSqlModule()
+      );
+    }
 
-      builder
-          .addModule(new HllSketchModule())
-          .addModule(new DruidModule()
-          {
-            // Small subset of MsqSqlModule
-            @Override
-            public void configure(Binder binder)
-            {
-              // We want this module to bring InputSourceModule along for the ride.
-              binder.install(new InputSourceModule());
-              binder.install(new BuiltInTypesModule());
-              BuiltInTypesModule.registerHandlersAndSerde();
-              SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-              SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-              SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-              SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-            }
+    private static final class LocalMsqSqlModule implements DruidModule
+    {
+      // Small subset of MsqSqlModule
+      @Override
+      public void configure(Binder binder)
+      {
+        // We want this module to bring InputSourceModule along for the ride.
+        binder.install(new InputSourceModule());
+        BuiltInTypesModule.registerHandlersAndSerde();
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+      }
 
-            @Override
-            public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-            {
-              // We want this module to bring input sources along for the ride.
-              return new InputSourceModule().getJacksonModules();
-            }
-          });
+      @Override
+      public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+      {
+        // We want this module to bring input sources along for the ride.
+        return new InputSourceModule().getJacksonModules();
+      }
     }
   }
+
 
   @AfterEach
   public void tearDown2()
@@ -648,6 +657,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       final QueryableIndex index;
       switch (segmentId.getDataSource()) {
         case DATASOURCE1:
+        case RESTRICTED_DATASOURCE: // RESTRICTED_DATASOURCE share the same index as DATASOURCE1.
           IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
               .withMetrics(
                   new CountAggregatorFactory("cnt"),
@@ -789,14 +799,19 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  private String runMultiStageQuery(String query, Map<String, Object> context, List<TypedValue> parameters)
+  private String runMultiStageQuery(
+      String query,
+      Map<String, Object> context,
+      AuthenticationResult authenticationResult,
+      List<TypedValue> parameters
+  )
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         new SqlQueryPlus(
             query,
             context,
             parameters,
-            CalciteTests.REGULAR_USER_AUTH_RESULT
+            authenticationResult
         )
     );
 
@@ -889,6 +904,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public abstract class MSQTester<Builder extends MSQTester<Builder>>
   {
     protected String sql = null;
+    protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
     protected MSQControllerTask taskSpec = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
     protected List<TypedValue> dynamicParameters = new ArrayList<>();
@@ -927,6 +943,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
+      if (queryContext.containsKey(MSQTaskQueryMaker.USER_KEY)
+          && CalciteTests.TEST_SUPERUSER_NAME.equals(queryContext.get(MSQTaskQueryMaker.USER_KEY))) {
+        this.authenticationResult = CalciteTests.SUPER_USER_AUTH_RESULT;
+      }
       return asBuilder();
     }
 
@@ -965,7 +985,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public Builder setExpectedTombstoneIntervals(Set<Interval> tombstoneIntervals)
     {
-      Preconditions.checkArgument(!tombstoneIntervals.isEmpty(), "Segments cannot be empty");
       this.expectedTombstoneIntervals = tombstoneIntervals;
       return asBuilder();
     }
@@ -1069,7 +1088,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
-          () -> runMultiStageQuery(sql, queryContext, dynamicParameters)
+          () -> runMultiStageQuery(sql, queryContext, authenticationResult, dynamicParameters)
       );
 
       assertThat(e, expectedValidationErrorMatcher);
@@ -1151,6 +1170,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private List<Interval> expectedDestinationIntervals = null;
 
+    private List<AggregateProjectionMetadata> expectedProjections = null;
+
     private IngestTester()
     {
       // nothing to do
@@ -1192,6 +1213,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return this;
     }
 
+    public IngestTester setExpectedProjections(List<AggregateProjectionMetadata> expectedProjections)
+    {
+      this.expectedProjections = expectedProjections;
+      return this;
+    }
+
     public void verifyResults()
     {
       Preconditions.checkArgument(
@@ -1221,7 +1248,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         String controllerId;
         if (sql != null) {
           // Run the sql command.
-          controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
+          controllerId = runMultiStageQuery(sql, queryContext, authenticationResult, dynamicParameters);
         } else {
           // Run the task spec directly instead.
           controllerId = TEST_CONTROLLER_TASK_ID;
@@ -1297,6 +1324,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
               expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
               queryableIndex.getMetadata().getAggregators()
           );
+
+          if (expectedProjections != null) {
+            Assert.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+          }
 
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
             // transforming rows for sketch assertions
@@ -1438,7 +1469,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       try {
         String controllerId;
         if (sql != null) {
-          controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
+          controllerId = runMultiStageQuery(sql, queryContext, authenticationResult, dynamicParameters);
         } else {
           // Run the task spec directly instead.
           controllerId = TEST_CONTROLLER_TASK_ID;
@@ -1480,7 +1511,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(sql == null || queryContext != null, "queryContext cannot be null");
 
       try {
-        String controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
+        String controllerId = runMultiStageQuery(sql, queryContext, authenticationResult, dynamicParameters);
 
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);

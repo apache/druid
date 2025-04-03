@@ -49,8 +49,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -152,14 +152,14 @@ public class QueryResource implements QueryCountStatsProvider
       datasources = new TreeSet<>();
     }
 
-    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
         Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
         authorizerMapper
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
 
     queryScheduler.cancelQuery(queryId);
@@ -198,7 +198,7 @@ public class QueryResource implements QueryCountStatsProvider
         log.debug("Got query [%s]", queryLifecycle.getQuery());
       }
 
-      final Access authResult;
+      final AuthorizationResult authResult;
       try {
         authResult = queryLifecycle.authorize(req);
       }
@@ -214,8 +214,9 @@ public class QueryResource implements QueryCountStatsProvider
         return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
       }
 
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
+      if (!authResult.allowBasicAccess()) {
+        log.info("Query[%s] forbidden due to reason[%s]", query.getId(), authResult.getErrorMessage());
+        throw new ForbiddenException(authResult.getErrorMessage());
       }
 
       final QueryResourceQueryResultPusher pusher = new QueryResourceQueryResultPusher(req, queryLifecycle, io);

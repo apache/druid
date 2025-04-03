@@ -27,12 +27,13 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.quidem.DruidAvaticaTestDriver;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
+import org.apache.druid.sql.calcite.util.FakeIndexTaskUtil;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -50,6 +51,7 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
+
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -61,11 +63,11 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -98,7 +100,7 @@ public class SqlTestFrameworkConfig
   @NumMergeBuffers(QueryStackTests.DEFAULT_NUM_MERGE_BUFFERS)
   public @interface NumMergeBuffers
   {
-    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(NumMergeBuffers.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(NumMergeBuffers.class)
     {
       @Override
       public Integer fromString(String str) throws NumberFormatException
@@ -115,7 +117,7 @@ public class SqlTestFrameworkConfig
   @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
   public @interface MinTopNThreshold
   {
-    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(MinTopNThreshold.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(MinTopNThreshold.class)
     {
       @Override
       public Integer fromString(String str) throws NumberFormatException
@@ -132,7 +134,7 @@ public class SqlTestFrameworkConfig
   @ResultCache(ResultCacheMode.DISABLED)
   public @interface ResultCache
   {
-    ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<ResultCacheMode>(ResultCache.class)
+    ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<>(ResultCache.class)
     {
       @Override
       public ResultCacheMode fromString(String str)
@@ -152,7 +154,7 @@ public class SqlTestFrameworkConfig
   @ComponentSupplier(StandardComponentSupplier.class)
   public @interface ComponentSupplier
   {
-    ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<Class<? extends QueryComponentSupplier>>(
+    ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<>(
         ComponentSupplier.class
     )
     {
@@ -166,17 +168,44 @@ public class SqlTestFrameworkConfig
     Class<? extends QueryComponentSupplier> value();
   }
 
+  /**
+   * Declares which tables to ingest into this {@link QueryComponentSupplier}.
+   *
+   * May point to a directory containing json ingestion files.
+   * All files will be made available thru via {@link FakeIndexTaskUtil}.
+   * It may not support all ingestion feature.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.METHOD, ElementType.TYPE})
+  @Datasets("")
+  public @interface Datasets
+  {
+    ConfigOptionProcessor<String> PROCESSOR = new ConfigOptionProcessor<>(Datasets.class)
+    {
+      @Override
+      public String fromString(String name)
+      {
+        return name;
+      }
+    };
+
+    String value();
+  }
+
   private static final Set<String> KNOWN_CONFIG_KEYS = ImmutableSet.<String>builder()
       .add(NumMergeBuffers.PROCESSOR.getConfigName())
       .add(MinTopNThreshold.PROCESSOR.getConfigName())
       .add(ResultCache.PROCESSOR.getConfigName())
       .add(ComponentSupplier.PROCESSOR.getConfigName())
+      .add(Datasets.PROCESSOR.getConfigName())
       .build();
 
   public final int numMergeBuffers;
   public final int minTopNThreshold;
   public final ResultCacheMode resultCache;
   public final Class<? extends QueryComponentSupplier> componentSupplier;
+  public final String datasets;
+
 
   public SqlTestFrameworkConfig(List<Annotation> annotations)
   {
@@ -185,6 +214,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromAnnotations(annotations);
       resultCache = ResultCache.PROCESSOR.fromAnnotations(annotations);
       componentSupplier = ComponentSupplier.PROCESSOR.fromAnnotations(annotations);
+      datasets = Datasets.PROCESSOR.fromAnnotations(annotations);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -199,6 +229,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromMap(queryParams);
       resultCache = ResultCache.PROCESSOR.fromMap(queryParams);
       componentSupplier = ComponentSupplier.PROCESSOR.fromMap(queryParams);
+      datasets = Datasets.PROCESSOR.fromMap(queryParams);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -217,7 +248,7 @@ public class SqlTestFrameworkConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier);
+    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier, datasets);
   }
 
   @Override
@@ -230,7 +261,8 @@ public class SqlTestFrameworkConfig
     return minTopNThreshold == other.minTopNThreshold
         && numMergeBuffers == other.numMergeBuffers
         && resultCache == other.resultCache
-        && componentSupplier == other.componentSupplier;
+        && componentSupplier == other.componentSupplier
+        && Objects.equals(datasets, other.datasets);
   }
 
   public static class SqlTestFrameworkConfigStore implements Closeable
@@ -323,7 +355,7 @@ public class SqlTestFrameworkConfig
      */
     public String buildTestCaseName(ExtensionContext context)
     {
-      List<String> names = new ArrayList<String>();
+      List<String> names = new ArrayList<>();
       Pattern pattern = Pattern.compile("\\([^)]*\\)");
       // this will add all name pieces - except the "last" which would be the
       // Class level name
@@ -426,20 +458,15 @@ public class SqlTestFrameworkConfig
     return map;
   }
 
-  public static SqlTestFrameworkConfig fromURL(String url) throws SQLException
+  public static SqlTestFrameworkConfig fromURL(String url)
   {
 
     Map<String, String> queryParams;
     queryParams = new HashMap<>();
     try {
       URI uri = new URI(url);
-      if (!DruidAvaticaTestDriver.SCHEME.equals(uri.getScheme())) {
-        throw new SQLException(
-            StringUtils.format("URI [%s] is invalid ; only scheme [%s] is supported.", url, DruidAvaticaTestDriver.SCHEME)
-        );
-      }
       if (uri.getHost() != null || uri.getPort() != -1) {
-        throw new SQLException(StringUtils.format("URI [%s] is invalid ; only query parameters are supported.", url));
+        throw DruidException.defensive("URI [%s] is invalid ; only query parameters are supported.", url);
       }
       List<NameValuePair> params = URLEncodedUtils.parse(uri, StandardCharsets.UTF_8);
       for (NameValuePair pair : params) {
@@ -448,13 +475,13 @@ public class SqlTestFrameworkConfig
       // possible caveat: duplicate entries overwrite earlier ones
     }
     catch (URISyntaxException e) {
-      throw new SQLException("Can't decode URI", e);
+      throw DruidException.defensive(e, "Can't decode URI");
     }
 
     return new SqlTestFrameworkConfig(queryParams);
   }
 
-  abstract static class ConfigOptionProcessor<T>
+  public abstract static class ConfigOptionProcessor<T>
   {
     final Class<? extends Annotation> annotationClass;
 
@@ -509,7 +536,7 @@ public class SqlTestFrameworkConfig
 
   static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
       .newBuilder()
-      .build(new CacheLoader<String, Set<Class<? extends QueryComponentSupplier>>>()
+      .build(new CacheLoader<>()
       {
         @Override
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
@@ -522,7 +549,21 @@ public class SqlTestFrameworkConfig
                       .includePackage(pkg)
                       .and(s -> s.contains("ComponentSupplier"))
               );
-          return new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
+          final Set<Class<? extends QueryComponentSupplier>> baseComponentClazzes =
+              new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
+          LinkedHashSet<Class<? extends QueryComponentSupplier>> retVal = new LinkedHashSet<>(baseComponentClazzes);
+
+          for (Class<? extends QueryComponentSupplier> baseClazz : baseComponentClazzes) {
+            if (MultiComponentSupplier.class.isAssignableFrom(baseClazz) && baseClazz != MultiComponentSupplier.class) {
+              final Class<? extends MultiComponentSupplier> multiClazz =
+                  (Class<? extends MultiComponentSupplier>) baseClazz;
+
+              MultiComponentSupplier.registerComponentSupplier(multiClazz);
+              retVal.addAll(MultiComponentSupplier.getSuppliers(multiClazz));
+            }
+          }
+
+          return retVal;
         }
       });
 

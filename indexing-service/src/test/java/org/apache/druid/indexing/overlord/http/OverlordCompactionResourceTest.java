@@ -19,214 +19,448 @@
 
 package org.apache.druid.indexing.overlord.http;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.error.DruidException;
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.compact.CompactionScheduler;
+import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
+import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.supervisor.CompactionSupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
-import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.security.AllowAllAuthorizer;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OverlordCompactionResourceTest
 {
-  private static final CompactionSupervisorConfig SUPERVISOR_ENABLED
-      = new CompactionSupervisorConfig(true, null);
-  private static final CompactionSupervisorConfig SUPERVISOR_DISABLED
-      = new CompactionSupervisorConfig(false, null);
+  private final Random random = new Random(1000);
 
   private CompactionScheduler scheduler;
+  private OverlordCompactionResource compactionResource;
+
+  private CoordinatorClient coordinatorClient;
+  private CoordinatorConfigManager configManager;
+
+  private HttpServletRequest httpRequest;
+  private AuthorizerMapper authorizerMapper;
+
+  private TaskMaster taskMaster;
+  private SupervisorManager supervisorManager;
+  private final AtomicBoolean useSupervisors = new AtomicBoolean(false);
+
+  private DataSourceCompactionConfig wikiConfig;
+
+  /**
+   * Mock instance of CompactionScheduler used only for validating compaction configs.
+   */
+  private CompactionScheduler validator;
 
   @Before
   public void setUp()
   {
+    useSupervisors.set(true);
     scheduler = EasyMock.createStrictMock(CompactionScheduler.class);
+    EasyMock.expect(scheduler.isEnabled()).andAnswer(useSupervisors::get).anyTimes();
+
+    coordinatorClient = EasyMock.createStrictMock(CoordinatorClient.class);
+    supervisorManager = EasyMock.createStrictMock(SupervisorManager.class);
+    configManager = EasyMock.createStrictMock(CoordinatorConfigManager.class);
+
+    httpRequest = EasyMock.createStrictMock(HttpServletRequest.class);
+    authorizerMapper = EasyMock.createStrictMock(AuthorizerMapper.class);
+    EasyMock.expect(authorizerMapper.getAuthorizer("druid")).andReturn(new AllowAllAuthorizer()).anyTimes();
+
+    taskMaster = EasyMock.createStrictMock(TaskMaster.class);
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).anyTimes();
+
+    final AuditManager auditManager = EasyMock.createStrictMock(AuditManager.class);
+
+    compactionResource = new OverlordCompactionResource(
+        scheduler,
+        authorizerMapper,
+        coordinatorClient,
+        configManager,
+        new CompactionSupervisorManager(taskMaster, auditManager)
+    );
+
+    wikiConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTaskPriority(random.nextInt(100))
+        .withSkipOffsetFromLatest(Period.days(random.nextInt(5)))
+        .build();
+
+    validator = EasyMock.createStrictMock(CompactionScheduler.class);
+    EasyMock.expect(validator.validateCompactionConfig(EasyMock.anyObject()))
+            .andReturn(CompactionConfigValidationResult.success())
+            .anyTimes();
+    EasyMock.replay(validator, taskMaster, authorizerMapper);
   }
 
   @After
   public void tearDown()
   {
-    EasyMock.verify(scheduler);
+    EasyMock.verify(
+        validator,
+        scheduler,
+        taskMaster,
+        httpRequest,
+        configManager,
+        authorizerMapper,
+        coordinatorClient,
+        supervisorManager
+    );
   }
 
-  @Test
-  public void testGetCompactionSnapshotWithEmptyDatasource()
+  private void replayAll()
   {
-    final Map<String, AutoCompactionSnapshot> allSnapshots = ImmutableMap.of(
-        TestDataSource.WIKI,
-        AutoCompactionSnapshot.builder(TestDataSource.WIKI).build()
-    );
-
-    EasyMock.expect(scheduler.getAllCompactionSnapshots())
-            .andReturn(allSnapshots).once();
-    EasyMock.replay(scheduler);
-
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
-        .getCompactionSnapshots("");
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
-        new CompactionStatusResponse(allSnapshots.values()),
-        response.getEntity()
-    );
+    EasyMock.replay(scheduler, httpRequest, configManager, coordinatorClient, supervisorManager);
   }
 
   @Test
-  public void testGetCompactionSnapshotWithNullDatasource()
+  public void test_updateClusterConfig()
   {
-    final Map<String, AutoCompactionSnapshot> allSnapshots = ImmutableMap.of(
-        TestDataSource.WIKI,
-        AutoCompactionSnapshot.builder(TestDataSource.WIKI).build()
+    EasyMock.expect(configManager.updateClusterCompactionConfig(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(true)
+            .once();
+
+    setupMockRequestForAudit();
+    replayAll();
+
+    Response response = compactionResource.updateClusterCompactionConfig(
+        new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ),
+        httpRequest
     );
-
-    EasyMock.expect(scheduler.getAllCompactionSnapshots())
-            .andReturn(allSnapshots).once();
-    EasyMock.replay(scheduler);
-
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
-        .getCompactionSnapshots(null);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
-        new CompactionStatusResponse(allSnapshots.values()),
-        response.getEntity()
+    Assert.assertEquals(Map.of("success", true), response.getEntity());
+  }
+
+  @Test
+  public void test_getClusterConfig()
+  {
+    final ClusterCompactionConfig clusterConfig =
+        new ClusterCompactionConfig(0.4, 100, null, true, CompactionEngine.MSQ);
+    EasyMock.expect(configManager.getClusterCompactionConfig())
+            .andReturn(clusterConfig)
+            .once();
+    replayAll();
+
+    final Response response = compactionResource.getClusterCompactionConfig();
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(clusterConfig, response.getEntity());
+  }
+
+  @Test
+  public void test_getDatasourceCompactionSnapshot_returnsInvalidInput_ifDatasourceIsNullOrEmpty()
+  {
+    replayAll();
+
+    verifyInvalidInputResponse(
+        compactionResource.getDatasourceCompactionSnapshot(""),
+        "No DataSource specified"
+    );
+    verifyInvalidInputResponse(
+        compactionResource.getDatasourceCompactionSnapshot(null),
+        "No DataSource specified"
     );
   }
 
   @Test
-  public void testGetCompactionSnapshotWithValidDatasource()
+  public void test_getDatasourceCompactionSnapshot()
   {
     final AutoCompactionSnapshot snapshot = AutoCompactionSnapshot.builder(TestDataSource.WIKI).build();
 
     EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.WIKI))
             .andReturn(snapshot).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
-        .getCompactionSnapshots(TestDataSource.WIKI);
+    final Response response = compactionResource.getDatasourceCompactionSnapshot(TestDataSource.WIKI);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
-        new CompactionStatusResponse(Collections.singleton(snapshot)),
-        response.getEntity()
-    );
+    Assert.assertEquals(snapshot, response.getEntity());
   }
 
   @Test
-  public void testGetCompactionSnapshotWithInvalidDatasource()
+  public void test_getDatasourceCompactionSnapshot_returnsNotFound_withInvalidDatasource()
   {
     EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.KOALA))
             .andReturn(null).once();
-    EasyMock.replay(scheduler);
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
-        .getCompactionSnapshots(TestDataSource.KOALA);
+    final Response response = compactionResource.getDatasourceCompactionSnapshot(TestDataSource.KOALA);
     Assert.assertEquals(404, response.getStatus());
   }
 
   @Test
-  public void testGetProgressForValidDatasource()
+  public void test_getDatasourceCompactionSnapshot_redirectsToCoordinator_ifSchedulerIsDisabled()
   {
-    final AutoCompactionSnapshot.Builder snapshotBuilder
-        = AutoCompactionSnapshot.builder(TestDataSource.WIKI);
-    snapshotBuilder.incrementWaitingStats(CompactionStatistics.create(100L, 10L, 1L));
-    final AutoCompactionSnapshot snapshot = snapshotBuilder.build();
+    useSupervisors.set(false);
 
-    EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.WIKI))
-            .andReturn(snapshot).once();
-    EasyMock.replay(scheduler);
+    final AutoCompactionSnapshot snapshot =
+        AutoCompactionSnapshot.builder(TestDataSource.WIKI).build();
+    EasyMock.expect(coordinatorClient.getCompactionSnapshots(TestDataSource.WIKI))
+            .andReturn(Futures.immediateFuture(new CompactionStatusResponse(List.of(snapshot))));
+    replayAll();
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
-        .getCompactionProgress(TestDataSource.WIKI);
+    final Response response = compactionResource.getDatasourceCompactionSnapshot(TestDataSource.WIKI);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new CompactionProgressResponse(100L), response.getEntity());
+    Assert.assertEquals(snapshot, response.getEntity());
   }
 
   @Test
-  public void testGetProgressForNullDatasourceReturnsBadRequest()
+  public void test_getAllCompactionSnapshots()
   {
-    EasyMock.replay(scheduler);
+    final AutoCompactionSnapshot snapshot =
+        AutoCompactionSnapshot.builder(TestDataSource.WIKI).build();
 
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
-        .getCompactionProgress(null);
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    setupMockRequestForUser("druid");
+    EasyMock.expect(httpRequest.getMethod()).andReturn("POST").once();
 
-    final Object responseEntity = response.getEntity();
-    Assert.assertTrue(responseEntity instanceof ErrorResponse);
+    EasyMock.expect(scheduler.getAllCompactionSnapshots())
+            .andReturn(Map.of(TestDataSource.WIKI, snapshot)).anyTimes();
+    replayAll();
 
+    final Response response = compactionResource.getAllCompactionSnapshots(httpRequest);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
+  }
+
+  @Test
+  public void test_getDatasourceCompactionConfig()
+  {
+    final String supervisorId = CompactionSupervisorSpec.getSupervisorIdForDatasource(TestDataSource.WIKI);
+    EasyMock.expect(supervisorManager.getSupervisorSpec(supervisorId))
+            .andReturn(Optional.of(new CompactionSupervisorSpec(wikiConfig, false, validator)))
+            .anyTimes();
+    replayAll();
+
+    final Response response = compactionResource.getDatasourceCompactionConfig(TestDataSource.WIKI);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(wikiConfig, response.getEntity());
+  }
+
+  @Test
+  public void test_getDatasourceCompactionConfig_returnsInvalidInput_ifDatasourceIsNullOrEmpty()
+  {
+    replayAll();
+
+    verifyInvalidInputResponse(
+        compactionResource.getDatasourceCompactionConfig(""),
+        "No DataSource specified"
+    );
+    verifyInvalidInputResponse(
+        compactionResource.getDatasourceCompactionConfig(null),
+        "No DataSource specified"
+    );
+  }
+
+  @Test
+  public void test_updateDatasourceCompactionConfig()
+  {
+    setupMockRequestForAudit();
+    EasyMock.expect(httpRequest.getMethod()).andReturn("POST").once();
+    EasyMock.expect(httpRequest.getRequestURI()).andReturn("supes").once();
+    EasyMock.expect(httpRequest.getQueryString()).andReturn("a=b").once();
+
+    final CompactionSupervisorSpec supervisorSpec =
+        new CompactionSupervisorSpec(wikiConfig, false, validator);
+
+    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(supervisorSpec))
+            .andReturn(true).once();
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(supervisorSpec))
+            .andReturn(true).once();
+    EasyMock.expect(scheduler.validateCompactionConfig(wikiConfig))
+            .andReturn(CompactionConfigValidationResult.success()).once();
+    replayAll();
+
+    final Response response = compactionResource
+        .updateDatasourceCompactionConfig(TestDataSource.WIKI, wikiConfig, httpRequest);
+    Assert.assertEquals(200, response.getStatus());
+  }
+
+  @Test
+  public void test_updateDatasourceCompactionConfig_returnsInvalidInput_ifDatasourceIsNullOrEmpty()
+  {
+    replayAll();
+
+    verifyInvalidInputResponse(
+        compactionResource.updateDatasourceCompactionConfig("", wikiConfig, httpRequest),
+        "No DataSource specified"
+    );
+    verifyInvalidInputResponse(
+        compactionResource.updateDatasourceCompactionConfig(null, wikiConfig, httpRequest),
+        "No DataSource specified"
+    );
+  }
+
+  @Test
+  public void test_deleteDatasourceCompactionConfig()
+  {
+    final String supervisorId = CompactionSupervisorSpec.getSupervisorIdForDatasource(TestDataSource.WIKI);
+    EasyMock.expect(supervisorManager.stopAndRemoveSupervisor(supervisorId))
+            .andReturn(true)
+            .once();
+    replayAll();
+
+    final Response response = compactionResource
+        .deleteDatasourceCompactionConfig(TestDataSource.WIKI, httpRequest);
+    Assert.assertEquals(200, response.getStatus());
+  }
+
+  @Test
+  public void test_deleteDatasourceCompactionConfig_returnsInvalidInput_ifDatasourceIsNullOrEmpty()
+  {
+    replayAll();
+
+    verifyInvalidInputResponse(
+        compactionResource.deleteDatasourceCompactionConfig("", httpRequest),
+        "No DataSource specified"
+    );
+    verifyInvalidInputResponse(
+        compactionResource.deleteDatasourceCompactionConfig(null, httpRequest),
+        "No DataSource specified"
+    );
+  }
+
+  @Test
+  public void test_getAllCompactionConfigs()
+  {
+    final String supervisorId = CompactionSupervisorSpec
+        .getSupervisorIdForDatasource(TestDataSource.WIKI);
+
+    setupMockRequestForUser("druid");
+    EasyMock.expect(httpRequest.getMethod()).andReturn("POST").once();
+
+    EasyMock.expect(supervisorManager.getSupervisorIds())
+            .andReturn(Set.of(supervisorId))
+            .once();
+    EasyMock.expect(supervisorManager.getSupervisorSpec(supervisorId))
+            .andReturn(Optional.of(new CompactionSupervisorSpec(wikiConfig, false, validator)))
+            .once();
+    replayAll();
+
+    final Response response = compactionResource.getAllCompactionConfigs(httpRequest);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(new CompactionConfigsResponse(List.of(wikiConfig)), response.getEntity());
+  }
+
+  @Test
+  public void test_getDatasourceCompactionConfigHistory_withFilters()
+  {
+    final String supervisorId = CompactionSupervisorSpec.getSupervisorIdForDatasource(TestDataSource.WIKI);
+
+    final CompactionSupervisorSpec spec = new CompactionSupervisorSpec(wikiConfig, false, validator);
+    final List<VersionedSupervisorSpec> specVersions = List.of(
+        new VersionedSupervisorSpec(spec, "2025-03"),
+        new VersionedSupervisorSpec(spec, "2025-02"),
+        new VersionedSupervisorSpec(spec, "2025-01")
+    );
+
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId(supervisorId))
+            .andReturn(specVersions)
+            .anyTimes();
+    replayAll();
+
+    final List<DataSourceCompactionConfigAuditEntry> history = List.of(
+        new DataSourceCompactionConfigAuditEntry(null, wikiConfig, null, DateTimes.of("2025-03")),
+        new DataSourceCompactionConfigAuditEntry(null, wikiConfig, null, DateTimes.of("2025-02")),
+        new DataSourceCompactionConfigAuditEntry(null, wikiConfig, null, DateTimes.of("2025-01"))
+    );
+
+    Response response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, null, null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history), response.getEntity());
+
+    // Filter by count
+    response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, null, 2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history.subList(0, 2)), response.getEntity());
+
+    // Filter by interval
+    response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, "2025-01/P40D", null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history.subList(1, 3)), response.getEntity());
+
+    // Filter by interval and count
+    response = compactionResource
+        .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, "2025-01/P40D", 1);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(toHistoryResponse(history.subList(1, 2)), response.getEntity());
+  }
+
+  private static CompactionConfigHistoryResponse toHistoryResponse(
+      List<DataSourceCompactionConfigAuditEntry> entries
+  )
+  {
+    return new CompactionConfigHistoryResponse(entries);
+  }
+
+  private void verifyInvalidInputResponse(Response response, String message)
+  {
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     MatcherAssert.assertThat(
-        ((ErrorResponse) responseEntity).getUnderlyingException(),
-        DruidExceptionMatcher.invalidInput().expectMessageIs("No DataSource specified")
+        ((ErrorResponse) response.getEntity()).getUnderlyingException(),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(message)
     );
   }
 
-  @Test
-  public void testGetProgressForInvalidDatasourceReturnsNotFound()
+  private void setupMockRequestForUser(String user)
   {
-    EasyMock.expect(scheduler.getCompactionSnapshot(TestDataSource.KOALA))
-            .andReturn(null).once();
-    EasyMock.replay(scheduler);
-
-    final Response response = new OverlordCompactionResource(SUPERVISOR_ENABLED, scheduler)
-        .getCompactionProgress(TestDataSource.KOALA);
-    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
-
-    final Object responseEntity = response.getEntity();
-    Assert.assertTrue(responseEntity instanceof ErrorResponse);
-
-    MatcherAssert.assertThat(
-        ((ErrorResponse) responseEntity).getUnderlyingException(),
-        DruidExceptionMatcher.notFound().expectMessageIs("Unknown DataSource")
-    );
+    EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
+    EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
+    EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(new AuthenticationResult(user, "druid", null, null))
+            .atLeastOnce();
+    httpRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
   }
 
-  @Test
-  public void testGetProgressReturnsUnsupportedWhenSupervisorDisabled()
+  private void setupMockRequestForAudit()
   {
-    EasyMock.replay(scheduler);
-    verifyResponseWhenSupervisorDisabled(
-        new OverlordCompactionResource(SUPERVISOR_DISABLED, scheduler)
-            .getCompactionProgress(TestDataSource.WIKI)
-    );
-  }
+    EasyMock.expect(httpRequest.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn("author").once();
+    EasyMock.expect(httpRequest.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn("comment").once();
 
-  @Test
-  public void testGetSnapshotReturnsUnsupportedWhenSupervisorDisabled()
-  {
-    EasyMock.replay(scheduler);
-    verifyResponseWhenSupervisorDisabled(
-        new OverlordCompactionResource(SUPERVISOR_DISABLED, scheduler)
-            .getCompactionSnapshots(TestDataSource.WIKI)
-    );
-  }
+    EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(new AuthenticationResult("druid", "druid", null, null))
+            .atLeastOnce();
 
-  private void verifyResponseWhenSupervisorDisabled(Response response)
-  {
-    Assert.assertEquals(501, response.getStatus());
+    EasyMock.expect(httpRequest.getRemoteAddr()).andReturn("127.0.0.1").atLeastOnce();
+    // EasyMock.expect(httpRequest.getMethod()).andReturn("POST").once();
 
-    final Object responseEntity = response.getEntity();
-    Assert.assertTrue(responseEntity instanceof ErrorResponse);
-
-    MatcherAssert.assertThat(
-        ((ErrorResponse) responseEntity).getUnderlyingException(),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.UNSUPPORTED,
-            "general"
-        ).expectMessageIs(
-            "Compaction Supervisors are disabled on the Overlord."
-            + " Use Coordinator APIs to fetch compaction status."
-        )
-    );
+    // EasyMock.expect(httpRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
   }
 }

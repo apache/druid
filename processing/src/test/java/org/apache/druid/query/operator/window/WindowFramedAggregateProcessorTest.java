@@ -22,7 +22,6 @@ package org.apache.druid.query.operator.window;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -39,10 +38,6 @@ import org.junit.Test;
 @SuppressWarnings("unchecked")
 public class WindowFramedAggregateProcessorTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void testIsPassThruWhenRACReturnsSemanticInterface()
   {

@@ -20,13 +20,13 @@
 package org.apache.druid.catalog.sql;
 
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
+import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.catalog.sync.LocalMetadataCatalog;
-import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;

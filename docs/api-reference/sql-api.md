@@ -85,20 +85,18 @@ The request body takes the following properties:
 
 * `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
 
-* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
+* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For more information on using dynamic parameters, see [Dynamic parameters](../querying/sql.md#dynamic-parameters). For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
 
     For example:
+
     ```json
-    "parameters": [
-        {
-            "type": "VARCHAR",
-            "value": "bar"
-        },
-        {
-            "type": "ARRAY",
-            "value": [-25.7, null, 36.85]
-        }
-    ]
+    {
+        "query": "SELECT \"arrayDouble\", \"stringColumn\" FROM \"array_example\" WHERE ARRAY_CONTAINS(\"arrayDouble\", ?) AND \"stringColumn\" = ?",
+        "parameters": [
+            {"type": "ARRAY", "value": [999.0, null, 5.5]},
+            {"type": "VARCHAR", "value": "bar"}
+            ]
+    }
     ```
 
 #### Responses
@@ -154,7 +152,6 @@ For line-oriented formats, Druid includes a newline character as the final chara
 If you detect a truncated response, treat it as an error.
 
 ---
-
 
 #### Sample request
 
@@ -1289,6 +1286,9 @@ Getting the query results for an ingestion query returns an empty response.
 * `resultFormat` (optional)
     * Type: String
     * Defines the format in which the results are presented. The following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. The default is `object`.
+* `filename` (optional)
+    * Type: String  
+    * If set, attaches a `Content-Disposition` header to the response with the value of `attachment; filename={filename}`. The filename must not be longer than 255 characters and must not contain the characters `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `\0`, `\n`, or `\r`.
 
 #### Responses
 

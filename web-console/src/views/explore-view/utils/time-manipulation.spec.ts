@@ -16,9 +16,14 @@
  * limitations under the License.
  */
 
+import { Duration } from 'chronoshift';
 import { SqlExpression } from 'druid-query-toolkit';
 
-import { decomposeTimeInInterval, shiftBackAndExpandTimeInExpression } from './time-manipulation';
+import {
+  decomposeTimeInInterval,
+  overqueryWhere,
+  shiftBackAndExpandTimeInExpression,
+} from './time-manipulation';
 
 describe('decomposeTimeInInterval', () => {
   it('works with TIME_IN_INTERVAL (date)', () => {
@@ -221,5 +226,49 @@ describe('shiftBackAndExpandTimeInExpression', () => {
         `"__time" BETWEEN TIME_FLOOR(TIME_SHIFT(TIMESTAMP '2016-06-27 20:31:02.498', 'PT1H', -1), 'PT1H') AND TIME_CEIL(TIME_SHIFT(TIMESTAMP '2016-06-27 21:31:02.498', 'PT1H', -1), 'PT1H')`,
       );
     });
+  });
+});
+
+describe('overqueryWhere', () => {
+  const min = new Duration('PT1M');
+
+  it('works when there is nothing to do', () => {
+    expect(String(overqueryWhere(SqlExpression.parse('TRUE'), '__time', min, false))).toEqual(
+      'TRUE',
+    );
+  });
+
+  it('works with relative time (no extra)', () => {
+    expect(
+      String(
+        overqueryWhere(
+          SqlExpression.parse(
+            `(TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1) <= "__time" AND "__time" < MAX_DATA_TIME()) AND country = 'USA'`,
+          ),
+          '__time',
+          min,
+          false,
+        ),
+      ),
+    ).toEqual(
+      `(TIME_FLOOR(TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1), 'PT1M') <= "__time" AND "__time" < TIME_CEIL(MAX_DATA_TIME(), 'PT1M')) AND "country" = 'USA'`,
+    );
+  });
+
+  it('works with relative time (with extra)', () => {
+    expect(
+      String(
+        overqueryWhere(
+          SqlExpression.parse(
+            `(TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1) <= "__time" AND "__time" < MAX_DATA_TIME()) AND country = 'USA'`,
+          ),
+          '__time',
+          min,
+          true,
+        ),
+      ),
+    ).toEqual(
+      `(TIME_SHIFT(TIME_FLOOR(TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1), 'PT1M'), 'PT1M', -1) <= "__time" AND "__time" < TIME_SHIFT(TIME_CEIL(MAX_DATA_TIME(), 'PT1M'), 'PT1M', 1)) AND "country" = 'USA'`,
+    );
   });
 });

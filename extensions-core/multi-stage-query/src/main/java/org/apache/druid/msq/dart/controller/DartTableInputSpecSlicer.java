@@ -23,8 +23,8 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -102,7 +102,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
     final TimelineLookup<String, ServerSelector> timeline =
-        serverView.getTimeline(new TableDataSource(tableInputSpec.getDataSource()).getAnalysis()).orElse(null);
+        serverView.getTimeline(new TableDataSource(tableInputSpec.getDataSource())).orElse(null);
 
     if (timeline == null) {
       return Collections.emptyList();
@@ -162,7 +162,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
-    final QueryableDruidServer<?> server = serverSelector.pick(null);
+    final QueryableDruidServer server = serverSelector.pick(null);
 
     if (server == null) {
       return UNKNOWN;

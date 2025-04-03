@@ -38,11 +38,11 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestMetadataStorageConnector;
 import org.apache.druid.metadata.TestMetadataStorageTablesConfig;
 import org.apache.druid.segment.TestDataSource;
-import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -85,7 +85,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
     final AuditManager auditManager = new TestAuditManager();
     configManager = TestCoordinatorConfigManager.create(auditManager);
-    resource = new CoordinatorCompactionConfigsResource(configManager, auditManager);
+    resource = new CoordinatorCompactionConfigsResource(configManager);
     configManager.delegate.start();
   }
 
@@ -104,37 +104,22 @@ public class CoordinatorCompactionConfigsResourceTest
 
     Assert.assertEquals(0.1, defaultConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
-    Assert.assertFalse(defaultConfig.isUseAutoScaleSlots());
     Assert.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
-  }
-
-  @Test
-  public void testUpdateClusterConfig()
-  {
-    Response response = resource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(0.5, 10, true, null),
-        mockHttpServletRequest
-    );
-    verifyStatus(Response.Status.OK, response);
-
-    final DruidCompactionConfig updatedConfig = verifyAndGetPayload(
-        resource.getCompactionConfig(),
-        DruidCompactionConfig.class
-    );
-
-    Assert.assertNotNull(updatedConfig);
-    Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
-    Assert.assertEquals(10, updatedConfig.getMaxCompactionTaskSlots());
-    Assert.assertTrue(updatedConfig.isUseAutoScaleSlots());
+    Assert.assertFalse(defaultConfig.isUseSupervisors());
+    Assert.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
   }
 
   @Test
   public void testSetCompactionTaskLimit()
   {
-    final DruidCompactionConfig defaultConfig
-        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
+    resource.setCompactionTaskLimit(0.1, 100, mockHttpServletRequest);
 
-    Response response = resource.setCompactionTaskLimit(0.5, 9, true, mockHttpServletRequest);
+    final DruidCompactionConfig oldConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
+    Assert.assertEquals(100, oldConfig.getMaxCompactionTaskSlots());
+    Assert.assertEquals(0.1, oldConfig.getCompactionTaskSlotRatio(), 1e-9);
+
+    Response response = resource.setCompactionTaskLimit(0.5, 9, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     final DruidCompactionConfig updatedConfig
@@ -143,10 +128,14 @@ public class CoordinatorCompactionConfigsResourceTest
     // Verify that the task slot fields have been updated
     Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(9, updatedConfig.getMaxCompactionTaskSlots());
-    Assert.assertTrue(updatedConfig.isUseAutoScaleSlots());
+
+    // Verify that other cluster config fields are unchanged
+    Assert.assertEquals(oldConfig.isUseSupervisors(), updatedConfig.isUseSupervisors());
+    Assert.assertEquals(oldConfig.getCompactionPolicy(), updatedConfig.getCompactionPolicy());
+    Assert.assertEquals(oldConfig.getEngine(), updatedConfig.getEngine());
 
     // Verify that the other fields are unchanged
-    Assert.assertEquals(defaultConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
+    Assert.assertEquals(oldConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
   }
 
   @Test
@@ -160,12 +149,12 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testAddDatasourceConfig()
   {
     final DataSourceCompactionConfig newDatasourceConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
     Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     final DataSourceCompactionConfig fetchedDatasourceConfig
-        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), DataSourceCompactionConfig.class);
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
     Assert.assertEquals(newDatasourceConfig, fetchedDatasourceConfig);
 
     final DruidCompactionConfig fullCompactionConfig
@@ -178,15 +167,15 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testAddDatasourceConfigWithMSQEngineIsInvalid()
   {
     final DataSourceCompactionConfig newDatasourceConfig
-        = DataSourceCompactionConfig.builder()
-                                    .forDataSource(TestDataSource.WIKI)
-                                    .withEngine(CompactionEngine.MSQ)
-                                    .build();
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(TestDataSource.WIKI)
+                                                .withEngine(CompactionEngine.MSQ)
+                                                .build();
     Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     Assert.assertEquals(
-        "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.",
+        "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
   }
@@ -194,7 +183,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testUpdateDatasourceConfig()
   {
-    final DataSourceCompactionConfig originalDatasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig originalDatasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withInputSegmentSizeBytes(500L)
@@ -211,7 +200,7 @@ public class CoordinatorCompactionConfigsResourceTest
     );
     verifyStatus(Response.Status.OK, response);
 
-    final DataSourceCompactionConfig updatedDatasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig updatedDatasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withInputSegmentSizeBytes(1000L)
@@ -226,7 +215,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.BAD_REQUEST, response);
 
     final DataSourceCompactionConfig latestDatasourceConfig
-        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), DataSourceCompactionConfig.class);
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
     Assert.assertEquals(originalDatasourceConfig, latestDatasourceConfig);
 
     final DruidCompactionConfig fullCompactionConfig
@@ -239,7 +228,7 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testDeleteDatasourceConfig()
   {
     final DataSourceCompactionConfig datasourceConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
     Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
@@ -263,12 +252,12 @@ public class CoordinatorCompactionConfigsResourceTest
     configManager.configUpdateResult
         = ConfigManager.SetResult.retryableFailure(new Exception("retryable"));
     resource.addOrUpdateDatasourceCompactionConfig(
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         mockHttpServletRequest
     );
 
     Assert.assertEquals(
-        CoordinatorCompactionConfigsResource.MAX_UPDATE_RETRIES,
+        5,
         configManager.numUpdateAttempts
     );
   }
@@ -279,7 +268,7 @@ public class CoordinatorCompactionConfigsResourceTest
     configManager.configUpdateResult
         = ConfigManager.SetResult.failure(new Exception("not retryable"));
     resource.addOrUpdateDatasourceCompactionConfig(
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         mockHttpServletRequest
     );
 
@@ -289,8 +278,8 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testGetDatasourceConfigHistory()
   {
-    final DataSourceCompactionConfig.Builder builder
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI);
+    final InlineSchemaDataSourceCompactionConfig.Builder builder
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI);
 
     final DataSourceCompactionConfig configV1 = builder.build();
     resource.addOrUpdateDatasourceCompactionConfig(configV1, mockHttpServletRequest);
@@ -326,7 +315,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testAddInvalidDatasourceConfigThrowsBadRequest()
   {
-    final DataSourceCompactionConfig datasourceConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig datasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
@@ -337,7 +326,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     Assert.assertEquals(
-        "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.",
+        "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
   }
@@ -452,6 +441,7 @@ public class CoordinatorCompactionConfigsResourceTest
       return new TestCoordinatorConfigManager(
           new JacksonConfigManager(configManager, OBJECT_MAPPER, auditManager),
           configManager,
+          auditManager,
           dbConnector,
           tablesConfig
       );
@@ -460,11 +450,12 @@ public class CoordinatorCompactionConfigsResourceTest
     TestCoordinatorConfigManager(
         JacksonConfigManager jackson,
         ConfigManager configManager,
+        AuditManager auditManager,
         TestDBConnector dbConnector,
         MetadataStorageTablesConfig tablesConfig
     )
     {
-      super(jackson, dbConnector, tablesConfig);
+      super(jackson, dbConnector, tablesConfig, auditManager);
       this.delegate = configManager;
     }
 

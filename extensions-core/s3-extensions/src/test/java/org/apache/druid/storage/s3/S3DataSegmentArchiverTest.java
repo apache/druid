@@ -76,7 +76,8 @@ public class S3DataSegmentArchiverTest
   private static final Supplier<ServerSideEncryptingAmazonS3> S3_SERVICE = Suppliers.ofInstance(
       new ServerSideEncryptingAmazonS3(
           EasyMock.createStrictMock(AmazonS3Client.class),
-          new NoopServerSideEncryption()
+          new NoopServerSideEncryption(),
+          new S3TransferConfig()
       )
   );
   private static final S3DataSegmentPuller PULLER = new S3DataSegmentPuller(S3_SERVICE.get());

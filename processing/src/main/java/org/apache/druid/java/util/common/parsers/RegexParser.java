@@ -55,7 +55,7 @@ public class RegexParser implements Parser<String, Object>
     this.listSplitter = Splitter.onPattern(listDelimiter.isPresent()
                                            ? listDelimiter.get()
                                            : Parsers.DEFAULT_LIST_DELIMITER);
-    this.valueFunction = new Function<String, Object>()
+    this.valueFunction = new Function<>()
     {
       @Override
       public Object apply(String input)

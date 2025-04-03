@@ -52,7 +52,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       CompactionStatusTracker statusTracker
   )
   {
-    this.queue = new PriorityQueue<>(searchPolicy);
+    this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
     this.datasourceIterators = Maps.newHashMapWithExpectedSize(datasourceToTimeline.size());
     compactionConfigs.forEach((datasource, config) -> {
       if (config == null) {

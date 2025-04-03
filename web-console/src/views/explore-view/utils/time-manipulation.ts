@@ -16,14 +16,19 @@
  * limitations under the License.
  */
 
+import type { Duration } from 'chronoshift';
+import { Timezone } from 'chronoshift';
 import {
   F,
+  filterPatternToExpression,
+  fitFilterPatterns,
   SqlBetweenPart,
   SqlColumn,
   SqlComparison,
   SqlExpression,
   SqlFunction,
   SqlLiteral,
+  SqlMulti,
 } from 'druid-query-toolkit';
 
 import { partition } from '../../../utils';
@@ -190,4 +195,57 @@ function shiftBackAndExpandEnd(
 ): SqlExpression {
   const ex = F.timeShift(end, shiftDuration, -1);
   return expandDuration ? F.timeCeil(ex, expandDuration) : ex;
+}
+
+export function overqueryWhere(
+  where: SqlExpression,
+  timeColumnName: string,
+  granularity: Duration,
+  oneExtra: boolean,
+) {
+  return SqlExpression.and(
+    ...fitFilterPatterns(where).map(pattern => {
+      if ('column' in pattern && pattern.column === timeColumnName) {
+        if (pattern.type === 'timeInterval') {
+          let start = granularity.floor(pattern.start, Timezone.UTC);
+          let end = granularity.ceil(pattern.end, Timezone.UTC);
+          if (oneExtra) {
+            start = granularity.shift(start, Timezone.UTC, -1);
+            end = granularity.shift(end, Timezone.UTC, 1);
+          }
+          return filterPatternToExpression({
+            ...pattern,
+            start,
+            end,
+          });
+        }
+
+        if (pattern.type === 'timeRelative') {
+          const ex = filterPatternToExpression(pattern);
+          // At this point we know that ex is something like (S <= __time AND __time < E)
+          // And we want to transform it to be (TIME_FLOOR(S, gran) <= __time AND __time < TIME_CEIL(E, gran))
+          if (ex instanceof SqlMulti && ex.op === 'AND') {
+            const condStart = ex.getArg(0);
+            const condEnd = ex.getArg(1);
+            if (
+              condStart instanceof SqlComparison &&
+              condEnd instanceof SqlComparison &&
+              condEnd.rhs instanceof SqlExpression
+            ) {
+              const p = granularity.toString();
+              return SqlExpression.and(
+                condStart.changeLhs(
+                  F.timeFloor(condStart.lhs, p).applyIf(oneExtra, e => F.timeShift(e, p, -1)),
+                ),
+                condEnd.changeRhs(
+                  F.timeCeil(condEnd.rhs, p).applyIf(oneExtra, e => F.timeShift(e, p, 1)),
+                ),
+              ).ensureParens();
+            }
+          }
+        }
+      }
+      return filterPatternToExpression(pattern);
+    }),
+  );
 }

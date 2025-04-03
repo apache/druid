@@ -48,6 +48,7 @@ import {
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import type {
   CompactionConfig,
+  CompactionConfigs,
   CompactionInfo,
   CompactionStatus,
   QueryWithContext,
@@ -70,6 +71,7 @@ import {
   compact,
   countBy,
   deepGet,
+  findMap,
   formatBytes,
   formatInteger,
   formatMillions,
@@ -526,9 +528,7 @@ GROUP BY 1, 2`;
                 return datasourcesAndDefaultRules;
               }
             });
-          }
-
-          if (capabilities.hasOverlordAccess()) {
+          } else if (capabilities.hasOverlordAccess()) {
             auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
               try {
                 const taskList = await getApiArray(
@@ -615,17 +615,20 @@ GROUP BY 1, 2`;
           // Compaction
           auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
             try {
-              const compactionConfigsResp = await Api.instance.get<{
-                compactionConfigs: CompactionConfig[];
-              }>('/druid/coordinator/v1/config/compaction', { cancelToken });
+              const compactionConfigsAndMore = (
+                await Api.instance.get<CompactionConfigs>(
+                  '/druid/indexer/v1/compaction/config/datasources',
+                  { cancelToken },
+                )
+              ).data;
               const compactionConfigs = lookupBy(
-                compactionConfigsResp.data.compactionConfigs || [],
+                compactionConfigsAndMore.compactionConfigs || [],
                 c => c.dataSource,
               );
 
               const compactionStatusesResp = await Api.instance.get<{
                 latestStatus: CompactionStatus[];
-              }>('/druid/coordinator/v1/compaction/status', { cancelToken });
+              }>('/druid/indexer/v1/compaction/status/datasources', { cancelToken });
               const compactionStatuses = lookupBy(
                 compactionStatusesResp.data.latestStatus || [],
                 c => c.dataSource,
@@ -683,14 +686,14 @@ GROUP BY 1, 2`;
     }
   };
 
-  private fetchDatasourceData() {
+  private readonly fetchData = () => {
     const { capabilities } = this.props;
     const { visibleColumns, showUnused } = this.state;
     this.datasourceQueryManager.runQuery({ capabilities, visibleColumns, showUnused });
-  }
+  };
 
   componentDidMount(): void {
-    this.fetchDatasourceData();
+    this.fetchData();
   }
 
   componentWillUnmount(): void {
@@ -729,9 +732,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       >
         <p>
           {`Are you sure you want to mark as unused all segments in '${datasourceToMarkAsUnusedAllSegmentsIn}'?`}
@@ -773,9 +774,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       >
         <p>{`Are you sure you want to mark as used all non-overshadowed segments in '${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}'?`}</p>
       </AsyncActionDialog>
@@ -810,9 +809,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ datasourceToMarkSegmentsByIntervalIn: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       >
         <p>{`Please select the interval in which you want to mark segments as ${usedWord} in '${datasourceToMarkSegmentsByIntervalIn}'?`}</p>
         <FormGroup>
@@ -839,9 +836,7 @@ GROUP BY 1, 2`;
         onClose={() => {
           this.setState({ killDatasource: undefined });
         }}
-        onSuccess={() => {
-          this.fetchDatasourceData();
-        }}
+        onSuccess={this.fetchData}
       />
     );
   }
@@ -929,7 +924,7 @@ GROUP BY 1, 2`;
       message: 'Retention rules submitted successfully',
       intent: Intent.SUCCESS,
     });
-    this.fetchDatasourceData();
+    this.fetchData();
   };
 
   private readonly editDefaultRules = () => {
@@ -953,9 +948,14 @@ GROUP BY 1, 2`;
   private readonly saveCompaction = async (compactionConfig: CompactionConfig) => {
     if (!compactionConfig) return;
     try {
-      await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      await Api.instance.post(
+        `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(
+          compactionConfig.dataSource,
+        )}`,
+        compactionConfig,
+      );
       this.setState({ compactionDialogOpenOn: undefined });
-      this.fetchDatasourceData();
+      this.fetchData();
     } catch (e) {
       AppToaster.show({
         message: getDruidErrorMessage(e),
@@ -977,9 +977,9 @@ GROUP BY 1, 2`;
         onClick: async () => {
           try {
             await Api.instance.delete(
-              `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}`,
+              `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(datasource)}`,
             );
-            this.setState({ compactionDialogOpenOn: undefined }, () => this.fetchDatasourceData());
+            this.setState({ compactionDialogOpenOn: undefined }, () => this.fetchData());
           } catch (e) {
             AppToaster.show({
               message: getDruidErrorMessage(e),
@@ -994,7 +994,7 @@ GROUP BY 1, 2`;
   private toggleUnused(showUnused: boolean) {
     this.setState({ showUnused: !showUnused }, () => {
       if (showUnused) return;
-      this.fetchDatasourceData();
+      this.fetchData();
     });
   }
 
@@ -1709,7 +1709,7 @@ GROUP BY 1, 2`;
   }
 
   render() {
-    const { capabilities, goToSegments } = this.props;
+    const { capabilities, filters, goToSegments } = this.props;
     const {
       showUnused,
       visibleColumns,
@@ -1737,7 +1737,16 @@ GROUP BY 1, 2`;
             label="Show segment timeline"
             onChange={() =>
               this.setState({
-                showSegmentTimeline: showSegmentTimeline ? undefined : { capabilities },
+                showSegmentTimeline: showSegmentTimeline
+                  ? undefined
+                  : {
+                      capabilities,
+                      datasource: findMap(filters, filter =>
+                        filter.id === 'datasource' && /^=[^=|]+$/.exec(String(filter.value))
+                          ? filter.value.slice(1)
+                          : undefined,
+                      ),
+                    },
               })
             }
             disabled={!capabilities.hasSqlOrCoordinatorAccess()}
@@ -1749,10 +1758,7 @@ GROUP BY 1, 2`;
                 visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
-            onClose={added => {
-              if (!added) return;
-              this.fetchDatasourceData();
-            }}
+            onClose={this.fetchData}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>

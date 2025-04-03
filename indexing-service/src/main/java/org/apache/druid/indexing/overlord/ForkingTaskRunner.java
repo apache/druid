@@ -168,7 +168,7 @@ public class ForkingTaskRunner
           new ForkingTaskRunnerWorkItem(
             task,
             exec.submit(
-              new Callable<TaskStatus>() {
+              new Callable<>() {
                 @Override
                 public TaskStatus call()
                 {
@@ -244,7 +244,9 @@ public class ForkingTaskRunner
 
                         command.add(config.getJavaCommand());
 
-                        command.addAll(STRONG_ENCAPSULATION_PROPERTIES);
+                        if (JvmUtils.majorVersion() >= 11) {
+                          command.addAll(STRONG_ENCAPSULATION_PROPERTIES);
+                        }
 
                         command.add("-cp");
                         command.add(taskClasspath);
@@ -271,7 +273,7 @@ public class ForkingTaskRunner
                         try {
                           List<String> taskJavaOptsArray = jsonMapper.convertValue(
                               task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
-                              new TypeReference<List<String>>() {}
+                              new TypeReference<>() {}
                           );
                           if (taskJavaOptsArray != null) {
                             command.addAll(taskJavaOptsArray);

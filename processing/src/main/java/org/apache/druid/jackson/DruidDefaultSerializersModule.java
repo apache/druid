@@ -59,7 +59,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
 
     addDeserializer(
         DateTimeZone.class,
-        new JsonDeserializer<DateTimeZone>()
+        new JsonDeserializer<>()
         {
           @Override
           public DateTimeZone deserialize(JsonParser jp, DeserializationContext ctxt)
@@ -72,7 +72,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     );
     addSerializer(
         DateTimeZone.class,
-        new JsonSerializer<DateTimeZone>()
+        new JsonSerializer<>()
         {
           @Override
           public void serialize(
@@ -87,7 +87,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     );
     addSerializer(
         Sequence.class,
-        new JsonSerializer<Sequence>()
+        new JsonSerializer<>()
         {
           @SuppressWarnings("unchecked")
           @Override
@@ -97,7 +97,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
             jgen.writeStartArray();
             value.accumulate(
                 null,
-                new Accumulator<Object, Object>()
+                new Accumulator<>()
                 {
                   // Save allocations in jgen.writeObject by caching serializer.
                   JsonSerializer<Object> serializer = null;
@@ -133,7 +133,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     );
     addSerializer(
         Yielder.class,
-        new JsonSerializer<Yielder>()
+        new JsonSerializer<>()
         {
           @SuppressWarnings("unchecked")
           @Override
@@ -174,7 +174,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     addSerializer(ByteOrder.class, ToStringSerializer.instance);
     addDeserializer(
         ByteOrder.class,
-        new JsonDeserializer<ByteOrder>()
+        new JsonDeserializer<>()
         {
           @Override
           public ByteOrder deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException

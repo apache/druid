@@ -71,7 +71,7 @@ jobs:
         if: ${{ matrix.java == '17' }}
         # errorprone requires JDK 11+
         # Strict compilation requires more than 2 GB
-        run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+        run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
 
       - name: maven install
         if: ${{ matrix.java == '17' }}
@@ -160,7 +160,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16.17.0
+          node-version: 18.0.0
 
       - name: docs
         run: |

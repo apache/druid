@@ -79,4 +79,26 @@ public class DataSourceCompactionConfigAuditEntry
     return Objects.equals(this.compactionConfig, other.compactionConfig)
         && Objects.equals(this.globalConfig, other.globalConfig);
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DataSourceCompactionConfigAuditEntry that = (DataSourceCompactionConfigAuditEntry) o;
+    return Objects.equals(globalConfig, that.globalConfig)
+           && Objects.equals(compactionConfig, that.compactionConfig)
+           && Objects.equals(auditInfo, that.auditInfo)
+           && Objects.equals(auditTime, that.auditTime);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(globalConfig, compactionConfig, auditInfo, auditTime);
+  }
 }
