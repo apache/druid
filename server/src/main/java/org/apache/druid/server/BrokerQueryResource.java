@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
@@ -97,14 +96,11 @@ public class BrokerQueryResource extends QueryResource
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
       ExecutionVertex ev = ExecutionVertex.of(query);
-      if (true) {
-        throw DruidException.defensive("is this being covered?");
-      }
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,
               ev.getBaseTableDataSource(),
-              query.getIntervals(),
+              ev.getEffectiveQuerySegmentSpec().getIntervals(),
               numCandidates
           )
       );
