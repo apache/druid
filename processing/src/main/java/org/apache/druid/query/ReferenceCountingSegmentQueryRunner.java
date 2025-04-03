@@ -19,9 +19,11 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentReference;
 
 public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
@@ -29,21 +31,33 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   private final QueryRunnerFactory<T, Query<T>> factory;
   private final SegmentReference segment;
   private final SegmentDescriptor descriptor;
+  private final PolicyEnforcer policyEnforcer;
 
   public ReferenceCountingSegmentQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
       SegmentReference segment,
-      SegmentDescriptor descriptor
+      SegmentDescriptor descriptor,
+      PolicyEnforcer policyEnforcer
   )
   {
     this.factory = factory;
     this.segment = segment;
     this.descriptor = descriptor;
+    this.policyEnforcer = policyEnforcer;
   }
 
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
+    if (!segment.validate(policyEnforcer)) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build(
+                              "Failed security validation with segment [%s] and type [%s]",
+                              segment.getId(),
+                              segment.getClass()
+                          );
+    }
     return segment.acquireReferences().map(closeable -> {
       try {
         final Sequence<T> baseSequence = factory.createRunner(segment).run(queryPlus, responseContext);

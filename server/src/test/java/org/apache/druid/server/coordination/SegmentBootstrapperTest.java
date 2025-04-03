@@ -52,7 +52,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.druid.server.TestSegmentUtils.makeSegment;
+import static org.apache.druid.segment.TestSegmentUtils.makeSegment;
 
 public class SegmentBootstrapperTest
 {

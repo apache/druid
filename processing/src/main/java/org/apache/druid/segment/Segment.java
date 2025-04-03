@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataResultValue;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -97,11 +98,20 @@ public interface Segment extends Closeable
     return null;
   }
 
+  /**
+   * Returns true if the segment complies with the policy restrictions on tables.
+   * <p>
+   * This should be called right before the segment is about to be processed by the query stack.
+   */
+  default boolean validate(PolicyEnforcer policyEnforcer)
+  {
+    return policyEnforcer.validate(this, null);
+  }
+
   default boolean isTombstone()
   {
     return false;
   }
-
 
   default String asString()
   {

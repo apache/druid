@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.segment.Segment;
 
 /**
  * A mechanism for enforcing policies on data sources in Druid queries.
@@ -42,12 +43,25 @@ public interface PolicyEnforcer
 {
 
   /**
-   * Validate a {@link DataSource} against the policy enforcer. The data source must be authorized and include an
-   * attached {@link Policy}, if applicable. The enforcer will validate it before executing any queries on the data
-   * source.
+   * Validate a {@link DataSource} node against the policy enforcer. This method is called during query planning from
+   * {@link DataSource#validate(PolicyEnforcer)}.
+   * <p>
+   * Don't call this method directly, use {@link DataSource#validate(PolicyEnforcer)}.
    *
    * @param ds data source to validate
    * @return true if the data source is valid according to the policy enforcer, false otherwise
    */
-  boolean validate(DataSource ds);
+  boolean validate(DataSource ds, Policy policy);
+
+
+  /**
+   * Validate a {@link Segment} node against the policy enforcer. This method is called during query planning from
+   * {@link Segment#validate(PolicyEnforcer)}.
+   * <p>
+   * Don't call this method directly, use {@link Segment#validate(PolicyEnforcer)}.
+   *
+   * @param segment segment to validate
+   * @return true if the segment is valid according to the policy enforcer, false otherwise
+   */
+  boolean validate(Segment segment, Policy policy);
 }

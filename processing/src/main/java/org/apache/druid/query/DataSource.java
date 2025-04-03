@@ -26,6 +26,7 @@ import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentReference;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -143,6 +144,8 @@ public interface DataSource
 
   /**
    * Returns true if the datasource complies with the policy restrictions on tables.
+   * <p>
+   * This should be called right before the data source is about to be processed by the query stack.
    */
   default boolean validate(PolicyEnforcer policyEnforcer)
   {

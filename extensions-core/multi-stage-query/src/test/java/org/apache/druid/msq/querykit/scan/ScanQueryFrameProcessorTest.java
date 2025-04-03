@@ -48,6 +48,7 @@ import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.CompleteSegment;
@@ -113,6 +114,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         query,
         null,
         new DefaultObjectMapper(),
+        NoopPolicyEnforcer.instance(),
         ReadableInput.segment(
             new SegmentWithDescriptor(
                 () -> new StupidResourceHolder<>(new CompleteSegment(null, new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")))),
@@ -212,6 +214,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         query,
         null,
         new DefaultObjectMapper(),
+        NoopPolicyEnforcer.instance(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
         Function.identity(),
         new ResourceHolder<>()

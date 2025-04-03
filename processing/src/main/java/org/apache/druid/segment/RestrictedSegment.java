@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -107,6 +108,12 @@ public class RestrictedSegment implements SegmentReference
       return delegate.as(clazz);
     }
     return null;
+  }
+
+  @Override
+  public boolean validate(PolicyEnforcer policyEnforcer)
+  {
+    return policyEnforcer.validate(this, policy);
   }
 
   @Override

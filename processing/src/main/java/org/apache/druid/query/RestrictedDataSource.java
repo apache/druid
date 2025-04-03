@@ -171,7 +171,7 @@ public class RestrictedDataSource implements DataSource
   @Override
   public boolean validate(PolicyEnforcer policyEnforcer)
   {
-    return policyEnforcer.validate(this);
+    return policyEnforcer.validate(this, policy);
   }
 
   @Override

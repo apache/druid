@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit;
 
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -33,6 +34,7 @@ import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -45,18 +47,21 @@ import java.util.function.Function;
 public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableInput baseInput;
+  private final PolicyEnforcer policyEnforcer;
   private final ResourceHolder<WritableFrameChannel> outputChannelHolder;
   private final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder;
   private final Function<SegmentReference, SegmentReference> segmentMapFn;
 
   protected BaseLeafFrameProcessor(
       final ReadableInput baseInput,
+      final PolicyEnforcer policyEnforcer,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
   {
     this.baseInput = baseInput;
+    this.policyEnforcer = policyEnforcer;
     this.outputChannelHolder = outputChannelHolder;
     this.frameWriterFactoryHolder = frameWriterFactoryHolder;
     this.segmentMapFn = segmentMapFn;
@@ -119,7 +124,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
    * Runs the leaf processor using the results from a data server as the input. The query and data server details are
    * described by {@link DataServerQueryHandler}.
    */
-  protected abstract ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException;
+  protected abstract ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler)
+      throws IOException;
 
   protected abstract ReturnOrAwait<Unit> runWithInputChannel(
       ReadableFrameChannel inputChannel,
@@ -132,6 +138,17 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
    */
   protected SegmentReference mapSegment(final Segment segment)
   {
-    return segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(segment));
+    SegmentReference mappedSegment = segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(segment));
+    if (mappedSegment.validate(policyEnforcer)) {
+      return mappedSegment;
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build(
+                              "Failed security validation with segment [%s] type [%s]",
+                              segment.getId(),
+                              segment.getClass()
+                          );
+    }
   }
 }

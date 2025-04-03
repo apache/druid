@@ -53,7 +53,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.druid.server.TestSegmentUtils.makeSegment;
+import static org.apache.druid.segment.TestSegmentUtils.makeSegment;
 
 public class SegmentLoadDropHandlerTest
 {
