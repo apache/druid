@@ -31,6 +31,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -38,6 +40,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
 
 import java.net.URL;
 import java.util.List;
@@ -253,7 +256,7 @@ public class CompactionResourceTestClient
   }
 
   /**
-   * This API is currently only to force the coordinator to refresh its config.
+   * This API is used only to force the coordinator to refresh its config.
    * For all other purposes, use {@link #updateClusterConfig}.
    */
   @Deprecated
@@ -273,6 +276,19 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
+
+    // Verify that coordinator has the latest config now
+    final DruidCompactionConfig configOnCoordinator = getCoordinatorCompactionConfig();
+    Assert.assertEquals(
+        maxCompactionTaskSlots,
+        Integer.valueOf(configOnCoordinator.getMaxCompactionTaskSlots()),
+        "Could not update compaction task slots on the Coordinator"
+    );
+    Assert.assertEquals(
+        compactionTaskSlotRatio,
+        Double.valueOf(configOnCoordinator.getCompactionTaskSlotRatio()),
+        "Could not update compaction task slot ratio on the Coordinator"
+    );
   }
 
   public Map<String, String> getCompactionProgress(String dataSource) throws Exception
@@ -291,7 +307,7 @@ public class CompactionResourceTestClient
     return jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
   }
 
-  public Map<String, String> getCompactionStatus(String dataSource) throws Exception
+  public AutoCompactionSnapshot getCompactionStatus(String dataSource) throws Exception
   {
     String url = StringUtils.format("%scompaction/status?dataSource=%s", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
     StatusResponseHolder response = httpClient.go(
@@ -306,8 +322,8 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    Map<String, List<Map<String, String>>> latestSnapshots = jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
-    return latestSnapshots.get("latestStatus").get(0);
+    final CompactionStatusResponse latestSnapshots = jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
+    return latestSnapshots.getLatestStatus().get(0);
   }
 
   public CompactionSimulateResult simulateRunOnCoordinator() throws Exception
