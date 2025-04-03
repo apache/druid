@@ -32,7 +32,6 @@ import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-
 import java.util.List;
 
 public class BrokerClientImpl implements BrokerClient
@@ -44,6 +43,19 @@ public class BrokerClientImpl implements BrokerClient
   {
     this.client = client;
     this.jsonMapper = jsonMapper;
+  }
+
+  @Override
+  public ListenableFuture<String> submitSqlQuery(final ClientSqlQuery sqlQuery)
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/v2/sql/")
+                    .jsonContent(jsonMapper, sqlQuery),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), String.class)
+    );
   }
 
   @Override

@@ -29,14 +29,12 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -242,24 +240,17 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
                                      ResultFormat.OBJECTLINES.contentType(),
                                      false, false, false, null, null
     );
-    ListenableFuture<SqlTaskStatus> response = brokerClient.submitSqlTask(clientSqlQuery);
-    SqlTaskStatus taskStatus = response.get();
-    if (taskStatus == null || taskStatus.getState() != TaskState.SUCCESS) {
-      // Unable to query broker or task failed
-      log.warn("Failed to get load status from broker, task state: %s",
-              taskStatus != null ? taskStatus.getState() : "null");
-      return new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated);
-    }
-    String taskId = taskStatus.getTaskId();
+    ListenableFuture<String> futureResponse = brokerClient.submitSqlQuery(clientSqlQuery);
+    String response = futureResponse.get();
 
-    if (taskId == null) {
+    if (response == null) {
       // Unable to query broker
       return new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated);
-    } else if (taskId.trim().isEmpty()) {
+    } else if (response.trim().isEmpty()) {
       // If no segments are returned for a version, all segments have been dropped by a drop rule.
       return new VersionLoadStatus(0, 0, 0, 0, 0);
     } else {
-      return objectMapper.readValue(taskId, VersionLoadStatus.class);
+      return objectMapper.readValue(response, VersionLoadStatus.class);
     }
   }
 
