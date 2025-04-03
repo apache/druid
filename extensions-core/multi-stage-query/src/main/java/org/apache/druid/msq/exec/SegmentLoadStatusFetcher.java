@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.broker.BrokerClient;
@@ -236,12 +235,12 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
    */
   private VersionLoadStatus fetchLoadStatusFromBroker() throws Exception
   {
-    ClientSqlQuery clientSqlQuery = new ClientSqlQuery(StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
-                                     ResultFormat.OBJECTLINES.contentType(),
-                                     false, false, false, null, null
+    ClientSqlQuery clientSqlQuery = new ClientSqlQuery(
+        StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
+        ResultFormat.OBJECTLINES.contentType(),
+        false, false, false, null, null
     );
-    ListenableFuture<String> futureResponse = brokerClient.submitSqlQuery(clientSqlQuery);
-    String response = futureResponse.get();
+    final String response = FutureUtils.get(brokerClient.submitSqlQuery(clientSqlQuery), true);
 
     if (response == null) {
       // Unable to query broker

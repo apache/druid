@@ -46,6 +46,8 @@ public class SegmentLoadStatusFetcherTest
 {
   private static final String TEST_DATASOURCE = "testDatasource";
 
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   private SegmentLoadStatusFetcher segmentLoadWaiter;
 
   private BrokerClient brokerClient;
@@ -75,13 +77,13 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        String jsonResponse = new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = OBJECT_MAPPER.writeValueAsString(loadStatus);
         return Futures.immediateFuture(jsonResponse);
       }
     }).when(brokerClient).submitSqlQuery(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
-        new ObjectMapper(),
+        OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
         IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
@@ -114,13 +116,13 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        String jsonResponse = new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = OBJECT_MAPPER.writeValueAsString(loadStatus);
         return Futures.immediateFuture(jsonResponse);
       }
     });
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
-        new ObjectMapper(),
+        OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
         IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
@@ -156,13 +158,13 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        String jsonResponse = new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = OBJECT_MAPPER.writeValueAsString(loadStatus);
         return Futures.immediateFuture(jsonResponse);
       }
     }).when(brokerClient).submitSqlQuery(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
-        new ObjectMapper(),
+        OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
         IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
