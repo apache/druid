@@ -143,7 +143,7 @@ public class UnionDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    return Function.identity();
+    throw DruidException.defensive("Method not supported. This method is not expected to be called!");
   }
 
 

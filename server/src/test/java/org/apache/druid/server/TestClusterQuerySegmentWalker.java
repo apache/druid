@@ -155,9 +155,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery.createSegmentMapFunction(
-        query
-    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction();
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
         toolChest.postMergeQueryDecoration(

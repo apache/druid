@@ -179,8 +179,9 @@ public class ServerManager implements QuerySegmentWalker
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
+    ExecutionVertex ev = ExecutionVertex.of(newQuery);
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
-        segmentManager.getTimeline(ExecutionVertex.of(newQuery).getBaseTableDataSource());
+        segmentManager.getTimeline(ev.getBaseTableDataSource());
 
     // Make sure this query type can handle the subquery, if present.
     if ((dataSourceFromQuery instanceof QueryDataSource)
@@ -195,7 +196,7 @@ public class ServerManager implements QuerySegmentWalker
     }
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> dataSourceFromQuery.createSegmentMapFunction(newQuery)
+        () -> ev.createSegmentMapFunction()
     );
 
     // We compute the datasource's cache key here itself so it doesn't need to be re-computed for every segment
