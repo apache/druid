@@ -83,7 +83,7 @@ public class CompactionStatusTracker
    */
   public Set<String> getSubmittedTaskIds()
   {
-    return submittedTaskIdToSegments.keySet();
+    return Set.copyOf(submittedTaskIdToSegments.keySet());
   }
 
   public CompactionStatus computeCompactionStatus(

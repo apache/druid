@@ -2004,6 +2004,20 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction) throws Exception
   {
     compactionResource.forceTriggerAutoCompaction();
+
+    final AutoCompactionSnapshot snapshot = compactionResource.getCompactionStatus(fullDatasourceName);
+    if (snapshot == null) {
+      LOG.warn("Compaction could not be triggered for datasource.");
+    } else {
+      LOG.info(
+          "Triggered compaction with status[%s], message[%s]."
+          + " Interval counts: skipped[%d], compacted[%d], pending[%d].",
+          snapshot.getScheduleStatus(), snapshot.getMessage(),
+          snapshot.getIntervalCountSkipped(), snapshot.getIntervalCountCompacted(),
+          snapshot.getIntervalCountAwaitingCompaction()
+      );
+    }
+
     waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
   }
 

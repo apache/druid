@@ -58,6 +58,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.CompactionTriggerResponse;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
@@ -105,6 +106,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -399,8 +401,10 @@ public class DruidCoordinator
     }
   }
 
-  public void runCompactSegmentsDuty()
+  public CompactionTriggerResponse runCompactSegmentsDuty()
   {
+    final Set<String> taskIdsBeforeDuty = compactionStatusTracker.getSubmittedTaskIds();
+
     final int startingLeaderCounter = coordLeaderSelector.localTerm();
     DutiesRunnable compactSegmentsDuty = new DutiesRunnable(
         ImmutableList.of(compactSegments),
@@ -409,6 +413,11 @@ public class DruidCoordinator
         null
     );
     compactSegmentsDuty.run();
+
+    final Set<String> submittedTaskIds = new HashSet<>(compactionStatusTracker.getSubmittedTaskIds());
+    submittedTaskIds.removeAll(taskIdsBeforeDuty);
+
+    return new CompactionTriggerResponse(submittedTaskIds);
   }
 
   private Map<String, Object2LongMap<String>> computeUnderReplicated(
