@@ -76,4 +76,9 @@ public interface AppenderatorConfig extends TuningConfig
   {
     return -1;
   }
+
+  default boolean getMessageGapStatsEnabled()
+  {
+    return false;
+  }
 }
