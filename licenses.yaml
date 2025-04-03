@@ -1112,13 +1112,11 @@ libraries:
 
 name: Jetbrains Annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 13.0
+version: 26.0.1
 libraries:
   - org.jetbrains: annotations
-
 
 ---
 
@@ -3841,7 +3839,7 @@ name: Reactive Streams
 license_category: binary
 module: java-core
 license_name: Creative Commons CC0
-version: 1.0.2
+version: 1.0.4
 license_file_path: licenses/bin/reactive-streams.CC0
 libraries:
   - org.reactivestreams: reactive-streams
@@ -5004,7 +5002,7 @@ name: jakarta.activation
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Eclipse Distribution License 1.0
-version: 1.2.1
+version: 1.2.2
 libraries:
   - com.sun.activation: jakarta.activation
 
