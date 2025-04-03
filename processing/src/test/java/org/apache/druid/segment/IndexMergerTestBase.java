@@ -3005,7 +3005,8 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
                       .setDimensions(
                           Arrays.asList(
                               new StringDimensionSchema("a"),
-                              new StringDimensionSchema("b")
+                              new StringDimensionSchema("b"),
+                              new LongDimensionSchema("c")
                           )
                       );
 
