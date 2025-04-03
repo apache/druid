@@ -179,6 +179,12 @@ public class Projections
       return this;
     }
 
+    @Nullable
+    public String getRemapValue(String queryColumn)
+    {
+      return remapColumns.get(queryColumn);
+    }
+
     /**
      * Add a projection physical column, which will later be added to {@link ProjectionMatch#getCursorBuildSpec()} if
      * the projection matches
