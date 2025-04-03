@@ -470,9 +470,9 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
           }
           if (getBaseTableDimensionDesc.apply(column) == null) {
             // aggregators with virtual column inputs are not supported yet. Supporting this requires some additional
-            // work so that there is a way to either rename aggregators input column names so the projection agg which
-            // references the projection virtual column can be changed to the query virtual column name (since the
-            // query agg references the query virtual column). Disallow but provide a helpful error for now
+            // work so that there is a way to do something like rename aggregators input column names so the projection
+            // agg which references the projection virtual column can be changed to the query virtual column name
+            // (since the query agg references the query virtual column). Disallow but provide a helpful error for now
             if (projectionSchema.getVirtualColumns().exists(column)) {
               throw InvalidInput.exception(
                   "projection[%s] contains aggregator[%s] that is has required field[%s] which is a virtual column, this is not yet supported",
