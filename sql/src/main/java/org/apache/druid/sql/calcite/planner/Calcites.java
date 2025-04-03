@@ -450,7 +450,7 @@ public class Calcites
   {
     final SqlTypeName typeName = literal.getType().getSqlTypeName();
     if (literal.getKind() != SqlKind.LITERAL) {
-      throw DruidException.defensive("Expected literal but got[%s]", typeName, literal.getKind());
+      throw DruidException.defensive("Expected literal but got[%s]", literal.getKind());
     }
 
     if (typeName == SqlTypeName.TIMESTAMP) {
