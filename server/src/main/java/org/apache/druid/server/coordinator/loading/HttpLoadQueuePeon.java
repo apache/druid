@@ -209,7 +209,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       while (newRequests.size() < batchSize && queuedSegmentIterator.hasNext()) {
         final SegmentHolder holder = queuedSegmentIterator.next();
         final DataSegment segment = holder.getSegment();
-        log.info("HTTP PEON OPERATION TO [%s]: [%s][%s]", serverId, loadingMode, segment);
         if (holder.hasRequestTimedOut()) {
           onRequestFailed(holder, SegmentChangeStatus.failed("timed out"));
           queuedSegmentIterator.remove();

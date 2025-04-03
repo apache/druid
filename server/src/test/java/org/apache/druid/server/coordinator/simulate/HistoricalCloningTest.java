@@ -47,11 +47,24 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
 
     startSimulation(sim);
     runCoordinatorCycle();
+    loadQueuedSegments();
 
     verifyValue(Metric.ASSIGNED_COUNT, 10L);
     verifyValue(
         Stats.CoordinatorRun.CLONE_LOAD.getMetricName(),
         Map.of("server", historicalT12.getName()),
+        10L
+    );
+
+    runCoordinatorCycle();
+    verifyValue(
+        Metric.SUCCESS_ACTIONS,
+        Map.of("server", historicalT11.getName(), "description", "LOAD: NORMAL"),
+        10L
+    );
+    verifyValue(
+        Metric.SUCCESS_ACTIONS,
+        Map.of("server", historicalT12.getName(), "description", "LOAD: TURBO"),
         10L
     );
 
