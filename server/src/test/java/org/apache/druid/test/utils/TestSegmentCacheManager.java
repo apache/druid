@@ -17,16 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordination;
+package org.apache.druid.test.utils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
-import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * methods to support these operations; any other method invoked will throw an exception from the base class,
  * {@link NoopSegmentCacheManager}.
  */
-class TestSegmentCacheManager extends NoopSegmentCacheManager
+public class TestSegmentCacheManager extends NoopSegmentCacheManager
 {
   private final List<DataSegment> cachedSegments;
 
@@ -51,12 +51,12 @@ class TestSegmentCacheManager extends NoopSegmentCacheManager
   private final List<DataSegment> observedSegmentsRemovedFromCache;
   private final AtomicInteger observedShutdownBootstrapCount;
 
-  TestSegmentCacheManager()
+  public TestSegmentCacheManager()
   {
     this(ImmutableSet.of());
   }
 
-  TestSegmentCacheManager(final Set<DataSegment> segmentsToCache)
+  public TestSegmentCacheManager(final Set<DataSegment> segmentsToCache)
   {
     this.cachedSegments = ImmutableList.copyOf(segmentsToCache);
 

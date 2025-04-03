@@ -65,6 +65,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.test.TestConfig;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.join.MapJoinableFactory;
@@ -365,6 +366,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new BrokerParallelMergeConfig(),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        NoopPolicyEnforcer.instance(),
         new NoopServiceEmitter()
     );
 

@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -29,9 +30,12 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -122,7 +126,7 @@ public class DataSourceTest
   }
 
   @Test
-  public void testMapWithRestriction()
+  public void testWithPolicies()
   {
     TableDataSource table1 = TableDataSource.create("table1");
     TableDataSource table2 = TableDataSource.create("table2");
@@ -163,7 +167,7 @@ public class DataSourceTest
   }
 
   @Test
-  public void testMapWithRestriction_onRestrictedDataSource_fromDruidSystem()
+  public void testWithPolicies_onRestrictedDataSource_fromDruidSystem()
   {
     RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
         TableDataSource.create("table1"),
@@ -179,7 +183,7 @@ public class DataSourceTest
   }
 
   @Test
-  public void testMapWithRestriction_onRestrictedDataSource_samePolicy()
+  public void testWithPolicies_onRestrictedDataSource_samePolicy()
   {
     RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
         TableDataSource.create("table1"),
@@ -194,7 +198,7 @@ public class DataSourceTest
   }
 
   @Test
-  public void testMapWithRestriction_onRestrictedDataSource_alwaysThrows()
+  public void testWithPolicies_onRestrictedDataSource_alwaysThrows()
   {
     RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
         TableDataSource.create("table1"),
@@ -220,5 +224,54 @@ public class DataSourceTest
     );
     ISE e3 = Assert.assertThrows(ISE.class, () -> restrictedDataSource.withPolicies(policyWasNotChecked));
     Assert.assertEquals("Missing policy check result for table [table1]", e3.getMessage());
+  }
+
+  @Test
+  public void testValidate_onInlineDataSource()
+  {
+    InlineDataSource inlineDataSource = InlineDataSource.fromIterable(ImmutableList.of(), RowSignature.empty());
+    Assert.assertTrue(inlineDataSource.validate(NoopPolicyEnforcer.instance()));
+    Assert.assertTrue(inlineDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
+  }
+
+  @Test
+  public void testValidate_onRestrictedDataSource()
+  {
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create("table1"),
+        RowFilterPolicy.from(new NullFilter("random-column", null))
+    );
+    Assert.assertTrue(restrictedDataSource.validate(NoopPolicyEnforcer.instance()));
+    Assert.assertTrue(restrictedDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
+    // Fail, only NoRestrictionPolicy is allowed.
+    Assert.assertFalse(restrictedDataSource.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        "NoRestrictionPolicy"))));
+  }
+
+  @Test
+  public void testValidate_onTableDataSource()
+  {
+    TableDataSource tableDataSource = TableDataSource.create("table1");
+    Assert.assertTrue(tableDataSource.validate(NoopPolicyEnforcer.instance()));
+    // Fail, policy must exist on table
+    Assert.assertFalse(tableDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
+  }
+
+  @Test
+  public void testValidate_onUnionDataSource()
+  {
+    UnionDataSource unionDataSource = new UnionDataSource(Lists.newArrayList(
+        RestrictedDataSource.create(
+            TableDataSource.create("table1"),
+            RowFilterPolicy.from(new NullFilter("random-column", null))
+        ),
+        TableDataSource.create("table2")
+    ));
+    Assert.assertTrue(unionDataSource.validate(NoopPolicyEnforcer.instance()));
+    // Fail, policy must exist on table
+    Assert.assertFalse(unionDataSource.validate(new RestrictAllTablesPolicyEnforcer(null)));
+    // Fail, only NoRestrictionPolicy is allowed.
+    Assert.assertFalse(unionDataSource.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        "NoRestrictionPolicy"))));
   }
 }
