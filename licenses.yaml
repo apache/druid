@@ -4382,7 +4382,7 @@ name: NimbusDS Jose
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 9.40
+version: '9.40'
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
