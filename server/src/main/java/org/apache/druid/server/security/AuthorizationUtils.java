@@ -427,6 +427,47 @@ public class AuthorizationUtils
   }
 
   /**
+   * Filters the given datasource-related resources on the basis of datasource
+   * permissions.
+   *
+   * @return List of resources to which the user has access, based on whether
+   * the user has access to the underlying datasource or not.
+   */
+  public static <T> List<T> filterByAuthorizedDatasources(
+      final HttpServletRequest request,
+      List<T> resources,
+      Function<T, String> getDatasource,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    final Function<T, Iterable<ResourceAction>> raGenerator =
+        entry -> List.of(createDatasourceResourceAction(getDatasource.apply(entry), request));
+
+    return Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            request,
+            resources,
+            raGenerator,
+            authorizerMapper
+        )
+    );
+  }
+
+  private static ResourceAction createDatasourceResourceAction(
+      String dataSource,
+      HttpServletRequest request
+  )
+  {
+    switch (request.getMethod()) {
+      case "GET":
+      case "HEAD":
+        return AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource);
+      default:
+        return AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(dataSource);
+    }
+  }
+
+  /**
    * This method constructs a 'superuser' set of permissions composed of {@link Action#READ} and {@link Action#WRITE}
    * permissions for all known {@link ResourceType#knownTypes()} for any {@link Authorizer} implementation which is
    * built on pattern matching with a regex.

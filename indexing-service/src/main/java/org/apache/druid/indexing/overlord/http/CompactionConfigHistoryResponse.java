@@ -17,35 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.server.compaction;
+package org.apache.druid.indexing.overlord.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
 
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Response of {@code /compaction/status} API exposed by Coordinator and
- * Overlord (when compaction supervisors are enabled).
- */
-public class CompactionStatusResponse
+public class CompactionConfigHistoryResponse
 {
-  private final List<AutoCompactionSnapshot> latestStatus;
-  
-  @JsonCreator
-  public CompactionStatusResponse(
-      @JsonProperty("latestStatus") List<AutoCompactionSnapshot> latestStatus
+  private final List<DataSourceCompactionConfigAuditEntry> entries;
+
+  public CompactionConfigHistoryResponse(
+      @JsonProperty("entries") List<DataSourceCompactionConfigAuditEntry> entries
   )
   {
-    this.latestStatus = latestStatus;
+    this.entries = entries;
   }
 
   @JsonProperty
-  public List<AutoCompactionSnapshot> getLatestStatus()
+  public List<DataSourceCompactionConfigAuditEntry> getEntries()
   {
-    return latestStatus;
+    return entries;
   }
 
   @Override
@@ -57,13 +51,13 @@ public class CompactionStatusResponse
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CompactionStatusResponse that = (CompactionStatusResponse) o;
-    return Objects.equals(latestStatus, that.latestStatus);
+    CompactionConfigHistoryResponse that = (CompactionConfigHistoryResponse) o;
+    return Objects.equals(entries, that.entries);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(latestStatus);
+    return Objects.hashCode(entries);
   }
 }
