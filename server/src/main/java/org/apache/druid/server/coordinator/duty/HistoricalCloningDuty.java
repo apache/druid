@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
@@ -29,21 +30,26 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Handles cloning of historicals. Given the historical to historical clone mappings, based on
+ * {@link CoordinatorDynamicConfig#getCloneServers()}, copies any segments load or unload requests from the source
+ * historical to the target historical.
+ */
 public class HistoricalCloningDuty implements CoordinatorDuty
 {
   private static final Logger log = new Logger(HistoricalCloningDuty.class);
 
-  @Nullable
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
+
     if (cloneServers.isEmpty()) {
+      // No servers to be cloned.
       return params;
     }
 
@@ -63,11 +69,21 @@ public class HistoricalCloningDuty implements CoordinatorDuty
       String sourceHistoricalName = entry.getKey();
       ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
 
-      String targetHistorical = entry.getValue();
-      ServerHolder targetServer = historicalMap.get(targetHistorical);
+      String targetHistoricalName = entry.getValue();
+      ServerHolder targetServer = historicalMap.get(targetHistoricalName);
+
+      if (sourceServer == null) {
+        log.info("Could not find source historical [%s]", sourceHistoricalName);
+        continue;
+      }
+
+      if (targetServer == null) {
+        log.info("Could not find target historical [%s]", targetHistoricalName);
+        continue;
+      }
 
       for (DataSegment segment : sourceServer.getProjectedSegments().getSegments()) {
-        if (!targetServer.getServedSegments().contains(segment)) {
+        if (!targetServer.getProjectedSegments().getSegments().contains(segment)) {
           targetServer.getPeon().loadSegment(segment, SegmentAction.LOAD, null);
           stats.add(
               Stats.CoordinatorRun.CLONE_LOAD,
@@ -78,7 +94,7 @@ public class HistoricalCloningDuty implements CoordinatorDuty
       }
 
       for (DataSegment segment : targetServer.getProjectedSegments().getSegments()) {
-        if (!sourceServer.getServedSegments().contains(segment)) {
+        if (!sourceServer.getProjectedSegments().getSegments().contains(segment)) {
           targetServer.getPeon().dropSegment(segment, null);
           stats.add(
               Stats.CoordinatorRun.CLONE_DROP,

@@ -50,7 +50,7 @@ public class SegmentReplicaCountMap
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
               if (serverHolder.isUnmanaged()) {
-                // Don't manage
+                // Don't count segments on unmanaged historicals towards replica counts.
                 return;
               }
               // Add segments already loaded on this server

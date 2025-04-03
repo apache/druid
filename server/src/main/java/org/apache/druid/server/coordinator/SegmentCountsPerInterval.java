@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Maintains a count of segments for each datasource and interval.
+ * Maintains a set of segments, along with count of segments for each datasource and interval.
  */
 public class SegmentCountsPerInterval
 {
