@@ -116,7 +116,6 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         projectionSchema.getTimeColumnPosition() == 0
     );
 
-    int i;
     // validate virtual columns refer to base table dimensions and initialize selector factory
     validateVirtualColumns(projectionSpec, getBaseTableDimensionDesc);
     this.virtualSelectorFactory = new OnheapIncrementalIndex.CachingColumnSelectorFactory(
