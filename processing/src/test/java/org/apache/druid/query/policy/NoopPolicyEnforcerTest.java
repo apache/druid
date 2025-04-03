@@ -20,10 +20,16 @@
 package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.RestrictedSegment;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,8 +65,15 @@ public class NoopPolicyEnforcerTest
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
 
-    Assert.assertTrue(policyEnforcer.validate(table));
-    Assert.assertTrue(policyEnforcer.validate(restricted));
+    Assert.assertTrue(policyEnforcer.validate(table, null));
+    Assert.assertTrue(policyEnforcer.validate(restricted, policy));
+
+    Segment baseSegment = new TestSegmentUtils.SegmentForTesting("table", Intervals.ETERNITY, "1");
+    SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
+    Assert.assertTrue(policyEnforcer.validate(baseSegment, null));
+    Assert.assertTrue(policyEnforcer.validate(segment, null));
+    Assert.assertTrue(policyEnforcer.validate(restrictedSegment, policy));
   }
 
 }

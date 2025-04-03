@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
-import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 

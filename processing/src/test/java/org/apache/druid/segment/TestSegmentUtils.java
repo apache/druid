@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,15 +28,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.Cursors;
-import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexCursorFactory;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.loading.LoadSpec;
@@ -58,7 +49,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-
+/**
+ * Test utility class for creating test segments and load specs.
+ */
 public class TestSegmentUtils
 {
   @JsonTypeName("test")

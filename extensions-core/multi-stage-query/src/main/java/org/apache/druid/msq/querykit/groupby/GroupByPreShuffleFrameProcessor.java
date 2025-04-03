@@ -51,6 +51,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -88,6 +89,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final GroupByQuery query,
       final GroupingEngine groupingEngine,
       final NonBlockingPool<ByteBuffer> bufferPool,
+      final PolicyEnforcer policyEnforcer,
       final ReadableInput baseInput,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
@@ -96,6 +98,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     super(
         baseInput,
+        policyEnforcer,
         segmentMapFn,
         outputChannelHolder,
         frameWriterFactoryHolder

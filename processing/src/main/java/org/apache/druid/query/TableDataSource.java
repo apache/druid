@@ -127,7 +127,7 @@ public class TableDataSource implements DataSource
   public boolean validate(PolicyEnforcer policyEnforcer)
   {
     // If it reaches here, this table is not wrapped with a RestrictedDataSource (which should overwrite this method).
-    return policyEnforcer.validate(this);
+    return policyEnforcer.validate(this, null);
   }
 
   @Override

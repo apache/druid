@@ -307,7 +307,7 @@ public class ServerManager implements QuerySegmentWalker
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
-        new ReferenceCountingSegmentQueryRunner<>(factory, segment, segmentDescriptor),
+        new ReferenceCountingSegmentQueryRunner<>(factory, segment, segmentDescriptor, policyEnforcer),
         QueryMetrics::reportSegmentTime,
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );

@@ -78,6 +78,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         query,
         runningCountForLimit,
         frameContext.jsonMapper(),
+        frameContext.policyEnforcer(),
         baseInput,
         segmentMapFn,
         outputChannelHolder,
