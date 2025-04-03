@@ -23,6 +23,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -143,9 +144,11 @@ public class UnionDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    throw DruidException.defensive("Method not supported. This method is not expected to be called!");
+    if (Iterables.all(dataSources, LeafDataSource.class::isInstance)) {
+      return Function.identity();
+    }
+    throw DruidException.defensive("Union datasource with non-leaf inputs is not supported [%s]!", dataSources);
   }
-
 
   @Override
   public byte[] getCacheKey()
