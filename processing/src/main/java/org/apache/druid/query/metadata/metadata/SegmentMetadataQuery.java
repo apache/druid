@@ -114,7 +114,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       Policy policy = ((RestrictedDataSource) dataSource).getPolicy();
       // Only no-restriction policy is allowed for segment metadata queries.
       if (!(policy instanceof NoRestrictionPolicy)) {
-        throw InvalidInput.exception("DataSource[%s] is restricted with policy[%s].", dataSource, policy);
+        throw InvalidInput.exception(
+            "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[%s], found policy[%s].",
+            ((RestrictedDataSource) dataSource).getBase(),
+            policy
+        );
       }
     } else if (!(dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource)) {
       throw InvalidInput.exception("Invalid dataSource type [%s]. "

@@ -286,7 +286,7 @@ public class QueryLifecycleTest
     );
     Assert.assertEquals("invalidInput", e.getErrorCode());
     Assert.assertEquals(
-        "DataSource[RestrictedDataSource{base=some_datasource, policy=RowFilterPolicy{rowFilter=col IS NULL}}] is restricted with policy[RowFilterPolicy{rowFilter=col IS NULL}].",
+        "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[some_datasource], found policy[RowFilterPolicy{rowFilter=col IS NULL}].",
         e.getMessage()
     );
   }
