@@ -121,6 +121,7 @@ This section contains detailed release notes separated by areas.
 - Added the ability to multi-select in table filters and added suggestions to the **Status** field for tasks and supervisors as well as service type [#17765](https://github.com/apache/druid/pull/17765)
 - The MERGE INTO keyword is now properly highlighted and the query gets treated as an insert query [#17679](https://github.com/apache/druid/pull/17679)
 - The Explore view now supports timezones [#17650](https://github.com/apache/druid/pull/17650)
+- Data exported from the web console is now normalized to how Druid exports data. Additionally, you can now export results as Markdown tables [#17845](https://github.com/apache/druid/pull/17845)
 
 
 ### Ingestion
@@ -148,6 +149,12 @@ curl -X POST --header "Content-Type: application/json" -d @supervisor.json local
 - Improved the efficiency of streaming ingestion by fetching active tasks from memory. This reduces the number of calls to the metadata store for active datasource task payloads [#16098](https://github.com/apache/druid/pull/16098)
 
 ### Querying
+
+#### Improved the query results API 
+
+The query results API (`GET /druid/v2/sql/statements/{queryId}/results`) now supports an optional `filename` parameter. When provided, the response instructs web browsers to save the results as a file instead of showing them inline (via the `Content-Disposition` header).
+
+[#17840](https://github.com/apache/druid/pull/17840)
 
 #### GROUP BY and ORDER BY for nulls
 
@@ -181,13 +188,19 @@ You can now control how many task slots are available for MSQ taskengine control
 
 #### Faster segment metadata operations
 
-Enabline segment metadata caching on the Overlord with theruntime property `druid.manager.segments.useCache` (default value false). When set to `true`, Druid uses a cache to speed up segment metadata operations such as reads and allocation.
+Enable segment metadata caching on the Overlord with theruntime property `druid.manager.segments.useCache`. This feature is off by default
+
+You can set the property to the following values: 
+
+- `never`: Cache is disabled (default)
+- `always`: Reads are always done from the cache. Service start-up will be blocked until the cache has synced with the metadata store at least once. Transactions are blocked until the cache has synced with the metadata store at least once after becoming leader. 
+- `ifSynced`: Reads are done from the cache only if it has already synced with the metadata store. This mode does not block service start-up or transactions unlike the `always` setting.
 
 As part of this change, additional metrics have been introduced. For more information about these metrics, see [Segment metadata cache metrics](#segment-metadata-cache-metrics).
 
-[#17653](https://github.com/apache/druid/pull/17653)
+[#17653](https://github.com/apache/druid/pull/17653) [#17824](https://github.com/apache/druid/pull/17824)
 
-#### Automatic kill tasks interval
+#### Automatic kill task interval
 
 The Coordinator can optionally issue kill tasks for cleaning up unused segments. Starting with this release, individual kill tasks are limited to processing 30 days or fewer worth of segments per task by default. This improves performance of the individual kill tasks.
 
@@ -258,6 +271,7 @@ The Kafka supervisor now includes additional lag metrics for how many minutes of
 #### Kubernetes 
 
 - You can now ingest payloads larger than 128KiB when using HDFS as deep storage for Middle Manager-less ingestion [#17742](https://github.com/apache/druid/pull/17742)
+- You can now run task pods in a namespace different from the rest of the cluster [#17738](https://github.com/apache/druid/pull/17738)
 - The logging level is now set to info. Previously, it was set to debug [#17752](https://github.com/apache/druid/pull/17752)
 - Druid now supports lazy loading of pod templates so that any config changes you make are deployed more quickly [#17701](https://github.com/apache/druid/pull/17701)
 - Removed startup probe so that peon tasks can start up properly without being killed by Kubernetes [#17784](https://github.com/apache/druid/pull/17784)
