@@ -3231,7 +3231,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.13.0
+version: 1.15.1
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3275,6 +3275,17 @@ notices:
   - parquet-format: |
       Apache Parquet Format
       Copyright 2017 The Apache Software Foundation
+
+---
+
+name: aircompressor
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Apache License version 2.0
+version: "2.0.2"
+libraries:
+  - io.airlift: aircompressor
+
 
 ---
 
