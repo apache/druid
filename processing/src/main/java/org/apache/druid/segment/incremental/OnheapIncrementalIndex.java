@@ -28,9 +28,7 @@ import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -42,7 +40,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -51,7 +48,6 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
@@ -61,7 +57,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
@@ -188,62 +183,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       // initialize them all with 0 rows
       AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
       aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
-      final List<DimensionDesc> descs = new ArrayList<>();
-      // mapping of position in descs on the projection to position in the parent incremental index. Like the parent
-      // incremental index, the time (or time-like) column does not have a dimension descriptor and is specially
-      // handled as the timestamp of the row. Unlike the parent incremental index, an aggregating projection will
-      // always have its time-like column in the grouping columns list, so its position in this array specifies -1
-      final int[] parentDimIndex = new int[projectionSpec.getGroupingColumns().size()];
-      Arrays.fill(parentDimIndex, -1);
-      int i = 0;
-      final Map<String, DimensionDesc> dimensionsMap = new HashMap<>();
-      for (DimensionSchema dimension : projectionSpec.getGroupingColumns()) {
-        if (dimension.getName().equals(schema.getTimeColumnName())) {
-          continue;
-        }
-        final DimensionDesc parent = getDimension(dimension.getName());
-        if (parent == null) {
-          // this dimension only exists in the child, it needs its own handler
-          final DimensionDesc childOnly = new DimensionDesc(
-              i++,
-              dimension.getName(),
-              dimension.getDimensionHandler(),
-              useMaxMemoryEstimates
-          );
-          descs.add(childOnly);
-          dimensionsMap.put(dimension.getName(), childOnly);
-        } else {
-          if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
-            // special handle auto column schema, who reports type as json in schema, but indexer reports whatever
-            // type it has seen, which is string at this stage
-            boolean allowAuto = ColumnType.NESTED_DATA.equals(dimension.getColumnType()) &&
-                                parent.getIndexer() instanceof AutoTypeColumnIndexer;
-            InvalidInput.conditionalException(
-                allowAuto,
-                "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
-                projectionSpec.getName(),
-                dimension.getName(),
-                dimension.getColumnType(),
-                parent.getCapabilities().toColumnType()
-            );
-          }
-          // make a new DimensionDesc from the child, containing all of the parents stuff but with the childs position
-          final DimensionDesc child = new DimensionDesc(
-              i++,
-              parent.getName(),
-              parent.getHandler(),
-              parent.getIndexer()
-          );
-          descs.add(child);
-          dimensionsMap.put(dimension.getName(), child);
-          parentDimIndex[child.getIndex()] = parent.getIndex();
-        }
-      }
+
       final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(
-          projectionSpec.toMetadataSchema(),
-          descs,
-          dimensionsMap,
-          parentDimIndex,
+          projectionSpec,
+          this::getDimension,
+          metric -> {
+            MetricDesc desc = getMetric(metric);
+            if (desc != null) {
+              return getMetricAggs()[desc.getIndex()];
+            }
+            return null;
+          },
           incrementalIndexSchema.getMinTimestamp(),
           this.useMaxMemoryEstimates,
           this.maxBytesPerRowForAggregators
@@ -368,7 +318,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
-    final AggregatorFactory[] metrics = getMetrics();
+    final AggregatorFactory[] metrics = getMetricAggs();
     final AtomicInteger numEntries = getNumEntries();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = aggregators.get(priorIndex);
