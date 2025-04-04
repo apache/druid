@@ -71,7 +71,7 @@ public class SegmentToMoveCalculator
   )
   {
     final int totalSegments = historicals.stream().mapToInt(
-        server -> server.getProjectedSegments().getTotalSegmentCount()
+        server -> server.getProjectedSegmentCounts().getTotalSegmentCount()
     ).sum();
 
     // Move at least some segments to ensure that the cluster is always balancing itself
@@ -187,8 +187,8 @@ public class SegmentToMoveCalculator
     int totalSegmentCount = 0;
     long totalUsageBytes = 0;
     for (ServerHolder server : servers) {
-      totalSegmentCount += server.getProjectedSegments().getTotalSegmentCount();
-      totalUsageBytes += server.getProjectedSegments().getTotalSegmentBytes();
+      totalSegmentCount += server.getProjectedSegmentCounts().getTotalSegmentCount();
+      totalUsageBytes += server.getProjectedSegmentCounts().getTotalSegmentBytes();
     }
 
     if (totalSegmentCount <= 0 || totalUsageBytes <= 0) {
@@ -209,7 +209,7 @@ public class SegmentToMoveCalculator
   {
     // Find all the datasources
     final Set<String> datasources = servers.stream().flatMap(
-        s -> s.getProjectedSegments().getDatasourceToTotalSegmentCount().keySet().stream()
+        s -> s.getProjectedSegmentCounts().getDatasourceToTotalSegmentCount().keySet().stream()
     ).collect(Collectors.toSet());
     if (datasources.isEmpty()) {
       return 0;
@@ -220,7 +220,7 @@ public class SegmentToMoveCalculator
     final Object2IntMap<String> datasourceToMinSegments = new Object2IntOpenHashMap<>();
     for (ServerHolder server : servers) {
       final Object2IntMap<String> datasourceToSegmentCount
-          = server.getProjectedSegments().getDatasourceToTotalSegmentCount();
+          = server.getProjectedSegmentCounts().getDatasourceToTotalSegmentCount();
       for (String datasource : datasources) {
         int count = datasourceToSegmentCount.getInt(datasource);
         datasourceToMaxSegments.mergeInt(datasource, count, Math::max);
@@ -243,7 +243,7 @@ public class SegmentToMoveCalculator
     int minNumSegments = Integer.MAX_VALUE;
     int maxNumSegments = 0;
     for (ServerHolder server : servers) {
-      int countForSkewedDatasource = server.getProjectedSegments()
+      int countForSkewedDatasource = server.getProjectedSegmentCounts()
                                            .getDatasourceToTotalSegmentCount()
                                            .getInt(mostUnbalancedDatasource);
 
@@ -276,7 +276,7 @@ public class SegmentToMoveCalculator
     long maxUsageBytes = 0;
     long minUsageBytes = Long.MAX_VALUE;
     for (ServerHolder server : servers) {
-      final SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
+      final SegmentCountsPerInterval projectedSegments = server.getProjectedSegmentCounts();
 
       // Track the maximum and minimum values
       long serverUsageBytes = projectedSegments.getTotalSegmentBytes();

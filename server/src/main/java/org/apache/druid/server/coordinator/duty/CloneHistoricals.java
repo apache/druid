@@ -93,8 +93,8 @@ public class CloneHistoricals implements CoordinatorDuty
       }
 
       // Load any segments missing in the clone target.
-      for (DataSegment segment : sourceServer.getProjectedSegments().getSegments()) {
-        if (!targetServer.getProjectedSegments().getSegments().contains(segment)) {
+      for (DataSegment segment : sourceServer.getProjectedSegments()) {
+        if (!targetServer.getProjectedSegments().contains(segment)) {
           targetServer.getPeon().loadSegment(segment, SegmentAction.LOAD, null);
           stats.add(
               Stats.Segments.CLONE_LOAD,
@@ -105,8 +105,8 @@ public class CloneHistoricals implements CoordinatorDuty
       }
 
       // Drop any segments missing from the clone source.
-      for (DataSegment segment : targetServer.getProjectedSegments().getSegments()) {
-        if (!sourceServer.getProjectedSegments().getSegments().contains(segment)) {
+      for (DataSegment segment : targetServer.getProjectedSegments()) {
+        if (!sourceServer.getProjectedSegments().contains(segment)) {
           targetServer.getPeon().dropSegment(segment, null);
           stats.add(
               Stats.Segments.CLONE_DROP,
