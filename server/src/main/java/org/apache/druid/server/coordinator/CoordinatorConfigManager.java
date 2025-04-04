@@ -154,9 +154,9 @@ public class CoordinatorConfigManager
   }
 
   public boolean updateCompactionTaskSlots(
-    @Nullable Double compactionTaskSlotRatio,
-    @Nullable Integer maxCompactionTaskSlots,
-    AuditInfo auditInfo
+      @Nullable Double compactionTaskSlotRatio,
+      @Nullable Integer maxCompactionTaskSlots,
+      AuditInfo auditInfo
   )
   {
     UnaryOperator<DruidCompactionConfig> operator = current -> {
