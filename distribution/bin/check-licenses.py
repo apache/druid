@@ -310,6 +310,7 @@ def build_compatible_license_names():
     compatible_licenses['SPDX-License-Identifier: MIT'] = 'MIT License'
 
     compatible_licenses['The Go license'] = 'The Go license'
+    compatible_licenses['Universal Permissive License, Version 1.0'] = 'Universal Permissive License, Version 1.0'
 
     compatible_licenses['-'] = '-'
     return compatible_licenses

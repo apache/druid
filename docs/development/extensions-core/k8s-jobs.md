@@ -22,6 +22,9 @@ title: "MM-less Druid in K8s"
   ~ under the License.
   -->
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 Apache Druid Extension to enable using Kubernetes for launching and managing tasks instead of the Middle Managers.  This extension allows you to launch tasks as kubernetes jobs removing the need for your middle manager.  
 
 Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it has not been tested yet on a wide variety of long-running Druid clusters.
@@ -610,7 +613,7 @@ strategy. To explicitly select this strategy, set the `podTemplateSelectStrategy
 ```
 
 Task specific pod templates can be specified as the runtime property 
-`druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the
+`druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where `{taskType}` is the name of the
 task type. For example, `index_parallel`.
 
 If you are trying to use the default image's environment variable parsing feature to set runtime properties, you need to add an extra escape underscore when specifying pod templates.

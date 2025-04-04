@@ -578,6 +578,56 @@ class K8sTaskAdapterTest
   }
 
   @Test
+  void testProbesRemoved() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    Pod pod = K8sTestUtils.fileToResource("probesPodSpec.yaml", Pod.class);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                  .withNamespace("test")
+                                                                  .build();
+
+    SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+    NoopTask task = K8sTestUtils.createTask("id", 1);
+    Job actual = adapter.createJobFromPodSpec(
+        pod.getSpec(),
+        task,
+        new PeonCommandContext(
+            Collections.singletonList("foo && bar"),
+            new ArrayList<>(),
+            new File("/tmp"),
+            config.getCpuCoreInMicro()
+        )
+    );
+    Job expected = K8sTestUtils.fileToResource("expectedProbesRemovedOutput.yaml", Job.class);
+    // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
+    // this would never happen in real life, but for the jdk 17 tests this is a problem
+    // could be related to: https://bugs.openjdk.org/browse/JDK-8081450
+    actual.getSpec()
+          .getTemplate()
+          .getSpec()
+          .getContainers()
+          .get(0)
+          .getEnv()
+          .removeIf(x -> x.getName().equals("TASK_JSON"));
+    expected.getSpec()
+            .getTemplate()
+            .getSpec()
+            .getContainers()
+            .get(0)
+            .getEnv()
+            .removeIf(x -> x.getName().equals("TASK_JSON"));
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
   void testCPUResourceIsRespected() throws IOException
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);

@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,7 +46,7 @@ import java.util.stream.Stream;
 /**
  * In-memory cache for segments and pending segments of a single datasource.
  */
-class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
+class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoCloseable
 {
   private final String dataSource;
 
@@ -59,6 +60,13 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    */
   private final TreeMap<Interval, SegmentsInInterval> intervalToSegments
       = new TreeMap<>(Comparators.intervalsByEndThenStart());
+
+  /**
+   * Number of transactions currently using this cache. This field is accessed
+   * without acquiring an explicit lock on this cache since the operations are
+   * always performed within a ConcurrentHashMap.compute() which is atomic.
+   */
+  private final AtomicInteger references = new AtomicInteger(0);
 
   HeapMemoryDatasourceSegmentCache(String dataSource)
   {
@@ -82,6 +90,30 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   boolean isEmpty()
   {
     return withReadLock(intervalToSegments::isEmpty);
+  }
+
+  /**
+   * Acquires a reference to this cache, which must be closed in {@link #close()}
+   * after the transaction holding this reference has completed.
+   */
+  void acquireReference()
+  {
+    references.incrementAndGet();
+  }
+
+  @Override
+  public void close()
+  {
+    references.decrementAndGet();
+  }
+
+  /**
+   * @return true if this cache is currently being used by a transaction and
+   * the number of {@link #references} is non-zero.
+   */
+  boolean isBeingUsedByTransaction()
+  {
+    return references.get() > 0;
   }
 
   /**

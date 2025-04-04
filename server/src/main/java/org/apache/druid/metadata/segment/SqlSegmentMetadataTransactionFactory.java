@@ -28,7 +28,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.segment.cache.DatasourceSegmentCache;
 import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.query.DruidMetrics;
@@ -93,13 +92,12 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
 
           // For read-only transactions, use cache only if it is already synced
           if (segmentMetadataCache.isSyncedForRead()) {
-            final DatasourceSegmentCache datasourceCache
-                = segmentMetadataCache.getDatasource(dataSource);
-            final SegmentMetadataReadTransaction cachedTransaction
-                = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector, true);
-
             emitTransactionCount(Metric.READ_ONLY_TRANSACTIONS, dataSource);
-            return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
+            return segmentMetadataCache.readCacheForDataSource(dataSource, dataSourceCache -> {
+              final SegmentMetadataReadTransaction cachedTransaction
+                  = new CachedSegmentMetadataTransaction(sqlTransaction, dataSourceCache, leaderSelector, true);
+              return executeReadAndClose(cachedTransaction, callback);
+            });
           } else {
             return executeReadAndClose(sqlTransaction, callback);
           }
@@ -121,17 +119,9 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
               = createSqlTransaction(dataSource, handle, status);
 
           if (segmentMetadataCache.isEnabled()) {
-            final boolean isCacheReadyForRead = segmentMetadataCache.isSyncedForRead();
-            final DatasourceSegmentCache datasourceCache
-                = segmentMetadataCache.getDatasource(dataSource);
-            final SegmentMetadataTransaction cachedTransaction = new CachedSegmentMetadataTransaction(
-                sqlTransaction,
-                datasourceCache,
-                leaderSelector,
-                isCacheReadyForRead
-            );
+            final boolean isSynced = segmentMetadataCache.isSyncedForRead();
 
-            if (isCacheReadyForRead) {
+            if (isSynced) {
               emitTransactionCount(Metric.READ_WRITE_TRANSACTIONS, dataSource);
             } else {
               log.warn(
@@ -142,7 +132,11 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
               emitTransactionCount(Metric.WRITE_ONLY_TRANSACTIONS, dataSource);
             }
 
-            return datasourceCache.write(() -> executeWriteAndClose(cachedTransaction, callback));
+            return segmentMetadataCache.writeCacheForDataSource(dataSource, dataSourceCache -> {
+              final SegmentMetadataTransaction cachedTransaction =
+                  new CachedSegmentMetadataTransaction(sqlTransaction, dataSourceCache, leaderSelector, isSynced);
+              return executeWriteAndClose(cachedTransaction, callback);
+            });
           } else {
             return executeWriteAndClose(sqlTransaction, callback);
           }
