@@ -186,7 +186,7 @@ public class CompactionStatus
     }
   }
 
-  public static CompactionStatus skipped(String reasonFormat, Object... args)
+  static CompactionStatus skipped(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args));
   }
