@@ -80,8 +80,16 @@ public class SegmentGenerationMetricsTest
 
     // Latest message gap must be invalid after processing is done
     Assert.assertEquals(-1, snapshot.messageGap());
-    assertMetricsReset(snapshot);
-    assertMetricsReset(metrics);
+    // Message gap aggregate metrics are persisted past snapshot if enabled
+    if (messageGapAggStats) {
+      Assert.assertEquals(1, snapshot.numMessageGapEvent());
+      Assert.assertEquals(1, snapshot.maxMessageGap());
+      Assert.assertEquals(1, snapshot.minMessageGap());
+      Assert.assertEquals(1.0, snapshot.avgMessageGap(), 0);
+    } else {
+      assertMetricsReset(snapshot);
+      assertMetricsReset(metrics);
+    }
     // value must be invalid
     Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }

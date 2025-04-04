@@ -303,11 +303,5 @@ public class SegmentGenerationMetrics
   private void reset()
   {
     maxSegmentHandoffTime.set(NO_EMIT_SEGMENT_HANDOFF_TIME);
-    if (messageGapStatsEnabled) {
-      numMessageGap.set(0);
-      avgMessageGap.set(0.0);
-      minMessageGap.set(Long.MAX_VALUE);
-      maxMessageGap.set(0);
-    }
   }
 }

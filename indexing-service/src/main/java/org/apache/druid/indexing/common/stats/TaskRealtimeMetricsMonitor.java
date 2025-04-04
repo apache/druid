@@ -132,7 +132,8 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.setMetric("ingest/events/messageGap", messageGap));
     }
 
-    if (metrics.isMessageGapStatsEnabled()) {
+    final long numMessageGapEvent = metrics.numMessageGapEvent();
+    if (metrics.isMessageGapStatsEnabled() && numMessageGapEvent > 0) {
       emitter.emit(builder.setMetric("ingest/events/avgMessageGap", metrics.avgMessageGap()));
       emitter.emit(builder.setMetric("ingest/events/minMessageGap", metrics.minMessageGap()));
       emitter.emit(builder.setMetric("ingest/events/maxMessageGap", metrics.maxMessageGap()));
