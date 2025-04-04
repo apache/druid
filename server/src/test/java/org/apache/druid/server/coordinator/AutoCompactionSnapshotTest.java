@@ -19,9 +19,15 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatistics;
+import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.List;
 
 public class AutoCompactionSnapshotTest
 {
@@ -32,9 +38,15 @@ public class AutoCompactionSnapshotTest
     final String expectedMessage = "message";
     final AutoCompactionSnapshot.Builder builder = AutoCompactionSnapshot.builder(expectedDataSource);
 
+    final List<DataSegment> segments = CreateDataSegments.ofDatasource(expectedDataSource)
+                                                         .forIntervals(13, Granularities.HOUR)
+                                                         .eachOfSize(1);
+
     // Increment every stat twice
     for (int i = 0; i < 2; i++) {
-      builder.incrementSkippedStats(CompactionStatistics.create(13, 13, 13));
+      final CompactionCandidate skippedCandidate =
+          CompactionCandidate.from(segments).withCurrentStatus(CompactionStatus.skipped("skip reason"));
+      builder.incrementSkippedStats(skippedCandidate);
       builder.incrementWaitingStats(CompactionStatistics.create(13, 13, 13));
       builder.incrementCompactedStats(CompactionStatistics.create(13, 13, 13));
     }
@@ -67,7 +79,8 @@ public class AutoCompactionSnapshotTest
         26,
         26,
         26,
-        26
+        26,
+        List.of("skip reason")
     );
     Assert.assertEquals(expected, actual);
   }
