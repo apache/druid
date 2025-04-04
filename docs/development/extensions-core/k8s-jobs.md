@@ -747,7 +747,7 @@ Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This lab
 
 ##### Differentiating Task Pods Created From Multiple Namespaces
 
-When we have task pods running in multiple namespaces, it will be difficult to tell which task pods are being started by which cluster. You can specify a task name prefix, `druid.indexer.runner.k8sTaskPodNamePrefix`, to apply your specified prefix to all task pods created by your cluster.
+When we have task pods started by overlords of different Druid clusters runnng in different K8S namespaces, it will be difficult to tell which task pods are being started by which overlord or Druid cluster. You can specify a task name prefix, `druid.indexer.runner.k8sTaskPodNamePrefix`, to apply your specified prefix to all task pods created by your cluster.
 
 After configuration, you can witness the change from `coordinatorissuedcompactdataso-0e74d5132781cc950eecf04--1-vbx6t` to `yourtaskprefix-0e74d5132781cc950eecf04--1-vbx6t` by either doing `kubectl get pods` or by viewing the "Location" column under the web console.
 
