@@ -47,14 +47,14 @@ public class HistoricalCloningDuty implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
 
     if (cloneServers.isEmpty()) {
       // No servers to be cloned.
       return params;
     }
 
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
-    // TODO: clean up
+    // Create a map of host to historical.
     final Map<String, ServerHolder> historicalMap = params.getDruidCluster()
                                                           .getHistoricals()
                                                           .values()
@@ -66,22 +66,33 @@ public class HistoricalCloningDuty implements CoordinatorDuty
                                                           ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
-      String sourceHistoricalName = entry.getKey();
-      ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
+      log.debug("Handling cloning for mapping: [%s]", entry);
 
-      String targetHistoricalName = entry.getValue();
-      ServerHolder targetServer = historicalMap.get(targetHistoricalName);
+      final String sourceHistoricalName = entry.getKey();
+      final ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
 
       if (sourceServer == null) {
-        log.info("Could not find source historical [%s]", sourceHistoricalName);
+        log.warn(
+            "Could not find source historical [%s]. Skipping over clone mapping [%s].",
+            sourceHistoricalName,
+            entry
+        );
         continue;
       }
+
+      final String targetHistoricalName = entry.getValue();
+      final ServerHolder targetServer = historicalMap.get(targetHistoricalName);
 
       if (targetServer == null) {
-        log.info("Could not find target historical [%s]", targetHistoricalName);
+        log.warn(
+            "Could not find target historical [%s]. Skipping over clone mapping [%s].",
+            targetHistoricalName,
+            entry
+        );
         continue;
       }
 
+      // Load any segments missing in the clone target.
       for (DataSegment segment : sourceServer.getProjectedSegments().getSegments()) {
         if (!targetServer.getProjectedSegments().getSegments().contains(segment)) {
           targetServer.getPeon().loadSegment(segment, SegmentAction.LOAD, null);
@@ -93,6 +104,7 @@ public class HistoricalCloningDuty implements CoordinatorDuty
         }
       }
 
+      // Drop any segments missing from the clone source.
       for (DataSegment segment : targetServer.getProjectedSegments().getSegments()) {
         if (!sourceServer.getProjectedSegments().getSegments().contains(segment)) {
           targetServer.getPeon().dropSegment(segment, null);
@@ -104,6 +116,7 @@ public class HistoricalCloningDuty implements CoordinatorDuty
         }
       }
     }
+
     return params;
   }
 }

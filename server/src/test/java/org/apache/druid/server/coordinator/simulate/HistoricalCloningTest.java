@@ -23,12 +23,10 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -66,11 +64,11 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                                      )
                                  ).build()
                              )
+                             .withImmediateSegmentLoading(true)
                              .build();
 
     startSimulation(sim);
     runCoordinatorCycle();
-    loadQueuedSegments();
 
     verifyValue(Metric.ASSIGNED_COUNT, 10L);
     verifyValue(
@@ -78,10 +76,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
         Map.of("server", historicalT12.getName()),
         10L
     );
-
-    runCoordinatorCycle();
-    loadQueuedSegments();
-
     verifyValue(
         Metric.SUCCESS_ACTIONS,
         Map.of("server", historicalT11.getName(), "description", "LOAD: NORMAL"),
@@ -112,6 +106,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                                      )
                                  ).build()
                              )
+                             .withImmediateSegmentLoading(true)
                              .build();
 
     // Run 1: Current state is a historical and clone already in sync.
@@ -123,7 +118,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
 
     runCoordinatorCycle();
-    loadQueuedSegments();
 
     // Confirm number of segments.
     Assert.assertEquals(10, historicalT11.getTotalSegments());
@@ -135,7 +129,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
 
     // Run 2: Let the coordinator balance segments.
     runCoordinatorCycle();
-    loadQueuedSegments();
 
     // Check that segments have been distributed to the new historical and have also been dropped by the clone
     Assert.assertEquals(5, historicalT11.getTotalSegments());
@@ -163,13 +156,13 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                                      )
                                  ).build()
                              )
+                             .withImmediateSegmentLoading(true)
                              .build();
 
     startSimulation(sim);
 
     // Run 1: All segments are loaded.
     runCoordinatorCycle();
-    loadQueuedSegments();
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(10, historicalT12.getTotalSegments());
 
@@ -179,7 +172,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
 
     // Run 2: No change in source historical.
     runCoordinatorCycle();
-    loadQueuedSegments();
 
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(0, historicalT12.getTotalSegments());
@@ -189,7 +181,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
 
     // Run 3: Segments recloned.
     runCoordinatorCycle();
-    loadQueuedSegments();
 
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(10, historicalT12.getTotalSegments());
@@ -198,10 +189,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
         Map.of("server", historicalT12.getName()),
         10L
     );
-
-    runCoordinatorCycle();
-    loadQueuedSegments();
-
     verifyValue(
         Metric.SUCCESS_ACTIONS,
         Map.of("server", historicalT12.getName(), "description", "LOAD: TURBO"),
@@ -227,16 +214,14 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                                      )
                                  ).withReplicationThrottleLimit(10).build()
                              )
+                             .withImmediateSegmentLoading(true)
                              .build();
 
+    Segments.WIKI_10X100D.forEach(segment -> historicalT11.addDataSegment(segment));
     startSimulation(sim);
-    Segments.WIKI_10X100D.forEach(
-        segment -> historicalT11.addDataSegment(segment)
-    );
 
     // Run 1: All segments are loaded on the source historical
     runCoordinatorCycle();
-    loadQueuedSegments();
     Assert.assertEquals(1000, historicalT11.getTotalSegments());
     Assert.assertEquals(0, historicalT12.getTotalSegments());
 
@@ -245,7 +230,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
 
     // Run 2: Assigns all segments to the cloned historical
     runCoordinatorCycle();
-    loadQueuedSegments();
 
     Assert.assertEquals(1000, historicalT11.getTotalSegments());
     Assert.assertEquals(1000, historicalT12.getTotalSegments());
@@ -256,14 +240,52 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
         1000L
     );
 
-    runCoordinatorCycle();
-    loadQueuedSegments();
-
     verifyValue(
         Metric.SUCCESS_ACTIONS,
         Map.of("server", historicalT12.getName(), "description", "LOAD: TURBO"),
         1000L
     );
+  }
+
+  @Test
+  public void testCloningHistoricalWithReplicationLimit()
+  {
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Segments.WIKI_10X1D)
+                             .withServers(historicalT11, historicalT12, historicalT13)
+                             .withRules(datasource, Load.on(Tier.T1, 2).forever())
+                             .withImmediateSegmentLoading(true)
+                             .withDynamicConfig(
+                                 withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                     .withReplicationThrottleLimit(2)
+                                     .withMaxSegmentsToMove(0)
+                                     .build()
+                             )
+                             .withImmediateSegmentLoading(true)
+                             .build();
+    Segments.WIKI_10X1D.forEach(historicalT13::addDataSegment);
+    startSimulation(sim);
+
+    // Check that only replication count segments are loaded each run and that the cloning server copies it.
+    while (historicalT11.getTotalSegments() < Segments.WIKI_10X1D.size()) {
+      runCoordinatorCycle();
+
+      // Check that all segments are cloned.
+      Assert.assertEquals(historicalT11.getTotalSegments(), historicalT12.getTotalSegments());
+
+      // Check that the replication throttling is respected.
+      verifyValue(Metric.ASSIGNED_COUNT, 2L);
+      verifyValue(
+          Stats.CoordinatorRun.CLONE_LOAD.getMetricName(),
+          Map.of("server", historicalT12.getName()),
+          2L
+      );
+    }
+
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(10, historicalT12.getTotalSegments());
+    Assert.assertEquals(10, historicalT13.getTotalSegments());
   }
 
   /**
@@ -275,7 +297,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     final Set<String> unmanagedServers = new HashSet<>(cloneServers.values());
 
     return CoordinatorDynamicConfig.builder()
-                                   .withSmartSegmentLoading(true)
+                                   .withSmartSegmentLoading(false)
                                    .withCloneServers(cloneServers)
                                    .withUnmanagedNodes(unmanagedServers)
                                    .withTurboLoadingNodes(unmanagedServers);
