@@ -38,6 +38,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -122,6 +123,7 @@ public class TaskToolboxTest
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
         mockEmitter,
+        NoopPolicyEnforcer.instance(),
         mockSegmentPusher,
         mockDataSegmentKiller,
         mockDataSegmentMover,

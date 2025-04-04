@@ -251,6 +251,11 @@ public class TaskToolbox
     return emitter;
   }
 
+  public PolicyEnforcer getPolicyEnforcer()
+  {
+    return policyEnforcer;
+  }
+
   public DataSegmentPusher getSegmentPusher()
   {
     return segmentPusher;
@@ -377,11 +382,6 @@ public class TaskToolbox
   public CachePopulatorStats getCachePopulatorStats()
   {
     return cachePopulatorStats;
-  }
-
-  public PolicyEnforcer getPolicyEnforcer()
-  {
-    return policyEnforcer;
   }
 
   public IndexMergerV9 getIndexMergerV9()
@@ -653,6 +653,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder policyEnforcer(final PolicyEnforcer policyEnforcer)
+    {
+      this.policyEnforcer = policyEnforcer;
+      return this;
+    }
+
     public Builder segmentPusher(final DataSegmentPusher segmentPusher)
     {
       this.segmentPusher = segmentPusher;
@@ -758,12 +764,6 @@ public class TaskToolbox
     public Builder cachePopulatorStats(final CachePopulatorStats cachePopulatorStats)
     {
       this.cachePopulatorStats = cachePopulatorStats;
-      return this;
-    }
-
-    public Builder policyEnforcer(final PolicyEnforcer policyEnforcer)
-    {
-      this.policyEnforcer = policyEnforcer;
       return this;
     }
 

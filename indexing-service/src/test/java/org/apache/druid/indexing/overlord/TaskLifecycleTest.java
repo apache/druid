@@ -571,6 +571,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         tac,
         emitter,
+        NoopPolicyEnforcer.instance(),
         dataSegmentPusher,
         new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig()),
         (dataSegment, targetLoadSpec) -> dataSegment,
