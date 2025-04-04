@@ -22,10 +22,8 @@ package org.apache.druid.server.http;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -85,18 +83,9 @@ public class CoordinatorCompactionConfigsResource
       return ServletResourceUtils.buildUpdateResponse(() -> true);
     }
 
-    final ClusterCompactionConfig currentConfig = configManager.getCurrentCompactionConfig().clusterConfig();
-    final ClusterCompactionConfig updatedClusterConfig = new ClusterCompactionConfig(
-        Configs.valueOrDefault(compactionTaskSlotRatio, currentConfig.getCompactionTaskSlotRatio()),
-        Configs.valueOrDefault(maxCompactionTaskSlots, currentConfig.getMaxCompactionTaskSlots()),
-        currentConfig.getCompactionPolicy(),
-        currentConfig.isUseSupervisors(),
-        currentConfig.getEngine()
-    );
-
     final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
     return ServletResourceUtils.buildUpdateResponse(
-        () -> configManager.updateClusterCompactionConfig(updatedClusterConfig, auditInfo)
+        () -> configManager.updateCompactionTaskSlots(compactionTaskSlotRatio, maxCompactionTaskSlots, auditInfo)
     );
   }
 

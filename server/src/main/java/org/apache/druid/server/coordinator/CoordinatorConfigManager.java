@@ -27,6 +27,7 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
@@ -150,6 +151,28 @@ public class CoordinatorConfigManager
         DruidCompactionConfig.class,
         DruidCompactionConfig.empty()
     );
+  }
+
+  public boolean updateCompactionTaskSlots(
+      @Nullable Double compactionTaskSlotRatio,
+      @Nullable Integer maxCompactionTaskSlots,
+      AuditInfo auditInfo
+  )
+  {
+    UnaryOperator<DruidCompactionConfig> operator = current -> {
+      final ClusterCompactionConfig currentClusterConfig = current.clusterConfig();
+      final ClusterCompactionConfig updatedClusterConfig = new ClusterCompactionConfig(
+          Configs.valueOrDefault(compactionTaskSlotRatio, currentClusterConfig.getCompactionTaskSlotRatio()),
+          Configs.valueOrDefault(maxCompactionTaskSlots, currentClusterConfig.getMaxCompactionTaskSlots()),
+          currentClusterConfig.getCompactionPolicy(),
+          currentClusterConfig.isUseSupervisors(),
+          currentClusterConfig.getEngine()
+      );
+
+      return current.withClusterConfig(updatedClusterConfig);
+    };
+
+    return updateConfigHelper(operator, auditInfo);
   }
 
   public boolean updateClusterCompactionConfig(
