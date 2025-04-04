@@ -382,7 +382,7 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
-    public Builder withk8sTaskPodNamePrefix(String k8sTaskPodNamePrefix)
+    public Builder withK8sTaskPodNamePrefix(String k8sTaskPodNamePrefix)
     {
       this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
       return this;
