@@ -38,6 +38,11 @@ import java.util.List;
 public interface BrokerClient
 {
   /**
+   * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint.
+   */
+  ListenableFuture<String> submitSqlQuery(ClientSqlQuery sqlQuery);
+
+  /**
    * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint.
    */
   ListenableFuture<SqlTaskStatus> submitSqlTask(ClientSqlQuery sqlQuery);

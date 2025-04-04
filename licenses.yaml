@@ -3231,7 +3231,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.13.0
+version: 1.15.1
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3275,6 +3275,17 @@ notices:
   - parquet-format: |
       Apache Parquet Format
       Copyright 2017 The Apache Software Foundation
+
+---
+
+name: aircompressor
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Apache License version 2.0
+version: "2.0.2"
+libraries:
+  - io.airlift: aircompressor
+
 
 ---
 
@@ -4253,7 +4264,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.25.1
+version: 12.29.0
 libraries:
   - com.azure: azure-storage-blob
 
@@ -4264,7 +4275,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.12.0
+version: 1.14.2
 libraries:
   - com.azure: azure-identity
 
@@ -4275,20 +4286,9 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.21.4
+version: 12.25.0
 libraries:
   - com.azure: azure-storage-blob-batch
-
----
-
-name: Microsoft Azure  Blob Storage SDK
-license_category: binary
-module: extensions/druid-azure-extensions
-license_name: MIT License
-copyright: Microsoft
-version: 12.25.4
-libraries:
-  - com.azure: azure-storage-blob
 
 ---
 
@@ -4297,7 +4297,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.24.4
+version: 12.28.0
 libraries:
   - com.azure: azure-storage-common
 
@@ -4308,7 +4308,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.10.4
+version: 12.14.0
 libraries:
   - com.azure: azure-storage-internal-avro
 
@@ -4319,7 +4319,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.1.0
+version: 1.3.0
 libraries:
   - com.azure: azure-json
 
@@ -4330,7 +4330,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.0.0
+version: 1.1.0
 libraries:
   - com.azure: azure-xml
 
@@ -4340,7 +4340,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.14.2
+version: 1.15.7
 libraries:
   - com.azure: azure-core-http-netty
 
@@ -4351,7 +4351,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.48.0
+version: 1.54.1
 libraries:
   - com.azure: azure-core
 
@@ -4362,7 +4362,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.15.0
+version: 1.17.2
 libraries:
   - com.microsoft.azure: msal4j
 
@@ -4393,7 +4393,7 @@ name: NimbusDS Jose
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 9.37.3
+version: '9.40'
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -4403,7 +4403,7 @@ name: NimbusDS Oauth
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 11.9.1
+version: 11.18
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -4413,7 +4413,7 @@ name: Reactor Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 1.0.43
+version: 1.0.48
 libraries:
   - io.projectreactor.netty: reactor-netty-core
   - io.projectreactor.netty: reactor-netty-http
@@ -4424,7 +4424,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.4.36
+version: 3.4.41
 libraries:
   - io.projectreactor: reactor-core
 ---
