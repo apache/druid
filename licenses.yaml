@@ -2040,7 +2040,7 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.5.3
+version: 2.12.4
 libraries:
   - org.asynchttpclient: async-http-client
   - org.asynchttpclient: async-http-client-netty-utils
