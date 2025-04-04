@@ -38,10 +38,9 @@ import java.util.Properties;
 public class PolicyModuleTest
 {
   @Test
-  public void testConfigNoopPolicyEnforcer()
+  public void testDefaultConfigNoopPolicyEnforcer()
   {
     Properties properties = new Properties();
-    properties.setProperty("druid.policy.enforcer.type", "none");
     PolicyEnforcer policyEnforcer = Guice.createInjector(
         binder -> binder.bind(Properties.class).toInstance(properties),
         new DruidGuiceExtensions(),
@@ -50,6 +49,27 @@ public class PolicyModuleTest
     ).getInstance(Key.get(PolicyEnforcer.class));
     Assert.assertNotNull(policyEnforcer);
     Assert.assertTrue(policyEnforcer instanceof NoopPolicyEnforcer);
+  }
+
+  @Test
+  public void testConfigThrowForUnrecognizedType()
+  {
+    Properties properties = new Properties();
+    properties.setProperty("druid.policy.enforcer.type", "unrecognizedType");
+    Injector injector = Guice.createInjector(
+        binder -> binder.bind(Properties.class).toInstance(properties),
+        new DruidGuiceExtensions(),
+        new ConfigModule(),
+        new PolicyModule()
+    );
+    ProvisionException e = Assert.assertThrows(
+        ProvisionException.class,
+        () -> injector.getInstance(Key.get(PolicyEnforcer.class))
+    );
+    Assert.assertTrue(e.getCause()
+                       .getMessage()
+                       .contains(
+                           "Could not resolve type id 'unrecognizedType' as a subtype of `org.apache.druid.query.policy.PolicyEnforcer`"));
   }
 
   @Test

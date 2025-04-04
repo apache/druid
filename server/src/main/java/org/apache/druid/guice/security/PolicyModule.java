@@ -22,6 +22,7 @@ package org.apache.druid.guice.security;
 import com.google.inject.Binder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 
 /**
@@ -32,6 +33,6 @@ public class PolicyModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.policy.enforcer", PolicyEnforcer.class);
+    JsonConfigProvider.bindWithDefault(binder, "druid.policy.enforcer", PolicyEnforcer.class, NoopPolicyEnforcer.class);
   }
 }

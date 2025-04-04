@@ -26,7 +26,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.Segment;
 
 /**
- * A mechanism for enforcing policies on data sources in Druid queries.
+ * Interface for enforcing policies on data sources and segments in Druid queries.
  * <p>
  * Note: The {@code PolicyEnforcer} is intended to serve as a sanity checker and not as a primary authorization mechanism.
  * It should not be used to implement security rules. Instead, it acts as a last line of defense to verify that
@@ -43,25 +43,27 @@ public interface PolicyEnforcer
 {
 
   /**
-   * Validate a {@link DataSource} node against the policy enforcer. This method is called during query planning from
-   * {@link DataSource#validate(PolicyEnforcer)}.
+   * Validates a {@link DataSource} against the policy enforcer. This method is invoked during query planning
+   * via {@link DataSource#validate(PolicyEnforcer)}.
    * <p>
-   * Don't call this method directly, use {@link DataSource#validate(PolicyEnforcer)}.
+   * Direct invocation of this method is discouraged; use {@link DataSource#validate(PolicyEnforcer)} instead.
    *
-   * @param ds data source to validate
-   * @return true if the data source is valid according to the policy enforcer, false otherwise
+   * @param ds the data source to validate
+   * @param policy the policy on the data source, e.x. {@link RestrictedDataSource#policy} or null for {@link TableDataSource}
+   * @return {@code true} if the data source complies with the policy, {@code false} otherwise
    */
   boolean validate(DataSource ds, Policy policy);
 
-
   /**
-   * Validate a {@link Segment} node against the policy enforcer. This method is called during query planning from
-   * {@link Segment#validate(PolicyEnforcer)}.
+   * Validates a {@link Segment} against the policy enforcer. This method is invoked during query planning
+   * via {@link Segment#validate(PolicyEnforcer)}.
    * <p>
-   * Don't call this method directly, use {@link Segment#validate(PolicyEnforcer)}.
+   * Direct invocation of this method is discouraged; use {@link Segment#validate(PolicyEnforcer)} instead.
+
    *
-   * @param segment segment to validate
-   * @return true if the segment is valid according to the policy enforcer, false otherwise
+   * @param segment the segment to validate
+   * @param policy the policy on the segment, {@link RestrictedSegment#policy}
+   * @return {@code true} if the segment complies with the policy, {@code false} otherwise
    */
   boolean validate(Segment segment, Policy policy);
 }

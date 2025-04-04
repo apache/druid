@@ -110,6 +110,7 @@ import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -1243,6 +1244,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         MapCache.create(2048),
         new CacheConfig(),
         new CachePopulatorStats(),
+        NoopPolicyEnforcer.instance(),
         MAPPER,
         new NoopServiceEmitter(),
         () -> queryRunnerFactoryConglomerate

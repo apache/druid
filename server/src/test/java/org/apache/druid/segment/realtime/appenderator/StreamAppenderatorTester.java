@@ -48,6 +48,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -244,6 +245,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           MapCache.create(2048),
           new CacheConfig(),
           new CachePopulatorStats(),
+          NoopPolicyEnforcer.instance(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
           true,
@@ -286,6 +288,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           MapCache.create(2048),
           new CacheConfig(),
           new CachePopulatorStats(),
+          NoopPolicyEnforcer.instance(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
           true,
