@@ -24,6 +24,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -48,6 +49,7 @@ public class CloneHistoricals implements CoordinatorDuty
   {
     final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final SegmentLoadQueueManager loadQueueManager = params.getLoadQueueManager();
 
     if (cloneServers.isEmpty()) {
       // No servers to be cloned.
@@ -95,24 +97,26 @@ public class CloneHistoricals implements CoordinatorDuty
       // Load any segments missing in the clone target.
       for (DataSegment segment : sourceServer.getProjectedSegments()) {
         if (!targetServer.getProjectedSegments().contains(segment)) {
-          targetServer.getPeon().loadSegment(segment, SegmentAction.LOAD, null);
-          stats.add(
-              Stats.Segments.CLONE_LOAD,
-              RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
-              1L
-          );
+          if (loadQueueManager.loadSegment(segment, targetServer, SegmentAction.LOAD)) {
+            stats.add(
+                Stats.Segments.CLONE_LOAD,
+                RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
+                1L
+            );
+          }
         }
       }
 
       // Drop any segments missing from the clone source.
       for (DataSegment segment : targetServer.getProjectedSegments()) {
         if (!sourceServer.getProjectedSegments().contains(segment)) {
-          targetServer.getPeon().dropSegment(segment, null);
-          stats.add(
-              Stats.Segments.CLONE_DROP,
-              RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
-              1L
-          );
+          if (loadQueueManager.dropSegment(segment, targetServer)) {
+            stats.add(
+                Stats.Segments.CLONE_DROP,
+                RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
+                1L
+            );
+          }
         }
       }
     }
