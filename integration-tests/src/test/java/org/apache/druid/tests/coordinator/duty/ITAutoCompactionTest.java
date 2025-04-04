@@ -2011,10 +2011,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     } else {
       LOG.info(
           "Triggered compaction with status[%s], message[%s]."
-          + " Interval counts: skipped[%d], compacted[%d], pending[%d].",
+          + " Interval counts: skipped[%d], compacted[%d], pending[%d]."
+          + " Skip reasons: %s",
           snapshot.getScheduleStatus(), snapshot.getMessage(),
           snapshot.getIntervalCountSkipped(), snapshot.getIntervalCountCompacted(),
-          snapshot.getIntervalCountAwaitingCompaction()
+          snapshot.getIntervalCountAwaitingCompaction(),
+          snapshot.getSkippedReasons()
       );
     }
 
