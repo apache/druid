@@ -65,6 +65,12 @@ public class Stats
     // Values computed in a run
     public static final CoordinatorStat REPLICATION_THROTTLE_LIMIT
         = CoordinatorStat.toDebugOnly("replicationThrottleLimit");
+
+    // Cloned segments in a run
+    public static final CoordinatorStat CLONE_LOAD
+        = CoordinatorStat.toDebugAndEmit("cloneLoad", "segment/clone/assigned/count");
+    public static final CoordinatorStat CLONE_DROP
+        = CoordinatorStat.toDebugAndEmit("cloneDrop", "segment/clone/dropped/count");
   }
 
   public static class SegmentQueue
@@ -137,10 +143,6 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("dutyRunTime", "coordinator/time");
     public static final CoordinatorStat GROUP_RUN_TIME
         = CoordinatorStat.toDebugAndEmit("groupRunTime", "coordinator/global/time");
-    public static final CoordinatorStat CLONE_LOAD
-        = CoordinatorStat.toDebugAndEmit("cloneLoad", "coordinator/clone/load");
-    public static final CoordinatorStat CLONE_DROP
-        = CoordinatorStat.toDebugAndEmit("cloneDrop", "coordinator/clone/drop");
   }
 
   public static class Kill

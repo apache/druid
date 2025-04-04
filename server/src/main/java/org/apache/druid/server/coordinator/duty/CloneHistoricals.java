@@ -39,9 +39,9 @@ import java.util.stream.Collectors;
  * {@link CoordinatorDynamicConfig#getCloneServers()}, copies any segments load or unload requests from the source
  * historical to the target historical.
  */
-public class HistoricalCloningDuty implements CoordinatorDuty
+public class CloneHistoricals implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(HistoricalCloningDuty.class);
+  private static final Logger log = new Logger(CloneHistoricals.class);
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -97,7 +97,7 @@ public class HistoricalCloningDuty implements CoordinatorDuty
         if (!targetServer.getProjectedSegments().getSegments().contains(segment)) {
           targetServer.getPeon().loadSegment(segment, SegmentAction.LOAD, null);
           stats.add(
-              Stats.CoordinatorRun.CLONE_LOAD,
+              Stats.Segments.CLONE_LOAD,
               RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
               1L
           );
@@ -109,7 +109,7 @@ public class HistoricalCloningDuty implements CoordinatorDuty
         if (!sourceServer.getProjectedSegments().getSegments().contains(segment)) {
           targetServer.getPeon().dropSegment(segment, null);
           stats.add(
-              Stats.CoordinatorRun.CLONE_DROP,
+              Stats.Segments.CLONE_DROP,
               RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
               1L
           );

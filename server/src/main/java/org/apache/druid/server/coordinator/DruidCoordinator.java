@@ -69,7 +69,7 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorDutyGroup;
 import org.apache.druid.server.coordinator.duty.DutyGroupStatus;
-import org.apache.druid.server.coordinator.duty.HistoricalCloningDuty;
+import org.apache.druid.server.coordinator.duty.CloneHistoricals;
 import org.apache.druid.server.coordinator.duty.KillAuditLog;
 import org.apache.druid.server.coordinator.duty.KillCompactionConfig;
 import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
@@ -559,7 +559,7 @@ public class DruidCoordinator
         new MarkOvershadowedSegmentsAsUnused(deleteSegments),
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
-        new HistoricalCloningDuty(),
+        new CloneHistoricals(),
         new CollectLoadQueueStats()
     );
   }

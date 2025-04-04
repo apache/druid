@@ -26,7 +26,6 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,11 +57,11 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withDynamicConfig(
-                                 withCloneServers(
-                                     Map.of(
-                                         historicalT11.getHost(), historicalT12.getHost()
-                                     )
-                                 ).build()
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
+                                                         .withSmartSegmentLoading(false)
+                                                         .build()
                              )
                              .withImmediateSegmentLoading(true)
                              .build();
@@ -72,7 +71,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
 
     verifyValue(Metric.ASSIGNED_COUNT, 10L);
     verifyValue(
-        Stats.CoordinatorRun.CLONE_LOAD.getMetricName(),
+        Stats.Segments.CLONE_LOAD.getMetricName(),
         Map.of("server", historicalT12.getName()),
         10L
     );
@@ -83,7 +82,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     );
     verifyValue(
         Metric.SUCCESS_ACTIONS,
-        Map.of("server", historicalT12.getName(), "description", "LOAD: TURBO"),
+        Map.of("server", historicalT12.getName(), "description", "LOAD: NORMAL"),
         10L
     );
 
@@ -100,11 +99,11 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withDynamicConfig(
-                                 withCloneServers(
-                                     Map.of(
-                                         historicalT11.getHost(), historicalT12.getHost()
-                                     )
-                                 ).build()
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
+                                                         .withSmartSegmentLoading(false)
+                                                         .build()
                              )
                              .withImmediateSegmentLoading(true)
                              .build();
@@ -135,7 +134,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(5, historicalT12.getTotalSegments());
     Assert.assertEquals(5, newHistorical.getTotalSegments());
     verifyValue(
-        Stats.CoordinatorRun.CLONE_DROP.getMetricName(),
+        Stats.Segments.CLONE_DROP.getMetricName(),
         Map.of("server", historicalT12.getName()),
         5L
     );
@@ -150,11 +149,11 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 2).forever())
                              .withDynamicConfig(
-                                 withCloneServers(
-                                     Map.of(
-                                         historicalT11.getHost(), historicalT12.getHost()
-                                     )
-                                 ).build()
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
+                                                         .withSmartSegmentLoading(false)
+                                                         .build()
                              )
                              .withImmediateSegmentLoading(true)
                              .build();
@@ -185,13 +184,13 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(10, historicalT12.getTotalSegments());
     verifyValue(
-        Stats.CoordinatorRun.CLONE_LOAD.getMetricName(),
+        Stats.Segments.CLONE_LOAD.getMetricName(),
         Map.of("server", historicalT12.getName()),
         10L
     );
     verifyValue(
         Metric.SUCCESS_ACTIONS,
-        Map.of("server", historicalT12.getName(), "description", "LOAD: TURBO"),
+        Map.of("server", historicalT12.getName(), "description", "LOAD: NORMAL"),
         10L
     );
 
@@ -208,11 +207,11 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withServers(historicalT11)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withDynamicConfig(
-                                 withCloneServers(
-                                     Map.of(
-                                         historicalT11.getHost(), historicalT12.getHost()
-                                     )
-                                 ).withReplicationThrottleLimit(10).build()
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
+                                                         .withSmartSegmentLoading(false)
+                                                         .build()
                              )
                              .withImmediateSegmentLoading(true)
                              .build();
@@ -235,14 +234,14 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(1000, historicalT12.getTotalSegments());
 
     verifyValue(
-        Stats.CoordinatorRun.CLONE_LOAD.getMetricName(),
+        Stats.Segments.CLONE_LOAD.getMetricName(),
         Map.of("server", historicalT12.getName()),
         1000L
     );
 
     verifyValue(
         Metric.SUCCESS_ACTIONS,
-        Map.of("server", historicalT12.getName(), "description", "LOAD: TURBO"),
+        Map.of("server", historicalT12.getName(), "description", "LOAD: NORMAL"),
         1000L
     );
   }
@@ -257,10 +256,13 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withRules(datasource, Load.on(Tier.T1, 2).forever())
                              .withImmediateSegmentLoading(true)
                              .withDynamicConfig(
-                                 withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
-                                     .withReplicationThrottleLimit(2)
-                                     .withMaxSegmentsToMove(0)
-                                     .build()
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
+                                                         .withSmartSegmentLoading(false)
+                                                         .withReplicationThrottleLimit(2)
+                                                         .withMaxSegmentsToMove(0)
+                                                         .build()
                              )
                              .withImmediateSegmentLoading(true)
                              .build();
@@ -277,7 +279,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
       // Check that the replication throttling is respected.
       verifyValue(Metric.ASSIGNED_COUNT, 2L);
       verifyValue(
-          Stats.CoordinatorRun.CLONE_LOAD.getMetricName(),
+          Stats.Segments.CLONE_LOAD.getMetricName(),
           Map.of("server", historicalT12.getName()),
           2L
       );
@@ -286,20 +288,5 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(10, historicalT11.getTotalSegments());
     Assert.assertEquals(10, historicalT12.getTotalSegments());
     Assert.assertEquals(10, historicalT13.getTotalSegments());
-  }
-
-  /**
-   * Creates a dynamic config with unlimited load queue, balancing disabled and
-   * the given {@code replicationThrottleLimit}.
-   */
-  private CoordinatorDynamicConfig.Builder withCloneServers(Map<String, String> cloneServers)
-  {
-    final Set<String> unmanagedServers = new HashSet<>(cloneServers.values());
-
-    return CoordinatorDynamicConfig.builder()
-                                   .withSmartSegmentLoading(false)
-                                   .withCloneServers(cloneServers)
-                                   .withUnmanagedNodes(unmanagedServers)
-                                   .withTurboLoadingNodes(unmanagedServers);
   }
 }

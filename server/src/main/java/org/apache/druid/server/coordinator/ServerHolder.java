@@ -227,6 +227,9 @@ public class ServerHolder implements Comparable<ServerHolder>
     return isDecommissioning;
   }
 
+  /**
+   * Returns true if this server is unmanaged and should not participate in segment assignment, drop or balancing.
+   */
   public boolean isUnmanaged()
   {
     return isUnmanaged;
