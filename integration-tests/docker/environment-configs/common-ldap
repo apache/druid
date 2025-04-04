@@ -49,7 +49,6 @@ druid_auth_authorizer_ldapauth_initialAdminRole=admin
 druid_auth_authorizer_ldapauth_roleProvider_type=ldap
 druid_auth_authorizers=["ldapauth"]
 druid_auth_authorizeQueryContextParams=true
-druid_policy_enforcer_type=none
 druid_client_https_certAlias=druid
 druid_client_https_keyManagerPassword=druid123
 druid_client_https_keyStorePassword=druid123
