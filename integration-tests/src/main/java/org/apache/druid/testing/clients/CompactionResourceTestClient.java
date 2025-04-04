@@ -191,7 +191,8 @@ public class CompactionResourceTestClient
 
   public void forceTriggerAutoCompaction() throws Exception
   {
-    // Perform a dummy update of task slots to force the coordinator to refresh its compaction config
+    // Fetch cluster config from Overlord and perform a dummy update of task slots
+    // to force the coordinator to refresh its compaction config
     final ClusterCompactionConfig clusterConfig = getClusterConfig();
     updateCompactionTaskSlot(
         clusterConfig.getCompactionTaskSlotRatio(),
