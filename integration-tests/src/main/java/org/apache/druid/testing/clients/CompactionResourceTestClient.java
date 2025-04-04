@@ -32,7 +32,6 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
-import org.apache.druid.server.compaction.CompactionTriggerResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -41,7 +40,6 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.testng.Assert;
 
 import java.net.URL;
 import java.util.List;
@@ -191,8 +189,7 @@ public class CompactionResourceTestClient
 
   public void forceTriggerAutoCompaction() throws Exception
   {
-    // Fetch cluster config from Overlord and perform a dummy update of task slots
-    // to force the coordinator to refresh its compaction config
+    // Perform a dummy update of task slots to force the coordinator to refresh its compaction config
     final ClusterCompactionConfig clusterConfig = getClusterConfig();
     updateCompactionTaskSlot(
         clusterConfig.getCompactionTaskSlotRatio(),
@@ -202,9 +199,9 @@ public class CompactionResourceTestClient
         clusterConfig.getCompactionTaskSlotRatio(),
         clusterConfig.getMaxCompactionTaskSlots()
     );
-    CompactionSimulateResult simulateResult = simulateRunOnCoordinator();
+    final CompactionSimulateResult simulateResult = simulateRunOnCoordinator();
     log.info(
-        "Before triggering compaction duty on Coordinator, expected jobs are %s",
+        "Triggering compaction duty on Coordinator. Expected jobs: %s",
         simulateResult.getCompactionStates()
     );
 
@@ -217,15 +214,6 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-
-    final CompactionTriggerResponse result = jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
-    log.info("Triggered compaction. Submitted tasks[%s].", result.getSubmittedTaskIds());
-
-    simulateResult = simulateRunOnCoordinator();
-    log.info(
-        "After triggering compaction duty on Coordinator, expected jobs are %s",
-        simulateResult.getCompactionStates()
-    );
   }
 
   public void updateClusterConfig(ClusterCompactionConfig config) throws Exception
@@ -267,7 +255,7 @@ public class CompactionResourceTestClient
   }
 
   /**
-   * This API is used only to force the coordinator to refresh its config.
+   * This API is currently only to force the coordinator to refresh its config.
    * For all other purposes, use {@link #updateClusterConfig}.
    */
   @Deprecated
@@ -287,19 +275,6 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-
-    // Verify that coordinator has the latest config now
-    final DruidCompactionConfig configOnCoordinator = getCoordinatorCompactionConfig();
-    Assert.assertEquals(
-        maxCompactionTaskSlots,
-        Integer.valueOf(configOnCoordinator.getMaxCompactionTaskSlots()),
-        "Could not update compaction task slots on the Coordinator"
-    );
-    Assert.assertEquals(
-        compactionTaskSlotRatio,
-        Double.valueOf(configOnCoordinator.getCompactionTaskSlotRatio()),
-        "Could not update compaction task slot ratio on the Coordinator"
-    );
   }
 
   public Map<String, String> getCompactionProgress(String dataSource) throws Exception

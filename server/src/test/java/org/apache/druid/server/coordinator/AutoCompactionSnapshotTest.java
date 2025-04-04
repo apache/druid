@@ -19,15 +19,9 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatistics;
-import org.apache.druid.server.compaction.CompactionStatus;
-import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.List;
 
 public class AutoCompactionSnapshotTest
 {
@@ -38,16 +32,9 @@ public class AutoCompactionSnapshotTest
     final String expectedMessage = "message";
     final AutoCompactionSnapshot.Builder builder = AutoCompactionSnapshot.builder(expectedDataSource);
 
-    final List<DataSegment> segments = CreateDataSegments.ofDatasource(expectedDataSource)
-                                                         .forIntervals(13, Granularities.HOUR)
-                                                         .startingAt("2010-01-01")
-                                                         .eachOfSize(1);
-
     // Increment every stat twice
     for (int i = 0; i < 2; i++) {
-      final CompactionCandidate skippedCandidate =
-          CompactionCandidate.from(segments).withCurrentStatus(CompactionStatus.skipped("reason " + i));
-      builder.incrementSkippedStats(skippedCandidate);
+      builder.incrementSkippedStats(CompactionStatistics.create(13, 13, 13));
       builder.incrementWaitingStats(CompactionStatistics.create(13, 13, 13));
       builder.incrementCompactedStats(CompactionStatistics.create(13, 13, 13));
     }
@@ -68,12 +55,6 @@ public class AutoCompactionSnapshotTest
     Assert.assertEquals(expectedDataSource, actual.getDataSource());
     Assert.assertEquals(expectedMessage, actual.getMessage());
 
-    final List<String> skipReasons = List.of(
-        "2010-01-01T00:00:00.000Z/2010-01-01T13:00:00.000Z: reason 0",
-        "2010-01-01T00:00:00.000Z/2010-01-01T13:00:00.000Z: reason 1"
-    );
-    Assert.assertEquals(skipReasons, actual.getSkippedReasons());
-
     AutoCompactionSnapshot expected = new AutoCompactionSnapshot(
         expectedDataSource,
         AutoCompactionSnapshot.ScheduleStatus.RUNNING,
@@ -86,8 +67,7 @@ public class AutoCompactionSnapshotTest
         26,
         26,
         26,
-        26,
-        skipReasons
+        26
     );
     Assert.assertEquals(expected, actual);
   }

@@ -631,7 +631,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     iterator.getSkippedSegments().forEach(
         candidateSegments -> currentRunAutoCompactionSnapshotBuilders
             .computeIfAbsent(candidateSegments.getDataSource(), AutoCompactionSnapshot::builder)
-            .incrementSkippedStats(candidateSegments)
+            .incrementSkippedStats(candidateSegments.getStats())
     );
 
     final Map<String, AutoCompactionSnapshot> currentAutoCompactionSnapshotPerDataSource = new HashMap<>();

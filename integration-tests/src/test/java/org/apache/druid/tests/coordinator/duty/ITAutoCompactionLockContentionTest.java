@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -152,9 +151,9 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
       rowsForMinute2 += generateData(minute2, streamEventWriter);
       ensureLockedIntervals(minute2);
 
-      // Trigger auto compaction and verify that only minute1 and minute3 are compacted
+      // Trigger auto compaction
       submitAndVerifyCompactionConfig();
-      forceTriggerAutoCompaction();
+      compactionResource.forceTriggerAutoCompaction();
 
       // Wait for segments to be loaded
       ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
@@ -166,32 +165,13 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
       verifyCompactedIntervals(minute1, minute3);
 
       // Trigger auto compaction again
-      forceTriggerAutoCompaction();
+      compactionResource.forceTriggerAutoCompaction();
 
       // Verify that all the segments are now compacted
       ensureCompactionTaskCount(3);
       ensureSegmentsLoaded();
       verifyCompactedIntervals(minute1, minute2, minute3);
       ensureSegmentsCount(3);
-    }
-  }
-
-  private void forceTriggerAutoCompaction() throws Exception
-  {
-    compactionResource.forceTriggerAutoCompaction();
-    final AutoCompactionSnapshot snapshot = compactionResource.getCompactionStatus(fullDatasourceName);
-    if (snapshot == null) {
-      LOG.warn("Compaction could not be triggered for datasource.");
-    } else {
-      LOG.info(
-          "Triggered compaction with status[%s], message[%s]."
-          + " Interval counts: skipped[%d], compacted[%d], pending[%d]."
-          + " Skipped reasons: %s",
-          snapshot.getScheduleStatus(), snapshot.getMessage(),
-          snapshot.getIntervalCountSkipped(), snapshot.getIntervalCountCompacted(),
-          snapshot.getIntervalCountAwaitingCompaction(),
-          snapshot.getSkippedReasons()
-      );
     }
   }
 

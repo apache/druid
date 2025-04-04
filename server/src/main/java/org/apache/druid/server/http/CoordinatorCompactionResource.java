@@ -61,11 +61,11 @@ public class CoordinatorCompactionResource
   @POST
   @Path("/compact")
   @ResourceFilters(ConfigResourceFilter.class)
-  @Produces(MediaType.APPLICATION_JSON)
   @VisibleForTesting
   public Response forceTriggerCompaction()
   {
-    return Response.ok(coordinator.runCompactSegmentsDuty()).build();
+    coordinator.runCompactSegmentsDuty();
+    return Response.ok().build();
   }
 
   @GET

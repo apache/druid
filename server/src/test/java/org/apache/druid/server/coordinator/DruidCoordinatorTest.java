@@ -48,7 +48,6 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
-import org.apache.druid.server.compaction.CompactionTriggerResponse;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
@@ -825,9 +824,6 @@ public class DruidCoordinatorTest
         new ClusterCompactionConfig(0.2, null, null, null, null)
     );
     Assert.assertEquals(Collections.emptyMap(), result.getCompactionStates());
-
-    final CompactionTriggerResponse response = coordinator.runCompactSegmentsDuty();
-    Assert.assertTrue(response.getSubmittedTaskIds().isEmpty());
   }
 
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)

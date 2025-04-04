@@ -23,13 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class AutoCompactionSnapshot
@@ -65,8 +62,6 @@ public class AutoCompactionSnapshot
   private final long intervalCountCompacted;
   @JsonProperty
   private final long intervalCountSkipped;
-  @JsonProperty
-  private final List<String> skippedReasons;
 
   public static Builder builder(String dataSource)
   {
@@ -86,8 +81,7 @@ public class AutoCompactionSnapshot
       @JsonProperty("segmentCountSkipped") long segmentCountSkipped,
       @JsonProperty("intervalCountAwaitingCompaction") long intervalCountAwaitingCompaction,
       @JsonProperty("intervalCountCompacted") long intervalCountCompacted,
-      @JsonProperty("intervalCountSkipped") long intervalCountSkipped,
-      @JsonProperty("skippedReasons") @Nullable List<String> skippedReasons
+      @JsonProperty("intervalCountSkipped") long intervalCountSkipped
   )
   {
     this.dataSource = dataSource;
@@ -102,7 +96,6 @@ public class AutoCompactionSnapshot
     this.intervalCountAwaitingCompaction = intervalCountAwaitingCompaction;
     this.intervalCountCompacted = intervalCountCompacted;
     this.intervalCountSkipped = intervalCountSkipped;
-    this.skippedReasons = skippedReasons;
   }
 
   @NotNull
@@ -168,12 +161,6 @@ public class AutoCompactionSnapshot
     return intervalCountSkipped;
   }
 
-  @Nullable
-  public List<String> getSkippedReasons()
-  {
-    return skippedReasons;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -195,8 +182,7 @@ public class AutoCompactionSnapshot
            intervalCountSkipped == that.intervalCountSkipped &&
            dataSource.equals(that.dataSource) &&
            scheduleStatus == that.scheduleStatus &&
-           Objects.equals(message, that.message) &&
-           Objects.equals(skippedReasons, that.skippedReasons);
+           Objects.equals(message, that.message);
   }
 
   @Override
@@ -214,8 +200,7 @@ public class AutoCompactionSnapshot
         segmentCountSkipped,
         intervalCountAwaitingCompaction,
         intervalCountCompacted,
-        intervalCountSkipped,
-        skippedReasons
+        intervalCountSkipped
     );
   }
 
@@ -228,8 +213,6 @@ public class AutoCompactionSnapshot
     private final CompactionStatistics compactedStats = new CompactionStatistics();
     private final CompactionStatistics skippedStats = new CompactionStatistics();
     private final CompactionStatistics waitingStats = new CompactionStatistics();
-
-    private final List<String> skippedReasons = new ArrayList<>();
 
     private Builder(
         @NotNull String dataSource
@@ -263,12 +246,9 @@ public class AutoCompactionSnapshot
       compactedStats.increment(entry);
     }
 
-    public void incrementSkippedStats(CompactionCandidate candidate)
+    public void incrementSkippedStats(CompactionStatistics entry)
     {
-      skippedStats.increment(candidate.getStats());
-      if (candidate.getCurrentStatus() != null) {
-        skippedReasons.add(candidate.getUmbrellaInterval() + ": " + candidate.getCurrentStatus().getReason());
-      }
+      skippedStats.increment(entry);
     }
 
     public AutoCompactionSnapshot build()
@@ -285,8 +265,7 @@ public class AutoCompactionSnapshot
           skippedStats.getNumSegments(),
           waitingStats.getNumIntervals(),
           compactedStats.getNumIntervals(),
-          skippedStats.getNumIntervals(),
-          skippedReasons.size() > 10 ? skippedReasons.subList(0, 10) : skippedReasons
+          skippedStats.getNumIntervals()
       );
     }
   }
