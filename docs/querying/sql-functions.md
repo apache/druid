@@ -659,7 +659,7 @@ Returns the following:
 
 ## ARRAY_OFFSET_OF
 
-Returns the zero-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the zero-based index of the first occurrence of the expression in the array. Returns null if the value isn't present.
 
 * **Syntax**: `ARRAY_OFFSET_OF(arr, expr)`
 * **Function type:** Array
@@ -721,7 +721,7 @@ Returns the following:
 
 ## ARRAY_ORDINAL_OF
 
-Returns the one-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the one-based index of the first occurrence of the expression in the array. Returns null if the value isn't present.
 
 * **Syntax**: `ARRAY_ORDINAL_OF(arr, expr)`
 * **Function type:** Array
