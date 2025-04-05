@@ -24,6 +24,10 @@ on:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
       - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 jobs:
   build:
