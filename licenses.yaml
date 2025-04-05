@@ -1112,13 +1112,11 @@ libraries:
 
 name: Jetbrains Annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 13.0
+version: 26.0.1
 libraries:
   - org.jetbrains: annotations
-
 
 ---
 
@@ -2040,7 +2038,7 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.4
+version: 3.0.1
 libraries:
   - org.asynchttpclient: async-http-client
   - org.asynchttpclient: async-http-client-netty-utils
@@ -3852,7 +3850,7 @@ name: Reactive Streams
 license_category: binary
 module: java-core
 license_name: Creative Commons CC0
-version: 1.0.3
+version: 1.0.4
 license_file_path: licenses/bin/reactive-streams.CC0
 libraries:
   - org.reactivestreams: reactive-streams
