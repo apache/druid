@@ -44,9 +44,6 @@ import java.util.stream.Collectors;
  */
 public class JoinableFactoryWrapper
 {
-
-  public static final byte JOIN_OPERATION = 0x1;
-
   private final JoinableFactory joinableFactory;
 
   @Inject

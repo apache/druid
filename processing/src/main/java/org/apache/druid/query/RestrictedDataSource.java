@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
@@ -117,9 +116,9 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
-    return base.isConcrete();
+    return base.isProcessable();
   }
 
   @Override
@@ -127,12 +126,6 @@ public class RestrictedDataSource implements DataSource
   {
     final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
     return baseSegment -> new RestrictedSegment(segmentMapFn.apply(baseSegment), policy);
-  }
-
-  @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return create(newSource, policy);
   }
 
   @Override
@@ -178,13 +171,7 @@ public class RestrictedDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[0];
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return base.getAnalysis();
+    return null;
   }
 
   @Override
