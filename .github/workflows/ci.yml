@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pattern: [ "L*,Q*,W*", "C*,E*", "B*,O*,S*,X*,Y*,Z*", "A*,G*,R*", "M*,P*,V*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*"]
+        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
