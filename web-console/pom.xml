@@ -40,6 +40,10 @@
     <maven.build.cache.input.6>typings</maven.build.cache.input.6>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
+
+    <!--
+    NOTE: When changing the following properties, the docker base image specified in distribution/docker/Dockerfile must be updated accordingly
+    -->
     <node.version>v20.9.0</node.version>
     <npm.version>10.9.0</npm.version>
   </properties>
@@ -163,11 +167,13 @@
         </executions>
       </plugin>
       <plugin>
+        <!--
+        The web.console.skip is NOT applied to this stage as this is required for web-console package when building docker image
+        -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <configuration>
           <outputDirectory>${project.build.outputDirectory}/org/apache/druid/console</outputDirectory>
-          <skip>${web.console.skip}</skip>
         </configuration>
       </plugin>
     </plugins>
