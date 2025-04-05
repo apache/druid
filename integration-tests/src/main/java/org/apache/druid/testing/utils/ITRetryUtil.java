@@ -120,6 +120,8 @@ public class ITRetryUtil
       }
     }
 
+    System.out.printf("Retries[%d] exhausted.%n", retryCount);
+
     if (lastException != null) {
       throw new ISE(
           lastException,

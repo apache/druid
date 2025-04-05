@@ -31,6 +31,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -291,7 +293,7 @@ public class CompactionResourceTestClient
     return jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
   }
 
-  public Map<String, String> getCompactionStatus(String dataSource) throws Exception
+  public AutoCompactionSnapshot getCompactionStatus(String dataSource) throws Exception
   {
     String url = StringUtils.format("%scompaction/status?dataSource=%s", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
     StatusResponseHolder response = httpClient.go(
@@ -306,8 +308,8 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    Map<String, List<Map<String, String>>> latestSnapshots = jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
-    return latestSnapshots.get("latestStatus").get(0);
+    final CompactionStatusResponse latestSnapshots = jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
+    return latestSnapshots.getLatestStatus().get(0);
   }
 
   public CompactionSimulateResult simulateRunOnCoordinator() throws Exception

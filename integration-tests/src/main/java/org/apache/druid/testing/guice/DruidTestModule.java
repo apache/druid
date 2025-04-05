@@ -19,8 +19,6 @@
 
 package org.apache.druid.testing.guice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -32,8 +30,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.emitter.core.LoggingEmitter;
-import org.apache.druid.java.util.emitter.core.LoggingEmitterConfig;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -83,8 +80,10 @@ public class DruidTestModule implements Module
 
   @Provides
   @ManageLifecycle
-  public ServiceEmitter getServiceEmitter(Supplier<LoggingEmitterConfig> config, ObjectMapper jsonMapper)
+  public ServiceEmitter getServiceEmitter()
   {
-    return new ServiceEmitter("", "", new LoggingEmitter(config.get(), jsonMapper));
+    // Disabling metric emission since no useful metrics are emitted by the integration testing client
+    // Use a LoggingEmitter here if needed in the future
+    return new ServiceEmitter("", "", new NoopEmitter());
   }
 }
