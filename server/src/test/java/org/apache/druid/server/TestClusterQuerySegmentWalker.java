@@ -45,6 +45,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -242,7 +243,8 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                                 new ReferenceCountingSegmentQueryRunner<>(
                                     factory,
                                     segmentMapFn.apply(segment.getSegment()),
-                                    segment.getDescriptor()
+                                    segment.getDescriptor(),
+                                    NoopPolicyEnforcer.instance()
                                 ),
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )

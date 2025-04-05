@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -61,6 +62,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
@@ -125,6 +127,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final PolicyEnforcer policyEnforcer;
 
   public SinkQuerySegmentWalker(
       String dataSource,
@@ -135,7 +138,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       QueryProcessingPool queryProcessingPool,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -147,6 +151,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
+    this.policyEnforcer = policyEnforcer;
 
     if (!cache.isLocal()) {
       log.warn("Configured cache[%s] is not local, caching will not be enabled.", cache.getClass().getName());
@@ -199,6 +204,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     if ((dataSourceFromQuery instanceof QueryDataSource)
         && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
+    }
+
+    if (!dataSourceFromQuery.validate(policyEnforcer)) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build("Failed security validation with dataSource [%s]", dataSourceFromQuery);
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.

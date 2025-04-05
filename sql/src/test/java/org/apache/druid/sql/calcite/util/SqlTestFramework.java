@@ -48,6 +48,7 @@ import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -396,12 +397,14 @@ public class SqlTestFramework
     @Override
     public void gatherProperties(Properties properties)
     {
+      properties.setProperty("druid.policy.enforcer.type", "none");
     }
 
     @Override
     public DruidModule getCoreModule()
     {
       return DruidModuleCollection.of(
+          new PolicyModule(),
           new LookylooModule(),
           new SegmentWranglerModule(),
           new ExpressionModule(),

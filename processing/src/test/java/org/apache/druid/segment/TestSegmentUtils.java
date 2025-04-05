@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,15 +28,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.Cursors;
-import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexCursorFactory;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.loading.LoadSpec;
@@ -45,6 +36,7 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
@@ -57,7 +49,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-
+/**
+ * Test utility class for creating test segments and load specs.
+ */
 public class TestSegmentUtils
 {
   @JsonTypeName("test")
@@ -251,6 +245,25 @@ public class TestSegmentUtils
         closed = true;
       }
     }
+  }
+
+  public static DataSegment makeTombstoneSegment(String dataSource, String version, Interval interval)
+  {
+    return new DataSegment(
+        dataSource,
+        interval,
+        version,
+        ImmutableMap.of("version", version,
+                        "interval", interval,
+                        "type",
+                        DataSegment.TOMBSTONE_LOADSPEC_TYPE
+        ),
+        Arrays.asList("dim1", "dim2", "dim3"),
+        Arrays.asList("metric1", "metric2"),
+        TombstoneShardSpec.INSTANCE,
+        IndexIO.CURRENT_VERSION_ID,
+        1L
+    );
   }
 
   public static DataSegment makeSegment(String dataSource, String version, Interval interval)
