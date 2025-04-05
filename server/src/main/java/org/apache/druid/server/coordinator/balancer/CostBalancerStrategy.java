@@ -284,7 +284,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     // Compute number of segments in each interval
     final Object2IntOpenHashMap<Interval> intervalToSegmentCount = new Object2IntOpenHashMap<>();
 
-    final SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
+    final SegmentCountsPerInterval projectedSegments = server.getProjectedSegmentCounts();
     projectedSegments.getIntervalToTotalSegmentCount().object2IntEntrySet().forEach(entry -> {
       final Interval interval = entry.getKey();
       if (costComputeInterval.overlaps(interval)) {

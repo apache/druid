@@ -74,6 +74,8 @@ public class CoordinatorDynamicConfig
   private final Map<Dimension, String> validDebugDimensions;
 
   private final Set<String> turboLoadingNodes;
+  private final Set<String> unmanagedNodes;
+  private final Map<String, String> cloneServers;
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
@@ -124,7 +126,9 @@ public class CoordinatorDynamicConfig
       @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
-      @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes
+      @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
+      @JsonProperty("unmanagedNodes") @Nullable Set<String> unmanagedNodes,
+      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
   )
   {
     this.markSegmentAsUnusedDelayMillis =
@@ -169,6 +173,8 @@ public class CoordinatorDynamicConfig
     this.debugDimensions = debugDimensions;
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
+    this.unmanagedNodes = Configs.valueOrDefault(unmanagedNodes, Set.of());
+    this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -322,6 +328,18 @@ public class CoordinatorDynamicConfig
     return replicateAfterLoadTimeout;
   }
 
+  @JsonProperty
+  public Set<String> getUnmanagedNodes()
+  {
+    return unmanagedNodes;
+  }
+
+  @JsonProperty
+  public Map<String, String> getCloneServers()
+  {
+    return cloneServers;
+  }
+
   /**
    * List of servers to put in turbo-loading mode. These servers will use a larger thread pool to load
    * segments. This causes decreases the average time taken to load segments. However, this also means less resources
@@ -464,6 +482,8 @@ public class CoordinatorDynamicConfig
     private Boolean useRoundRobinSegmentAssignment;
     private Boolean smartSegmentLoading;
     private Set<String> turboLoadingNodes;
+    private Set<String> unmanagedNodes;
+    private Map<String, String> cloneServers;
 
     public Builder()
     {
@@ -487,7 +507,9 @@ public class CoordinatorDynamicConfig
         @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
-        @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes
+        @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
+        @JsonProperty("unmanagedNodes") @Nullable Set<String> unmanagedNodes,
+        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
@@ -507,6 +529,8 @@ public class CoordinatorDynamicConfig
       this.smartSegmentLoading = smartSegmentLoading;
       this.debugDimensions = debugDimensions;
       this.turboLoadingNodes = turboLoadingNodes;
+      this.unmanagedNodes = unmanagedNodes;
+      this.cloneServers = cloneServers;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -599,6 +623,18 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withUnmanagedNodes(Set<String> unmanagedNodes)
+    {
+      this.unmanagedNodes = unmanagedNodes;
+      return this;
+    }
+
+    public Builder withCloneServers(Map<String, String> cloneServers)
+    {
+      this.cloneServers = cloneServers;
+      return this;
+    }
+
     /**
      * Builds a CoordinatoryDynamicConfig using either the configured values, or
      * the default value if not configured.
@@ -625,7 +661,9 @@ public class CoordinatorDynamicConfig
           valueOrDefault(useRoundRobinSegmentAssignment, Defaults.USE_ROUND_ROBIN_ASSIGNMENT),
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
           debugDimensions,
-          turboLoadingNodes
+          turboLoadingNodes,
+          unmanagedNodes,
+          cloneServers
       );
     }
 
@@ -656,7 +694,9 @@ public class CoordinatorDynamicConfig
           valueOrDefault(useRoundRobinSegmentAssignment, defaults.isUseRoundRobinSegmentAssignment()),
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
-          valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes())
+          valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
+          valueOrDefault(unmanagedNodes, defaults.getUnmanagedNodes()),
+          valueOrDefault(cloneServers, defaults.getCloneServers())
       );
     }
   }

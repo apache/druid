@@ -65,6 +65,12 @@ public class Stats
     // Values computed in a run
     public static final CoordinatorStat REPLICATION_THROTTLE_LIMIT
         = CoordinatorStat.toDebugOnly("replicationThrottleLimit");
+
+    // Cloned segments in a run
+    public static final CoordinatorStat CLONE_LOAD
+        = CoordinatorStat.toDebugAndEmit("cloneLoad", "segment/clone/assigned/count");
+    public static final CoordinatorStat CLONE_DROP
+        = CoordinatorStat.toDebugAndEmit("cloneDrop", "segment/clone/dropped/count");
   }
 
   public static class SegmentQueue

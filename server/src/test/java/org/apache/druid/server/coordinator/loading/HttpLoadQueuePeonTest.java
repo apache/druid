@@ -73,10 +73,12 @@ public class HttpLoadQueuePeonTest
 
   private TestHttpClient httpClient;
   private HttpLoadQueuePeon httpLoadQueuePeon;
+  private SegmentLoadingCapabilities segmentLoadingCapabilities;
 
   @Before
   public void setUp()
   {
+    segmentLoadingCapabilities = new SegmentLoadingCapabilities(1, 3);
     httpClient = new TestHttpClient();
     httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
@@ -90,14 +92,7 @@ public class HttpLoadQueuePeonTest
             true
         ),
         httpClient.callbackExecutor
-    )
-    {
-      @Override
-      SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
-      {
-        return new SegmentLoadingCapabilities(1, 3);
-      }
-    };
+    );
     httpLoadQueuePeon.start();
   }
 
@@ -344,14 +339,7 @@ public class HttpLoadQueuePeonTest
             true
         ),
         httpClient.callbackExecutor
-    )
-    {
-      @Override
-      SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
-      {
-        return new SegmentLoadingCapabilities(1, 3);
-      }
-    };
+    );
 
     Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
     Assert.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));
@@ -362,7 +350,7 @@ public class HttpLoadQueuePeonTest
     return success -> httpClient.processedSegments.add(segment);
   }
 
-  private static class TestHttpClient implements HttpClient, DataSegmentChangeHandler
+  private class TestHttpClient implements HttpClient, DataSegmentChangeHandler
   {
     final BlockingExecutorService processingExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-%s");
     final BlockingExecutorService callbackExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-cb");
@@ -379,6 +367,7 @@ public class HttpLoadQueuePeonTest
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <Intermediate, Final> ListenableFuture<Final> go(
         Request request,
         HttpResponseHandler<Intermediate, Final> httpResponseHandler,
@@ -388,7 +377,17 @@ public class HttpLoadQueuePeonTest
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
+
       try {
+        if (request.getUrl().toString().contains("/loadCapabilities")) {
+          return (ListenableFuture<Final>) Futures.immediateFuture(
+              new ByteArrayInputStream(
+                  MAPPER.writerFor(SegmentLoadingCapabilities.class)
+                        .writeValueAsBytes(segmentLoadingCapabilities)
+              )
+          );
+        }
+
         List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
             request.getContent().array(),
             HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF

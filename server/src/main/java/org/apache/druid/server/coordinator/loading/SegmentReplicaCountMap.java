@@ -49,6 +49,10 @@ public class SegmentReplicaCountMap
     cluster.getHistoricals().forEach(
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
+              if (serverHolder.isUnmanaged()) {
+                // Don't count segments on unmanaged historicals towards replica counts.
+                return;
+              }
               // Add segments already loaded on this server
               for (DataSegment segment : serverHolder.getServedSegments()) {
                 computeIfAbsent(segment.getId(), tier).incrementLoaded();

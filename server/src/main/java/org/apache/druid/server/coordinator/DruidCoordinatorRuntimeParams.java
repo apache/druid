@@ -54,6 +54,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorRunStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
+  private final SegmentLoadQueueManager loadQueueManager;
 
   private DruidCoordinatorRuntimeParams(
       DruidCluster druidCluster,
@@ -65,7 +66,8 @@ public class DruidCoordinatorRuntimeParams
       SegmentLoadingConfig segmentLoadingConfig,
       CoordinatorRunStats stats,
       BalancerStrategy balancerStrategy,
-      Set<String> broadcastDatasources
+      Set<String> broadcastDatasources,
+      SegmentLoadQueueManager loadQueueManager
   )
   {
     this.druidCluster = druidCluster;
@@ -78,6 +80,7 @@ public class DruidCoordinatorRuntimeParams
     this.stats = stats;
     this.balancerStrategy = balancerStrategy;
     this.broadcastDatasources = broadcastDatasources;
+    this.loadQueueManager = loadQueueManager;
   }
 
   public DruidCluster getDruidCluster()
@@ -100,6 +103,11 @@ public class DruidCoordinatorRuntimeParams
   public StrategicSegmentAssigner getSegmentAssigner()
   {
     return segmentAssigner;
+  }
+
+  public SegmentLoadQueueManager getLoadQueueManager()
+  {
+    return loadQueueManager;
   }
 
   public Map<String, SegmentTimeline> getUsedSegmentsTimelinesPerDataSource()
@@ -186,7 +194,8 @@ public class DruidCoordinatorRuntimeParams
         segmentLoadingConfig,
         stats,
         balancerStrategy,
-        broadcastDatasources
+        broadcastDatasources,
+        loadQueueManager
     );
   }
 
@@ -221,7 +230,8 @@ public class DruidCoordinatorRuntimeParams
         SegmentLoadingConfig segmentLoadingConfig,
         CoordinatorRunStats stats,
         BalancerStrategy balancerStrategy,
-        Set<String> broadcastDatasources
+        Set<String> broadcastDatasources,
+        SegmentLoadQueueManager loadQueueManager
     )
     {
       this.druidCluster = cluster;
@@ -234,6 +244,7 @@ public class DruidCoordinatorRuntimeParams
       this.stats = stats;
       this.balancerStrategy = balancerStrategy;
       this.broadcastDatasources = broadcastDatasources;
+      this.loadQueueManager = loadQueueManager;
     }
 
     public DruidCoordinatorRuntimeParams build()
@@ -254,7 +265,8 @@ public class DruidCoordinatorRuntimeParams
           segmentLoadingConfig,
           stats,
           balancerStrategy,
-          broadcastDatasources
+          broadcastDatasources,
+          loadQueueManager
       );
     }
 

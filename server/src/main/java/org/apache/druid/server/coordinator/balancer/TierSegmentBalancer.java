@@ -75,7 +75,9 @@ public class TierSegmentBalancer
     this.runStats = params.getCoordinatorStats();
 
     Map<Boolean, List<ServerHolder>> partitions =
-        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
+        servers.stream()
+               .filter(s -> !s.isUnmanaged())
+               .collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
     this.decommissioningServers = partitions.get(true);
     this.activeServers = partitions.get(false);
 
@@ -205,7 +207,7 @@ public class TierSegmentBalancer
       return 0;
     } else {
       final int decommSegmentsToMove = decommissioningServers.stream().mapToInt(
-          server -> server.getProjectedSegments().getTotalSegmentCount()
+          server -> server.getProjectedSegmentCounts().getTotalSegmentCount()
       ).sum();
       return Math.min(decommSegmentsToMove, maxSegmentsToMove);
     }
