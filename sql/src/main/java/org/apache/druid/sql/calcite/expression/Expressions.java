@@ -648,12 +648,19 @@ public class Expressions
         return null;
       }
 
-      // Special handling for filters on FLOOR(__time TO granularity).
+      // Special handling for filters like FLOOR(__time TO granularity).
       final Granularity queryGranularity =
           toQueryGranularity(lhsExpression, plannerContext.getExpressionParser());
-      if (queryGranularity != null) {
-        // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
-        final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
+      if (queryGranularity != null && !RexLiteral.isNullLiteral(rhs)) {
+        // lhs is a time-floor expression; rhs must be a timestamp or millis
+        final long rhsMillis;
+
+        if (rhs.getType().getSqlTypeName() == SqlTypeName.BIGINT) {
+          rhsMillis = ((Number) RexLiteral.value(rhs)).longValue();
+        } else {
+          rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
+        }
+
         return buildTimeFloorFilter(
             ColumnHolder.TIME_COLUMN_NAME,
             queryGranularity,

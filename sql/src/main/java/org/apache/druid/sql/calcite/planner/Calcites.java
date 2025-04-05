@@ -40,8 +40,8 @@ import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
@@ -449,8 +449,8 @@ public class Calcites
   public static DateTime calciteDateTimeLiteralToJoda(final RexNode literal, final DateTimeZone timeZone)
   {
     final SqlTypeName typeName = literal.getType().getSqlTypeName();
-    if (literal.getKind() != SqlKind.LITERAL || (typeName != SqlTypeName.TIMESTAMP && typeName != SqlTypeName.DATE)) {
-      throw new IAE("Expected literal but got[%s]", literal.getKind());
+    if (literal.getKind() != SqlKind.LITERAL) {
+      throw DruidException.defensive("Expected literal but got[%s]", literal.getKind());
     }
 
     if (typeName == SqlTypeName.TIMESTAMP) {
@@ -460,7 +460,7 @@ public class Calcites
       final DateString dateString = (DateString) RexLiteral.value(literal);
       return CALCITE_DATE_PARSER.parse(dateString.toString()).withZoneRetainFields(timeZone);
     } else {
-      throw new IAE("Expected TIMESTAMP or DATE but got[%s]", typeName);
+      throw DruidException.defensive("Expected TIMESTAMP or DATE but got[%s]", typeName);
     }
   }
 
