@@ -324,7 +324,7 @@ class K8sTaskAdapterTest
         .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
-    assertEquals(new K8sTaskId("ID"), adapter.getTaskId(job));
+    assertEquals(new K8sTaskId(null, "ID"), adapter.getTaskId(job));
   }
 
   @Test

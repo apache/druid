@@ -46,9 +46,22 @@ public class KubernetesOverlordUtils
         .toLowerCase(Locale.ENGLISH), 63);
   }
 
+  public static String convertTaskIdToJobName(String k8sTaskPodNamePrefix, String taskId)
+  {
+    return (k8sTaskPodNamePrefix == null || k8sTaskPodNamePrefix.isEmpty())
+      ? convertTaskIdToJobName(taskId)
+      : StringUtils.left(RegExUtils.replaceAll(k8sTaskPodNamePrefix, K8S_TASK_ID_PATTERN, "")
+               .toLowerCase(Locale.ENGLISH), 30) + "-" + hashString(taskId);
+  }
+
   public static String convertTaskIdToJobName(String taskId)
   {
     return taskId == null ? "" : StringUtils.left(RegExUtils.replaceAll(taskId, K8S_TASK_ID_PATTERN, "")
-        .toLowerCase(Locale.ENGLISH), 30) + "-" + Hashing.murmur3_128().hashString(taskId, StandardCharsets.UTF_8);
+        .toLowerCase(Locale.ENGLISH), 30) + "-" + hashString(taskId);
+  }
+
+  private static String hashString(String rawString)
+  {
+    return Hashing.murmur3_128().hashString(rawString, StandardCharsets.UTF_8).toString();
   }
 }
