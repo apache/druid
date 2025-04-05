@@ -69,6 +69,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         null,
         null,
         null,
+        null,
         null
         );
   }
@@ -101,7 +102,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+      @JsonProperty("messageGapStatsEnabled") @Nullable Boolean messageGapStatsEnabled
   )
   {
     super(
@@ -128,7 +130,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         recordBufferSize,
         recordBufferOfferTimeout,
         maxRecordsPerPoll,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        messageGapStatsEnabled
     );
     this.workerThreads = workerThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
@@ -245,7 +248,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         getRecordBufferOfferTimeout(),
         getMaxRecordsPerPollConfigured(),
         getNumPersistThreads(),
-        getMaxColumnsToMerge()
+        getMaxColumnsToMerge(),
+        getMessageGapStatsEnabled()
         );
   }
 }

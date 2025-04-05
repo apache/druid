@@ -29,6 +29,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.FutureCallback;
@@ -99,6 +100,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -126,6 +128,7 @@ public class StreamAppenderator implements Appenderator
   public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
   // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
   public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
+  public static final int NUMBER_OF_PERSIST_REASONS = 4;
 
   private static final EmittingLogger log = new EmittingLogger(StreamAppenderator.class);
   private static final int WARN_DELAY = 1000;
@@ -320,7 +323,8 @@ public class StreamAppenderator implements Appenderator
     }
 
     final Sink sink = getOrCreateSink(identifier);
-    metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
+    final long maxTimestamp = row.getTimestampFromEpoch();
+    metrics.reportMessageMaxTimestamp(maxTimestamp);
     final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
     final int sinkRowsInMemoryAfterAdd;
     final long bytesInMemoryBeforeAdd = sink.getBytesInMemory();
@@ -340,6 +344,9 @@ public class StreamAppenderator implements Appenderator
       throw e;
     }
 
+    final long systemTime = System.currentTimeMillis();
+    metrics.reportMessageGapAggregates(systemTime - maxTimestamp);
+
     if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
@@ -357,40 +364,43 @@ public class StreamAppenderator implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    List<String> persistReasons = new ArrayList<>();
+    final String[] persistReasons = new String[NUMBER_OF_PERSIST_REASONS];
 
     if (!sink.canAppendRow()) {
       persist = true;
-      persistReasons.add("No more rows can be appended to sink");
+      persistReasons[0] = "No more rows can be appended to sink";
     }
-    if (System.currentTimeMillis() > nextFlush) {
+    if (systemTime > nextFlush) {
       persist = true;
-      persistReasons.add(StringUtils.format(
+      persistReasons[1] = StringUtils.format(
           "current time[%d] is greater than nextFlush[%d]",
-          System.currentTimeMillis(),
+          systemTime,
           nextFlush
-      ));
+      );
     }
     if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
-      persistReasons.add(StringUtils.format(
+      persistReasons[2] = StringUtils.format(
           "rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d]",
           rowsCurrentlyInMemory.get(),
           tuningConfig.getMaxRowsInMemory()
-      ));
+      );
     }
     if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
       persist = true;
-      persistReasons.add(StringUtils.format(
+      persistReasons[3] = StringUtils.format(
           "(estimated) bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
           maxBytesTuningConfig
-      ));
+      );
     }
     if (persist) {
+      final String persistReasonsStr = Arrays.stream(persistReasons)
+                                             .filter(Objects::nonNull)
+                                             .collect(Collectors.joining(", "));
       if (allowIncrementalPersists) {
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
-        log.info("Flushing in-memory data to disk because %s.", String.join(",", persistReasons));
+        log.info("Flushing in-memory data to disk because [%s].", persistReasonsStr);
 
         long bytesToBePersisted = 0L;
         for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
@@ -456,7 +466,10 @@ public class StreamAppenderator implements Appenderator
             MoreExecutors.directExecutor()
         );
       } else {
-        log.info("Marking ready for non-incremental async persist due to reasons[%s].", persistReasons);
+        log.info(
+            "Marking ready for non-incremental async persist due to reasons[%s].",
+            persistReasonsStr
+        );
         isPersistRequired = true;
       }
     }
@@ -642,7 +655,7 @@ public class StreamAppenderator implements Appenderator
   public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     throwPersistErrorIfExists();
-    final Map<String, Integer> currentHydrants = new HashMap<>();
+    final Map<String, Integer> currentHydrants = Maps.newHashMapWithExpectedSize(sinks.size());
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
@@ -877,7 +890,6 @@ public class StreamAppenderator implements Appenderator
    * @param identifier    sink identifier
    * @param sink          sink to push
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
-   *
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
@@ -1124,7 +1136,7 @@ public class StreamAppenderator implements Appenderator
    * Unannounces the given base segment and all its upgraded versions.
    *
    * @param baseSegment base segment
-   * @param sink sink corresponding to the base segment
+   * @param sink        sink corresponding to the base segment
    * @return the set of all segment ids associated with the base segment containing the upgraded ids and itself.
    */
   private Set<SegmentIdWithShardSpec> unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)

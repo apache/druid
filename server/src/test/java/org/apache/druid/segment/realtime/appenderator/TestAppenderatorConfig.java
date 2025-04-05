@@ -45,6 +45,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   private final IndexSpec indexSpecForIntermediatePersists;
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+  private final boolean enableMessageGapAggStats;
 
   public TestAppenderatorConfig(
       AppendableIndexSpec appendableIndexSpec,
@@ -57,7 +58,8 @@ public class TestAppenderatorConfig implements AppenderatorConfig
       Long pushTimeout,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Integer maxColumnsToMerge,
-      File basePersistDirectory
+      File basePersistDirectory,
+      Boolean enableMessageGapAggStats
   )
   {
     this.appendableIndexSpec = appendableIndexSpec;
@@ -74,6 +76,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
 
     this.partitionsSpec = null;
     this.indexSpecForIntermediatePersists = this.indexSpec;
+    this.enableMessageGapAggStats = enableMessageGapAggStats;
   }
 
   @Override
@@ -160,6 +163,12 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   public Period getIntermediatePersistPeriod()
   {
     return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
+  }
+
+  @Override
+  public boolean getMessageGapStatsEnabled()
+  {
+    return enableMessageGapAggStats;
   }
 
   @Override
