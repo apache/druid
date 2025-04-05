@@ -71,4 +71,4 @@ fi
 
 
 echo " * test balancing details"
-dev/test_balancing_calc
+.github/scripts/test_balancing_calc

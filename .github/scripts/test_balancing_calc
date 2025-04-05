@@ -31,5 +31,8 @@ for c in {A..Z} ;do
  echo -n "$c    ";
  (echo 0;grep "^$c" test_times| cut -f 2)|paste -s -d + -|bc
 done | sort -k 2 -nr
+# final output is a table like
+# <letter>	<sumTime>
+# C	88
 
 
