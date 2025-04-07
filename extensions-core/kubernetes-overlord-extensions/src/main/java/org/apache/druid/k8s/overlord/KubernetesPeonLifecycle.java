@@ -100,14 +100,15 @@ public class KubernetesPeonLifecycle
 
   protected KubernetesPeonLifecycle(
       Task task,
+      K8sTaskId taskId,
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
       TaskStateListener stateListener
   )
   {
-    this.taskId = new K8sTaskId(task);
     this.task = task;
+    this.taskId = taskId;
     this.kubernetesClient = kubernetesClient;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
