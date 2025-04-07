@@ -100,8 +100,8 @@ public class CloneHistoricals implements CoordinatorDuty
         continue;
       }
 
-      Set<DataSegment> sourceProjectedSegments = sourceServer.getProjectedSegments();
-      Set<DataSegment> targetProjectedSegments = targetServer.getProjectedSegments();
+      final Set<DataSegment> sourceProjectedSegments = sourceServer.getProjectedSegments();
+      final Set<DataSegment> targetProjectedSegments = targetServer.getProjectedSegments();
       // Load any segments missing in the clone target.
       for (DataSegment segment : sourceProjectedSegments) {
         if (!targetProjectedSegments.contains(segment) && loadQueueManager.loadSegment(segment, targetServer, SegmentAction.LOAD)) {

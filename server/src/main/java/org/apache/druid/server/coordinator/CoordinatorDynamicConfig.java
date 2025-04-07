@@ -74,7 +74,6 @@ public class CoordinatorDynamicConfig
   private final Map<Dimension, String> validDebugDimensions;
 
   private final Set<String> turboLoadingNodes;
-  private final Set<String> unmanagedNodes;
   private final Map<String, String> cloneServers;
 
   /**
@@ -127,7 +126,6 @@ public class CoordinatorDynamicConfig
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
       @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-      @JsonProperty("unmanagedNodes") @Nullable Set<String> unmanagedNodes,
       @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
   )
   {
@@ -173,7 +171,6 @@ public class CoordinatorDynamicConfig
     this.debugDimensions = debugDimensions;
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
-    this.unmanagedNodes = Configs.valueOrDefault(unmanagedNodes, Set.of());
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
   }
 
@@ -329,12 +326,6 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
-  public Set<String> getUnmanagedNodes()
-  {
-    return unmanagedNodes;
-  }
-
-  @JsonProperty
   public Map<String, String> getCloneServers()
   {
     return cloneServers;
@@ -482,7 +473,6 @@ public class CoordinatorDynamicConfig
     private Boolean useRoundRobinSegmentAssignment;
     private Boolean smartSegmentLoading;
     private Set<String> turboLoadingNodes;
-    private Set<String> unmanagedNodes;
     private Map<String, String> cloneServers;
 
     public Builder()
@@ -508,7 +498,6 @@ public class CoordinatorDynamicConfig
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
         @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
-        @JsonProperty("unmanagedNodes") @Nullable Set<String> unmanagedNodes,
         @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
     )
     {
@@ -529,7 +518,6 @@ public class CoordinatorDynamicConfig
       this.smartSegmentLoading = smartSegmentLoading;
       this.debugDimensions = debugDimensions;
       this.turboLoadingNodes = turboLoadingNodes;
-      this.unmanagedNodes = unmanagedNodes;
       this.cloneServers = cloneServers;
     }
 
@@ -623,12 +611,6 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withUnmanagedNodes(Set<String> unmanagedNodes)
-    {
-      this.unmanagedNodes = unmanagedNodes;
-      return this;
-    }
-
     public Builder withCloneServers(Map<String, String> cloneServers)
     {
       this.cloneServers = cloneServers;
@@ -662,7 +644,6 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
           debugDimensions,
           turboLoadingNodes,
-          unmanagedNodes,
           cloneServers
       );
     }
@@ -695,7 +676,6 @@ public class CoordinatorDynamicConfig
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
           valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
-          valueOrDefault(unmanagedNodes, defaults.getUnmanagedNodes()),
           valueOrDefault(cloneServers, defaults.getCloneServers())
       );
     }

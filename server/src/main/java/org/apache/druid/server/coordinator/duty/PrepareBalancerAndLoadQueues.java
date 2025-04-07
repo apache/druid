@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -152,7 +153,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   )
   {
     final Set<String> decommissioningServers = dynamicConfig.getDecommissioningNodes();
-    final Set<String> unmanagedServers = dynamicConfig.getUnmanagedNodes();
+    final Set<String> unmanagedServers = new HashSet<>(dynamicConfig.getCloneServers().values());
     final DruidCluster.Builder cluster = DruidCluster.builder();
     for (ImmutableDruidServer server : currentServers) {
       cluster.add(

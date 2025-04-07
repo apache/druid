@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Map;
-import java.util.Set;
 
 public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
 {
@@ -59,7 +58,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
                                                          .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
-                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .build()
                              )
@@ -101,7 +99,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
                                                          .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
-                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .build()
                              )
@@ -151,7 +148,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
                                                          .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
-                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .build()
                              )
@@ -209,7 +205,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
                                                          .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
-                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .withReplicationThrottleLimit(2)
                                                          .build()
@@ -259,7 +254,6 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
                                                          .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
-                                                         .withUnmanagedNodes(Set.of(historicalT12.getHost()))
                                                          .withSmartSegmentLoading(false)
                                                          .withReplicationThrottleLimit(2)
                                                          .withMaxSegmentsToMove(0)

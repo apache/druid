@@ -234,7 +234,6 @@ public class DruidCoordinatorRuntimeParams
       this.stats = stats;
       this.balancerStrategy = balancerStrategy;
       this.broadcastDatasources = broadcastDatasources;
-      this.loadQueueManager = loadQueueManager;
     }
 
     public DruidCoordinatorRuntimeParams build()
