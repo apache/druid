@@ -1452,7 +1452,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    */
   private void authorizationCheck(final HttpServletRequest request)
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(request, task.getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(request, task.getDataSource(), authorizerMapper);
   }
 
   public Appenderator getAppenderator()

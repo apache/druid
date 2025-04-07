@@ -488,7 +488,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(req, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     Map<String, List<ParseExceptionReport>> events = new HashMap<>();
 
     if (addBuildSegmentStatsToReport(full != null, ingestionState)) {
@@ -531,7 +531,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(req, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
@@ -552,7 +552,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(req, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetLiveReports(full != null)).build();
   }
 

@@ -81,7 +81,7 @@ public class AuthorizationUtils
    * @throws ForbiddenException if the user does not have unrestricted access to
    * perform the required action on the given datasource.
    */
-  public static void verifyUnrestrictedAccessOnDatasource(
+  public static void verifyUnrestrictedAccessToDatasource(
       final HttpServletRequest req,
       String datasource,
       AuthorizerMapper authorizerMapper

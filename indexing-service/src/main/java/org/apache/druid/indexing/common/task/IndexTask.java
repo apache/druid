@@ -331,7 +331,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       @QueryParam("full") String full
   )
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(req, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetUnparseableEvents(full != null)).build();
   }
 
@@ -396,7 +396,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       @QueryParam("full") String full
   )
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(req, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
@@ -408,7 +408,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       @QueryParam("full") String full
   )
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(req, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
 
     final TaskReport.ReportMap liveReports = buildLiveIngestionStatsReport(
         ingestionState,

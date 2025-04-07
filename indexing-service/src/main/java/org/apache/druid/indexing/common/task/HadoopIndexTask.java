@@ -661,7 +661,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       @QueryParam("windows") List<Integer> windows
   )
   {
-    AuthorizationUtils.verifyUnrestrictedAccessOnDatasource(req, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     Map<String, Object> totalsMap = new HashMap<>();
 
     if (determinePartitionsStatsGetter != null) {
