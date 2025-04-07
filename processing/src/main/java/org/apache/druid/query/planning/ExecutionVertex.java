@@ -28,6 +28,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.scan.ScanQuery;
@@ -42,7 +43,9 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * Represents the native engine's execution vertex - the execution unit it may execute in one go.
+ * Represents the native engine's execution vertex - the execution unit it may execute in one execution cycle.
+ *
+ * An execution cycle is one call to either CachingClusteredClient or LocalQuerySegmentWalker.
  *
  * This minimal Vertex a single {@link Query} with an input {@link DataSource}.
  *
@@ -54,7 +57,7 @@ import java.util.function.Function;
  * For example: <br/>
  * SELECT COUNT(*) FROM (SELECT string_first_added FROM druid.wikipedia_first_last GROUP BY 1)
  *
- * Will have 2 groupby queries; but they will be executed together.
+ * Will have 2 groupby queries; but they will be executed together - as that's suppoerted with {@link QueryToolChest#canPerformSubquery(Query)}.
  *
  * There could be a DAG of datasources: <br/>
  * an execution may process a complex dag of datasources when

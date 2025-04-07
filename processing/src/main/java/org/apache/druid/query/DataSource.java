@@ -22,7 +22,6 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.java.util.common.Cacheable;
-import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
@@ -94,13 +93,11 @@ public interface DataSource extends Cacheable
   /**
    * Communicates that this {@link DataSource} can be directly used to run a {@link Query}.
    * <p>
-   * A Processable datasource could pack the necessary logic into the {@link DataSource#createSegmentMapFunction(Query)}.
+   * A Processable datasource must pack the necessary logic into the {@link DataSource#createSegmentMapFunction(Query)}.
    *
    * Processable examples are: {@link TableDataSource}, {@link InlineDataSource}, {@link FilteredDataSource}.
    * Non-processable ones are those which need further pre-processing before running them.
    * examples are: {@link QueryDataSource} and join which are not supported directly.
-   * </p>
-   * Processing boundaries could be identified with {@link ExecutionVertex}.
    */
   boolean isProcessable();
 
