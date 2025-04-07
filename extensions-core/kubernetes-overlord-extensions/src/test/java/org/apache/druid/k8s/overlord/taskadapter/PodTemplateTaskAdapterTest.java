@@ -189,7 +189,7 @@ public class PodTemplateTaskAdapterTest
   public void test_getTaskIdWithK8sTaskPodNamePrefix()
   {
     TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
-    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().withk8sTaskPodNamePrefix("k8sTaskPodNamePrefix").build();
+    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().withK8sTaskPodNamePrefix("k8sTaskPodNamePrefix").build();
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
