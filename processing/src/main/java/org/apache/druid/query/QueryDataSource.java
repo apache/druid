@@ -98,6 +98,9 @@ public class QueryDataSource implements DataSource
   @Override
   public boolean isGlobal()
   {
+   // It would be more accurate if this method returned false.
+   // But doing so currently causes multiple cases in ExecutionVertexTest fail
+   // when the baseDataSource is a QueryDataSource.
     return query.getDataSource().isGlobal();
   }
 
