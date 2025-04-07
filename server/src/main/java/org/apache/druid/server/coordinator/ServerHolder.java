@@ -297,6 +297,9 @@ public class ServerHolder implements Comparable<ServerHolder>
     return projectedSegmentCounts;
   }
 
+  /**
+   * Segments that are expected to be loaded on this server once all the operations in progress have completed.
+   */
   public Set<DataSegment> getProjectedSegments()
   {
     final Set<DataSegment> projectedSegments = new HashSet<>(getServedSegments());

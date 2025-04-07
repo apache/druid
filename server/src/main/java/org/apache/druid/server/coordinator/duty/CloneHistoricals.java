@@ -33,6 +33,7 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -43,13 +44,18 @@ import java.util.stream.Collectors;
 public class CloneHistoricals implements CoordinatorDuty
 {
   private static final Logger log = new Logger(CloneHistoricals.class);
+  private final SegmentLoadQueueManager loadQueueManager;
+
+  public CloneHistoricals(SegmentLoadQueueManager loadQueueManager)
+  {
+    this.loadQueueManager = loadQueueManager;
+  }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    final SegmentLoadQueueManager loadQueueManager = params.getLoadQueueManager();
 
     if (cloneServers.isEmpty()) {
       // No servers to be cloned.
@@ -74,8 +80,8 @@ public class CloneHistoricals implements CoordinatorDuty
       final ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
 
       if (sourceServer == null) {
-        log.warn(
-            "Could not find source historical [%s]. Skipping over clone mapping [%s].",
+        log.error(
+            "Could not process clone mapping[%s] as source historical[%s] does not exist.",
             sourceHistoricalName,
             entry
         );
@@ -86,37 +92,35 @@ public class CloneHistoricals implements CoordinatorDuty
       final ServerHolder targetServer = historicalMap.get(targetHistoricalName);
 
       if (targetServer == null) {
-        log.warn(
-            "Could not find target historical [%s]. Skipping over clone mapping [%s].",
+        log.error(
+            "Could not process clone mapping[%s] as target historical[%s] does not exist.",
             targetHistoricalName,
             entry
         );
         continue;
       }
 
+      Set<DataSegment> sourceProjectedSegments = sourceServer.getProjectedSegments();
+      Set<DataSegment> targetProjectedSegments = targetServer.getProjectedSegments();
       // Load any segments missing in the clone target.
-      for (DataSegment segment : sourceServer.getProjectedSegments()) {
-        if (!targetServer.getProjectedSegments().contains(segment)) {
-          if (loadQueueManager.loadSegment(segment, targetServer, SegmentAction.LOAD)) {
+      for (DataSegment segment : sourceProjectedSegments) {
+        if (!targetProjectedSegments.contains(segment) && loadQueueManager.loadSegment(segment, targetServer, SegmentAction.LOAD)) {
             stats.add(
-                Stats.Segments.CLONE_LOAD,
+                Stats.Segments.ASSIGNED_TO_CLONE,
                 RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
                 1L
             );
-          }
         }
       }
 
       // Drop any segments missing from the clone source.
-      for (DataSegment segment : targetServer.getProjectedSegments()) {
-        if (!sourceServer.getProjectedSegments().contains(segment)) {
-          if (loadQueueManager.dropSegment(segment, targetServer)) {
+      for (DataSegment segment : targetProjectedSegments) {
+        if (!sourceProjectedSegments.contains(segment) && loadQueueManager.dropSegment(segment, targetServer)) {
             stats.add(
-                Stats.Segments.CLONE_DROP,
+                Stats.Segments.DROPPED_FROM_CLONE,
                 RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
                 1L
             );
-          }
         }
       }
     }

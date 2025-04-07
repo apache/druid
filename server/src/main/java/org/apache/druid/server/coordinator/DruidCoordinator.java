@@ -559,7 +559,7 @@ public class DruidCoordinator
         new MarkOvershadowedSegmentsAsUnused(deleteSegments),
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
-        new CloneHistoricals(),
+        new CloneHistoricals(loadQueueManager),
         new CollectLoadQueueStats()
     );
   }

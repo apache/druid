@@ -54,7 +54,6 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorRunStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
-  private final SegmentLoadQueueManager loadQueueManager;
 
   private DruidCoordinatorRuntimeParams(
       DruidCluster druidCluster,
@@ -66,8 +65,7 @@ public class DruidCoordinatorRuntimeParams
       SegmentLoadingConfig segmentLoadingConfig,
       CoordinatorRunStats stats,
       BalancerStrategy balancerStrategy,
-      Set<String> broadcastDatasources,
-      SegmentLoadQueueManager loadQueueManager
+      Set<String> broadcastDatasources
   )
   {
     this.druidCluster = druidCluster;
@@ -80,7 +78,6 @@ public class DruidCoordinatorRuntimeParams
     this.stats = stats;
     this.balancerStrategy = balancerStrategy;
     this.broadcastDatasources = broadcastDatasources;
-    this.loadQueueManager = loadQueueManager;
   }
 
   public DruidCluster getDruidCluster()
@@ -103,11 +100,6 @@ public class DruidCoordinatorRuntimeParams
   public StrategicSegmentAssigner getSegmentAssigner()
   {
     return segmentAssigner;
-  }
-
-  public SegmentLoadQueueManager getLoadQueueManager()
-  {
-    return loadQueueManager;
   }
 
   public Map<String, SegmentTimeline> getUsedSegmentsTimelinesPerDataSource()
@@ -194,8 +186,7 @@ public class DruidCoordinatorRuntimeParams
         segmentLoadingConfig,
         stats,
         balancerStrategy,
-        broadcastDatasources,
-        loadQueueManager
+        broadcastDatasources
     );
   }
 
@@ -230,8 +221,7 @@ public class DruidCoordinatorRuntimeParams
         SegmentLoadingConfig segmentLoadingConfig,
         CoordinatorRunStats stats,
         BalancerStrategy balancerStrategy,
-        Set<String> broadcastDatasources,
-        SegmentLoadQueueManager loadQueueManager
+        Set<String> broadcastDatasources
     )
     {
       this.druidCluster = cluster;
@@ -265,8 +255,7 @@ public class DruidCoordinatorRuntimeParams
           segmentLoadingConfig,
           stats,
           balancerStrategy,
-          broadcastDatasources,
-          loadQueueManager
+          broadcastDatasources
       );
     }
 
