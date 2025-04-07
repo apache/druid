@@ -21,7 +21,7 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 
 /**
  * Allows all data sources (no restrictions).
@@ -39,7 +39,7 @@ public class NoopPolicyEnforcer implements PolicyEnforcer
   }
 
   @Override
-  public boolean validate(Segment unused, Policy unused2)
+  public boolean validate(SegmentReference unused, Policy unused2)
   {
     return true;
   }

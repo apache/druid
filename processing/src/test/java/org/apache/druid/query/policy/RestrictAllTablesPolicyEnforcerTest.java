@@ -72,7 +72,6 @@ public class RestrictAllTablesPolicyEnforcerTest
     Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
-    Assert.assertFalse(policyEnforcer.validate(baseSegment, null));
     Assert.assertFalse(policyEnforcer.validate(segment, null));
     Assert.assertTrue(policyEnforcer.validate(restrictedSegment, policy));
   }
@@ -92,7 +91,6 @@ public class RestrictAllTablesPolicyEnforcerTest
     Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
-    Assert.assertFalse(policyEnforcer.validate(baseSegment, null));
     Assert.assertFalse(policyEnforcer.validate(segment, null));
     Assert.assertFalse(policyEnforcer.validate(restrictedSegment, policy));
   }

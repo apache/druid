@@ -71,7 +71,6 @@ public class NoopPolicyEnforcerTest
     Segment baseSegment = new TestSegmentUtils.SegmentForTesting("table", Intervals.ETERNITY, "1");
     SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
-    Assert.assertTrue(policyEnforcer.validate(baseSegment, null));
     Assert.assertTrue(policyEnforcer.validate(segment, null));
     Assert.assertTrue(policyEnforcer.validate(restrictedSegment, policy));
   }

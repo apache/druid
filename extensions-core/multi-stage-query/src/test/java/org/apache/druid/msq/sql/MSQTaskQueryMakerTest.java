@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -31,8 +32,11 @@ import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.DruidSecondaryModule;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -57,6 +61,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -88,6 +93,7 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
+import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.expressionVirtualColumn;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.when;
@@ -114,7 +120,7 @@ public class MSQTaskQueryMakerTest
   @Nullable
   private DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   @Bind(lazy = true)
-  private PolicyEnforcer policyEnforcer;
+  private PolicyEnforcer policyEnforcer; // lazy so we can set it in the test
 
   private MSQTestOverlordServiceClient overlordClient;
 
@@ -139,6 +145,8 @@ public class MSQTaskQueryMakerTest
     queryProcessingPool = new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool"));
     policyEnforcer = NoopPolicyEnforcer.instance();
     Module defaultModule = Modules.combine(
+        binder -> binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(new DefaultObjectMapper()),
+        new ExpressionModule(),
         new DruidGuiceExtensions(),
         new LifecycleModule(),
         new ConfigModule(),
@@ -283,6 +291,58 @@ public class MSQTaskQueryMakerTest
     ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{1L, "abc"});
     assertResultsEquals(
         "select cnt, dim1 from foo (with restriction)",
+        expectedResults,
+        payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  public void testUnnestOnRestrictedPassedPolicyValidation() throws Exception
+  {
+    // Arrange
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    UnnestDataSource unnestDataSource = UnnestDataSource.create(
+        RestrictedDataSource.create(
+            TableDataSource.create(CalciteTests.DATASOURCE1),
+            RowFilterPolicy.from(new EqualityFilter(
+                "dim1",
+                ColumnType.STRING,
+                "10.1",
+                null
+            ))
+        ),
+        expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+        null
+    );
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .dataSource(unnestDataSource)
+                            .eternityInterval()
+                            .columns("dim1", "j0.unnest")
+                            .columnTypes(ColumnType.STRING, ColumnType.STRING)
+                            .build();
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim1", ColumnType.STRING)
+                                               .add("j0.unnest", ColumnType.STRING)
+                                               .build();
+
+    String controllerTaskId = "scan_query";
+    MSQControllerTask controllerTask = buildMSQControllerTask(
+        controllerTaskId,
+        query,
+        resultSignature,
+        "SELECT dim1 FROM foo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)"
+    );
+    // Act
+    overlordClient.runTask(controllerTaskId, controllerTask).get();
+    MSQTaskReportPayload payload = (MSQTaskReportPayload) overlordClient.getReportForTask(controllerTaskId)
+                                                                        .get(MSQTaskReport.REPORT_KEY)
+                                                                        .getPayload();
+    // Assert
+    Assert.assertTrue(payload.getStatus().getStatus().isSuccess());
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{"10.1", "b"}, new Object[]{"10.1", "c"});
+    assertResultsEquals(
+        "SELECT dim1 FROM foo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) (with restriction)",
         expectedResults,
         payload.getResults().getResults()
     );

@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.segment.RestrictedSegment;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.reflections.Reflections;
 
 import javax.annotation.Nullable;
@@ -76,7 +76,7 @@ public class RestrictAllTablesPolicyEnforcer implements PolicyEnforcer
   }
 
   @Override
-  public boolean validate(Segment segment, Policy policy)
+  public boolean validate(SegmentReference segment, Policy policy)
   {
     if (segment instanceof RestrictedSegment) {
       return allowedPolicies.isEmpty() || allowedPolicies.contains(policy.getClass().getSimpleName());
