@@ -2132,17 +2132,17 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       long intervalCountSkipped
   ) throws Exception
   {
-    Map<String, String> actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
+    AutoCompactionSnapshot actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
     Assert.assertNotNull(actualStatus);
-    Assert.assertEquals(actualStatus.get("scheduleStatus"), scheduleStatus.toString());
-    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesAwaitingCompaction")), bytesAwaitingCompactionMatcher);
-    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesCompacted")), bytesCompactedMatcher);
-    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesSkipped")), bytesSkippedMatcher);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountAwaitingCompaction")), segmentCountAwaitingCompaction);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountCompacted")), segmentCountCompacted);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountSkipped")), segmentCountSkipped);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountAwaitingCompaction")), intervalCountAwaitingCompaction);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountCompacted")), intervalCountCompacted);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountSkipped")), intervalCountSkipped);
+    Assert.assertEquals(actualStatus.getScheduleStatus(), scheduleStatus);
+    MatcherAssert.assertThat(actualStatus.getBytesAwaitingCompaction(), bytesAwaitingCompactionMatcher);
+    MatcherAssert.assertThat(actualStatus.getBytesCompacted(), bytesCompactedMatcher);
+    MatcherAssert.assertThat(actualStatus.getBytesSkipped(), bytesSkippedMatcher);
+    Assert.assertEquals(actualStatus.getSegmentCountAwaitingCompaction(), segmentCountAwaitingCompaction);
+    Assert.assertEquals(actualStatus.getSegmentCountCompacted(), segmentCountCompacted);
+    Assert.assertEquals(actualStatus.getSegmentCountSkipped(), segmentCountSkipped);
+    Assert.assertEquals(actualStatus.getIntervalCountAwaitingCompaction(), intervalCountAwaitingCompaction);
+    Assert.assertEquals(actualStatus.getIntervalCountCompacted(), intervalCountCompacted);
+    Assert.assertEquals(actualStatus.getIntervalCountSkipped(), intervalCountSkipped);
   }
 }

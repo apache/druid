@@ -17,28 +17,23 @@ name: "CI"
 
 on:
   workflow_call:
-    inputs:
-      jdk:
-        required: false
-        type: string
-        default: '17'
 
 jobs:
   run-unit-tests:
-    name: "unit tests"
+    name: "unit tests(main)"
     strategy:
       fail-fast: false
       matrix:
-        Dtest: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
+        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.Dtest }}' -Dmaven.test.failure.ignore=true
-      jdk: ${{ inputs.jdk }}
+      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      jdk: 17
       artifact_prefix: "unit-test-reports"
-      key: ${{ matrix.Dtest }}
+      key: "test-jdk17-[${{ matrix.pattern }}]"
 
-  reporting-unit-test-failures:
-    name: "report-unit-test-failures"
+  test-report:
+    name: "test-report"
     needs: run-unit-tests
     runs-on: ubuntu-latest
     steps:
@@ -61,11 +56,26 @@ jobs:
           truncate_stack_traces: false
 
   reporting-jacoco-coverage-failures:
-    name: "report-jacoco-coverage-failures"
+    name: "coverage-jacoco"
     needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
     if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"
-      key: "jacoco-coverage-report"
+      key: "coverage-jacoco"
+
+  run-unit-tests-all-jdk:
+    needs: test-report
+    name: "unit tests(all jdk)"
+    if: ${{ !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ "11", "21.0.4" ]
+        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
+      jdk: ${{ matrix.jdk }}
+      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"

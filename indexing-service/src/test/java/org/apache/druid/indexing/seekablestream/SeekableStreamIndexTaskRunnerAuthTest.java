@@ -197,12 +197,12 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   )
   {
     // Verify that datasource write user can access
-    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE);
+    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE, "POST");
     replay(allowedRequest);
     method.accept(allowedRequest);
 
     // Verify that no other user can access
-    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_READ);
+    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_READ, "POST");
     replay(blockedRequest);
     expectedException.expect(ForbiddenException.class);
     method.accept(blockedRequest);
@@ -213,20 +213,21 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   )
   {
     // Verify that datasource read user can access
-    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_READ);
+    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_READ, "GET");
     replay(allowedRequest);
     method.accept(allowedRequest);
 
     // Verify that no other user can access
-    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_WRITE);
+    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_WRITE, "GET");
     replay(blockedRequest);
     expectedException.expect(ForbiddenException.class);
     method.accept(blockedRequest);
   }
 
-  private HttpServletRequest createRequest(String username)
+  private HttpServletRequest createRequest(String username, String method)
   {
     HttpServletRequest request = mock(HttpServletRequest.class);
+    EasyMock.expect(request.getMethod()).andReturn(method);
 
     AuthenticationResult authenticationResult = new AuthenticationResult(username, "druid", null, null);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
