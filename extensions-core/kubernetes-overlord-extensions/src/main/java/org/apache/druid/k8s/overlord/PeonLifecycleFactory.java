@@ -20,8 +20,9 @@
 package org.apache.druid.k8s.overlord;
 
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 
 public interface PeonLifecycleFactory
 {
-  KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener);
+  KubernetesPeonLifecycle build(Task task, K8sTaskId taskId, KubernetesPeonLifecycle.TaskStateListener stateListener);
 }
