@@ -59,18 +59,18 @@ This section contains important information about new and existing features.
 
 ### Overlord APIs for compaction (experimental)
 
-You can use the following APIs Overlord APIs (`/druid/indexer/v1/compaction`) to manage compaction status and configs:
+You can use the following Overlord compaction APIs to manage compaction status and configs. These APIs work seamlessly irrespective of whether compaction supervisors are enabled or not.
 
 |Method|Path|Description|Required Permission|
 |--------|--------------------------------------------|------------|--------------------|
-|GET|`/config/cluster`|Get the cluster-level compaction config|Read configs|
-|POST|`/config/cluster`|Update the cluster-level compaction config|Write configs|
-|GET|`/config/datasources`|Get the compaction configs for all datasources|Read datasource|
-|GET|`/config/datasources/{dataSource}`|Get the compaction config of a single datasource|Read datasource|
-|POST|`/config/datasources/{dataSource}`|Update the compaction config of a single datasource|Write datasource|
-|GET|`/config/datasources/{dataSource}/history`|Get the compaction config history of a single datasource|Read datasource|
-|GET|`/status/datasources`|Get the compaction status of all datasources|Read datasource|
-|GET|`/status/datasources/{dataSource}`|Get the compaction status of a single datasource|Read datasource|
+|GET|`/druid/indexer/v1/compaction/config/cluster`|Get the cluster-level compaction config|Read configs|
+|POST|`/druid/indexer/v1/compaction/config/cluster`|Update the cluster-level compaction config|Write configs|
+|GET|`/druid/indexer/v1/compaction/config/datasources`|Get the compaction configs for all datasources|Read datasource|
+|GET|`/druid/indexer/v1/compaction/config/datasources/{dataSource}`|Get the compaction config of a single datasource|Read datasource|
+|POST|`/druid/indexer/v1/compaction/config/datasources/{dataSource}`|Update the compaction config of a single datasource|Write datasource|
+|GET|`/druid/indexer/v1/compaction/config/datasources/{dataSource}/history`|Get the compaction config history of a single datasource|Read datasource|
+|GET|`/druid/indexer/v1/compaction/status/datasources`|Get the compaction status of all datasources|Read datasource|
+|GET|`/druid/indexer/v1/compaction/status/datasources/{dataSource}`|Get the compaction status of a single datasource|Read datasource|
 
 [#17834](https://github.com/apache/druid/pull/17834)
 
@@ -188,7 +188,7 @@ You can now control how many task slots are available for MSQ taskengine control
 
 #### Faster segment metadata operations
 
-Enable segment metadata caching on the Overlord with theruntime property `druid.manager.segments.useCache`. This feature is off by default
+Enable segment metadata caching on the Overlord with the runtime property `druid.manager.segments.useCache`. This feature is off by default.
 
 You can set the property to the following values: 
 
