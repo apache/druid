@@ -328,7 +328,7 @@ public class CoordinatorDynamicConfig
   /**
    * Map of source to target Historicals to place into cloning mode. Target historicals are not involved in normal
    * segment assignment or segment balancing. Instead, segment assignments to the source Historical are mirrored to
-   * the target Historical, so that the source Historical becomes an exact copy. Segments on the target Historical do
+   * the target Historical, so that the target Historical becomes an exact copy. Segments on the target Historical do
    * not count towards the desired segment replication counts.
    */
   @JsonProperty
