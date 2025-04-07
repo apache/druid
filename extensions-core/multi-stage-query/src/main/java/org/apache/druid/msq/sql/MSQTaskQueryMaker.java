@@ -55,6 +55,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -98,6 +99,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final IngestDestination targetDataSource;
   private final OverlordClient overlordClient;
   private final PlannerContext plannerContext;
+  private final PolicyEnforcer policyEnforcer;
   private final ObjectMapper jsonMapper;
   private final List<Entry<Integer, String>> fieldMapping;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
@@ -106,6 +108,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       @Nullable final IngestDestination targetDataSource,
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
+      final PolicyEnforcer policyEnforcer,
       final ObjectMapper jsonMapper,
       final List<Entry<Integer, String>> fieldMapping,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
@@ -114,6 +117,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     this.targetDataSource = targetDataSource;
     this.overlordClient = Preconditions.checkNotNull(overlordClient, "indexingServiceClient");
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
+    this.policyEnforcer = Preconditions.checkNotNull(policyEnforcer, "policyEnforcer");
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
     this.terminalStageSpecFactory = terminalStageSpecFactory;
@@ -124,6 +128,14 @@ public class MSQTaskQueryMaker implements QueryMaker
   {
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
+    if (!druidQuery.getQuery().getDataSource().validate(policyEnforcer)) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build(
+                              "Failed security validation with dataSource [%s]",
+                              druidQuery.getQuery().getDataSource()
+                          );
+    }
 
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 

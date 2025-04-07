@@ -49,6 +49,7 @@ import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -89,17 +90,20 @@ public class MSQTaskSqlEngine implements SqlEngine
   private static final String NAME = "msq-task";
 
   private final OverlordClient overlordClient;
+  private final PolicyEnforcer policyEnforcer;
   private final ObjectMapper jsonMapper;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   @Inject
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
+      final PolicyEnforcer policyEnforcer,
       final ObjectMapper jsonMapper,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
     this.overlordClient = overlordClient;
+    this.policyEnforcer = policyEnforcer;
     this.jsonMapper = jsonMapper;
     this.terminalStageSpecFactory = terminalStageSpecFactory;
   }
@@ -177,6 +181,7 @@ public class MSQTaskSqlEngine implements SqlEngine
         null,
         overlordClient,
         plannerContext,
+        policyEnforcer,
         jsonMapper,
         relRoot.fields,
         terminalStageSpecFactory
@@ -211,6 +216,7 @@ public class MSQTaskSqlEngine implements SqlEngine
         destination,
         overlordClient,
         plannerContext,
+        policyEnforcer,
         jsonMapper,
         relRoot.fields,
         terminalStageSpecFactory

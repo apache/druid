@@ -126,6 +126,6 @@ public class PolicyModuleTest
         ProvisionException.class,
         () -> injector.getInstance(Key.get(PolicyEnforcer.class))
     );
-    Assert.assertTrue(e.getCause().getMessage().contains("Unrecognized policy class"));
+    Assert.assertTrue(e.getCause().getMessage().contains("Unrecognized class[[UnrecognizedPolicy]]"));
   }
 }
