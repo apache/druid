@@ -324,30 +324,10 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private int getNumberOfCompletedCompactionTasks()
   {
-    List<TaskResponseObject> incompleteTasks = indexer
-        .getUncompletedTasksForDataSource(fullDatasourceName);
     List<TaskResponseObject> completeTasks = indexer
         .getCompleteTasksForDataSource(fullDatasourceName);
 
-    printTasks(incompleteTasks, "Incomplete");
-    printTasks(completeTasks, "Complete");
-
     return (int) completeTasks.stream().filter(this::isCompactionTask).count();
-  }
-
-  private void printTasks(List<TaskResponseObject> tasks, String taskState)
-  {
-    StringBuilder sb = new StringBuilder();
-    tasks.forEach(
-        task -> sb.append("{")
-                  .append(task.getType())
-                  .append(", ")
-                  .append(task.getStatus())
-                  .append(", ")
-                  .append(task.getCreatedTime())
-                  .append("}, ")
-    );
-    LOG.info("%s Tasks: %s", taskState, sb);
   }
 
   /**

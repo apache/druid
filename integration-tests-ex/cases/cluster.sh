@@ -128,13 +128,11 @@ function show_status {
 
 function build_shared_dir {
   mkdir -p $SHARED_DIR
-  # Must start with an empty DB to keep MySQL happy
-  sudo rm -rf $SHARED_DIR/db
   mkdir -p $SHARED_DIR/logs
   mkdir -p $SHARED_DIR/tasklogs
-  mkdir -p $SHARED_DIR/db
   mkdir -p $SHARED_DIR/kafka
   mkdir -p $SHARED_DIR/resources
+  mkdir -p $SHARED_DIR/export
   cp $BASE_MODULE_DIR/assets/log4j2.xml $SHARED_DIR/resources
   # Permissions in some build setups are screwed up. See above. The user
   # which runs Docker does not have permission to write into the /shared

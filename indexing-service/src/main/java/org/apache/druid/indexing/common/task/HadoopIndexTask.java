@@ -63,6 +63,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -660,8 +661,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       @QueryParam("windows") List<Integer> windows
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, Object> returnMap = new HashMap<>();
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     Map<String, Object> totalsMap = new HashMap<>();
 
     if (determinePartitionsStatsGetter != null) {
@@ -672,8 +672,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       totalsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsStatsGetter.getTotalMetrics());
     }
 
-    returnMap.put("totals", totalsMap);
-    return Response.ok(returnMap).build();
+    return Response.ok(Map.of("totals", totalsMap)).build();
   }
 
   private TaskReport.ReportMap getTaskCompletionReports()
