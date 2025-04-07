@@ -84,8 +84,12 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
         10L
     );
 
-    Assert.assertEquals(10, historicalT11.getTotalSegments());
-    Assert.assertEquals(10, historicalT12.getTotalSegments());
+    Assert.assertEquals(Segments.WIKI_10X1D.size(), historicalT11.getTotalSegments());
+    Assert.assertEquals(Segments.WIKI_10X1D.size(), historicalT12.getTotalSegments());
+    Segments.WIKI_10X1D.forEach(segment -> {
+      Assert.assertEquals(segment, historicalT11.getSegment(segment.getId()));
+      Assert.assertEquals(segment, historicalT12.getSegment(segment.getId()));
+    });
   }
 
   @Test
@@ -190,8 +194,12 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
         10L
     );
 
-    Assert.assertEquals(10, historicalT11.getTotalSegments());
-    Assert.assertEquals(10, historicalT12.getTotalSegments());
+    Assert.assertEquals(Segments.WIKI_10X1D.size(), historicalT11.getTotalSegments());
+    Assert.assertEquals(Segments.WIKI_10X1D.size(), historicalT12.getTotalSegments());
+    Segments.WIKI_10X1D.forEach(segment -> {
+      Assert.assertEquals(segment, historicalT11.getSegment(segment.getId()));
+      Assert.assertEquals(segment, historicalT12.getSegment(segment.getId()));
+    });
   }
 
   @Test
@@ -280,8 +288,13 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
       );
     }
 
-    Assert.assertEquals(10, historicalT11.getTotalSegments());
-    Assert.assertEquals(10, historicalT12.getTotalSegments());
-    Assert.assertEquals(10, historicalT13.getTotalSegments());
+    Assert.assertEquals(Segments.WIKI_10X1D.size(), historicalT11.getTotalSegments());
+    Assert.assertEquals(Segments.WIKI_10X1D.size(), historicalT12.getTotalSegments());
+    Assert.assertEquals(Segments.WIKI_10X1D.size(), historicalT13.getTotalSegments());
+    Segments.WIKI_10X1D.forEach(segment -> {
+      Assert.assertEquals(segment, historicalT11.getSegment(segment.getId()));
+      Assert.assertEquals(segment, historicalT12.getSegment(segment.getId()));
+      Assert.assertEquals(segment, historicalT13.getSegment(segment.getId()));
+    });
   }
 }
