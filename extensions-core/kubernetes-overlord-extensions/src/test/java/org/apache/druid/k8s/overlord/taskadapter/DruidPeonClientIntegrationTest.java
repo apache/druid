@@ -136,7 +136,7 @@ public class DruidPeonClientIntegrationTest
     List<Job> jobs = peonClient.getPeonJobs();
     assertEquals(1, jobs.size());
 
-    K8sTaskId taskId = new K8sTaskId(task.getId());
+    K8sTaskId taskId = new K8sTaskId(null, task.getId());
     InputStream peonLogs = peonClient.getPeonLogs(taskId).get();
     List<Integer> expectedLogs = IntStream.range(1, 1001).boxed().collect(Collectors.toList());
     List<Integer> actualLogs = new ArrayList<>();
