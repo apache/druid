@@ -59,6 +59,20 @@ public class RestrictAllTablesPolicyEnforcerTest
   }
 
   @Test
+  public void test_unrecognizedClass() throws Exception
+  {
+    Exception e = Assert.assertThrows(
+        Exception.class,
+        () -> new RestrictAllTablesPolicyEnforcer(ImmutableList.of("UnrecognizedClass"))
+    );
+    Assert.assertEquals(
+        "Unrecognized class[[UnrecognizedClass]], ensure that the class is loaded and is a subclass of Policy",
+        e.getMessage()
+    );
+
+  }
+
+  @Test
   public void test_validate() throws Exception
   {
     RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);

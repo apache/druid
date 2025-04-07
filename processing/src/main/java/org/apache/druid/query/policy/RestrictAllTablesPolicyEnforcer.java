@@ -36,7 +36,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * All tables must be restricted by a policy. 
+ * All tables must be restricted by a policy.
  */
 public class RestrictAllTablesPolicyEnforcer implements PolicyEnforcer
 {
@@ -50,17 +50,30 @@ public class RestrictAllTablesPolicyEnforcer implements PolicyEnforcer
     if (allowedPolicies == null) {
       this.allowedPolicies = ImmutableList.of();
     } else {
-      Set<String> policyClazz = new Reflections("org.apache.druid.query.policy").getSubTypesOf(
-          Policy.class).stream().map(Class::getSimpleName).collect(Collectors.toSet());
-
+      Set<String> policyClazz = new Reflections("org.apache.druid.query.policy").getSubTypesOf(Policy.class)
+                                                                                .stream()
+                                                                                .map(Class::getSimpleName)
+                                                                                .collect(Collectors.toSet());
+      ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
       List<String> unrecognizedClazz = allowedPolicies.stream()
-                                                      .filter(p -> !policyClazz.contains(p))
+                                                      .filter(p -> {
+                                                        if (policyClazz.contains(p)) {
+                                                          return false;
+                                                        }
+                                                        try {
+                                                          // try load the class from its full path
+                                                          Class<?> clazz = classLoader.loadClass(p);
+                                                          return clazz.isAssignableFrom(Policy.class);
+                                                        }
+                                                        catch (ClassNotFoundException e) {
+                                                          return true;
+                                                        }
+                                                      })
                                                       .collect(Collectors.toList());
       Preconditions.checkArgument(
           unrecognizedClazz.isEmpty(),
-          "Unrecognized policy class[%s], must be one of class[%s]",
-          unrecognizedClazz,
-          policyClazz
+          "Unrecognized class[%s], ensure that the class is loaded and is a subclass of Policy",
+          unrecognizedClazz
       );
       this.allowedPolicies = ImmutableList.copyOf(allowedPolicies);
     }
