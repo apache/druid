@@ -137,7 +137,7 @@ public class ParseExceptionHandlerTest
     for (int i = 0; i < maxSavedParseExceptions; i++) {
       Assert.assertEquals(
           StringUtils.format("test %d", i),
-          parseExceptionHandler.getSavedParseExceptionReports().get(i).getDetails().get(0)
+          parseExceptionHandler.getSavedParseExceptionReports().get(maxSavedParseExceptions - i - 1).getDetails().get(0)
       );
     }
     for (; exceptionCounter < 5; exceptionCounter++) {
@@ -149,7 +149,7 @@ public class ParseExceptionHandlerTest
     for (int i = 0; i < maxSavedParseExceptions; i++) {
       Assert.assertEquals(
           StringUtils.format("test %d", i + 2),
-          parseExceptionHandler.getSavedParseExceptionReports().get(i).getDetails().get(0)
+          parseExceptionHandler.getSavedParseExceptionReports().get(maxSavedParseExceptions - i - 1).getDetails().get(0)
       );
     }
   }
