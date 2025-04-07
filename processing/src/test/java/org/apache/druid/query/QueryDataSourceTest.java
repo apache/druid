@@ -117,7 +117,7 @@ public class QueryDataSourceTest
   @Test
   public void test_isProcessable_lookup()
   {
-    Assert.assertTrue(queryOnLookupDataSource.isProcessable());
+    Assert.assertFalse(queryOnLookupDataSource.isProcessable());
   }
 
   @Test
@@ -129,7 +129,7 @@ public class QueryDataSourceTest
   @Test
   public void test_isGlobal_lookup()
   {
-    Assert.assertTrue(queryOnLookupDataSource.isGlobal());
+    Assert.assertFalse(queryOnLookupDataSource.isGlobal());
   }
 
   @Test

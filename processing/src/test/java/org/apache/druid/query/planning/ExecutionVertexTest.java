@@ -185,7 +185,7 @@ public class ExecutionVertexTest
     final QueryDataSource queryDataSource = makeQueryDS(LOOKUP_LOOKYLOO);
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));
 
-    Assert.assertTrue(ev.isProcessable());
+    Assert.assertFalse(ev.isProcessable());
     Assert.assertFalse(ev.isTableBased());
     Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
@@ -234,7 +234,7 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertTrue(ev.isProcessable());
+    Assert.assertFalse(ev.isProcessable());
     Assert.assertTrue(ev.isTableBased());
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
@@ -280,7 +280,7 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertTrue(ev.isProcessable());
+    Assert.assertFalse(ev.isProcessable());
     Assert.assertTrue(ev.isTableBased());
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
@@ -333,7 +333,7 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertTrue(ev.isProcessable());
+    Assert.assertFalse(ev.isProcessable());
     Assert.assertTrue(ev.isTableBased());
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
@@ -380,7 +380,7 @@ public class ExecutionVertexTest
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(joinDataSource));
     final JoinDataSourceAnalysis analysis = joinDataSource.getJoinAnalysisForDataSource();
 
-    Assert.assertTrue(ev.isProcessable());
+    Assert.assertFalse(ev.isProcessable());
     Assert.assertTrue(ev.isTableBased());
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
