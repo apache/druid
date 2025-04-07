@@ -83,7 +83,9 @@ public class RestrictAllTablesPolicyEnforcer implements PolicyEnforcer
   public boolean validate(DataSource ds, Policy policy)
   {
     if (ds instanceof RestrictedDataSource) {
-      return allowedPolicies.isEmpty() || allowedPolicies.contains(policy.getClass().getSimpleName());
+      return allowedPolicies.isEmpty()
+             || allowedPolicies.contains(policy.getClass().getSimpleName())
+             || allowedPolicies.contains(policy.getClass().getName());
     }
     return false;
   }
@@ -92,7 +94,9 @@ public class RestrictAllTablesPolicyEnforcer implements PolicyEnforcer
   public boolean validate(SegmentReference segment, Policy policy)
   {
     if (segment instanceof RestrictedSegment) {
-      return allowedPolicies.isEmpty() || allowedPolicies.contains(policy.getClass().getSimpleName());
+      return allowedPolicies.isEmpty()
+             || allowedPolicies.contains(policy.getClass().getSimpleName())
+             || allowedPolicies.contains(policy.getClass().getName());
     }
     return false;
   }

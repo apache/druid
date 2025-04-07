@@ -273,5 +273,22 @@ public class DataSourceTest
     // Fail, only NoRestrictionPolicy is allowed.
     Assert.assertFalse(unionDataSource.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
         "NoRestrictionPolicy"))));
+
+
+    UnionDataSource unionDataSource2 = new UnionDataSource(Lists.newArrayList(
+        RestrictedDataSource.create(
+            TableDataSource.create("table1"),
+            RowFilterPolicy.from(new NullFilter("random-column", null))
+        ),
+        RestrictedDataSource.create(
+            TableDataSource.create("table2"),
+            RowFilterPolicy.from(new NullFilter("random-column2", null))
+        )
+    ));
+    Assert.assertTrue(unionDataSource2.validate(NoopPolicyEnforcer.instance()));
+    Assert.assertTrue(unionDataSource2.validate(new RestrictAllTablesPolicyEnforcer(null)));
+    // Fail, only NoRestrictionPolicy is allowed.
+    Assert.assertFalse(unionDataSource2.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        "NoRestrictionPolicy"))));
   }
 }
