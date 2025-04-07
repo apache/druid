@@ -32,9 +32,13 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.external.ExternalInputSliceReader;
+import org.apache.druid.msq.input.inline.InlineInputSliceReader;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
+import org.apache.druid.query.lookup.LookupSegment;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -139,16 +143,31 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   protected SegmentReference mapSegment(final Segment segment)
   {
     SegmentReference mappedSegment = segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(segment));
+    if (segment instanceof LookupSegment) {
+      return mappedSegment;
+    }
+    return validateMappedSegment(mappedSegment);
+  }
+
+  private SegmentReference validateMappedSegment(SegmentReference mappedSegment)
+  {
+    switch (mappedSegment.getId().getDataSource()) {
+      case InlineSegmentWrangler.SEGMENT_ID:
+      case InlineInputSliceReader.SEGMENT_ID:
+      case ExternalInputSliceReader.SEGMENT_ID:
+        return mappedSegment;
+      default:
+        // continue
+    }
     if (mappedSegment.validate(policyEnforcer)) {
       return mappedSegment;
-    } else {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.FORBIDDEN)
-                          .build(
-                              "Failed security validation with segment [%s] type [%s]",
-                              segment.getId(),
-                              segment.getClass()
-                          );
     }
+    throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                        .ofCategory(DruidException.Category.FORBIDDEN)
+                        .build(
+                            "Failed security validation with segment [%s] type [%s]",
+                            mappedSegment.getId(),
+                            mappedSegment.getClass()
+                        );
   }
 }

@@ -82,7 +82,7 @@ public class DartFrameContext implements FrameContext
   @Override
   public PolicyEnforcer policyEnforcer()
   {
-    return workerContext.injector().getInstance(PolicyEnforcer.class);
+    return workerContext.policyEnforcer();
   }
 
   @Override

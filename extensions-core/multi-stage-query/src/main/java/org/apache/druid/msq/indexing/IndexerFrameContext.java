@@ -77,7 +77,7 @@ public class IndexerFrameContext implements FrameContext
   @Override
   public PolicyEnforcer policyEnforcer()
   {
-    return context.injector().getInstance(PolicyEnforcer.class);
+    return context.policyEnforcer();
   }
 
   @Override

@@ -1052,7 +1052,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
+  public static void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
     int minSize = Math.min(results.size(), expectedResults.size());
     for (int i = 0; i < minSize; i++) {

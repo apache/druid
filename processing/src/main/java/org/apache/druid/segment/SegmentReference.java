@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.policy.PolicyEnforcer;
+
 /**
  * A {@link Segment} with a associated references, such as {@link ReferenceCountingSegment} where the reference is
  * the segment itself, and {@link org.apache.druid.segment.join.HashJoinSegment} which wraps a
@@ -27,4 +29,15 @@ package org.apache.druid.segment;
  */
 public interface SegmentReference extends Segment, ReferenceCountedObject
 {
+
+  /**
+   * Returns true if the segment complies with the policy restrictions on tables.
+   * <p>
+   * This should be called right before the segment is about to be processed by the query stack.
+   */
+  default boolean validate(PolicyEnforcer policyEnforcer)
+  {
+    return policyEnforcer.validate(this, null);
+  }
+
 }

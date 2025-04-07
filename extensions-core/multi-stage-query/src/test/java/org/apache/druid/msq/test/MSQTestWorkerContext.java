@@ -96,6 +96,12 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
+  public PolicyEnforcer policyEnforcer()
+  {
+    return injector.getInstance(PolicyEnforcer.class);
+  }
+
+  @Override
   public Injector injector()
   {
     return injector;
@@ -179,7 +185,7 @@ public class MSQTestWorkerContext implements WorkerContext
     @Override
     public PolicyEnforcer policyEnforcer()
     {
-      return injector.getInstance(PolicyEnforcer.class);
+      return MSQTestWorkerContext.this.policyEnforcer();
     }
 
     @Override

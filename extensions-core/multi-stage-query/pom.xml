@@ -334,6 +334,10 @@
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>com.google.inject.extensions</groupId>
+        <artifactId>guice-testlib</artifactId>
+      </dependency>
     </dependencies>
 
     <build>

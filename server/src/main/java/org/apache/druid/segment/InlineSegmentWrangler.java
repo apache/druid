@@ -35,7 +35,7 @@ import java.util.Collections;
  */
 public class InlineSegmentWrangler implements SegmentWrangler
 {
-  private static final String SEGMENT_ID = "inline";
+  public static final String SEGMENT_ID = "inline";
 
   @Override
   @SuppressWarnings("unchecked")

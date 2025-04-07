@@ -52,6 +52,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
@@ -189,6 +190,12 @@ public class IndexerWorkerContext implements WorkerContext
   public ObjectMapper jsonMapper()
   {
     return toolbox.getJsonMapper();
+  }
+
+  @Override
+  public PolicyEnforcer policyEnforcer()
+  {
+    return toolbox.getPolicyEnforcer();
   }
 
   @Override
