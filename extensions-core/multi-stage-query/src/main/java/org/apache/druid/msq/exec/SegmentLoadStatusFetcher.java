@@ -26,23 +26,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -238,13 +235,12 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
    */
   private VersionLoadStatus fetchLoadStatusFromBroker() throws Exception
   {
-    Request request = brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/");
-    SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
-                                     ResultFormat.OBJECTLINES,
-                                     false, false, false, null, null
+    ClientSqlQuery clientSqlQuery = new ClientSqlQuery(
+        StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
+        ResultFormat.OBJECTLINES.contentType(),
+        false, false, false, null, null
     );
-    request.setContent(MediaType.APPLICATION_JSON, objectMapper.writeValueAsBytes(sqlQuery));
-    String response = brokerClient.sendQuery(request);
+    final String response = FutureUtils.get(brokerClient.submitSqlQuery(clientSqlQuery), true);
 
     if (response == null) {
       // Unable to query broker

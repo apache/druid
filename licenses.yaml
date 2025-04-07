@@ -479,7 +479,7 @@ name: Netty Reactive Streams
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.0
+version: 2.0.4
 libraries:
   - com.typesafe.netty: netty-reactive-streams
 
@@ -1112,13 +1112,11 @@ libraries:
 
 name: Jetbrains Annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 13.0
+version: 26.0.1
 libraries:
   - org.jetbrains: annotations
-
 
 ---
 
@@ -1692,7 +1690,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.5.0
+version: 5.8.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -2040,7 +2038,7 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.5.3
+version: 3.0.1
 libraries:
   - org.asynchttpclient: async-http-client
   - org.asynchttpclient: async-http-client-netty-utils
@@ -2102,7 +2100,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.56.v20240826
+version: 9.4.57.v20241219
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -3231,7 +3229,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.13.0
+version: 1.15.1
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3275,6 +3273,17 @@ notices:
   - parquet-format: |
       Apache Parquet Format
       Copyright 2017 The Apache Software Foundation
+
+---
+
+name: aircompressor
+license_category: binary
+module: extensions/druid-parquet-extensions
+license_name: Apache License version 2.0
+version: "2.0.2"
+libraries:
+  - io.airlift: aircompressor
+
 
 ---
 
@@ -3841,7 +3850,7 @@ name: Reactive Streams
 license_category: binary
 module: java-core
 license_name: Creative Commons CC0
-version: 1.0.2
+version: 1.0.4
 license_file_path: licenses/bin/reactive-streams.CC0
 libraries:
   - org.reactivestreams: reactive-streams
@@ -4253,7 +4262,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.25.1
+version: 12.29.0
 libraries:
   - com.azure: azure-storage-blob
 
@@ -4264,7 +4273,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.12.0
+version: 1.14.2
 libraries:
   - com.azure: azure-identity
 
@@ -4275,20 +4284,9 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.21.4
+version: 12.25.0
 libraries:
   - com.azure: azure-storage-blob-batch
-
----
-
-name: Microsoft Azure  Blob Storage SDK
-license_category: binary
-module: extensions/druid-azure-extensions
-license_name: MIT License
-copyright: Microsoft
-version: 12.25.4
-libraries:
-  - com.azure: azure-storage-blob
 
 ---
 
@@ -4297,7 +4295,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.24.4
+version: 12.28.0
 libraries:
   - com.azure: azure-storage-common
 
@@ -4308,7 +4306,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.10.4
+version: 12.14.0
 libraries:
   - com.azure: azure-storage-internal-avro
 
@@ -4319,7 +4317,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.1.0
+version: 1.3.0
 libraries:
   - com.azure: azure-json
 
@@ -4330,7 +4328,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.0.0
+version: 1.1.0
 libraries:
   - com.azure: azure-xml
 
@@ -4340,7 +4338,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.14.2
+version: 1.15.7
 libraries:
   - com.azure: azure-core-http-netty
 
@@ -4351,7 +4349,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.48.0
+version: 1.54.1
 libraries:
   - com.azure: azure-core
 
@@ -4362,7 +4360,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.15.0
+version: 1.17.2
 libraries:
   - com.microsoft.azure: msal4j
 
@@ -4393,7 +4391,7 @@ name: NimbusDS Jose
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 9.37.3
+version: '9.40'
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -4403,7 +4401,7 @@ name: NimbusDS Oauth
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 11.9.1
+version: 11.18
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -4413,7 +4411,7 @@ name: Reactor Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 1.0.43
+version: 1.0.48
 libraries:
   - io.projectreactor.netty: reactor-netty-core
   - io.projectreactor.netty: reactor-netty-http
@@ -4424,7 +4422,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.4.36
+version: 3.4.41
 libraries:
   - io.projectreactor: reactor-core
 ---
@@ -5004,7 +5002,7 @@ name: jakarta.activation
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Eclipse Distribution License 1.0
-version: 1.2.1
+version: 1.2.2
 libraries:
   - com.sun.activation: jakarta.activation
 

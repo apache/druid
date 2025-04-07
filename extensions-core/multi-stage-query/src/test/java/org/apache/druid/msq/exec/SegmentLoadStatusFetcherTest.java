@@ -20,9 +20,11 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.discovery.BrokerClient;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
@@ -34,16 +36,17 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class SegmentLoadStatusFetcherTest
 {
   private static final String TEST_DATASOURCE = "testDatasource";
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private SegmentLoadStatusFetcher segmentLoadWaiter;
 
@@ -57,13 +60,14 @@ public class SegmentLoadStatusFetcherTest
   {
     brokerClient = mock(BrokerClient.class);
 
-    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer<String>()
+    String dummyString = "";
+    when(brokerClient.submitSqlQuery(any(ClientSqlQuery.class))).thenReturn(Futures.immediateFuture(dummyString));
+    doAnswer(new Answer<ListenableFuture<String>>()
     {
       int timesInvoked = 0;
 
       @Override
-      public String answer(InvocationOnMock invocation) throws Throwable
+      public ListenableFuture<String> answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
         SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
@@ -73,12 +77,13 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        return new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = OBJECT_MAPPER.writeValueAsString(loadStatus);
+        return Futures.immediateFuture(jsonResponse);
       }
-    }).when(brokerClient).sendQuery(any());
+    }).when(brokerClient).submitSqlQuery(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
-        new ObjectMapper(),
+        OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
         IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
@@ -86,7 +91,7 @@ public class SegmentLoadStatusFetcherTest
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
 
-    verify(brokerClient, times(5)).sendQuery(any());
+    verify(brokerClient, times(5)).submitSqlQuery(any(ClientSqlQuery.class));
   }
 
   @Test
@@ -94,13 +99,14 @@ public class SegmentLoadStatusFetcherTest
   {
     brokerClient = mock(BrokerClient.class);
 
-    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer<String>()
+    String dummyString = "";
+    when(brokerClient.submitSqlQuery(any(ClientSqlQuery.class))).thenReturn(Futures.immediateFuture(dummyString));
+    when(brokerClient.submitSqlQuery(any(ClientSqlQuery.class))).thenAnswer(new Answer<ListenableFuture<String>>()
     {
       int timesInvoked = 0;
 
       @Override
-      public String answer(InvocationOnMock invocation) throws Throwable
+      public ListenableFuture<String> answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
         SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
@@ -110,12 +116,13 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        return new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = OBJECT_MAPPER.writeValueAsString(loadStatus);
+        return Futures.immediateFuture(jsonResponse);
       }
-    }).when(brokerClient).sendQuery(any());
+    });
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
-        new ObjectMapper(),
+        OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
         IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
@@ -123,22 +130,25 @@ public class SegmentLoadStatusFetcherTest
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
 
-    verify(brokerClient, times(5)).sendQuery(any());
+    verify(brokerClient, times(5)).submitSqlQuery(any(ClientSqlQuery.class));
   }
 
   @Test
   public void triggerCancellationFromAnotherThread() throws Exception
   {
     brokerClient = mock(BrokerClient.class);
-    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer<String>()
+
+    String dummyString = "";
+    when(brokerClient.submitSqlQuery(any(ClientSqlQuery.class))).thenReturn(Futures.immediateFuture(dummyString));
+
+    doAnswer(new Answer<ListenableFuture<String>>()
     {
       int timesInvoked = 0;
 
       @Override
-      public String answer(InvocationOnMock invocation) throws Throwable
+      public ListenableFuture<String> answer(InvocationOnMock invocation) throws Throwable
       {
-        // sleeping broker call to simulate a long running query
+        // sleeping broker call to simulate a long-running query
         Thread.sleep(1000);
         timesInvoked++;
         SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
@@ -148,12 +158,13 @@ public class SegmentLoadStatusFetcherTest
             5 - timesInvoked,
             0
         );
-        return new ObjectMapper().writeValueAsString(loadStatus);
+        String jsonResponse = OBJECT_MAPPER.writeValueAsString(loadStatus);
+        return Futures.immediateFuture(jsonResponse);
       }
-    }).when(brokerClient).sendQuery(any());
+    }).when(brokerClient).submitSqlQuery(any(ClientSqlQuery.class));
     segmentLoadWaiter = new SegmentLoadStatusFetcher(
         brokerClient,
-        new ObjectMapper(),
+        OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
         IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),

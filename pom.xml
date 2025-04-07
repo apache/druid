@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>33.0.0-SNAPSHOT</version>
+    <version>34.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -74,7 +74,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>5.5.0</apache.curator.version>
+        <apache.curator.version>5.8.0</apache.curator.version>
         <apache.kafka.version>3.9.0</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
@@ -98,7 +98,7 @@
         <guava.version>32.0.1-jre</guava.version>
         <guice.version>5.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.56.v20240826</jetty.version>
+        <jetty.version>9.4.57.v20241219</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.12.7.20221012</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -996,8 +996,7 @@
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <!-- Uses Netty 4.1.x -->
-                <version>2.5.3</version>
+                <version>3.0.1</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
