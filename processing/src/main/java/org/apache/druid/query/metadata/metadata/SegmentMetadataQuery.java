@@ -36,7 +36,6 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
-import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
@@ -110,17 +109,19 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
     this.analysisTypes = analysisTypes;
-    if (dataSource instanceof RestrictedDataSource) {
-      Policy policy = ((RestrictedDataSource) dataSource).getPolicy();
+
+    if (dataSource.getClass().equals(RestrictedDataSource.class)) {
       // Only no-restriction policy is allowed for segment metadata queries.
-      if (!(policy instanceof NoRestrictionPolicy)) {
-        throw InvalidInput.exception(
-            "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[%s], found policy[%s].",
-            ((RestrictedDataSource) dataSource).getBase(),
-            policy
-        );
-      }
-    } else if (!(dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource)) {
+      validateWithNoRestrictionPolicy((RestrictedDataSource) dataSource);
+    } else if (dataSource.getClass().equals(UnionDataSource.class)) {
+      // Verify that all children of the union data source are either table or restricted data sources with no-restriction policy.
+      dataSource.getChildren()
+                .stream()
+                .filter(ds -> ds instanceof RestrictedDataSource)
+                .forEach(ds -> validateWithNoRestrictionPolicy((RestrictedDataSource) ds));
+    } else if (dataSource.getClass().equals(TableDataSource.class)) {
+      // do nothing
+    } else {
       throw InvalidInput.exception("Invalid dataSource type [%s]. "
                                    + "SegmentMetadataQuery only supports table or union datasources.", dataSource);
     }
@@ -258,6 +259,17 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public List<Interval> getIntervals()
   {
     return this.getQuerySegmentSpec().getIntervals();
+  }
+
+  private void validateWithNoRestrictionPolicy(RestrictedDataSource restricted)
+  {
+    if (!(restricted.getPolicy() instanceof NoRestrictionPolicy)) {
+      throw InvalidInput.exception(
+          "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[%s], found policy[%s].",
+          restricted.getBase(),
+          restricted.getPolicy()
+      );
+    }
   }
 
   @Override
