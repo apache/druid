@@ -284,11 +284,9 @@ public class QueryLifecycleTest
         DruidException.class,
         () -> lifecycle.runSimple(query, authenticationResult, authorizationResult)
     );
-    Assert.assertEquals("invalidInput", e.getErrorCode());
-    Assert.assertEquals(
-        "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[some_datasource], found policy[RowFilterPolicy{rowFilter=col IS NULL}].",
-        e.getMessage()
-    );
+    Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals("You do not have permission to run a SegmentMetadataQuery on table[some_datasource].", e.getMessage());
   }
 
   @Test
