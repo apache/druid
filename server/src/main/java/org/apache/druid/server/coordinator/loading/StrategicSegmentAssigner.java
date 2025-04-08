@@ -275,7 +275,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     final SegmentStatusInTier segmentStatus =
-        new SegmentStatusInTier(segment, cluster.getHistoricalsByTier(tier));
+        new SegmentStatusInTier(segment, cluster.getManagedHistoricalsByTier(tier));
 
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {

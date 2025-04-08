@@ -105,7 +105,7 @@ public class Stats
     public static final CoordinatorStat HISTORICAL_COUNT
         = CoordinatorStat.toDebugAndEmit("numHistorical", "tier/historical/count");
     public static final CoordinatorStat CLONE_COUNT
-        = CoordinatorStat.toDebugAndEmit("numHistorical", "tier/historical/clone/count");
+        = CoordinatorStat.toDebugAndEmit("numClones", "tier/historical/clone/count");
   }
 
   public static class Compaction

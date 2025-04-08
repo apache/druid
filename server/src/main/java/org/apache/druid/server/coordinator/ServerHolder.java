@@ -264,7 +264,6 @@ public class ServerHolder implements Comparable<ServerHolder>
   public boolean canLoadSegment(DataSegment segment)
   {
     return !isDecommissioning
-           && !isUnmanaged
            && !hasSegmentLoaded(segment.getId())
            && getActionOnSegment(segment) == null
            && totalAssignmentsInRun < maxAssignmentsInRun

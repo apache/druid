@@ -120,7 +120,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   {
     final AtomicInteger cancelledCount = new AtomicInteger(0);
     final List<ServerHolder> decommissioningServers
-        = cluster.getAllServers().stream()
+        = cluster.getAllManagedServers().stream()
                  .filter(ServerHolder::isDecommissioning)
                  .collect(Collectors.toList());
 

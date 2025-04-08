@@ -47,7 +47,6 @@ public class DruidCluster
   private final Map<String, NavigableSet<ServerHolder>> historicals;
   private final Map<String, NavigableSet<ServerHolder>> managedHistoricals;
   private final Set<ServerHolder> brokers;
-  private final List<ServerHolder> allServers;
   private final List<ServerHolder> allManagedServers;
 
   private DruidCluster(
@@ -63,14 +62,15 @@ public class DruidCluster
     );
     this.managedHistoricals = CollectionUtils.mapValues(
         historicals,
-        holders -> CollectionUtils.newTreeSet(Comparator.naturalOrder(),
-                                            holders.stream()
-                                                 .filter(serverHolder -> !serverHolder.isUnmanaged())
-                                                 .collect(Collectors.toList())
-        )
+        holders -> {
+          List<ServerHolder> managedServers = holders.stream()
+                                                     .filter(serverHolder -> !serverHolder.isUnmanaged())
+                                                     .collect(Collectors.toList());
+
+          return CollectionUtils.newTreeSet(Comparator.naturalOrder(), managedServers);
+        }
     );
     this.brokers = Collections.unmodifiableSet(brokers);
-    this.allServers = initAllServers();
     this.allManagedServers = initAllManagedServers();
   }
 
@@ -79,11 +79,18 @@ public class DruidCluster
     return realtimes;
   }
 
+  /**
+   * Return all historicals.
+   */
   public Map<String, NavigableSet<ServerHolder>> getHistoricals()
   {
     return historicals;
   }
 
+  /**
+   * Returns all managed historicals. Managed historicals are historicals which can participate in segment assignment,
+   * drop or balancing.
+   */
   public Map<String, NavigableSet<ServerHolder>> getManagedHistoricals()
   {
     return managedHistoricals;
@@ -99,14 +106,9 @@ public class DruidCluster
     return historicals.keySet();
   }
 
-  public NavigableSet<ServerHolder> getHistoricalsByTier(String tier)
+  public NavigableSet<ServerHolder> getManagedHistoricalsByTier(String tier)
   {
-    return historicals.get(tier);
-  }
-
-  public List<ServerHolder> getAllServers()
-  {
-    return allServers;
+    return managedHistoricals.get(tier);
   }
 
   public List<ServerHolder> getAllManagedServers()
@@ -114,29 +116,13 @@ public class DruidCluster
     return allManagedServers;
   }
 
-  private List<ServerHolder> initAllServers()
-  {
-    final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
-    final int realtimeSize = realtimes.size();
-    final List<ServerHolder> allServers = new ArrayList<>(historicalSize + realtimeSize);
-
-    historicals.values().forEach(allServers::addAll);
-    allServers.addAll(brokers);
-    allServers.addAll(realtimes);
-    return allServers;
-  }
-
   private List<ServerHolder> initAllManagedServers()
   {
-    final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
+    final int historicalSize = managedHistoricals.values().stream().mapToInt(Collection::size).sum();
     final int realtimeSize = realtimes.size();
     final List<ServerHolder> allManagedServers = new ArrayList<>(historicalSize + realtimeSize);
 
-    historicals.values()
-               .stream()
-               .flatMap(Collection::stream)
-               .filter(serverHolder -> !serverHolder.isUnmanaged())
-               .forEach(allManagedServers::add);
+    managedHistoricals.values().forEach(allManagedServers::addAll);
     allManagedServers.addAll(brokers);
     allManagedServers.addAll(realtimes);
     return allManagedServers;
