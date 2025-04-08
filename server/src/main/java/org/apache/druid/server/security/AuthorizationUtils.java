@@ -30,6 +30,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.policy.Policy;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,6 +75,26 @@ public class AuthorizationUtils
   }
 
   /**
+   * Verifies that the user has unrestricted access to perform the required
+   * action on the given datasource.
+   *
+   * @throws ForbiddenException if the user does not have unrestricted access to
+   * perform the required action on the given datasource.
+   */
+  public static void verifyUnrestrictedAccessToDatasource(
+      final HttpServletRequest req,
+      String datasource,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    ResourceAction resourceAction = createDatasourceResourceAction(datasource, req);
+    AuthorizationResult authResult = authorizeResourceAction(req, resourceAction, authorizerMapper);
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
+  }
+
+  /**
    * Returns the authentication information for a request.
    *
    * @param request http request
@@ -97,6 +118,7 @@ public class AuthorizationUtils
    * Extracts the identity from the authentication result if set as an atrribute
    * of this request.
    */
+  @Nullable
   public static String getAuthenticatedIdentity(HttpServletRequest request)
   {
     final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
@@ -332,7 +354,7 @@ public class AuthorizationUtils
     }
 
     final Map<ResourceAction, Access> resultCache = new HashMap<>();
-    final Iterable<ResType> filteredResources = Iterables.filter(
+    return Iterables.filter(
         resources,
         resource -> {
           final Iterable<ResourceAction> resourceActions = resourceActionGenerator.apply(resource);
@@ -358,8 +380,6 @@ public class AuthorizationUtils
           return true;
         }
     );
-
-    return filteredResources;
   }
 
   /**
@@ -414,7 +434,7 @@ public class AuthorizationUtils
           )
       );
 
-      if (filteredList.size() > 0) {
+      if (!filteredList.isEmpty()) {
         filteredResources.put(
             entry.getKey(),
             filteredList
@@ -424,6 +444,47 @@ public class AuthorizationUtils
 
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     return filteredResources;
+  }
+
+  /**
+   * Filters the given datasource-related resources on the basis of datasource
+   * permissions.
+   *
+   * @return List of resources to which the user has access, based on whether
+   * the user has access to the underlying datasource or not.
+   */
+  public static <T> List<T> filterByAuthorizedDatasources(
+      final HttpServletRequest request,
+      List<T> resources,
+      Function<T, String> getDatasource,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    final Function<T, Iterable<ResourceAction>> raGenerator =
+        entry -> List.of(createDatasourceResourceAction(getDatasource.apply(entry), request));
+
+    return Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            request,
+            resources,
+            raGenerator,
+            authorizerMapper
+        )
+    );
+  }
+
+  private static ResourceAction createDatasourceResourceAction(
+      String dataSource,
+      HttpServletRequest request
+  )
+  {
+    switch (request.getMethod()) {
+      case "GET":
+      case "HEAD":
+        return AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource);
+      default:
+        return AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(dataSource);
+    }
   }
 
   /**
@@ -467,20 +528,4 @@ public class AuthorizationUtils
       Action.WRITE
   );
 
-  /**
-   * Function for the common pattern of generating a resource-action for reading from a view, using the
-   * view name.
-   */
-  public static final Function<String, ResourceAction> VIEW_READ_RA_GENERATOR = input -> new ResourceAction(
-      new Resource(input, ResourceType.VIEW),
-      Action.READ
-  );
-
-  /**
-   * Function for the pattern of generating a {@link ResourceAction} for reading from a given {@link Resource}
-   */
-  public static final Function<Resource, ResourceAction> RESOURCE_READ_RA_GENERATOR = input -> new ResourceAction(
-      input,
-      Action.READ
-  );
 }

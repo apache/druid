@@ -19,29 +19,15 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.audit.AuditManager;
-import org.apache.druid.common.config.ConfigManager.SetResult;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.error.NotFound;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
-import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
-import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -55,97 +41,71 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.UnaryOperator;
 
 @Path("/druid/coordinator/v1/config/compaction")
 @ResourceFilters(ConfigResourceFilter.class)
 public class CoordinatorCompactionConfigsResource
 {
-  private static final Logger LOG = new Logger(CoordinatorCompactionConfigsResource.class);
-  private static final long UPDATE_RETRY_DELAY = 1000;
-  static final int MAX_UPDATE_RETRIES = 5;
-
   private final CoordinatorConfigManager configManager;
-  private final AuditManager auditManager;
 
   @Inject
   public CoordinatorCompactionConfigsResource(
-      CoordinatorConfigManager configManager,
-      AuditManager auditManager
+      CoordinatorConfigManager configManager
   )
   {
     this.configManager = configManager;
-    this.auditManager = auditManager;
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig()
   {
-    return Response.ok(configManager.getCurrentCompactionConfig()).build();
-  }
-
-  @POST
-  @Path("/cluster")
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response updateClusterCompactionConfig(
-      ClusterCompactionConfig updatePayload,
-      @Context HttpServletRequest req
-  )
-  {
-    UnaryOperator<DruidCompactionConfig> operator = current -> current.withClusterConfig(updatePayload);
-    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
+    return ServletResourceUtils.buildReadResponse(
+        configManager::getCurrentCompactionConfig
+    );
   }
 
   /**
-   * @deprecated in favor of {@link #updateClusterCompactionConfig}.
+   * @deprecated Use API {@code GET /druid/indexer/v1/compaction/config/cluster} instead.
    */
   @POST
   @Deprecated
   @Path("/taskslots")
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
       @Context HttpServletRequest req
   )
   {
-    return updateClusterCompactionConfig(
-        new ClusterCompactionConfig(
-            compactionTaskSlotRatio,
-            maxCompactionTaskSlots,
-            null,
-            null,
-            null
-        ),
-        req
+    if (compactionTaskSlotRatio == null && maxCompactionTaskSlots == null) {
+      return ServletResourceUtils.buildUpdateResponse(() -> true);
+    }
+
+    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+    return ServletResourceUtils.buildUpdateResponse(
+        () -> configManager.updateCompactionTaskSlots(compactionTaskSlotRatio, maxCompactionTaskSlots, auditInfo)
     );
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response addOrUpdateDatasourceCompactionConfig(
       final DataSourceCompactionConfig newConfig,
       @Context HttpServletRequest req
   )
   {
-    UnaryOperator<DruidCompactionConfig> callable = current -> {
+    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+    return ServletResourceUtils.buildUpdateResponse(() -> {
       if (newConfig.getEngine() == CompactionEngine.MSQ) {
         throw InvalidInput.exception(
-            "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.");
-      } else {
-        return current.withDatasourceConfig(newConfig);
+            "MSQ engine is supported only with supervisor-based compaction on the Overlord."
+        );
       }
-    };
-    return updateConfigHelper(
-        callable,
-        AuthorizationUtils.buildAuditInfo(req)
-    );
+      return configManager.updateDatasourceCompactionConfig(newConfig, auditInfo);
+    });
   }
 
   @GET
@@ -153,13 +113,9 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatasourceCompactionConfig(@PathParam("dataSource") String dataSource)
   {
-    final DruidCompactionConfig current = configManager.getCurrentCompactionConfig();
-    final Optional<DataSourceCompactionConfig> config = current.findConfigForDatasource(dataSource);
-    if (config.isPresent()) {
-      return Response.ok().entity(config.get()).build();
-    } else {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    }
+    return ServletResourceUtils.buildReadResponse(
+        () -> configManager.getDatasourceCompactionConfig(dataSource)
+    );
   }
 
   @GET
@@ -171,36 +127,9 @@ public class CoordinatorCompactionConfigsResource
       @QueryParam("count") Integer count
   )
   {
-    Interval theInterval = interval == null ? null : Intervals.of(interval);
-    try {
-      List<AuditEntry> auditEntries;
-      if (theInterval == null && count != null) {
-        auditEntries = auditManager.fetchAuditHistory(
-            DruidCompactionConfig.CONFIG_KEY,
-            DruidCompactionConfig.CONFIG_KEY,
-            count
-        );
-      } else {
-        auditEntries = auditManager.fetchAuditHistory(
-            DruidCompactionConfig.CONFIG_KEY,
-            DruidCompactionConfig.CONFIG_KEY,
-            theInterval
-        );
-      }
-      DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
-      for (AuditEntry audit : auditEntries) {
-        DruidCompactionConfig compactionConfig = configManager.convertBytesToCompactionConfig(
-            audit.getPayload().serialized().getBytes(StandardCharsets.UTF_8)
-        );
-        history.add(compactionConfig, audit.getAuditInfo(), audit.getAuditTime());
-      }
-      return Response.ok(history.getEntries()).build();
-    }
-    catch (IllegalArgumentException e) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ServletResourceUtils.sanitizeException(e))
-                     .build();
-    }
+    return ServletResourceUtils.buildReadResponse(
+        () -> configManager.getCompactionConfigHistory(dataSource, interval, count)
+    );
   }
 
   @DELETE
@@ -211,74 +140,9 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    UnaryOperator<DruidCompactionConfig> callable = current -> {
-      final Map<String, DataSourceCompactionConfig> configs = current.dataSourceToCompactionConfigMap();
-      final DataSourceCompactionConfig config = configs.remove(dataSource);
-      if (config == null) {
-        throw NotFound.exception("datasource not found");
-      }
-
-      return current.withDatasourceConfigs(ImmutableList.copyOf(configs.values()));
-    };
-    return updateConfigHelper(callable, AuthorizationUtils.buildAuditInfo(req));
-  }
-
-  private Response updateConfigHelper(
-      UnaryOperator<DruidCompactionConfig> configOperator,
-      AuditInfo auditInfo
-  )
-  {
-    int attemps = 0;
-    SetResult setResult = null;
-    try {
-      while (attemps < MAX_UPDATE_RETRIES) {
-        setResult = configManager.getAndUpdateCompactionConfig(configOperator, auditInfo);
-        if (setResult.isOk() || !setResult.isRetryable()) {
-          break;
-        }
-        attemps++;
-        updateRetryDelay();
-      }
-    }
-    catch (DruidException e) {
-      return ServletResourceUtils.buildErrorResponseFrom(e);
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Update compaction config failed");
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                     .entity(ImmutableMap.of("error", createErrorMessage(e)))
-                     .build();
-    }
-
-    if (setResult.isOk()) {
-      return Response.ok().build();
-    } else if (setResult.getException() instanceof NoSuchElementException) {
-      LOG.warn(setResult.getException(), "Update compaction config failed");
-      return Response.status(Response.Status.NOT_FOUND).build();
-    } else {
-      LOG.warn(setResult.getException(), "Update compaction config failed");
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", createErrorMessage(setResult.getException())))
-                     .build();
-    }
-  }
-
-  private void updateRetryDelay()
-  {
-    try {
-      Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
-    }
-    catch (InterruptedException ie) {
-      throw new RuntimeException(ie);
-    }
-  }
-
-  private String createErrorMessage(Exception e)
-  {
-    if (e.getMessage() == null) {
-      return "Unknown Error";
-    } else {
-      return e.getMessage();
-    }
+    final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+    return ServletResourceUtils.buildUpdateResponse(
+        () -> configManager.deleteDatasourceCompactionConfig(dataSource, auditInfo)
+    );
   }
 }

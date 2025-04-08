@@ -141,6 +141,7 @@
     <cve>CVE-2024-47554</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to hadoop-client 3.4 which required aws sdk v2 dependency work to finish -->
     <cve>CVE-2024-47561</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to hadoop-client 3.4 which required aws sdk v2 dependency work to finish -->
     <cve>CVE-2024-29131</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to hadoop-client 3.4 which required aws sdk v2 dependency work to finish -->
+    <cve>CVE-2024-22201</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to a hadoop-client which was not yet released  -->
   </suppress>
 
   <!-- those are false positives, no other tools report any of those CVEs in the hadoop package -->

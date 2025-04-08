@@ -24,4 +24,8 @@ class Template(BaseTemplate):
         self.add_property(service, 'druid.msq.intermediate.storage.basePath', '/shared/durablestorage/')
         self.add_property(service, 'druid.export.storage.baseDir', '/')
 
+    # No kafka dependency in this cluster
+    def define_kafka(self):
+        pass
+
 generate(__file__, Template())

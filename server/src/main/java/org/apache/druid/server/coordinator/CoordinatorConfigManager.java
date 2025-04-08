@@ -19,14 +19,31 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
+import org.apache.druid.error.NotFound;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.UnaryOperator;
 
 /**
@@ -35,6 +52,12 @@ import java.util.function.UnaryOperator;
  */
 public class CoordinatorConfigManager
 {
+  private static final Logger log = new Logger(CoordinatorConfigManager.class);
+
+  private static final long UPDATE_RETRY_DELAY = 1000;
+  static final int MAX_UPDATE_RETRIES = 5;
+
+  private final AuditManager auditManager;
   private final JacksonConfigManager jacksonConfigManager;
   private final MetadataStorageConnector metadataStorageConnector;
   private final MetadataStorageTablesConfig tablesConfig;
@@ -43,12 +66,14 @@ public class CoordinatorConfigManager
   public CoordinatorConfigManager(
       JacksonConfigManager jacksonConfigManager,
       MetadataStorageConnector metadataStorageConnector,
-      MetadataStorageTablesConfig tablesConfig
+      MetadataStorageTablesConfig tablesConfig,
+      AuditManager auditManager
   )
   {
     this.jacksonConfigManager = jacksonConfigManager;
     this.metadataStorageConnector = metadataStorageConnector;
     this.tablesConfig = tablesConfig;
+    this.auditManager = auditManager;
   }
 
   public CoordinatorDynamicConfig getCurrentDynamicConfig()
@@ -127,4 +152,172 @@ public class CoordinatorConfigManager
         DruidCompactionConfig.empty()
     );
   }
+
+  public boolean updateCompactionTaskSlots(
+      @Nullable Double compactionTaskSlotRatio,
+      @Nullable Integer maxCompactionTaskSlots,
+      AuditInfo auditInfo
+  )
+  {
+    UnaryOperator<DruidCompactionConfig> operator = current -> {
+      final ClusterCompactionConfig currentClusterConfig = current.clusterConfig();
+      final ClusterCompactionConfig updatedClusterConfig = new ClusterCompactionConfig(
+          Configs.valueOrDefault(compactionTaskSlotRatio, currentClusterConfig.getCompactionTaskSlotRatio()),
+          Configs.valueOrDefault(maxCompactionTaskSlots, currentClusterConfig.getMaxCompactionTaskSlots()),
+          currentClusterConfig.getCompactionPolicy(),
+          currentClusterConfig.isUseSupervisors(),
+          currentClusterConfig.getEngine()
+      );
+
+      return current.withClusterConfig(updatedClusterConfig);
+    };
+
+    return updateConfigHelper(operator, auditInfo);
+  }
+
+  public boolean updateClusterCompactionConfig(
+      ClusterCompactionConfig config,
+      AuditInfo auditInfo
+  )
+  {
+    UnaryOperator<DruidCompactionConfig> operator = current -> current.withClusterConfig(config);
+    return updateConfigHelper(operator, auditInfo);
+  }
+
+  public ClusterCompactionConfig getClusterCompactionConfig()
+  {
+    return getCurrentCompactionConfig().clusterConfig();
+  }
+
+  public boolean updateDatasourceCompactionConfig(
+      DataSourceCompactionConfig config,
+      AuditInfo auditInfo
+  )
+  {
+    UnaryOperator<DruidCompactionConfig> callable = current -> current.withDatasourceConfig(config);
+    return updateConfigHelper(callable, auditInfo);
+  }
+
+  public DataSourceCompactionConfig getDatasourceCompactionConfig(String dataSource)
+  {
+    final DruidCompactionConfig current = getCurrentCompactionConfig();
+    final Optional<DataSourceCompactionConfig> config = current.findConfigForDatasource(dataSource);
+    if (config.isPresent()) {
+      return config.get();
+    } else {
+      throw NotFound.exception("Datasource compaction config does not exist");
+    }
+  }
+
+  public boolean deleteDatasourceCompactionConfig(
+      String dataSource,
+      AuditInfo auditInfo
+  )
+  {
+    UnaryOperator<DruidCompactionConfig> callable = current -> {
+      final Map<String, DataSourceCompactionConfig> configs = current.dataSourceToCompactionConfigMap();
+      final DataSourceCompactionConfig config = configs.remove(dataSource);
+      if (config == null) {
+        throw NotFound.exception("Datasource compaction config does not exist");
+      }
+
+      return current.withDatasourceConfigs(List.copyOf(configs.values()));
+    };
+    return updateConfigHelper(callable, auditInfo);
+  }
+
+  public List<DataSourceCompactionConfigAuditEntry> getCompactionConfigHistory(
+      String dataSource,
+      @Nullable String interval,
+      @Nullable Integer count
+  )
+  {
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
+    try {
+      List<AuditEntry> auditEntries;
+      if (theInterval == null && count != null) {
+        auditEntries = auditManager.fetchAuditHistory(
+            DruidCompactionConfig.CONFIG_KEY,
+            DruidCompactionConfig.CONFIG_KEY,
+            count
+        );
+      } else {
+        auditEntries = auditManager.fetchAuditHistory(
+            DruidCompactionConfig.CONFIG_KEY,
+            DruidCompactionConfig.CONFIG_KEY,
+            theInterval
+        );
+      }
+      DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
+      for (AuditEntry audit : auditEntries) {
+        DruidCompactionConfig compactionConfig = convertBytesToCompactionConfig(
+            audit.getPayload().serialized().getBytes(StandardCharsets.UTF_8)
+        );
+        history.add(compactionConfig, audit.getAuditInfo(), audit.getAuditTime());
+      }
+      return history.getEntries();
+    }
+    catch (Exception e) {
+      throw InternalServerError.exception(
+          Throwables.getRootCause(e),
+          "Could not fetch audit entries"
+      );
+    }
+  }
+
+  private boolean updateConfigHelper(
+      UnaryOperator<DruidCompactionConfig> configUpdateOperator,
+      AuditInfo auditInfo
+  )
+  {
+    int attemps = 0;
+    ConfigManager.SetResult setResult = null;
+    try {
+      while (attemps < MAX_UPDATE_RETRIES) {
+        setResult = getAndUpdateCompactionConfig(configUpdateOperator, auditInfo);
+        if (setResult.isOk() || !setResult.isRetryable()) {
+          break;
+        }
+        attemps++;
+        updateRetryDelay();
+      }
+    }
+    catch (DruidException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      log.warn(e, "Compaction config update failed");
+      throw InternalServerError.exception(
+          Throwables.getRootCause(e),
+          "Failed to perform operation on compaction config"
+      );
+    }
+
+    if (setResult.isOk()) {
+      return true;
+    } else if (setResult.getException() instanceof NoSuchElementException) {
+      log.warn(setResult.getException(), "Update compaction config failed");
+      throw NotFound.exception(
+          Throwables.getRootCause(setResult.getException()),
+          "Compaction config does not exist"
+      );
+    } else {
+      log.warn(setResult.getException(), "Update compaction config failed");
+      throw InternalServerError.exception(
+          Throwables.getRootCause(setResult.getException()),
+          "Failed to perform operation on compaction config"
+      );
+    }
+  }
+
+  private void updateRetryDelay()
+  {
+    try {
+      Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+    }
+    catch (InterruptedException ie) {
+      throw new RuntimeException(ie);
+    }
+  }
+
 }

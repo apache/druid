@@ -19,9 +19,12 @@
 
 package org.apache.druid.testing.utils;
 
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -36,12 +39,12 @@ public class ITRetryUtil
 
   public static void retryUntilTrue(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, true, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, true, task);
   }
 
   public static void retryUntilFalse(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, false, task);
   }
 
   public static void retryUntil(
@@ -52,52 +55,86 @@ public class ITRetryUtil
       String taskMessage
   )
   {
+    retryUntilEquals(
+        callable,
+        expectedValue,
+        delayInMillis,
+        retryCount,
+        taskMessage
+    );
+  }
+
+  public static <T> void retryUntilEquals(
+      Callable<T> callable,
+      T expectedValue,
+      String taskMessage
+  )
+  {
+    retryUntilEquals(callable, expectedValue, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, taskMessage);
+  }
+
+  @SuppressForbidden(reason = "System#out")
+  public static <T> void retryUntilEquals(
+      Callable<T> callable,
+      T expectedValue,
+      long delayInMillis,
+      int retryCount,
+      String taskMessage
+  )
+  {
     int currentTry = 0;
     Exception lastException = null;
+    T lastValue = null;
 
-    while (true) {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    LOG.info("Waiting until [%s] is [%s]", taskMessage, expectedValue);
+
+    for (; currentTry <= retryCount; ++currentTry) {
       try {
-        LOG.info("Trying attempt[%d/%d]...", currentTry, retryCount);
-        if (currentTry > retryCount || callable.call() == expectedValue) {
-          break;
+        final T currentValue = callable.call();
+
+        if (Objects.equals(expectedValue, currentValue)) {
+          System.out.printf(
+              "Done after [%,d] millis, [%d/%d] attempts.%n",
+              stopwatch.millisElapsed(), currentTry + 1, retryCount
+          );
+          return;
+        } else if (!Objects.equals(lastValue, currentValue)) {
+          System.out.printf("updated to [%s]", currentValue);
         }
+
+        // Print a '.' for every retry
+        System.out.print(".");
+        lastValue = currentValue;
       }
       catch (Exception e) {
         // just continue retrying if there is an exception (it may be transient!) but save the last:
         lastException = e;
       }
 
-      LOG.info(
-          "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
-          currentTry,
-          retryCount,
-          taskMessage,
-          delayInMillis
-      );
       try {
         Thread.sleep(delayInMillis);
       }
       catch (InterruptedException e) {
         // Ignore
       }
-      currentTry++;
     }
 
-    if (currentTry > retryCount) {
-      if (lastException != null) {
-        throw new ISE(
-            lastException,
-            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
-            retryCount,
-            taskMessage
-        );
-      } else {
-        throw new ISE(
-            "Max number of retries[%d] exceeded for Task[%s]. Failing.",
-            retryCount,
-            taskMessage
-        );
-      }
+    System.out.printf("Retries[%d] exhausted.%n", retryCount);
+
+    if (lastException != null) {
+      throw new ISE(
+          lastException,
+          "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+          retryCount,
+          taskMessage
+      );
+    } else {
+      throw new ISE(
+          "Max number of retries[%d] exceeded for Task[%s]. Failing.",
+          retryCount,
+          taskMessage
+      );
     }
   }
 

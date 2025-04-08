@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -32,18 +32,18 @@ import java.util.Objects;
  */
 public class CompactionStatusResponse
 {
-  private final Collection<AutoCompactionSnapshot> latestStatus;
+  private final List<AutoCompactionSnapshot> latestStatus;
   
   @JsonCreator
   public CompactionStatusResponse(
-      @JsonProperty("latestStatus") Collection<AutoCompactionSnapshot> latestStatus
+      @JsonProperty("latestStatus") List<AutoCompactionSnapshot> latestStatus
   )
   {
     this.latestStatus = latestStatus;
   }
 
   @JsonProperty
-  public Collection<AutoCompactionSnapshot> getLatestStatus()
+  public List<AutoCompactionSnapshot> getLatestStatus()
   {
     return latestStatus;
   }
