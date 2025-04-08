@@ -188,7 +188,7 @@ You can now control how many task slots are available for MSQ taskengine control
 
 #### Faster segment metadata operations
 
-Enable segment metadata caching on the Overlord with the runtime property `druid.manager.segments.useCache`. This feature is off by default.
+Enable segment metadata caching on the Overlord with the runtime property `druid.manager.segments.useCache`. This feature is off by default.  
 
 You can set the property to the following values: 
 
@@ -230,18 +230,10 @@ The following metrics have been added:
 
 The following metrics have been introduced as part of the segment metadata cache performance improvement.
 
-- `segment/used/count`
-- `segment/unused/count`
-- `segment/pending/count`
 - `segment/metadataCache/sync/time`
-- `segment/metadataCache/deleted`
-- `segment/metadataCache/skipped`
-- `segment/metadataCache/used/stale`
-- `segment/metadataCache/used/updated`
-- `segment/metadataCache/unused/updated`
-- `segment/metadataCache/pending/deleted`
-- `segment/metadataCache/pending/updated`
-- `segment/metadataCache/pending/skipped`
+- `segment/metadataCache/transactions/readOnly`
+- `segment/metadataCache/transactions/writeOnly`
+- `segment/metadataCache/transactions/readWrite`
 
 For more information about the segment metadata cache, see [Faster segment metadata operations](#faster-segment-metadata-operations).
 
@@ -263,7 +255,6 @@ The Kafka supervisor now includes additional lag metrics for how many minutes of
 
 #### Other metrics and monitoring changes
 
-- Added the `segment/metadataCache/transactions` that describes the number of read or write transactions performed on the cache for a single datasource
 - Added the `ingest/processed/bytes` metric that tracks the total number of bytes processed during ingestion tasks for JSON-based batch, SQL-based batch, and streaming ingestion tasks [#17581](https://github.com/apache/druid/pull/17581)
 
 ### Extensions
