@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -510,10 +511,11 @@ public class SqlSegmentsMetadataQuery
               (index, r, ctx) -> {
                 String schemaFingerprint = (String) r.getObject(3);
                 Long numRows = (Long) r.getObject(4);
+                String usedStatusLastUpdatedDate = r.getString(6);
                 return new DataSegmentPlus(
                     JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                     null,
-                    DateTimes.of(r.getString(6)),
+                    Strings.isNullOrEmpty(usedStatusLastUpdatedDate) ? null : DateTimes.of(usedStatusLastUpdatedDate),
                     r.getBoolean(2),
                     schemaFingerprint,
                     numRows,
@@ -537,15 +539,18 @@ public class SqlSegmentsMetadataQuery
           .bind("dataSource", datasource)
           .setFetchSize(connector.getStreamingFetchSize())
           .map(
-              (index, r, ctx) -> new DataSegmentPlus(
-                  JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-                  DateTimes.of(r.getString(5)),
-                  DateTimes.of(r.getString(4)),
-                  r.getBoolean(2),
-                  null,
-                  null,
-                  r.getString(3)
-              )
+              (index, r, ctx) -> {
+                String usedStatusLastUpdatedDate = r.getString(4);
+                return new DataSegmentPlus(
+                    JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                    DateTimes.of(r.getString(5)),
+                    Strings.isNullOrEmpty(usedStatusLastUpdatedDate) ? null : DateTimes.of(usedStatusLastUpdatedDate),
+                    r.getBoolean(2),
+                    null,
+                    null,
+                    r.getString(3)
+                );
+              }
           )
           .iterator();
     }
@@ -1237,10 +1242,11 @@ public class SqlSegmentsMetadataQuery
     return sql.map((index, r, ctx) -> {
       final String segmentId = r.getString(1);
       try {
+        String usedStatusLastUpdatedDate = r.getString(4);
         return new DataSegmentPlus(
             JacksonUtils.readValue(jsonMapper, r.getBytes(2), DataSegment.class),
             DateTimes.of(r.getString(3)),
-            DateTimes.of(r.getString(4)),
+            Strings.isNullOrEmpty(usedStatusLastUpdatedDate) ? null : DateTimes.of(usedStatusLastUpdatedDate),
             used,
             null,
             null,
