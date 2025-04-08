@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.NullFilter;
@@ -36,6 +37,9 @@ import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -274,7 +278,6 @@ public class DataSourceTest
     Assert.assertFalse(unionDataSource.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
         "NoRestrictionPolicy"))));
 
-
     UnionDataSource unionDataSource2 = new UnionDataSource(Lists.newArrayList(
         RestrictedDataSource.create(
             TableDataSource.create("table1"),
@@ -290,5 +293,55 @@ public class DataSourceTest
     // Fail, only NoRestrictionPolicy is allowed.
     Assert.assertFalse(unionDataSource2.validate(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
         "NoRestrictionPolicy"))));
+  }
+
+  @Test
+  public void testValidate_onJoinDataSource()
+  {
+    JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(NoopJoinableFactory.INSTANCE);
+    JoinDataSource joinDataSource1 = JoinDataSource.create(
+        new TableDataSource("table1"),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
+    );
+    Assert.assertTrue(joinDataSource1.validate(NoopPolicyEnforcer.instance()));
+    // Fail, policy must exist on both tables
+    Assert.assertFalse(joinDataSource1.validate(new RestrictAllTablesPolicyEnforcer(null)));
+
+    JoinDataSource joinDataSource2 = JoinDataSource.create(
+        RestrictedDataSource.create(new TableDataSource("table1"), NoRestrictionPolicy.instance()),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
+    );
+    Assert.assertTrue(joinDataSource2.validate(NoopPolicyEnforcer.instance()));
+    // Fail, policy must exist on table
+    Assert.assertFalse(joinDataSource2.validate(new RestrictAllTablesPolicyEnforcer(null)));
+
+    JoinDataSource joinDataSource3 = JoinDataSource.create(
+        RestrictedDataSource.create(new TableDataSource("table1"), NoRestrictionPolicy.instance()),
+        InlineDataSource.fromIterable(ImmutableList.of(), RowSignature.empty()),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        joinableFactoryWrapper,
+        JoinAlgorithm.BROADCAST
+    );
+    Assert.assertTrue(joinDataSource3.validate(NoopPolicyEnforcer.instance()));
+    // Success, policy exist on table, and inline data source doesn't need to have policy
+    Assert.assertTrue(joinDataSource3.validate(new RestrictAllTablesPolicyEnforcer(null)));
   }
 }
