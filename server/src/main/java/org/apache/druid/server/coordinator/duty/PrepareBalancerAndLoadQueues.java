@@ -153,7 +153,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   )
   {
     final Set<String> decommissioningServers = dynamicConfig.getDecommissioningNodes();
-    final Set<String> unmanagedServers = new HashSet<>(dynamicConfig.getCloneServers().values());
+    final Set<String> unmanagedServers = new HashSet<>(dynamicConfig.getCloneServers().keySet());
     final DruidCluster.Builder cluster = DruidCluster.builder();
     for (ImmutableDruidServer server : currentServers) {
       cluster.add(

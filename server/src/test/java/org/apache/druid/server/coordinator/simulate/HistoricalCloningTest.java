@@ -57,7 +57,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
-                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .build()
                              )
@@ -102,7 +102,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
-                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .build()
                              )
@@ -151,7 +151,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withRules(datasource, Load.on(Tier.T1, 2).forever())
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
-                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .build()
                              )
@@ -212,7 +212,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
-                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
                                                          .withSmartSegmentLoading(true)
                                                          .withReplicationThrottleLimit(2)
                                                          .build()
@@ -261,7 +261,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                              .withImmediateSegmentLoading(true)
                              .withDynamicConfig(
                                  CoordinatorDynamicConfig.builder()
-                                                         .withCloneServers(Map.of(historicalT11.getHost(), historicalT12.getHost()))
+                                                         .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
                                                          .withSmartSegmentLoading(false)
                                                          .withReplicationThrottleLimit(2)
                                                          .withMaxSegmentsToMove(0)

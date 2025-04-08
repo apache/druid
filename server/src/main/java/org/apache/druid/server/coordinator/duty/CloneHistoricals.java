@@ -74,11 +74,11 @@ public class CloneHistoricals implements CoordinatorDuty
                                                           ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
-      final String sourceHistoricalName = entry.getKey();
-      final ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
-
-      final String targetHistoricalName = entry.getValue();
+      final String targetHistoricalName = entry.getKey();
       final ServerHolder targetServer = historicalMap.get(targetHistoricalName);
+
+      final String sourceHistoricalName = entry.getValue();
+      final ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
 
       if (sourceServer == null || targetServer == null) {
         log.error(
