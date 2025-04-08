@@ -74,28 +74,17 @@ public class CloneHistoricals implements CoordinatorDuty
                                                           ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
-      log.debug("Handling cloning for mapping: [%s]", entry);
-
       final String sourceHistoricalName = entry.getKey();
       final ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
-
-      if (sourceServer == null) {
-        log.error(
-            "Could not process clone mapping[%s] as source historical[%s] does not exist.",
-            sourceHistoricalName,
-            entry
-        );
-        continue;
-      }
 
       final String targetHistoricalName = entry.getValue();
       final ServerHolder targetServer = historicalMap.get(targetHistoricalName);
 
-      if (targetServer == null) {
+      if (sourceServer == null || targetServer == null) {
         log.error(
-            "Could not process clone mapping[%s] as target historical[%s] does not exist.",
-            targetHistoricalName,
-            entry
+            "Could not process clone mapping[%s] as historical[%s] does not exist.",
+            entry,
+            (sourceServer == null ? sourceHistoricalName : targetHistoricalName)
         );
         continue;
       }

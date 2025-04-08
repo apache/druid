@@ -326,10 +326,12 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * Map of source to target Historicals to place into cloning mode. Target historicals are not involved in normal
-   * segment assignment or segment balancing. Instead, segment assignments to the source Historical are mirrored to
-   * the target Historical, so that the target Historical becomes an exact copy. Segments on the target Historical do
-   * not count towards the desired segment replication counts.
+   * Map from source Historical server to target Historical server which should be made a clone of the source. The
+   * target Historical does not participate in regular segment assignment or balancing. Instead, the Coordinator
+   * mirrors any segment assignment made to the source Historical onto the target Historical, so that the target
+   * becomes an exact copy of the source. Segments on the target Historical do not count towards replica counts either.
+   * If the source disappears, the target remains in the last known state of the source server until removed from the
+   * cloneServers.
    */
   @JsonProperty
   public Map<String, String> getCloneServers()
