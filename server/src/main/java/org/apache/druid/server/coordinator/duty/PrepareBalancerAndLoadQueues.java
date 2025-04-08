@@ -176,7 +176,16 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       RowKey rowKey = RowKey.of(Dimension.TIER, tier);
       stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
 
-      long totalCapacity = historicals.stream().mapToLong(ServerHolder::getMaxSize).sum();
+      long totalCapacity = 0;
+      long cloneCount = 0;
+      for (ServerHolder holder : historicals) {
+        if (holder.isUnmanaged()) {
+          cloneCount += 1;
+        } else {
+          totalCapacity += holder.getMaxSize();
+        }
+      }
+      stats.add(Stats.Tier.CLONE_COUNT, rowKey, cloneCount);
       stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, totalCapacity);
     });
   }

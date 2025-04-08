@@ -75,9 +75,7 @@ public class TierSegmentBalancer
     this.runStats = params.getCoordinatorStats();
 
     Map<Boolean, List<ServerHolder>> partitions =
-        servers.stream()
-               .filter(s -> !s.isUnmanaged())
-               .collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
+        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
     this.decommissioningServers = partitions.get(true);
     this.activeServers = partitions.get(false);
 

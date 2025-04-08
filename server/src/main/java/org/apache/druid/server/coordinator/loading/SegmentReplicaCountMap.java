@@ -46,13 +46,9 @@ public class SegmentReplicaCountMap
 
   private void initReplicaCounts(DruidCluster cluster)
   {
-    cluster.getHistoricals().forEach(
+    cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
-              if (serverHolder.isUnmanaged()) {
-                // Don't count segments on unmanaged historicals towards replica counts.
-                return;
-              }
               // Add segments already loaded on this server
               for (DataSegment segment : serverHolder.getServedSegments()) {
                 computeIfAbsent(segment.getId(), tier).incrementLoaded();

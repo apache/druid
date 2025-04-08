@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Contains a representation of the current state of the cluster by tier.
@@ -44,8 +45,10 @@ public class DruidCluster
 
   private final Set<ServerHolder> realtimes;
   private final Map<String, NavigableSet<ServerHolder>> historicals;
+  private final Map<String, NavigableSet<ServerHolder>> managedHistoricals;
   private final Set<ServerHolder> brokers;
   private final List<ServerHolder> allServers;
+  private final List<ServerHolder> allManagedServers;
 
   private DruidCluster(
       Set<ServerHolder> realtimes,
@@ -58,8 +61,17 @@ public class DruidCluster
         historicals,
         holders -> CollectionUtils.newTreeSet(Comparator.naturalOrder(), holders)
     );
+    this.managedHistoricals = CollectionUtils.mapValues(
+        historicals,
+        holders -> CollectionUtils.newTreeSet(Comparator.naturalOrder(),
+                                            holders.stream()
+                                                 .filter(serverHolder -> !serverHolder.isUnmanaged())
+                                                 .collect(Collectors.toList())
+        )
+    );
     this.brokers = Collections.unmodifiableSet(brokers);
     this.allServers = initAllServers();
+    this.allManagedServers = initAllManagedServers();
   }
 
   public Set<ServerHolder> getRealtimes()
@@ -70,6 +82,11 @@ public class DruidCluster
   public Map<String, NavigableSet<ServerHolder>> getHistoricals()
   {
     return historicals;
+  }
+
+  public Map<String, NavigableSet<ServerHolder>> getManagedHistoricals()
+  {
+    return managedHistoricals;
   }
 
   public Set<ServerHolder> getBrokers()
@@ -92,6 +109,11 @@ public class DruidCluster
     return allServers;
   }
 
+  public List<ServerHolder> getAllManagedServers()
+  {
+    return allManagedServers;
+  }
+
   private List<ServerHolder> initAllServers()
   {
     final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
@@ -102,6 +124,22 @@ public class DruidCluster
     allServers.addAll(brokers);
     allServers.addAll(realtimes);
     return allServers;
+  }
+
+  private List<ServerHolder> initAllManagedServers()
+  {
+    final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
+    final int realtimeSize = realtimes.size();
+    final List<ServerHolder> allManagedServers = new ArrayList<>(historicalSize + realtimeSize);
+
+    historicals.values()
+               .stream()
+               .flatMap(Collection::stream)
+               .filter(serverHolder -> !serverHolder.isUnmanaged())
+               .forEach(allManagedServers::add);
+    allManagedServers.addAll(brokers);
+    allManagedServers.addAll(realtimes);
+    return allManagedServers;
   }
 
   public boolean isEmpty()

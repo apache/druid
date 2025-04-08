@@ -105,6 +105,8 @@ public class ServerHolder implements Comparable<ServerHolder>
    * @param server                 Underlying Druid server
    * @param peon                   Load queue peon for this server
    * @param isDecommissioning      Whether the server is decommissioning
+   * @param isUnmanaged            Whether this server is unmanaged and should not participate in segment assignment,
+   *                               drop or balancing.
    * @param maxSegmentsInLoadQueue Max number of segments that can be present in
    *                               the load queue at any point. If this is 0, the
    *                               load queue can have an unlimited number of segments.
