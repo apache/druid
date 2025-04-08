@@ -22,6 +22,7 @@ package org.apache.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.Intervals;
@@ -110,21 +111,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     this.merge = merge == null ? false : merge;
     this.analysisTypes = analysisTypes;
 
-    if (dataSource.getClass().equals(RestrictedDataSource.class)) {
-      // Only no-restriction policy is allowed for segment metadata queries.
-      validateWithNoRestrictionPolicy((RestrictedDataSource) dataSource);
-    } else if (dataSource.getClass().equals(UnionDataSource.class)) {
-      // Verify that all children of the union data source are either table or restricted data sources with no-restriction policy.
-      dataSource.getChildren()
-                .stream()
-                .filter(ds -> ds instanceof RestrictedDataSource)
-                .forEach(ds -> validateWithNoRestrictionPolicy((RestrictedDataSource) ds));
-    } else if (dataSource.getClass().equals(TableDataSource.class)) {
-      // do nothing
-    } else {
-      throw InvalidInput.exception("Invalid dataSource type [%s]. "
-                                   + "SegmentMetadataQuery only supports table or union datasources.", dataSource);
-    }
+    validateDataSource(dataSource);
     // We validate that there's only one parameter specified by the user. While the deprecated property is still
     // supported in the API, we only set the new member variable either using old or new property, so we've a single source
     // of truth for consumers of this class variable. The defaults are to preserve backwards compatibility.
@@ -261,14 +248,31 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return this.getQuerySegmentSpec().getIntervals();
   }
 
-  private void validateWithNoRestrictionPolicy(RestrictedDataSource restricted)
+  private static void validateDataSource(DataSource dataSource)
+  {
+    if (dataSource instanceof TableDataSource) {
+      // do nothing
+    } else if (dataSource instanceof RestrictedDataSource) {
+      validateWithNoRestrictionPolicy((RestrictedDataSource) dataSource);
+    } else if (dataSource instanceof UnionDataSource) {
+      for (DataSource child : dataSource.getChildren()) {
+        validateDataSource(child);
+      }
+    } else {
+      throw InvalidInput.exception("Invalid dataSource type [%s]. "
+                                   + "SegmentMetadataQuery only supports table or union datasources.", dataSource);
+    }
+  }
+
+  private static void validateWithNoRestrictionPolicy(RestrictedDataSource restricted)
   {
     if (!(restricted.getPolicy() instanceof NoRestrictionPolicy)) {
-      throw InvalidInput.exception(
-          "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[%s], found policy[%s].",
-          restricted.getBase(),
-          restricted.getPolicy()
-      );
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build(
+                              "You do not have permission to run a SegmentMetadataQuery on table[%s].",
+                              restricted.getBase()
+                          );
     }
   }
 

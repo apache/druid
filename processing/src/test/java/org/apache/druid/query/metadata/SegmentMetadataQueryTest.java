@@ -1595,9 +1595,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
             )
         ),
         DruidExceptionMatcher
-            .invalidInput()
-            .expectMessageIs(
-                "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[testDatasource], found policy[RowFilterPolicy{rowFilter=column IS NULL}].")
+            .forbidden()
+            .expectMessageIs("You do not have permission to run a SegmentMetadataQuery on table[testDatasource].")
     );
 
     MatcherAssert.assertThat(
@@ -1623,19 +1622,22 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
             )
         ),
         DruidExceptionMatcher
-            .invalidInput()
-            .expectMessageIs(
-                "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[testDatasource], found policy[RowFilterPolicy{rowFilter=column IS NULL}].")
+            .forbidden()
+            .expectMessageIs("You do not have permission to run a SegmentMetadataQuery on table[testDatasource].")
     );
 
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
-                RestrictedDataSource.create(
-                    TableDataSource.create(DATASOURCE),
-                    RowFilterPolicy.from(new NullFilter("column", null))
-                ),
+                new UnionDataSource(
+                    ImmutableList.of(
+                        TableDataSource.create(DATASOURCE),
+                        InlineDataSource.fromIterable(
+                            ImmutableList.of(new Object[0]),
+                            RowSignature.builder().add("column", ColumnType.STRING).build()
+                        )
+                    )),
                 new LegacySegmentSpec("2015-01-01/2015-01-02"),
                 null,
                 null,
@@ -1649,7 +1651,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         DruidExceptionMatcher
             .invalidInput()
             .expectMessageIs(
-                "Only NoRestrictionPolicy is allowed for SegmentMetadataQuery on dataSource[testDatasource], found policy[RowFilterPolicy{rowFilter=column IS NULL}].")
+                "Invalid dataSource type [InlineDataSource{signature={column:STRING}}]. SegmentMetadataQuery only supports table or union datasources.")
     );
 
     MatcherAssert.assertThat(
