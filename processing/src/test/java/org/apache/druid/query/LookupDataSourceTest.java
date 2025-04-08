@@ -65,7 +65,7 @@ public class LookupDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(lookylooDataSource.isConcrete());
+    Assert.assertTrue(lookylooDataSource.isProcessable());
   }
 
   @Test

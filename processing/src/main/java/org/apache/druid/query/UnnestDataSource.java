@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegment;
 import org.apache.druid.segment.VirtualColumn;
@@ -127,9 +126,9 @@ public class UnnestDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
-    return base.isConcrete();
+    return base.isProcessable();
   }
 
   @Override
@@ -137,12 +136,6 @@ public class UnnestDataSource implements DataSource
   {
     final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
     return baseSegment -> new UnnestSegment(segmentMapFn.apply(baseSegment), virtualColumn, unnestFilter);
-  }
-
-  @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return new UnnestDataSource(newSource, virtualColumn, unnestFilter);
   }
 
   @Override
@@ -155,14 +148,6 @@ public class UnnestDataSource implements DataSource
     // create an appropriate cac
     return null;
   }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    final DataSource current = this.getBase();
-    return current.getAnalysis();
-  }
-
 
   @Override
   public String toString()
