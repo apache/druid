@@ -32,7 +32,6 @@ import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.options.BlobInputStreamOptions;
 import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
-import com.azure.storage.common.Utility;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
 import org.apache.druid.java.util.common.RE;
@@ -158,7 +157,7 @@ public class AzureStorage
     final BlockBlobClient blockBlobClient = azureClientFactory
         .getBlobServiceClient(maxAttempts, defaultStorageAccount)
         .createBlobContainerIfNotExists(containerName)
-        .getBlobClient(Utility.urlEncode(blobName))
+        .getBlobClient(blobName)
         .getBlockBlobClient();
 
     // TODO based on the usage here, it might be better to overwrite the existing blob instead; that's what StorageConnector#write documents it does
@@ -187,7 +186,7 @@ public class AzureStorage
     return azureClientFactory
         .getBlobServiceClient(null, defaultStorageAccount)
         .getBlobContainerClient(containerName)
-        .getBlobClient(Utility.urlEncode(blobName))
+        .getBlobClient(blobName)
         .getBlockBlobClient()
         .getProperties()
         .getBlobSize();
@@ -243,7 +242,7 @@ public class AzureStorage
     return azureClientFactory
         .getBlobServiceClient(maxAttempts, defaultStorageAccount)
         .getBlobContainerClient(containerName)
-        .getBlobClient(Utility.urlEncode(blobName))
+        .getBlobClient(blobName)
         .openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
   }
 
@@ -335,7 +334,7 @@ public class AzureStorage
     return azureClientFactory
         .getBlobServiceClient(maxAttempts, defaultStorageAccount)
         .getBlobContainerClient(container)
-        .getBlobClient(Utility.urlEncode(blobName))
+        .getBlobClient(blobName)
         .exists();
   }
 
@@ -442,7 +441,7 @@ public class AzureStorage
       blobContainerClient
           // Creates a blob by default, no need to use a specific blob client.
           // We also need to urlEncode the path to handle special characters.
-          .getBlobClient(Utility.urlEncode(blobName))
+          .getBlobClient(blobName)
 
           // Set overwrite to true to keep behavior more similar to s3Client.putObject.
           .upload(stream, file.length(), true);

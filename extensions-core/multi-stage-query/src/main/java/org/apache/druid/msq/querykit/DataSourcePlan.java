@@ -58,7 +58,7 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -70,6 +70,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -600,7 +601,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
-    final DataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
+    final JoinDataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKitSpec,
@@ -608,7 +609,7 @@ public class DataSourcePlan
         analysis.getBaseDataSource(),
         querySegmentSpec,
         filter,
-        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis),
+        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis::isBaseColumn),
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
     );
@@ -791,10 +792,7 @@ public class DataSourcePlan
   /**
    * Verify that the provided {@link QuerySegmentSpec} is a {@link MultipleIntervalSegmentSpec} with
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
-   * <p>
-   * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
-   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
-   * <p>
+   *
    * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
    * the SQL layer avoids "intervals" in other cases. See
    * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.

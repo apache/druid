@@ -145,6 +145,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -3054,7 +3055,7 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.getEntityTag());
+    Assert.assertEquals("RsQmZHYstvXNeGf86z3pgpk+Wsg=", responseContext.getEntityTag());
   }
 
   @Test

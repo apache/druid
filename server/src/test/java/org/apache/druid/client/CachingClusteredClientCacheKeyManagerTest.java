@@ -28,7 +28,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.timeline.DataSegment;
@@ -59,12 +58,11 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   @Mock
   private JoinableFactoryWrapper joinableFactoryWrapper;
   @Mock
-  private DataSourceAnalysis dataSourceAnalysis;
-  @Mock
   private DataSource dataSource;
 
   private static final byte[] QUERY_CACHE_KEY = new byte[]{1, 2, 3};
   private static final byte[] JOIN_KEY = new byte[]{4, 5};
+  private static final byte[] FULL_QUERY_CACHE_KEY = new byte[]{DataSource.NOOP_CACHE_ID, 1, 2, 3};
 
   @Before
   public void setup()
@@ -148,7 +146,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, QUERY_CACHE_KEY);
+    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, FULL_QUERY_CACHE_KEY);
     Assert.assertNotNull(actual1);
 
     selectors = ImmutableSet.of(
@@ -178,7 +176,6 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   @Test
   public void testComputeEtag_noEffectifBySegment()
   {
-    expect(dataSourceAnalysis.isJoin()).andReturn(false);
     reset(query);
 
     expect(query.getDataSource()).andReturn(new NoopDataSource());
@@ -197,7 +194,6 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   @Test
   public void testComputeEtag_noEffectIfUseAndPopulateFalse()
   {
-    expect(dataSourceAnalysis.isJoin()).andReturn(false);
     expect(query.getDataSource()).andReturn(new NoopDataSource());
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = new CachingClusteredClient.CacheKeyManager<>(
@@ -221,7 +217,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = makeKeyManager();
     byte[] cacheKey = keyManager.computeSegmentLevelQueryCacheKey();
-    Assert.assertArrayEquals(QUERY_CACHE_KEY, cacheKey);
+    Assert.assertArrayEquals(FULL_QUERY_CACHE_KEY, cacheKey);
   }
 
   @Test

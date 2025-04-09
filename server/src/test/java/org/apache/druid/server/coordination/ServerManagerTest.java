@@ -76,6 +76,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -558,7 +559,7 @@ public class ServerManagerTest
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
-        .getTimeline(query.getDataSourceAnalysis().getBaseTableDataSource());
+        .getTimeline(ExecutionVertex.of(query).getBaseTableDataSource());
     Assume.assumeTrue(maybeTimeline.isPresent());
     // close all segments in interval
     final List<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = maybeTimeline.get().lookup(interval);
