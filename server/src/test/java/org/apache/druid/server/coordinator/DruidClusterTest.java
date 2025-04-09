@@ -98,7 +98,7 @@ public class DruidClusterTest
   }
 
   @Test
-  public void testGetAllServers()
+  public void testGetAllManagedServers()
   {
     clusterBuilder.add(NEW_REALTIME);
     clusterBuilder.add(NEW_HISTORICAL);
@@ -107,7 +107,7 @@ public class DruidClusterTest
     final Set<ServerHolder> expectedRealtimes = cluster.getRealtimes();
     final Map<String, NavigableSet<ServerHolder>> expectedHistoricals = cluster.getHistoricals();
 
-    final Collection<ServerHolder> allServers = cluster.getAllServers();
+    final Collection<ServerHolder> allServers = cluster.getAllManagedServers();
     Assert.assertEquals(4, allServers.size());
     Assert.assertTrue(allServers.containsAll(cluster.getRealtimes()));
     Assert.assertTrue(

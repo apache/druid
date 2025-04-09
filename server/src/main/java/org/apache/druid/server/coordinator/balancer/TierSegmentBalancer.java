@@ -205,7 +205,7 @@ public class TierSegmentBalancer
       return 0;
     } else {
       final int decommSegmentsToMove = decommissioningServers.stream().mapToInt(
-          server -> server.getProjectedSegments().getTotalSegmentCount()
+          server -> server.getProjectedSegmentCounts().getTotalSegmentCount()
       ).sum();
       return Math.min(decommSegmentsToMove, maxSegmentsToMove);
     }
