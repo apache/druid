@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec0;
+import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
@@ -62,7 +62,7 @@ import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
-  private final MSQSpec0 querySpec;
+  private final MSQSpec querySpec;
   private final ResultsContext resultsContext;
   private final QueryKitSpec queryKitSpec;
   private final ObjectMapper jsonMapper;
@@ -74,7 +74,7 @@ public class QueryKitBasedMSQPlanner
 
 
   public QueryKitBasedMSQPlanner(
-      MSQSpec0 querySpec,
+      MSQSpec querySpec,
       ResultsContext resultsContext,
       Query<?> query,
       ObjectMapper jsonMapper,

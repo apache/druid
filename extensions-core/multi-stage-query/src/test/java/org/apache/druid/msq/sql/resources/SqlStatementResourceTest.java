@@ -45,7 +45,7 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
@@ -142,7 +142,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private static final MSQControllerTask MSQ_CONTROLLER_SELECT_PAYLOAD = new MSQControllerTask(
       ACCEPTED_SELECT_MSQ_QUERY,
-      MSQSpec.builder()
+      LegacyMSQSpec.builder()
              .query(QUERY)
              .columnMappings(
                  ColumnMappings.identity(
@@ -182,7 +182,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private static final MSQControllerTask MSQ_CONTROLLER_INSERT_PAYLOAD = new MSQControllerTask(
       ACCEPTED_SELECT_MSQ_QUERY,
-      MSQSpec.builder()
+      LegacyMSQSpec.builder()
              .query(QUERY)
              .columnMappings(
                  ColumnMappings.identity(

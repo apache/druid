@@ -22,7 +22,7 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.msq.indexing.MSQSpec0;
+import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.query.Query;
@@ -36,5 +36,5 @@ import org.apache.druid.query.Query;
 })
 public interface TerminalStageSpec
 {
-  StageDefinitionBuilder constructFinalStage(QueryDefinition queryDef, MSQSpec0 querySpec, ObjectMapper jsonMapper, Query<?> query);
+  StageDefinitionBuilder constructFinalStage(QueryDefinition queryDef, MSQSpec querySpec, ObjectMapper jsonMapper, Query<?> query);
 }

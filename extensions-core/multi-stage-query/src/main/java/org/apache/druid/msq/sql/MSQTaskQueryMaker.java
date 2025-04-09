@@ -44,7 +44,7 @@ import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -147,7 +147,8 @@ public class MSQTaskQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
 
-    final MSQSpec querySpec = makeQuerySpec0(
+    // FIXME rename?
+    final LegacyMSQSpec querySpec = makeQuerySpec0(
         targetDataSource,
         druidQuery,
         druidQuery.getQuery().context(),
@@ -172,7 +173,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
 
-  public static MSQSpec makeQuerySpec0(
+  public static LegacyMSQSpec makeQuerySpec0(
       @Nullable final IngestDestination targetDataSource,
       final DruidQuery druidQuery,
       final QueryContext queryContext3,
@@ -250,8 +251,8 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     QueryContext queryContext = queryContext3.override(nativeQueryContextOverrides);
 
-    final MSQSpec querySpec =
-        MSQSpec.builder()
+    final LegacyMSQSpec querySpec =
+        LegacyMSQSpec.builder()
                .query(druidQuery==null?null:druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
                .queryContext(queryContext)
                .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))

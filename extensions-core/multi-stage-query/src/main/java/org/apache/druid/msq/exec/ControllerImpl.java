@@ -92,6 +92,7 @@ import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -158,6 +159,7 @@ import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
@@ -182,6 +184,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -214,6 +217,7 @@ public class ControllerImpl implements Controller
 
   private final String queryId;
   private final MSQSpec querySpec;
+  private final Query<?> legacyQuery;
   private final ResultsContext resultsContext;
   private final ControllerContext context;
   private volatile ControllerQueryKernelConfig queryKernelConfig;
@@ -289,7 +293,7 @@ public class ControllerImpl implements Controller
 
   public ControllerImpl(
       final String queryId,
-      final MSQSpec querySpec,
+      final LegacyMSQSpec querySpec,
       final ResultsContext resultsContext,
       final ControllerContext controllerContext,
       final QueryKitSpecFactory queryKitSpecFactory
@@ -297,6 +301,7 @@ public class ControllerImpl implements Controller
   {
     this.queryId = Preconditions.checkNotNull(queryId, "queryId");
     this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
+    this.legacyQuery = querySpec.getQuery();
     this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
     this.context = Preconditions.checkNotNull(controllerContext, "controllerContext");
     this.queryKitSpecFactory = queryKitSpecFactory;
@@ -642,7 +647,7 @@ public class ControllerImpl implements Controller
       QueryKitBasedMSQPlanner qkPlanner = new QueryKitBasedMSQPlanner(
           querySpec,
           resultsContext,
-          querySpec.getQuery(),
+          legacyQuery,
           context.jsonMapper(),
           queryKitSpecFactory.makeQueryKitSpec(
               QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),

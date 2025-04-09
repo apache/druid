@@ -42,7 +42,7 @@ import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.QueryKitBasedMSQPlanner;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -145,7 +145,7 @@ public class DartQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
 
-    final MSQSpec querySpec = makeMSQSpec(druidQuery, dartQueryId, controllerContext, resultsContext);
+    final LegacyMSQSpec querySpec = makeMSQSpec(druidQuery, dartQueryId, controllerContext, resultsContext);
 
     final ControllerImpl controller = new ControllerImpl(
         dartQueryId,
@@ -187,10 +187,11 @@ public class DartQueryMaker implements QueryMaker
     }
   }
 
-  private MSQSpec makeMSQSpec(DruidQuery druidQuery, final String dartQueryId, final ControllerContext controllerContext,
+  // FIXME types here are not final
+  private LegacyMSQSpec makeMSQSpec(DruidQuery druidQuery, final String dartQueryId, final ControllerContext controllerContext,
       final ResultsContext resultsContext)
   {
-    final MSQSpec querySpec = MSQTaskQueryMaker.makeQuerySpec0(
+    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeQuerySpec0(
         null,
         druidQuery,
         druidQuery.getQuery().context(),

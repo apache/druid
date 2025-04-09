@@ -273,7 +273,7 @@ public class MSQCompactionRunner implements CompactionRunner
           .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
           .build();
 
-      MSQSpec msqSpec = MSQSpec.builder()
+      LegacyMSQSpec msqSpec = LegacyMSQSpec.builder()
                                .query(query)
                                .queryContext(QueryContext.of(queryContext))
                                .columnMappings(getColumnMappings(dataSchema))

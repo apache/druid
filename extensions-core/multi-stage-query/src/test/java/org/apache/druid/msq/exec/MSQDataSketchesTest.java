@@ -21,7 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -71,7 +71,7 @@ public class MSQDataSketchesTest extends MSQTestBase
                 + "FROM foo\n"
                 + "GROUP BY dim2\n"
                 + "HAVING HLL_SKETCH_ESTIMATE(col) > 1")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(new ColumnMappings(ImmutableList.of(
                                        new ColumnMapping("d0", "dim2"),
@@ -118,7 +118,7 @@ public class MSQDataSketchesTest extends MSQTestBase
 
     testSelectQuery()
         .setSql("SELECT APPROX_COUNT_DISTINCT_DS_HLL(dim2) FILTER(WHERE dim1 = 'nonexistent') AS c FROM druid.foo")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(new ColumnMappings(ImmutableList.of(
                                        new ColumnMapping("a0", "c"))
