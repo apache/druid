@@ -57,20 +57,17 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
+### Increase segment load speed
+
+You can now increase the speed at which segments get loaded at the cost of query performance by providing a list of servers for the Coordinator dynamic config `turboLoadingNodes`. For these servers, the Coordinator ignores `druid.coordinator.loadqueuepeon.http.batchSize` and uses the value of the respective `numLoadingThreads` instead.
+
+[#17775](https://github.com/apache/druid/pull/17775)
+
 ### Overlord APIs for compaction (experimental)
 
 You can use the following Overlord compaction APIs to manage compaction status and configs. These APIs work seamlessly irrespective of whether compaction supervisors are enabled or not.
 
-|Method|Path|Description|Required Permission|
-|--------|--------------------------------------------|------------|--------------------|
-|GET|`/druid/indexer/v1/compaction/config/cluster`|Get the cluster-level compaction config|Read configs|
-|POST|`/druid/indexer/v1/compaction/config/cluster`|Update the cluster-level compaction config|Write configs|
-|GET|`/druid/indexer/v1/compaction/config/datasources`|Get the compaction configs for all datasources|Read datasource|
-|GET|`/druid/indexer/v1/compaction/config/datasources/{dataSource}`|Get the compaction config of a single datasource|Read datasource|
-|POST|`/druid/indexer/v1/compaction/config/datasources/{dataSource}`|Update the compaction config of a single datasource|Write datasource|
-|GET|`/druid/indexer/v1/compaction/config/datasources/{dataSource}/history`|Get the compaction config history of a single datasource|Read datasource|
-|GET|`/druid/indexer/v1/compaction/status/datasources`|Get the compaction status of all datasources|Read datasource|
-|GET|`/druid/indexer/v1/compaction/status/datasources/{dataSource}`|Get the compaction status of a single datasource|Read datasource|
+For more information, see [Compaction APIs](#compaction-apis)
 
 [#17834](https://github.com/apache/druid/pull/17834)
 
@@ -147,6 +144,7 @@ curl -X POST --header "Content-Type: application/json" -d @supervisor.json local
 ##### Other streaming ingestion improvements
 
 - Improved the efficiency of streaming ingestion by fetching active tasks from memory. This reduces the number of calls to the metadata store for active datasource task payloads [#16098](https://github.com/apache/druid/pull/16098)
+- Improved how Druid behaves when resubmitting supervisors or when task publishing takes a long time [#17509](https://github.com/apache/druid/pull/17509)
 
 ### Querying
 
@@ -185,6 +183,32 @@ You can now control how many task slots are available for MSQ taskengine control
 - Improved query distribution when `druid.broker.balancer.type` is set to `connectionCount` [#17764](https://github.com/apache/druid/pull/17764)
 
 ### Data management
+
+#### Compaction supervisors (experimental)
+
+You now configure compaction supervisors with the following Coordinator compaction config:
+
+- `useSupervisors` - Enable compaction to run as a supervisor on the Overlord instead of as a Coordinator duty
+- `engine` - Choose between `native` and `msq` to run compaction tasks. The `msq` setting uses the MSQ task engine and can be used only when `useSupervisors` is true.
+
+Previously, you used runtime properties for the Overlord. Support for these has been removed.
+
+[#17782](https://github.com/apache/druid/pull/17782)
+
+#### Compaction APIs
+
+You can use the following Overlord APIs to manage compaction:
+
+|Method|Path|Description|Required Permission|
+|--------|--------------------------------------------|------------|--------------------|
+|GET|`/druid/indexer/v1/compaction/config/cluster`|Get the cluster-level compaction config|Read configs|
+|POST|`/druid/indexer/v1/compaction/config/cluster`|Update the cluster-level compaction config|Write configs|
+|GET|`/druid/indexer/v1/compaction/config/datasources`|Get the compaction configs for all datasources|Read datasource|
+|GET|`/druid/indexer/v1/compaction/config/datasources/{dataSource}`|Get the compaction config of a single datasource|Read datasource|
+|POST|`/druid/indexer/v1/compaction/config/datasources/{dataSource}`|Update the compaction config of a single datasource|Write datasource|
+|GET|`/druid/indexer/v1/compaction/config/datasources/{dataSource}/history`|Get the compaction config history of a single datasource|Read datasource|
+|GET|`/druid/indexer/v1/compaction/status/datasources`|Get the compaction status of all datasources|Read datasource|
+|GET|`/druid/indexer/v1/compaction/status/datasources/{dataSource}`|Get the compaction status of a single datasource|Read datasource|
 
 #### Faster segment metadata operations
 
@@ -272,6 +296,12 @@ The Kafka supervisor now includes additional lag metrics for how many minutes of
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
+
+#### `useMaxMemoryEstimates`
+
+`useMaxMemoryEstimates` is now set to false for MSQ task engine tasks. Additionally, the property has been deprecated and will be removed in a future release. Setting this to false allows for better on-heap memory estimation.
+
+[#17792](https://github.com/apache/druid/pull/17792)
 
 #### Automatic kill tasks interval
 
