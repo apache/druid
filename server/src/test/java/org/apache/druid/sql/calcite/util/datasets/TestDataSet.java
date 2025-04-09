@@ -31,6 +31,8 @@ public interface TestDataSet
   public static final MapBasedTestDataset NUMFOO = new NumFoo();
   public static final MapBasedTestDataset BROADCAST = new NumFoo("broadcast");
 
+  public static final MapBasedTestDataset NUMBERS = new Numbers();
+
   String getName();
 
   QueryableIndex makeIndex(File tmpDir);
