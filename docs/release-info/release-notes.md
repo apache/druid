@@ -59,7 +59,7 @@ This section contains important information about new and existing features.
 
 ### Increase segment load speed
 
-You can now increase the speed at which segments get loaded at the cost of query performance by providing a list of servers for the Coordinator dynamic config `turboLoadingNodes`. For these servers, the Coordinator ignores `druid.coordinator.loadqueuepeon.http.batchSize` and uses the value of the respective `numLoadingThreads` instead.
+You can now increase the speed at which segments get loaded on a Historical by providing a list of servers for the Coordinator dynamic config `turboLoadingNodes`. For these servers, the Coordinator ignores `druid.coordinator.loadqueuepeon.http.batchSize` and uses the value of the respective `numLoadingThreads` instead. Please note that putting a Historical in turbo-loading mode might affect query performance since more resources would be used by the segment loading threads.
 
 [#17775](https://github.com/apache/druid/pull/17775)
 
