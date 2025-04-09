@@ -270,7 +270,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.FORBIDDEN)
                           .build(
-                              "You do not have permission to run a SegmentMetadataQuery on table[%s].",
+                              "You do not have permission to run a segmentMetadata query on table[%s].",
                               restricted.getBase()
                           );
     }

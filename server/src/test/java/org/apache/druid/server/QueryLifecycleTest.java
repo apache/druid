@@ -286,7 +286,7 @@ public class QueryLifecycleTest
     );
     Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
     Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals("You do not have permission to run a SegmentMetadataQuery on table[some_datasource].", e.getMessage());
+    Assert.assertEquals("You do not have permission to run a segmentMetadata query on table[some_datasource].", e.getMessage());
   }
 
   @Test

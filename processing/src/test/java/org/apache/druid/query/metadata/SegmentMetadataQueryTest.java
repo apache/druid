@@ -1596,7 +1596,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ),
         DruidExceptionMatcher
             .forbidden()
-            .expectMessageIs("You do not have permission to run a SegmentMetadataQuery on table[testDatasource].")
+            .expectMessageIs("You do not have permission to run a segmentMetadata query on table[testDatasource].")
     );
 
     MatcherAssert.assertThat(
@@ -1623,7 +1623,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ),
         DruidExceptionMatcher
             .forbidden()
-            .expectMessageIs("You do not have permission to run a SegmentMetadataQuery on table[testDatasource].")
+            .expectMessageIs("You do not have permission to run a segmentMetadata query on table[testDatasource].")
     );
 
     MatcherAssert.assertThat(
