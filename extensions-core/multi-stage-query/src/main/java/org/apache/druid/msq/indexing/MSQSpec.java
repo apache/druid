@@ -39,13 +39,13 @@ import java.util.Objects;
 
 public class MSQSpec
 {
-  protected final ColumnMappings columnMappings;
-  protected final MSQDestination destination;
-  protected final WorkerAssignmentStrategy assignmentStrategy;
-  protected final MSQTuningConfig tuningConfig;
-  protected final List<AggregatorFactory> compactionMetricSpec;
-  protected final QueryContext queryContext;
-  protected final QueryDefinition queryDef;
+  private final ColumnMappings columnMappings;
+  private final MSQDestination destination;
+  private final WorkerAssignmentStrategy assignmentStrategy;
+  private final MSQTuningConfig tuningConfig;
+  private final List<AggregatorFactory> compactionMetricSpec;
+  private final QueryContext queryContext;
+  private final QueryDefinition queryDef;
 
   public MSQSpec()
   {

@@ -105,12 +105,12 @@ public class LegacyMSQSpec extends MSQSpec
     } else {
       return new LegacyMSQSpec(
           query != null ? query.withOverriddenContext(contextOverride) : null,
-          columnMappings,
-          destination,
-          assignmentStrategy,
-          tuningConfig,
-          compactionMetricSpec,
-          queryContext.override(contextOverride)
+          getColumnMappings(),
+          getDestination(),
+          getAssignmentStrategy(),
+          getTuningConfig(),
+          getCompactionMetricSpec(),
+          getContext().override(contextOverride)
       );
     }
   }
@@ -218,16 +218,17 @@ public class LegacyMSQSpec extends MSQSpec
     }
   }
 
+  // FIXME not necessery needed trright now
   public LegacyMSQSpec withQueryDef(QueryDefinition newQueryDef)
   {
     return new LegacyMSQSpec(
         query,
-        columnMappings,
-        destination,
-        assignmentStrategy,
-        tuningConfig,
-        compactionMetricSpec,
-        queryContext,
+        getColumnMappings(),
+        getDestination(),
+        getAssignmentStrategy(),
+        getTuningConfig(),
+        getCompactionMetricSpec(),
+        getContext(),
         newQueryDef
     );
   }
