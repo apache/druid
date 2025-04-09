@@ -1785,6 +1785,42 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     server.close();
   }
 
+  @Test
+  public void testMultiStatementFails() throws SQLException
+  {
+    try (Statement stmt = client.createStatement()) {
+      Throwable t = Assert.assertThrows(
+          AvaticaSqlException.class,
+          () -> stmt.executeQuery("SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo")
+      );
+      // ugly error message for statement
+      Assert.assertEquals(
+          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: Received an unexpected token [;] (line [1], column [34]), acceptable options: [<EOF>] -> DruidException: Received an unexpected token [;] (line [1], column [34]), acceptable options: [<EOF>] -> SqlParseException: Encountered \";\" at line 1, column 34.\n"
+          + "Was expecting:\n"
+          + "    <EOF> \n"
+          + "     -> ParseException: Encountered \";\" at line 1, column 34.\n"
+          + "Was expecting:\n"
+          + "    <EOF> \n"
+          + "    ",
+          t.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testMultiPreparedStatementFails() throws SQLException
+  {
+    Throwable t = Assert.assertThrows(
+        AvaticaSqlException.class,
+        () -> client.prepareStatement("SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo")
+    );
+    // sad error message for prepared statement
+    Assert.assertEquals(
+        "Error -1 (00000) : while preparing SQL: SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo",
+        t.getMessage()
+    );
+  }
+
   // Test the async feature using DBI, as used internally in Druid.
   // Ensures that DBI knows how to handle empty batches (which should,
   // in reality, but handled at the JDBC level below DBI.)

@@ -303,16 +303,22 @@ public class CalciteTests
       final PlannerFactory plannerFactory
   )
   {
-    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig());
+    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig(), false);
   }
 
   public static SqlStatementFactory createSqlStatementFactory(
       final SqlEngine engine,
       final PlannerFactory plannerFactory,
-      final AuthConfig authConfig
+      final AuthConfig authConfig,
+      boolean allowMultiStatementParsingForDirectStatements
   )
   {
-    return QueryFrameworkUtils.createSqlStatementFactory(engine, plannerFactory, authConfig);
+    return QueryFrameworkUtils.createSqlStatementFactory(
+        engine,
+        plannerFactory,
+        authConfig,
+        allowMultiStatementParsingForDirectStatements
+    );
   }
 
   public static ObjectMapper getJsonMapper()

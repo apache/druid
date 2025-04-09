@@ -104,7 +104,8 @@ public class QueryFrameworkUtils
   public static SqlStatementFactory createSqlStatementFactory(
       final SqlEngine engine,
       final PlannerFactory plannerFactory,
-      final AuthConfig authConfig
+      final AuthConfig authConfig,
+      boolean allowMultiStatementParsingForDirectStatements
   )
   {
     SqlToolbox toolbox = new SqlToolbox(
@@ -116,6 +117,9 @@ public class QueryFrameworkUtils
         new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );
+    if (allowMultiStatementParsingForDirectStatements) {
+      return new SqlTestFramework.TestDirectMultiStatmentFactory(toolbox, engine, plannerFactory);
+    }
     return new SqlStatementFactory(toolbox);
   }
 

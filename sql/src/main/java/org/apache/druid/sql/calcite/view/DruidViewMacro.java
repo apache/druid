@@ -62,7 +62,8 @@ public class DruidViewMacro implements TableMacro
                  ViewSqlEngine.INSTANCE,
                  viewSql,
                  Collections.emptyMap(),
-                 null
+                 null,
+                 false
              )
     ) {
       planner.validate();

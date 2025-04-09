@@ -15832,4 +15832,77 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             )
         ).run();
   }
+
+  @Test
+  public void testMultiStatementSetsContext()
+  {
+    Map<String, Object> expectedContext = ImmutableMap.<String, Object>builder()
+                                                      .putAll(QUERY_CONTEXT_DEFAULT)
+                                                      .put("useApproximateCountDistinct", true)
+                                                      .put("timeout", 9000.0)
+                                                      .put("vectorize", "force")
+                                                      .build();
+    testBuilder().sql(
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; select 3;"
+    ).expectedQueries(
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          List.<Object[]>of(new Object[]{3L}),
+                          RowSignature.builder().add("EXPR$0", ColumnType.LONG).build())
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("EXPR$0")
+                  .columnTypes(ColumnType.LONG)
+                  .context(expectedContext)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{3}
+        )
+    ).run();
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidNoNonSetStatement()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000",
+        DruidException.class,
+        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; set timeout = 90000] - statement list must end with a statement that is not a SET"
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidRegularStatementInMiddle()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000",
+        DruidException.class,
+        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000] - only SET statments are permitted before the final statement"
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidSetNotLiteral()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = vectorize; SELECT 1 + 1;",
+        DruidException.class,
+        "Invalid sql SET statement[SET `useApproximateCountDistinct` = `vectorize`], value must be a literal"
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidTooManyNonSetStatements()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2",
+        DruidException.class,
+        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2] - only SET statments are permitted before the final statement"
+    );
+  }
 }

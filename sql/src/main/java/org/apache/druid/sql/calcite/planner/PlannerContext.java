@@ -67,6 +67,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -177,7 +178,7 @@ public class PlannerContext
     this.sql = sql;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.engine = engine;
-    this.queryContext = queryContext;
+    this.queryContext = new LinkedHashMap<>(queryContext);
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
     this.useBoundsAndSelectors = useBoundsAndSelectors;
@@ -627,6 +628,11 @@ public class PlannerContext
     }
 
     this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
+  }
+
+  public void addAllToQueryContext(Map<String, Object> toAdd)
+  {
+    this.queryContext.putAll(toAdd);
   }
 
   public SqlEngine getEngine()

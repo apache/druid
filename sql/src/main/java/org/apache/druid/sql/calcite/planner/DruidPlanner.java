@@ -27,7 +27,10 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlSetOption;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.tools.FrameworkConfig;
@@ -43,11 +46,13 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.parser.ParseException;
 import org.apache.druid.sql.calcite.parser.Token;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.run.SqlResults;
 import org.joda.time.DateTimeZone;
 
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -106,6 +111,7 @@ public class DruidPlanner implements Closeable
   private final PlannerContext plannerContext;
   private final SqlEngine engine;
   private final PlannerHook hook;
+  private final boolean allowSetStatementsToBuildContext;
   private State state = State.START;
   private SqlStatementHandler handler;
   private boolean authorized;
@@ -114,14 +120,16 @@ public class DruidPlanner implements Closeable
       final FrameworkConfig frameworkConfig,
       final PlannerContext plannerContext,
       final SqlEngine engine,
-      final PlannerHook hook
+      final PlannerHook hook,
+      boolean allowSetStatementsToBuildContext
   )
   {
     this.frameworkConfig = frameworkConfig;
-    this.planner = new CalcitePlanner(frameworkConfig);
+    this.planner = new CalcitePlanner(frameworkConfig, allowSetStatementsToBuildContext);
     this.plannerContext = plannerContext;
     this.engine = engine;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
+    this.allowSetStatementsToBuildContext = allowSetStatementsToBuildContext;
   }
 
   /**
@@ -146,6 +154,34 @@ public class DruidPlanner implements Closeable
     }
     catch (SqlParseException e1) {
       throw translateException(e1);
+    }
+    if (allowSetStatementsToBuildContext && root instanceof SqlNodeList) {
+      final Map<String, Object> contextMap = new LinkedHashMap<>();
+      final SqlNodeList nodeList = (SqlNodeList) root;
+      boolean isMissingDruidStatementNode = true;
+      // convert 0 or more SET statements into a Map of stuff to add to the query context
+      for (int i = 0; i < nodeList.size(); i++) {
+        SqlNode sqlNode = nodeList.get(i);
+        if (sqlNode instanceof SqlSetOption) {
+          final SqlSetOption sqlSetOption = (SqlSetOption) sqlNode;
+          if (!(sqlSetOption.getValue() instanceof SqlLiteral)) {
+            throw InvalidSqlInput.exception("Invalid sql SET statement[%s], value must be a literal", sqlSetOption);
+          }
+          final SqlLiteral value = (SqlLiteral) sqlSetOption.getValue();
+          contextMap.put(sqlSetOption.getName().getSimple(), SqlResults.coerce(plannerContext.getJsonMapper(), SqlResults.Context.fromPlannerContext(plannerContext), value.getValue(), value.getTypeName(), "set"));
+        } else if (i < nodeList.size() - 1) {
+          // only SET statements can appear before the last statement
+          throw InvalidSqlInput.exception("Invalid sql statement list[%s] - only SET statments are permitted before the final statement", sql);
+        } else {
+          // last SqlNode
+          root = sqlNode;
+          isMissingDruidStatementNode = false;
+        }
+      }
+      if (isMissingDruidStatementNode) {
+        throw InvalidSqlInput.exception("Invalid sql statement list[%s] - statement list must end with a statement that is not a SET", sql);
+      }
+      plannerContext.addAllToQueryContext(contextMap);
     }
     root = rewriteParameters(root);
     hook.captureSqlNode(root);
