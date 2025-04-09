@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.MSQSpec0;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.input.stage.ReadablePartition;
@@ -35,6 +36,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
+import org.apache.druid.query.Query;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -61,7 +63,7 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
   }
 
   @Override
-  public StageDefinitionBuilder constructFinalStage(QueryDefinition queryDef, MSQSpec querySpec, ObjectMapper jsonMapper)
+  public StageDefinitionBuilder constructFinalStage(QueryDefinition queryDef, MSQSpec0 querySpec, ObjectMapper jsonMapper, Query<?> query)
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
@@ -70,7 +72,7 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
 
     // Add a segment-generation stage.
     final DataSchema dataSchema =
-        SegmentGenerationUtils.makeDataSchemaForIngestion(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
+        SegmentGenerationUtils.makeDataSchemaForIngestion(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper, query);
 
     return StageDefinition.builder(queryDef.getNextStageNumber())
                        .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))

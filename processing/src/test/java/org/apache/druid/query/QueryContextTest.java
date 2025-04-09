@@ -41,6 +41,7 @@ import org.joda.time.Interval;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -426,6 +427,24 @@ public class QueryContextTest
                                 .context(ImmutableMap.of("foo", "bar"))
                                 .build();
     assertNotNull(timeseries.getContext());
+  }
+
+  @Test
+  public void testSerialization() throws Exception
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of(
+            "key1", "true",
+            "key2", true
+        )
+    );
+
+    String ctxStr = JSON_MAPPER.writeValueAsString(context);
+    assertEquals("{\"key1\":\"true\",\"key2\":true}", ctxStr);
+    QueryContext ctx2 = JSON_MAPPER.readValue(ctxStr, QueryContext.class);
+    assertEquals(context, ctx2);
+    assertEquals(true, ctx2.get("key2"));
+    assertEquals("true", ctx2.get("key1"));
   }
 
   public static class LegacyContextQuery implements Query<Integer>

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
@@ -263,13 +264,23 @@ public class MSQCompactionRunner implements CompactionRunner
         query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
       }
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+      DataSourceMSQDestination destination = buildMSQDestination(compactionTask, dataSchema);
+
+      boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
+      final ImmutableMap<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+          .putAll(query.getContext())
+          // I don't suspect that this is really necessary - but this is the equiv behaviour
+          .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
+          .build();
 
       MSQSpec msqSpec = MSQSpec.builder()
                                .query(query)
+                               .queryContext(QueryContext.of(queryContext))
                                .columnMappings(getColumnMappings(dataSchema))
-                               .destination(buildMSQDestination(compactionTask, dataSchema))
+                               .destination(destination)
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
                                .tuningConfig(buildMSQTuningConfig(compactionTask, compactionTaskContext))
+                               .compactionMetrics(buildMSQCompactionMetrics(query, dataSchema))
                                .build();
 
       Map<String, Object> msqControllerTaskContext = createMSQTaskContext(compactionTask, dataSchema);
@@ -288,6 +299,29 @@ public class MSQCompactionRunner implements CompactionRunner
       msqControllerTasks.add(controllerTask);
     }
     return msqControllerTasks;
+  }
+
+  private List<AggregatorFactory> buildMSQCompactionMetrics(Query<?> query,       DataSchema dataSchema)
+  {
+    List<AggregatorFactory> metricsSpec = Collections.emptyList();
+
+    if (query instanceof GroupByQuery) {
+      // For group-by queries, the aggregators are transformed to their combining factories in the dataschema, resulting
+      // in a mismatch between schema in compaction spec and the one in compaction state. Sourcing the original
+      // AggregatorFactory definition for aggregators in the dataSchema, therefore, directly from the querySpec.
+      GroupByQuery groupByQuery = (GroupByQuery) query;
+      // Collect all aggregators that are part of the current dataSchema, since a non-rollup query (isRollup() is false)
+      // moves metrics columns to dimensions in the final schema.
+      Set<String> aggregatorsInDataSchema = Arrays.stream(dataSchema.getAggregators())
+                                                  .map(AggregatorFactory::getName)
+                                                  .collect(Collectors.toSet());
+      metricsSpec = groupByQuery.getAggregatorSpecs()
+                                .stream()
+                                .filter(aggregatorFactory -> aggregatorsInDataSchema.contains(aggregatorFactory.getName()))
+                                .collect(Collectors.toList());
+    }
+    return metricsSpec ;
+
   }
 
   private static DataSourceMSQDestination buildMSQDestination(

@@ -33,12 +33,13 @@ import java.util.Objects;
  */
 public class ResultsContext
 {
+  @Nullable
   private final List<SqlTypeName> sqlTypeNames;
   private final SqlResults.Context sqlResultsContext;
 
   @JsonCreator
   public ResultsContext(
-      @JsonProperty("sqlTypeNames") final List<SqlTypeName> sqlTypeNames,
+      @Nullable @JsonProperty("sqlTypeNames") final List<SqlTypeName> sqlTypeNames,
       @JsonProperty("sqlResultsContext") final SqlResults.Context sqlResultsContext
   )
   {

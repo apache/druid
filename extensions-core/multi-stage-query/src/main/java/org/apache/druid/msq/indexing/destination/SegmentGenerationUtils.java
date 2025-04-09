@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.MSQSpec0;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -70,17 +70,18 @@ public final class SegmentGenerationUtils
   private static final Logger log = new Logger(SegmentGenerationUtils.class);
 
   public static DataSchema makeDataSchemaForIngestion(
-      MSQSpec querySpec,
+      MSQSpec0 querySpec,
       RowSignature querySignature,
       ClusterBy queryClusterBy,
       ColumnMappings columnMappings,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      Query<?> query
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-    final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
+    final boolean isRollupQuery = isRollupQuery(query);
     final boolean forceSegmentSortByTime =
-        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
+        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
 
     final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
@@ -90,7 +91,7 @@ public final class SegmentGenerationUtils
             forceSegmentSortByTime,
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery(),
+            query,
             destination.getDimensionSchemas()
         );
 
@@ -99,7 +100,7 @@ public final class SegmentGenerationUtils
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
                      .withDimensions(dimensionsAndAggregators.lhs)
                      .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
-                     .withGranularity(makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withGranularity(makeGranularitySpecForIngestion(query, querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
                      .withProjections(destination.getProjections())
                      .build();
   }

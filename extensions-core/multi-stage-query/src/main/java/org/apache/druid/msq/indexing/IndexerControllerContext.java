@@ -43,17 +43,15 @@ import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
-import org.apache.druid.msq.querykit.QueryKit;
-import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -238,29 +236,6 @@ public class IndexerControllerContext implements ControllerContext
     return toolbox.getIndexingTmpDir();
   }
 
-  @Override
-  public QueryKitSpec makeQueryKitSpec(
-      final QueryKit<Query<?>> queryKit,
-      final String queryId,
-      final MSQSpec querySpec,
-      final ControllerQueryKernelConfig queryKernelConfig
-  )
-  {
-    return new QueryKitSpec(
-        queryKit,
-        queryId,
-        querySpec.getTuningConfig().getMaxNumWorkers(),
-        querySpec.getTuningConfig().getMaxNumWorkers(),
-
-        // Assume tasks are symmetric: workers have the same number of processors available as a controller.
-        // Create one partition per processor per task, for maximum parallelism.
-        MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
-            querySpec.getContext(),
-            memoryIntrospector.numProcessingThreads()
-        )
-    );
-  }
-
   /**
    * Helper method for {@link #queryKernelConfig(String, MSQSpec)}. Also used in tests.
    */
@@ -309,7 +284,7 @@ public class IndexerControllerContext implements ControllerContext
         .destination(querySpec.getDestination())
         .maxConcurrentStages(maxConcurrentStages)
         .maxRetainedPartitionSketchBytes(memoryParameters.getPartitionStatisticsMaxRetainedBytes())
-        .workerContextMap(makeWorkerContextMap(querySpec, isDurableStorageEnabled, maxConcurrentStages))
+        .workerContextMap(makeWorkerContextMap(querySpec.getContext(), querySpec.getDestination(), isDurableStorageEnabled, maxConcurrentStages))
         .build();
   }
 
@@ -318,29 +293,29 @@ public class IndexerControllerContext implements ControllerContext
    * i.e., the map that will become {@link WorkOrder#getWorkerContext()}.
    */
   public static Map<String, Object> makeWorkerContextMap(
-      final MSQSpec querySpec,
+      final QueryContext queryContext,
+      final MSQDestination destination,
       final boolean durableStorageEnabled,
-      final int maxConcurrentStages
-  )
+      final int maxConcurrentStages)
   {
-    final QueryContext queryContext = querySpec.getContext();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
+    final boolean isReindex = MultiStageQueryContext.isReindex(queryContext);
     final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
 
     builder
         .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled)
         .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
-        .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec.getQuery(), querySpec.getDestination()))
+        .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
 
-    if (querySpec.getDestination().toSelectDestination() != null) {
+    if (destination.toSelectDestination() != null) {
       builder.put(
           MultiStageQueryContext.CTX_SELECT_DESTINATION,
-          querySpec.getDestination().toSelectDestination().getName()
+          destination.toSelectDestination().getName()
       );
     }
 
@@ -364,7 +339,8 @@ public class IndexerControllerContext implements ControllerContext
     // WorkOrder#getContext or Task#getContext.
     taskContextOverridesBuilder.putAll(
         makeWorkerContextMap(
-            querySpec,
+            querySpec.getContext(),
+            querySpec.getDestination(),
             queryKernelConfig.isDurableStorage(),
             queryKernelConfig.getMaxConcurrentStages()
         )

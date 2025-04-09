@@ -57,6 +57,7 @@ import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -91,6 +92,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -276,7 +278,9 @@ public class MSQInsertTest extends MSQTestBase
             null
         ),
         WorkerAssignmentStrategy.MAX,
-        MSQTuningConfig.defaultConfig()
+        MSQTuningConfig.defaultConfig(),
+        Collections.emptyList(),
+        QueryContext.empty()
     );
 
     ImmutableMap<String, Object> sqlContext =

@@ -35,7 +35,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
 import java.io.IOException;
 import java.util.Collections;
 
@@ -204,7 +203,6 @@ public class ControllerImplTest
         ControllerImpl.finalizeClusterStatisticsMergeMode(null, ClusterStatisticsMergeMode.PARALLEL)
     );
   }
-
 
   @After
   public void tearDown() throws Exception
