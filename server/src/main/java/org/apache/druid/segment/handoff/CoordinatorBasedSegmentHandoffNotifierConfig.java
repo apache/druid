@@ -26,7 +26,7 @@ import org.joda.time.Period;
 public class CoordinatorBasedSegmentHandoffNotifierConfig
 {
   @JsonProperty
-  public Duration pollDuration = new Period("PT1M").toStandardDuration();
+  public Duration pollDuration = new Period("PT1S").toStandardDuration();
 
   public Duration getPollDuration()
   {
