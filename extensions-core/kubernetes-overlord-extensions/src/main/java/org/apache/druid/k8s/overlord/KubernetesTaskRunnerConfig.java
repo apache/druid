@@ -241,9 +241,10 @@ public class KubernetesTaskRunnerConfig
     return namespace;
   }
 
+  @Nullable
   public String getOverlordNamespace()
   {
-    return overlordNamespace == null ? namespace : overlordNamespace;
+    return overlordNamespace;
   }
 
   public String getK8sTaskPodNamePrefix()

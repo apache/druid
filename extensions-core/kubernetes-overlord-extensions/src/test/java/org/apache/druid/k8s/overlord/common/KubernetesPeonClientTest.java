@@ -350,26 +350,6 @@ public class KubernetesPeonClientTest
         .withNewMetadata()
         .withName(KUBERNETES_JOB_NAME)
         .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
-        .addToLabels(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, NAMESPACE)
-        .endMetadata()
-        .build();
-
-    client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
-
-    List<Job> jobs = instance.getPeonJobs();
-
-    Assertions.assertEquals(1, jobs.size());
-  }
-
-  @Test
-  void test_getPeonJobs_withJobWithSameNamespaceAndOverlordNamespaceWithoutLabels_returnsPodList()
-  {
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, NAMESPACE, false, serviceEmitter);
-
-    Job job = new JobBuilder()
-        .withNewMetadata()
-        .withName(KUBERNETES_JOB_NAME)
-        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .endMetadata()
         .build();
 
@@ -401,7 +381,7 @@ public class KubernetesPeonClientTest
   }
 
   @Test
-  void test_getPeonJobs_withJobInDifferentNamespaceButOverlordNamespaceNotSpecified_returnsPodList()
+  void test_getPeonJobs_withJobInDifferentNamespaceButOverlordNamespaceNotSpecified_doesNotReturnPodList()
   {
     instance = new KubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
 
@@ -410,6 +390,25 @@ public class KubernetesPeonClientTest
         .withName(KUBERNETES_JOB_NAME)
         .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, "someOtherNamespace")
+        .endMetadata()
+        .build();
+
+    client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
+
+    List<Job> jobs = instance.getPeonJobs();
+
+    Assertions.assertEquals(0, jobs.size());
+  }
+
+  @Test
+  void test_getPeonJobs_withJobInSameNamespaceWithoutLabels_doesNotReturnPodList()
+  {
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, NAMESPACE, false, serviceEmitter);
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(KUBERNETES_JOB_NAME)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .endMetadata()
         .build();
 
