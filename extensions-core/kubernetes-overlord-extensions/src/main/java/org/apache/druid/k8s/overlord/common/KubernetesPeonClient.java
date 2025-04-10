@@ -55,7 +55,7 @@ public class KubernetesPeonClient
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
       String namespace,
-      @Nullable String overlordNamespace,
+      String overlordNamespace,
       boolean debugJobs,
       ServiceEmitter emitter
   )
@@ -65,7 +65,7 @@ public class KubernetesPeonClient
     this.overlordNamespace = overlordNamespace;
     this.debugJobs = debugJobs;
     this.emitter = emitter;
-    this.overlordMaybeInAnotherNamespace = overlordNamespace != null;
+    this.overlordMaybeInAnotherNamespace = !namespace.equals(overlordNamespace);
   }
 
   public KubernetesPeonClient(
@@ -75,7 +75,7 @@ public class KubernetesPeonClient
       ServiceEmitter emitter
   )
   {
-    this(clientApi, namespace, null, debugJobs, emitter);
+    this(clientApi, namespace, namespace, debugJobs, emitter);
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
