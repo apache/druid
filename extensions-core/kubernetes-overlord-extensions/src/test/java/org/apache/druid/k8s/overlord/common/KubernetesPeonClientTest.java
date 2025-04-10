@@ -362,8 +362,10 @@ public class KubernetesPeonClientTest
   }
 
   @Test
-  void test_getPeonJobs_withJobInSameNamespaceDoNotNeedLabelsToBeDiscoverable_returnsPodList()
+  void test_getPeonJobs_withJobWithSameNamespaceAndOverlordNamespaceWithoutLabels_returnsPodList()
   {
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, NAMESPACE, false, serviceEmitter);
+
     Job job = new JobBuilder()
         .withNewMetadata()
         .withName(KUBERNETES_JOB_NAME)
