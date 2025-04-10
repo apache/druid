@@ -55,7 +55,7 @@ public class KubernetesPeonClient
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
       String namespace,
-      String overlordNamespace,
+      @Nullable String overlordNamespace,
       boolean debugJobs,
       ServiceEmitter emitter
   )
