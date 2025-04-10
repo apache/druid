@@ -295,6 +295,10 @@ public abstract class DruidQuidemTestBase
         } else {
           fail("Files differ: " + outFile + " " + inFile + "\n" + diff);
         }
+      } else {
+        if (outFile.exists()) {
+          outFile.delete();
+        }
       }
     }
 
