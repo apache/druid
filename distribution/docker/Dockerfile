@@ -132,4 +132,13 @@ WORKDIR /opt/druid
 # However, since Derby is not used in production, we can safely exclude it from the Druid image.
 RUN rm /opt/druid/lib/derby-10.14.2.0.jar /opt/druid/lib/derbyclient-10.14.2.0.jar /opt/druid/lib/derbynet-10.14.2.0.jar
 
+# Create directory for PostgreSQL certificates
+RUN mkdir -p /opt/druid/.postgresql
+
+# Download RDS root CA certificates for both commercial and us-gov regions
+RUN curl -s https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/druid/.postgresql/root.crt && \
+    curl -s https://truststore.pki.rds.amazonaws.com/global/global-bundle-fedramp.pem -o /opt/druid/.postgresql/root-fedramp.crt && \
+    chmod 644 /opt/druid/.postgresql/root.crt /opt/druid/.postgresql/root-fedramp.crt && \
+    chown -R druid:druid /opt/druid/.postgresql
+
 ENTRYPOINT ["/druid.sh"]
