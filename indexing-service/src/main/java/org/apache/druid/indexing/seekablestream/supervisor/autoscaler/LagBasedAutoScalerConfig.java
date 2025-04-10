@@ -42,6 +42,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final double triggerScaleInFractionThreshold;
   private int taskCountMax;
   private int taskCountMin;
+  private int taskCountStart;
   private final int scaleInStep;
   private final int scaleOutStep;
   private final boolean enableTaskAutoScaler;
@@ -59,6 +60,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("triggerScaleOutFractionThreshold") Double triggerScaleOutFractionThreshold,
           @Nullable @JsonProperty("triggerScaleInFractionThreshold") Double triggerScaleInFractionThreshold,
           @JsonProperty("taskCountMax") Integer taskCountMax,
+          @Nullable @JsonProperty("taskCountStart") Integer taskCountStart,
           @JsonProperty("taskCountMin") Integer taskCountMin,
           @Nullable @JsonProperty("scaleInStep") Integer scaleInStep,
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
@@ -85,9 +87,12 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
         throw new RuntimeException("taskCountMax or taskCountMin can't be null!");
       } else if (taskCountMax < taskCountMin) {
         throw new RuntimeException("taskCountMax can't lower than taskCountMin!");
+      } else if (taskCountStart != null && (taskCountStart > taskCountMax || taskCountStart < taskCountMin)) {
+        throw new RuntimeException("taskCountMin <= taskCountStart <= taskCountMax");
       }
       this.taskCountMax = taskCountMax;
       this.taskCountMin = taskCountMin;
+      this.taskCountStart = taskCountStart != null ? taskCountStart : taskCountMin;
     }
 
     this.scaleInStep = scaleInStep != null ? scaleInStep : 1;
@@ -159,6 +164,13 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @Override
+  @JsonProperty
+  public int getTaskCountStart()
+  {
+    return taskCountStart;
+  }
+
+  @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
     return new LagBasedAutoScaler((SeekableStreamSupervisor) supervisor, spec.getId(), this, spec, emitter);
@@ -204,6 +216,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
             "enableTaskAutoScaler=" + enableTaskAutoScaler +
             ", taskCountMax=" + taskCountMax +
             ", taskCountMin=" + taskCountMin +
+            ", taskCountStart=" + taskCountStart +
             ", minTriggerScaleActionFrequencyMillis=" + minTriggerScaleActionFrequencyMillis +
             ", lagCollectionIntervalMillis=" + lagCollectionIntervalMillis +
             ", lagCollectionIntervalMillis=" + lagCollectionIntervalMillis +
