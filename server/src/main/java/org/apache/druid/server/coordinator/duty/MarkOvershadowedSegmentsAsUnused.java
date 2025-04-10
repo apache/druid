@@ -83,7 +83,7 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
     final DruidCluster cluster = params.getDruidCluster();
     final Map<String, SegmentTimeline> timelines = new HashMap<>();
 
-    cluster.getHistoricals().values().forEach(
+    cluster.getManagedHistoricals().values().forEach(
         historicals -> historicals.forEach(
             historical -> addSegmentsFromServer(historical, timelines)
         )

@@ -17,17 +17,39 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common;
+package org.apache.druid.query;
 
-import javax.annotation.Nullable;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.SegmentReference;
 
-public interface Cacheable
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+
+/**
+ * Leaf {@link DataSource}-s have no inputs.
+ */
+public abstract class LeafDataSource implements DataSource
 {
-  /**
-   * Get a byte array used as a cache key.
-   *
-   * @return bytes to be used as cache key - or null if this object should not be cached.
-   */
-  @Nullable
-  byte[] getCacheKey();
+  @Override
+  public final List<DataSource> getChildren()
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public final DataSource withChildren(List<DataSource> children)
+  {
+    if (!children.isEmpty()) {
+      throw new IAE("Cannot accept children");
+    }
+
+    return this;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  {
+    return Function.identity();
+  }
 }

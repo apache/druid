@@ -248,12 +248,10 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).once();
-    // We're expecting the data source in the query to still be TableDataSource.
-    // Any other DataSource would throw AssertionError.
-    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
-        queryMatchDataSource(TableDataSource.create(DATASOURCE)),
-        EasyMock.anyObject()
-    )).andReturn(runner).once();
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(runner)
+            .once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
     replayAll();
 
@@ -277,13 +275,18 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
-            .andReturn(toolChest).once();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).once();
     replayAll();
 
     QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
-    Assert.assertThrows(Exception.class, () -> lifecycle.runSimple(query, authenticationResult, authorizationResult));
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> lifecycle.runSimple(query, authenticationResult, authorizationResult)
+    );
+    Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals("You do not have permission to run a segmentMetadata query on table[some_datasource].", e.getMessage());
   }
 
   @Test

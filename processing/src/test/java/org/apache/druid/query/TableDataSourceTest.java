@@ -66,7 +66,7 @@ public class TableDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(fooDataSource.isConcrete());
+    Assert.assertTrue(fooDataSource.isProcessable());
   }
 
   @Test
