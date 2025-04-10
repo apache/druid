@@ -38,6 +38,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
@@ -103,6 +104,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.BinaryOperator;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
@@ -294,7 +296,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
           query,
           strategy,
           useCache,
-          populateCache
+          populateCache,
+          dynamicConfigurationManager
       );
     }
 
@@ -472,22 +475,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
 
-          boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
-          Set<String> serversToIgnore;
-          if (queryUnmanagedServers) {
-            // If this is a test query, ignore source servers.
-            serversToIgnore = dynamicConfigurationManager.getSourceClusterServers();
-          } else {
-            serversToIgnore = dynamicConfigurationManager.getTargetCloneServers();
-          }
-
-          ServerSelector filteredServer = server.createFilteredServerSelector(o -> !serversToIgnore.contains(o));
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
               holder.getVersion(),
               chunk.getChunkNumber()
           );
-          segments.add(new SegmentServerSelector(filteredServer, segment));
+          segments.add(new SegmentServerSelector(server, segment));
         }
       }
       return segments;
@@ -612,7 +605,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
-        final QueryableDruidServer queryableDruidServer = segmentServer.getServer().pick(query);
+        Supplier<Set<String>> supplier = () -> {
+          boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
+          if (queryUnmanagedServers) {
+            // If this is a test query, ignore source servers.
+            return dynamicConfigurationManager.getSourceClusterServers();
+          } else {
+            return dynamicConfigurationManager.getTargetCloneServers();
+          }
+        };
+
+        final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
+                                                                       .pick(query, new HistoricalFilter(supplier));
 
         if (queryableDruidServer == null) {
           log.makeAlert(
@@ -791,17 +795,20 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
     private final boolean isSegmentLevelCachingEnable;
+    private final DynamicConfigurationManager dynamicConfigurationManager;
 
     CacheKeyManager(
         final Query<T> query,
         final CacheStrategy<T, Object, Query<T>> strategy,
         final boolean useCache,
-        final boolean populateCache
+        final boolean populateCache,
+        final DynamicConfigurationManager dynamicConfigurationManager
     )
     {
 
       this.query = query;
       this.strategy = strategy;
+      this.dynamicConfigurationManager = dynamicConfigurationManager;
       this.isSegmentLevelCachingEnable = ((populateCache || useCache)
                                           && !query.context().isBySegment());   // explicit bySegment queries are never cached
 
@@ -830,7 +837,16 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        QueryableDruidServer queryableServer = p.getServer().pick(query);
+        Supplier<Set<String>> supplier = () -> {
+          boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
+          if (queryUnmanagedServers) {
+            // If this is a test query, ignore source servers.
+            return dynamicConfigurationManager.getSourceClusterServers();
+          } else {
+            return dynamicConfigurationManager.getTargetCloneServers();
+          }
+        };
+        QueryableDruidServer queryableServer = p.getServer().pick(query, new HistoricalFilter(supplier));
         if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;
