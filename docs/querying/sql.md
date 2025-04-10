@@ -393,7 +393,7 @@ written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL 
 
 ## SET statements
 
-Druid SQL over HTTP supports including 0 or more `SET` statements separated by `;` preceeding the statement to execute
+Druid SQL over HTTP supports including 0 or more `SET` statements separated by `;` preceding the statement to execute
 in order to assign [SQL query context parameter values](../querying/sql-query-context.md).
 
 The syntax of a `SET` statement is
@@ -401,7 +401,7 @@ The syntax of a `SET` statement is
 ```sql
 SET identifier = literal
 ```
-
+g
 For example,
 
 ```sql
