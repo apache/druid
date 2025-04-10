@@ -333,15 +333,19 @@ The following metrics are emitted only when [segment metadata caching](../config
 |Metric|Description|Dimensions|
 |------|-----------|----------|
 |`segment/used/count`|Number of used segments currently present in the metadata store.|`dataSource`|
-|`segment/unused/count`|Number of unused segments currently present in the metadata store.|`dataSource`|
 |`segment/pending/count`|Number of pending segments currently present in the metadata store.|`dataSource`|
-|`segment/metadataCache/transactions`|Number of read or write transactions performed on the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/interval/count`|Total number of intervals present in the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/used/count`|Total number of used segments present in the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/pending/count`|Total number of pending segments present in the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/transactions/readOnly`|Number of read-only transactions performed on the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/transactions/readWrite`|Number of read-write transactions performed on the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/transactions/writeOnly`|Number of write-only transactions performed on the cache for a single datasource. These transactions happen only if the cache is operating in mode `ifSynced` and the first sync on the leader Overlord is not complete yet.|`dataSource`|
 |`segment/metadataCache/sync/time`|Number of milliseconds taken for the cache to sync with the metadata store.||
+|`segment/metadataCache/dataSource/deleted`|Indicates that a datasource has no used or pending segments anymore and has been removed from the cache.|`dataSource`|
 |`segment/metadataCache/deleted`|Total number of segments deleted from the cache during the latest sync.||
 |`segment/metadataCache/skipped`|Total number of unparseable segment records that were skipped in the latest sync.||
 |`segment/metadataCache/used/stale`|Number of used segments in the cache which are out-of-date and need to be refreshed.|`dataSource`|
 |`segment/metadataCache/used/updated`|Number of used segments updated in the cache during the latest sync.|`dataSource`|
-|`segment/metadataCache/unused/updated`|Number of unused segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/deleted`|Number of pending segments deleted from the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
