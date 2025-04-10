@@ -218,7 +218,7 @@ public abstract class DruidQuidemTestBase
     final String testName = testConfig.getTestName();
 
     File inFile = new File(getTestRoot(), testConfig.fileName);
-    final File outFile = new File(inFile.getParentFile(), testName + ".iq.out");
+    final File outFile = new File(getTestRoot(), testName + ".out");
     try (AutoCloseable closeable = Threads.withThreadName(testName)) {
       druidQuidemRunner.run(inFile, outFile, testConfig.componentSupplierName);
     }
