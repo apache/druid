@@ -126,6 +126,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
+  private final DynamicConfigurationManager dynamicConfigurationManager;
 
   @Inject
   public CachingClusteredClient(
@@ -139,7 +140,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BrokerParallelMergeConfig parallelMergeConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      DynamicConfigurationManager dynamicConfigurationManager
   )
   {
     this.conglomerate = conglomerate;
@@ -153,6 +155,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.emitter = emitter;
+    this.dynamicConfigurationManager = dynamicConfigurationManager;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -468,12 +471,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
+
+          boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
+          Set<String> serversToIgnore;
+          if (queryUnmanagedServers) {
+            // If this is a test query, ignore source servers.
+            serversToIgnore = dynamicConfigurationManager.getSourceClusterServers();
+          } else {
+            serversToIgnore = dynamicConfigurationManager.getTargetCloneServers();
+          }
+
+          ServerSelector filteredServer = server.createFilteredServerSelector(o -> !serversToIgnore.contains(o));
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
               holder.getVersion(),
               chunk.getChunkNumber()
           );
-          segments.add(new SegmentServerSelector(server, segment));
+          segments.add(new SegmentServerSelector(filteredServer, segment));
         }
       }
       return segments;

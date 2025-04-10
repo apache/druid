@@ -29,6 +29,7 @@ import com.google.inject.name.Names;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.CachingClusteredClient;
+import org.apache.druid.client.DynamicConfigurationManager;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
@@ -59,6 +60,7 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
+import org.apache.druid.server.DruidInternalDynamicConfigResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
@@ -160,6 +162,7 @@ public class CliBroker extends ServerRunnable
           binder.bind(SubqueryCountStatsProvider.class).toInstance(new SubqueryCountStatsProvider());
           Jerseys.addResource(binder, BrokerResource.class);
           Jerseys.addResource(binder, ClientInfoResource.class);
+          Jerseys.addResource(binder, DruidInternalDynamicConfigResource.class);
 
           LifecycleModule.register(binder, BrokerQueryResource.class);
 
@@ -167,6 +170,7 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
+          binder.bind(DynamicConfigurationManager.class).in(ManageLifecycle.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
           Jerseys.addResource(binder, HistoricalResource.class);

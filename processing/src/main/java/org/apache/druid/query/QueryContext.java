@@ -552,6 +552,14 @@ public class QueryContext
     );
   }
 
+  public boolean getQueryUnmanagedServers()
+  {
+    return getBoolean(
+        QueryContexts.QUERY_UNMANAGED_SERVERS,
+        QueryContexts.DEFAULT_QUERY_UNMANAGED_SERVERS
+    );
+  }
+
   public boolean getEnableRewriteJoinToFilter()
   {
     return getBoolean(

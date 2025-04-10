@@ -36,6 +36,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -60,6 +62,36 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+  }
+
+  private ServerSelector(
+      DataSegment segment,
+      TierSelectorStrategy strategy,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> realtimeServers
+  )
+  {
+    this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
+    this.strategy = strategy;
+    this.historicalServers = historicalServers;
+    this.realtimeServers = realtimeServers;
+  }
+
+  public ServerSelector createFilteredServerSelector(Predicate<String> filter)
+  {
+    synchronized (this) {
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredHistoricals = new Int2ObjectRBTreeMap<>();
+      for (int priority : historicalServers.keySet()) {
+        Set<QueryableDruidServer> servers = historicalServers.get(priority);
+        filteredHistoricals.put(priority,
+                                servers.stream()
+                                       .filter(server -> filter.test(server.getServer().getHost()))
+                                       .collect(Collectors.toSet())
+        );
+      }
+
+      return new ServerSelector(segment.get(), strategy, filteredHistoricals, new Int2ObjectRBTreeMap<>(realtimeServers));
+    }
   }
 
   public DataSegment getSegment()
