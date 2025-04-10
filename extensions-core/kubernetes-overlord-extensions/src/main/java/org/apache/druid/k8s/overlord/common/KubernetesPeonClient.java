@@ -47,7 +47,6 @@ public class KubernetesPeonClient
 
   private final KubernetesClientApi clientApi;
   private final String namespace;
-  private final boolean overlordMaybeInAnotherNamespace;
   private final String overlordNamespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
@@ -65,7 +64,6 @@ public class KubernetesPeonClient
     this.overlordNamespace = overlordNamespace;
     this.debugJobs = debugJobs;
     this.emitter = emitter;
-    this.overlordMaybeInAnotherNamespace = overlordNamespace != null;
   }
 
   public KubernetesPeonClient(
@@ -198,10 +196,10 @@ public class KubernetesPeonClient
 
   public List<Job> getPeonJobs()
   {
-    if (overlordMaybeInAnotherNamespace) {
-      return getPeonJobsWithOverlordNamespaceKeyLabels();
-    }
-    return getPeonJobsWithoutOverlordNamespaceKeyLabels();
+    boolean overlordNamespaceNotConfigured = this.overlordNamespace == null;
+    return overlordNamespaceNotConfigured
+           ? getPeonJobsWithoutOverlordNamespaceKeyLabels()
+           : getPeonJobsWithOverlordNamespaceKeyLabels();
   }
 
   private List<Job> getPeonJobsWithoutOverlordNamespaceKeyLabels()

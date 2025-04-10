@@ -745,16 +745,20 @@ If you are running multiple Druid clusters and would like to have a dedicated na
 
 - `druid.indexer.runner.namespace`: The namespace where the task pods will run. It can be the same as the namespace where your Druid cluster is deployed, or different from it. In the latter case, you need to define the following `overlordNamespace`.
 - `druid.indexer.runner.overlordNamespace`: The namespace where the Overlord resides. This must be defined when tasks are scheduled in different namespace. When unprovided, Druid will assume that the entire cluster operates within a single namespace and will default to `druid.indexer.runner.namespace`.
-- `druid.indexer.runner.k8sTaskPodNamePrefix`: (Optional) A user-defined task name prefix that helps in distinguishing which task pods are being started by which Overlord or Druid cluster. <br> When configuring the `druid.indexer.runner.k8sTaskPodNamePrefix`, you should note that:
-  - The prefix will cut off at 30 characters, as the task pod names must respect a character limit of 63 in Kubernetes.
-  - Special characters `: - . _` will be ignored.
-  - The prefix will be converted to lowercase.  
 
-Warning: When `druid.indexer.runner.overlordNamespace` or `druid.indexer.runner.k8sTaskPodNamePrefix` is set, Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces. Users should ensure that all running tasks are stopped when changing these values. Failure to do so will cause the Overlord to lose track of running tasks, and re-launch them. This may lead to duplicate data and possibly metadata inconsistency issues.
+Warning: Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces. When `druid.indexer.runner.overlordNamespace` is set, users should ensure that all running tasks are stopped when changing these values. Failure to do so will cause the Overlord to lose track of running tasks, and re-launch them. This may lead to duplicate data and possibly metadata inconsistency issues.
+
+#### Differentiating Task Pods Created From Multiple Namespaces
 
 When we have task pods started by Overlord servers of different Druid clusters, running in different K8S namespaces, it will be difficult to tell which task pods are being started by which overlord or Druid cluster. You can specify a task name prefix, `druid.indexer.runner.k8sTaskPodNamePrefix`, to apply your specified prefix to all task pods created by your cluster.
 
 After configuration, you can witness the change from `coordinatorissuedcompactdataso-0e74d5132781cc950eecf04--1-vbx6t` to `yourtaskprefix-0e74d5132781cc950eecf04--1-vbx6t` by either doing `kubectl get pods` or by viewing the "Location" column under the web console.
+
+When configuring the `druid.indexer.runner.k8sTaskPodNamePrefix`, you should note that:
+- The prefix will cut off at 30 characters, as the task pod names must respect a character limit of 63 in Kubernetes.
+- Special characters `: - . _` will be ignored.
+- The prefix will be converted to lowercase.
+- All running tasks must be stopped during configuration. Failure to do so will cause the Overlord to lose track of running tasks, and re-launch them. This may lead to duplicate data and possibly metadata inconsistency issues.
 
 ##### Dealing with ZooKeeper Problems
 
