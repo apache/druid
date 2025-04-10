@@ -155,37 +155,7 @@ public class DruidPlanner implements Closeable
     catch (SqlParseException e1) {
       throw translateException(e1);
     }
-    if (root instanceof SqlNodeList) {
-      final SqlNodeList nodeList = (SqlNodeList) root;
-      if (!allowSetStatementsToBuildContext && nodeList.size() > 1) {
-        throw InvalidSqlInput.exception("Multiple statements detected in SQL string[%s], but only a single statement is supported", sql);
-      }
-      final Map<String, Object> contextMap = new LinkedHashMap<>();
-      boolean isMissingDruidStatementNode = true;
-      // convert 0 or more SET statements into a Map of stuff to add to the query context
-      for (int i = 0; i < nodeList.size(); i++) {
-        SqlNode sqlNode = nodeList.get(i);
-        if (sqlNode instanceof SqlSetOption) {
-          final SqlSetOption sqlSetOption = (SqlSetOption) sqlNode;
-          if (!(sqlSetOption.getValue() instanceof SqlLiteral)) {
-            throw InvalidSqlInput.exception("Invalid sql SET statement[%s], value must be a literal", sqlSetOption);
-          }
-          final SqlLiteral value = (SqlLiteral) sqlSetOption.getValue();
-          contextMap.put(sqlSetOption.getName().getSimple(), SqlResults.coerce(plannerContext.getJsonMapper(), SqlResults.Context.fromPlannerContext(plannerContext), value.getValue(), value.getTypeName(), "set"));
-        } else if (i < nodeList.size() - 1) {
-          // only SET statements can appear before the last statement
-          throw InvalidSqlInput.exception("Invalid sql statement list[%s] - only SET statments are permitted before the final statement", sql);
-        } else {
-          // last SqlNode
-          root = sqlNode;
-          isMissingDruidStatementNode = false;
-        }
-      }
-      if (isMissingDruidStatementNode) {
-        throw InvalidSqlInput.exception("Invalid sql statement list[%s] - statement list must end with a statement that is not a SET", sql);
-      }
-      plannerContext.addAllToQueryContext(contextMap);
-    }
+    root = processStatementList(root, sql);
     root = rewriteParameters(root);
     hook.captureSqlNode(root);
     handler = createHandler(root);
@@ -320,6 +290,49 @@ public class DruidPlanner implements Closeable
   public void close()
   {
     planner.close();
+  }
+
+  private SqlNode processStatementList(SqlNode root, String sql)
+  {
+    if (root instanceof SqlNodeList) {
+      final SqlNodeList nodeList = (SqlNodeList) root;
+      if (!allowSetStatementsToBuildContext && nodeList.size() > 1) {
+        throw InvalidSqlInput.exception("Multiple statements detected in SQL string[%s], but only a single statement is supported",
+                                        sql
+        );
+      }
+      final Map<String, Object> contextMap = new LinkedHashMap<>();
+      boolean isMissingDruidStatementNode = true;
+      // convert 0 or more SET statements into a Map of stuff to add to the query context
+      for (int i = 0; i < nodeList.size(); i++) {
+        SqlNode sqlNode = nodeList.get(i);
+        if (sqlNode instanceof SqlSetOption) {
+          final SqlSetOption sqlSetOption = (SqlSetOption) sqlNode;
+          if (!(sqlSetOption.getValue() instanceof SqlLiteral)) {
+            throw InvalidSqlInput.exception("Invalid sql SET statement[%s], value must be a literal", sqlSetOption);
+          }
+          final SqlLiteral value = (SqlLiteral) sqlSetOption.getValue();
+          contextMap.put(sqlSetOption.getName().getSimple(), SqlResults.coerce(plannerContext.getJsonMapper(), SqlResults.Context.fromPlannerContext(plannerContext), value.getValue(), value.getTypeName(), "set"));
+        } else if (i < nodeList.size() - 1) {
+          // only SET statements can appear before the last statement
+          throw InvalidSqlInput.exception("Invalid sql statement list[%s] - only SET statments are permitted before the final statement",
+                                          sql
+          );
+        } else {
+          // last SqlNode
+          root = sqlNode;
+          isMissingDruidStatementNode = false;
+        }
+      }
+      if (isMissingDruidStatementNode) {
+        throw InvalidSqlInput.exception(
+            "Invalid sql statement list[%s] - statement list must end with a statement that is not a SET",
+            sql
+        );
+      }
+      plannerContext.addAllToQueryContext(contextMap);
+    }
+    return root;
   }
 
   protected class HandlerContextImpl implements SqlStatementHandler.HandlerContext

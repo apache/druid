@@ -401,7 +401,7 @@ The syntax of a `SET` statement is
 ```sql
 SET identifier = literal
 ```
-g
+
 For example,
 
 ```sql

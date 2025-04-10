@@ -28,6 +28,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.Cache;
@@ -100,6 +101,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.DirectStatement;
+import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -1328,6 +1330,31 @@ public class SqlTestFramework
               hook,
               true
           );
+        }
+      };
+    }
+
+    @Override
+    public PreparedStatement preparedStatement(SqlQueryPlus sqlRequest)
+    {
+      return new PreparedStatement(toolbox, sqlRequest)
+      {
+        @Override
+        protected DruidPlanner getPlanner()
+        {
+          return plannerFactory.createPlanner(
+              engine,
+              queryPlus.sql(),
+              queryContext,
+              hook,
+              true
+          );
+        }
+
+        @Override
+        public DirectStatement execute(List<TypedValue> parameters)
+        {
+          return directStatement(queryPlus.withParameters(parameters));
         }
       };
     }
