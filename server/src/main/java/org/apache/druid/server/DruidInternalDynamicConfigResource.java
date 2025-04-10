@@ -30,14 +30,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Path("/druid-internal/v1/dynamicConfiguration")
 public class DruidInternalDynamicConfigResource
 {
-  // TODO: Probably a better way
-  private final AtomicReference<CoordinatorDynamicConfig> reference =
-      new AtomicReference<>(CoordinatorDynamicConfig.builder().build());
   private final DynamicConfigurationManager dynamicConfigurationManager;
 
   @Inject
@@ -51,16 +47,15 @@ public class DruidInternalDynamicConfigResource
   @Path("/coordinatorDynamicConfig")
   public Response getDatasource()
   {
-    return Response.ok(reference.get()).build();
+    return Response.ok(dynamicConfigurationManager.getConfig()).build();
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Path("/coordinatorDynamicConfig")
-  public Response getDatasource(final CoordinatorDynamicConfig.Builder dynamicConfigBuilder)
+  public Response getDatasource(final CoordinatorDynamicConfig dynamicConfig)
   {
-    reference.set(dynamicConfigBuilder.build(reference.get()));
-    dynamicConfigurationManager.updateCloneServers(reference.get());
-    return Response.ok().build();
+    dynamicConfigurationManager.updateCloneServers(dynamicConfig);
+    return Response.ok(dynamicConfigurationManager.getConfig()).build();
   }
 }
