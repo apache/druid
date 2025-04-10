@@ -48,7 +48,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
@@ -321,12 +320,8 @@ public class QueryLifecycle
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
-      if (this.baseQuery instanceof SegmentMetadataQuery && authorizationResult.allowAccessWithNoRestriction()) {
-        // skip restrictions mapping for SegmentMetadataQuery from user with no restriction
-      } else {
-        this.baseQuery = this.baseQuery.withDataSource(this.baseQuery.getDataSource()
-                                                                     .withPolicies(authorizationResult.getPolicyMap()));
-      }
+      this.baseQuery = this.baseQuery.withDataSource(this.baseQuery.getDataSource()
+                                                                   .withPolicies(authorizationResult.getPolicyMap()));
     }
 
     this.authenticationResult = authenticationResult;
