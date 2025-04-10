@@ -81,9 +81,9 @@ public abstract class WrappedSegmentReference implements SegmentReference
   }
 
   @Override
-  public boolean validate(PolicyEnforcer policyEnforcer)
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
   {
-    return delegate.validate(policyEnforcer);
+    delegate.validateOrElseThrow(policyEnforcer);
   }
 
   @Override

@@ -138,9 +138,9 @@ public class HashJoinSegment implements SegmentReference
   }
 
   @Override
-  public boolean validate(PolicyEnforcer policyEnforcer)
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
   {
-    return baseSegment.validate(policyEnforcer);
+    baseSegment.validateOrElseThrow(policyEnforcer);
   }
 
   @Override

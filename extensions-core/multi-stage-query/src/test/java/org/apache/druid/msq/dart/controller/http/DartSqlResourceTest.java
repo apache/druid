@@ -51,6 +51,7 @@ import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
@@ -215,6 +216,7 @@ public class DartSqlResourceTest extends MSQTestBase
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 

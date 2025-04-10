@@ -128,14 +128,6 @@ public class MSQTaskQueryMaker implements QueryMaker
   {
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
-    if (!druidQuery.getQuery().getDataSource().validate(policyEnforcer)) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.FORBIDDEN)
-                          .build(
-                              "Failed security validation with dataSource [%s]",
-                              druidQuery.getQuery().getDataSource()
-                          );
-    }
 
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 

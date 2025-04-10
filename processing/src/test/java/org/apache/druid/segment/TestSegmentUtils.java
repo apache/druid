@@ -40,6 +40,7 @@ import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -120,14 +121,14 @@ public class TestSegmentUtils
     }
   }
 
-  public static class SegmentForTesting implements Segment
+  public static class SegmentForTesting extends QueryableIndexSegment implements Segment
   {
     private final String datasource;
     private final String version;
     private final Interval interval;
     private final Object lock = new Object();
     private volatile boolean closed = false;
-    private final QueryableIndex index = new QueryableIndex()
+    private static final QueryableIndex INDEX = new QueryableIndex()
     {
       @Override
       public Interval getDataInterval()
@@ -194,9 +195,10 @@ public class TestSegmentUtils
 
     public SegmentForTesting(String datasource, Interval interval, String version)
     {
+      super(INDEX, SegmentId.of(datasource, interval, version, 0));
       this.datasource = datasource;
-      this.version = version;
       this.interval = interval;
+      this.version = version;
     }
 
     public String getVersion()
@@ -229,13 +231,24 @@ public class TestSegmentUtils
     @Override
     public QueryableIndex asQueryableIndex()
     {
-      return index;
+      return INDEX;
     }
 
     @Override
     public CursorFactory asCursorFactory()
     {
-      return new QueryableIndexCursorFactory(index);
+      return new QueryableIndexCursorFactory(INDEX);
+    }
+
+    @Override
+    public <T> T as(@Nonnull Class<T> clazz)
+    {
+      if (clazz.equals(QueryableIndex.class)) {
+        return (T) asQueryableIndex();
+      } else if (clazz.equals(CursorFactory.class)) {
+        return (T) asCursorFactory();
+      }
+      return null;
     }
 
     @Override

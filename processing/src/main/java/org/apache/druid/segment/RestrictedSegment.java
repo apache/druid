@@ -111,9 +111,9 @@ public class RestrictedSegment implements SegmentReference
   }
 
   @Override
-  public boolean validate(PolicyEnforcer policyEnforcer)
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
   {
-    return policyEnforcer.validate(this, policy);
+    policyEnforcer.validateOrElseThrow(delegate, policy);
   }
 
   @Override

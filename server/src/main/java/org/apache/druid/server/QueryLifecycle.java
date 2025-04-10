@@ -48,6 +48,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
@@ -98,6 +99,7 @@ public class QueryLifecycle
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
+  private final PolicyEnforcer policyEnforcer;
   private final long startMs;
   private final long startNs;
 
@@ -119,6 +121,7 @@ public class QueryLifecycle
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
       final long startMs,
       final long startNs
   )
@@ -131,6 +134,7 @@ public class QueryLifecycle
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
+    this.policyEnforcer = policyEnforcer;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -320,8 +324,11 @@ public class QueryLifecycle
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
-      this.baseQuery = this.baseQuery.withDataSource(this.baseQuery.getDataSource()
-                                                                   .withPolicies(authorizationResult.getPolicyMap()));
+      this.baseQuery = this.baseQuery.withDataSource(baseQuery.getDataSource()
+                                                              .withPolicies(
+                                                                  authorizationResult.getPolicyMap(),
+                                                                  policyEnforcer
+                                                              ));
     }
 
     this.authenticationResult = authenticationResult;

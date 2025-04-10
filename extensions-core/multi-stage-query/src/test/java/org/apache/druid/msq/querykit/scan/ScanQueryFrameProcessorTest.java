@@ -47,23 +47,14 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.RestrictedDataSource;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.policy.NoRestrictionPolicy;
-import org.apache.druid.query.policy.NoopPolicyEnforcer;
-import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
@@ -71,7 +62,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
@@ -82,33 +72,6 @@ import java.util.function.Function;
 
 public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 {
-  private CursorFactory cursorFactory;
-  private ReadableInput baseInput;
-  private FrameWriterFactory frameWriterFactory;
-  private BlockingQueueFrameChannel outputChannel;
-
-  @Override
-  @Before
-  public void setUp() throws Exception
-  {
-    final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
-    cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
-    baseInput = makeChannelFromCursorFactory(cursorFactory, ImmutableList.of(), 1000);
-
-    // Limit output frames to 1 row to ensure we test edge cases
-    frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-            new QueryableIndexCursorFactory(queryableIndex).getRowSignature(),
-            Collections.emptyList(),
-            false
-        ),
-        1
-    );
-    outputChannel = BlockingQueueFrameChannel.minimal();
-
-    super.setUp();
-  }
 
   @Test
   public void test_runWithSegments() throws Exception
@@ -150,7 +113,6 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         query,
         null,
         new DefaultObjectMapper(),
-        NoopPolicyEnforcer.instance(),
         ReadableInput.segment(
             new SegmentWithDescriptor(
                 () -> new StupidResourceHolder<>(new CompleteSegment(null, new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")))),
@@ -250,7 +212,6 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         query,
         null,
         new DefaultObjectMapper(),
-        NoopPolicyEnforcer.instance(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
         Function.identity(),
         new ResourceHolder<>()
@@ -292,82 +253,6 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
             "Expected eternity intervals, but got[[2001-01-01T00:00:00.000Z/2011-01-01T00:00:00.000Z, "
             + "2011-01-02T00:00:00.000Z/2021-01-01T00:00:00.000Z]]"))
-    );
-  }
-
-  @Test
-  public void test_runWithPolicyEnforcerThrowsOnValidationFailure() throws Exception
-  {
-    // Arrange
-    QuerySegmentSpec querySegmentSpec = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
-    DataSource dataSource = TableDataSource.create("test");
-    ScanQuery query =
-        Druids.newScanQueryBuilder()
-              .dataSource(dataSource)
-              .intervals(querySegmentSpec)
-              .columns(cursorFactory.getRowSignature().getColumnNames())
-              .build();
-    Function<SegmentReference, SegmentReference> mapFn = dataSource.createSegmentMapFunction(query);
-
-    PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
-    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
-        query,
-        null,
-        new DefaultObjectMapper(),
-        policyEnforcer,
-        baseInput,
-        mapFn,
-        ResourceHolder.fromCloseable(outputChannel.writable()),
-        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {
-        })
-    );
-    // Act
-    exec.runFully(processor, null);
-    final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
-        outputChannel.readable(),
-        FrameReader.create(cursorFactory.getRowSignature())
-    );
-    // Assert
-    Exception e = Assert.assertThrows(Exception.class, () -> rowsFromProcessor.toList());
-    Assert.assertTrue(e.getCause().getMessage().contains("Failed security validation"));
-  }
-
-  @Test
-  public void test_runWithPolicyEnforcerPassedValidation() throws Exception
-  {
-    // Arrange
-    QuerySegmentSpec querySegmentSpec = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
-    DataSource dataSource = RestrictedDataSource.create(TableDataSource.create("test"), NoRestrictionPolicy.instance());
-    ScanQuery query =
-        Druids.newScanQueryBuilder()
-              .dataSource(dataSource)
-              .intervals(querySegmentSpec)
-              .columns(cursorFactory.getRowSignature().getColumnNames())
-              .build();
-    Function<SegmentReference, SegmentReference> mapFn = dataSource.createSegmentMapFunction(query);
-
-    PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
-    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
-        query,
-        null,
-        new DefaultObjectMapper(),
-        policyEnforcer,
-        baseInput,
-        mapFn,
-        ResourceHolder.fromCloseable(outputChannel.writable()),
-        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {
-        })
-    );
-    // Act
-    exec.runFully(processor, null);
-    final Sequence<List<Object>> rowsFromProcessorOnRestricted = FrameTestUtil.readRowsFromFrameChannel(
-        outputChannel.readable(),
-        FrameReader.create(cursorFactory.getRowSignature())
-    );
-    // Assert
-    FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromCursorFactory(cursorFactory, cursorFactory.getRowSignature(), false),
-        rowsFromProcessorOnRestricted
     );
   }
 }

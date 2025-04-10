@@ -21,6 +21,7 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -39,10 +40,10 @@ public class RestrictAllTablesPolicyEnforcerTest
   @Test
   public void test_serialize() throws Exception
   {
-    RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(NoRestrictionPolicy.class.getName()));
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
-    String expected = "{\"type\":\"restrictAllTables\",\"allowedPolicies\":[]}";
+    String expected = "{\"type\":\"restrictAllTables\",\"allowedPolicies\":[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]}";
     Assert.assertEquals(expected, jsonMapper.writeValueAsString(policyEnforcer));
   }
 
@@ -59,20 +60,6 @@ public class RestrictAllTablesPolicyEnforcerTest
   }
 
   @Test
-  public void test_unrecognizedClass() throws Exception
-  {
-    Exception e = Assert.assertThrows(
-        Exception.class,
-        () -> new RestrictAllTablesPolicyEnforcer(ImmutableList.of("UnrecognizedClass"))
-    );
-    Assert.assertEquals(
-        "Unrecognized class[[UnrecognizedClass]], ensure that the class is loaded and is a subclass of Policy",
-        e.getMessage()
-    );
-
-  }
-
-  @Test
   public void test_validate() throws Exception
   {
     RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
@@ -80,32 +67,58 @@ public class RestrictAllTablesPolicyEnforcerTest
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
 
-    Assert.assertFalse(policyEnforcer.validate(table, null));
-    Assert.assertTrue(policyEnforcer.validate(restricted, policy));
+    Assert.assertFalse(policyEnforcer.validate(null));
+    Assert.assertTrue(policyEnforcer.validate(policy));
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> policyEnforcer.validateOrElseThrow(table, null)
+    );
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assert.assertEquals(
+        "Failed security validation with dataSource [table]",
+        e.getMessage()
+    );
+    policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
 
     Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
-    Assert.assertFalse(policyEnforcer.validate(segment, null));
-    Assert.assertTrue(policyEnforcer.validate(restrictedSegment, policy));
+    Assert.assertFalse(policyEnforcer.validate(null));
+    Assert.assertTrue(policyEnforcer.validate(policy));
+    final DruidException e2 = Assert.assertThrows(
+        DruidException.class,
+        () -> policyEnforcer.validateOrElseThrow(segment, null)
+    );
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e2.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e2.getTargetPersona());
+    Assert.assertEquals(
+        "Failed security validation with segment [table_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_1]",
+        e2.getMessage()
+    );
+    policyEnforcer.validateOrElseThrow(restrictedSegment, policy);
   }
 
   @Test
   public void test_validate_withAllowedPolicies() throws Exception
   {
     RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
-        "NoRestrictionPolicy"));
+        NoRestrictionPolicy.class.getName()));
     RowFilterPolicy policy = RowFilterPolicy.from(new NullFilter("some-col", null));
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
 
-    Assert.assertFalse(policyEnforcer.validate(table, null));
-    Assert.assertFalse(policyEnforcer.validate(restricted, policy));
+    Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(table, null));
+    Assert.assertThrows(
+        DruidException.class,
+        () -> policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy())
+    );
+    policyEnforcer.validateOrElseThrow(table, NoRestrictionPolicy.instance());
 
     Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
-    RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
-    Assert.assertFalse(policyEnforcer.validate(segment, null));
-    Assert.assertFalse(policyEnforcer.validate(restrictedSegment, policy));
+    Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, null));
+    Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, policy));
+    policyEnforcer.validateOrElseThrow(segment, NoRestrictionPolicy.instance());
   }
 }

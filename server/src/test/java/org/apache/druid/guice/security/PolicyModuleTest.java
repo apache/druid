@@ -94,7 +94,7 @@ public class PolicyModuleTest
   {
     Properties properties = new Properties();
     properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
-    properties.setProperty("druid.policy.enforcer.allowedPolicies", "[\"NoRestrictionPolicy\"]");
+    properties.setProperty("druid.policy.enforcer.allowedPolicies", "[\"some-policy-class\"]");
     PolicyEnforcer policyEnforcer = Guice.createInjector(
         binder -> binder.bind(Properties.class).toInstance(properties),
         new DruidGuiceExtensions(),
@@ -104,7 +104,7 @@ public class PolicyModuleTest
     ).getInstance(Key.get(PolicyEnforcer.class));
 
     Assert.assertNotNull(policyEnforcer);
-    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(ImmutableList.of("NoRestrictionPolicy")), policyEnforcer);
+    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(ImmutableList.of("some-policy-class")), policyEnforcer);
   }
 
   @Test

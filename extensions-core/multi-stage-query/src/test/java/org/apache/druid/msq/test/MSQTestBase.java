@@ -591,6 +591,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         CalciteTests.createJoinableFactoryWrapper(),
         catalogResolver,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 

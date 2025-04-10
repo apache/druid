@@ -130,7 +130,7 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
+  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap, PolicyEnforcer policyEnforcer)
   {
     if (!policyMap.containsKey(base.getName())) {
       throw new ISE("Missing policy check result for table [%s]", base.getName());
@@ -158,13 +158,8 @@ public class RestrictedDataSource implements DataSource
     }
     // The only happy path is, newPolicy is NoRestrictionPolicy, which means this comes from an anthenticated and
     // authorized druid-internal request.
+    policyEnforcer.validateOrElseThrow(base, policy);
     return this;
-  }
-
-  @Override
-  public boolean validate(PolicyEnforcer policyEnforcer)
-  {
-    return policyEnforcer.validate(this, policy);
   }
 
   @Override

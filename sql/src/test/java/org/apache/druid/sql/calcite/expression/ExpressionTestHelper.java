@@ -37,6 +37,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
@@ -99,6 +100,7 @@ public class ExpressionTestHelper
       new CalciteRulesManager(ImmutableSet.of()),
       CalciteTests.TEST_AUTHORIZER_MAPPER,
       AuthConfig.newBuilder().build(),
+      NoopPolicyEnforcer.instance(),
       new DruidHookDispatcher()
   );
   public static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(

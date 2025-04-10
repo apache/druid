@@ -37,6 +37,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -293,6 +294,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
         new NoopServiceEmitter(),
         new TestRequestLogger(),
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
     );

@@ -55,6 +55,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -1059,6 +1060,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             CalciteTests.createJoinableFactoryWrapper(),
             CatalogResolver.NULL_RESOLVER,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             new DruidHookDispatcher()
         )
     );

@@ -46,7 +46,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -140,7 +139,6 @@ public class CachingClusteredClientPerfTest
         Mockito.mock(BrokerParallelMergeConfig.class),
         ForkJoinPool.commonPool(),
         queryScheduler,
-        NoopPolicyEnforcer.instance(),
         new NoopServiceEmitter()
     );
 

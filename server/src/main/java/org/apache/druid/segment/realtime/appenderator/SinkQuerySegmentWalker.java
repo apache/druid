@@ -29,7 +29,6 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -206,16 +205,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    if (!dataSourceFromQuery.validate(policyEnforcer)) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.FORBIDDEN)
-                          .build("Failed security validation with dataSource [%s]", dataSourceFromQuery);
-    }
-
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> ev.createSegmentMapFunction()
+        () -> ev.createSegmentMapFunction(policyEnforcer)
     );
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment

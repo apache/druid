@@ -303,7 +303,10 @@ public class DruidQuery
     }
 
     return new DruidQuery(
-        applyPolicies ? dataSource.withPolicies(plannerContext.getAuthorizationResult().getPolicyMap()) : dataSource,
+        applyPolicies ? dataSource.withPolicies(
+            plannerContext.getAuthorizationResult().getPolicyMap(),
+            plannerContext.getPlannerToolbox().getPolicyEnforcer()
+        ) : dataSource,
         plannerContext,
         filter,
         selectProjection,

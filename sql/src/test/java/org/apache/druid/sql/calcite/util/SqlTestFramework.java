@@ -73,6 +73,7 @@ import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.quidem.TestSqlModule;
@@ -852,6 +853,7 @@ public class SqlTestFramework
           framework.injector.getInstance(JoinableFactoryWrapper.class),
           framework.builder.catalogResolver,
           authConfig != null ? authConfig : new AuthConfig(),
+          NoopPolicyEnforcer.instance(),
           new DruidHookDispatcher()
       );
       componentSupplier.finalizePlanner(this);

@@ -65,6 +65,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -247,6 +248,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -282,6 +284,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
@@ -356,6 +359,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
@@ -448,6 +452,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -493,6 +498,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -553,7 +559,7 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
 
-        new QueryLifecycleFactory(null, null, null, null, null, null, null, Suppliers.ofInstance(overrideConfig))
+        new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, Suppliers.ofInstance(overrideConfig))
         {
           @Override
           public QueryLifecycle factorize()
@@ -567,6 +573,7 @@ public class QueryResourceTest
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 overrideConfig,
                 new AuthConfig(),
+                NoopPolicyEnforcer.instance(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
@@ -618,6 +625,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
@@ -855,6 +863,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -930,6 +939,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -1026,6 +1036,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -1133,6 +1144,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -1487,6 +1499,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),

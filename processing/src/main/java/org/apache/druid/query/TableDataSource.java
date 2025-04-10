@@ -81,21 +81,11 @@ public class TableDataSource extends LeafDataSource
   }
 
   @Override
-  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
+  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap, PolicyEnforcer policyEnforcer)
   {
     Optional<Policy> policy = policyMap.getOrDefault(name, Optional.empty());
-    if (policy.isEmpty()) {
-      // Skip adding restriction on table if there's no policy restriction found.
-      return this;
-    }
-    return RestrictedDataSource.create(this, policy.get());
-  }
-
-  @Override
-  public boolean validate(PolicyEnforcer policyEnforcer)
-  {
-    // If it reaches here, this table is not wrapped with a RestrictedDataSource (which should overwrite this method).
-    return policyEnforcer.validate(this, null);
+    policyEnforcer.validateOrElseThrow(this, policy.orElse(null));
+    return policy.isEmpty() ? this : RestrictedDataSource.create(this, policy.get());
   }
 
   @Override

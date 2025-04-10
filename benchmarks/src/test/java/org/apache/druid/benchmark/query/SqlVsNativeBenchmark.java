@@ -32,6 +32,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -129,6 +130,7 @@ public class SqlVsNativeBenchmark
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
     groupByQuery = GroupByQuery

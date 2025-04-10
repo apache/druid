@@ -21,19 +21,11 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.RestrictedDataSource;
-import org.apache.druid.segment.RestrictedSegment;
-import org.apache.druid.segment.SegmentReference;
-import org.reflections.Reflections;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * All tables must be restricted by a policy.
@@ -50,55 +42,14 @@ public class RestrictAllTablesPolicyEnforcer implements PolicyEnforcer
     if (allowedPolicies == null) {
       this.allowedPolicies = ImmutableList.of();
     } else {
-      Set<String> policyClazz = new Reflections("org.apache.druid.query.policy").getSubTypesOf(Policy.class)
-                                                                                .stream()
-                                                                                .map(Class::getSimpleName)
-                                                                                .collect(Collectors.toSet());
-      ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-      List<String> unrecognizedClazz = allowedPolicies.stream()
-                                                      .filter(p -> {
-                                                        if (policyClazz.contains(p)) {
-                                                          return false;
-                                                        }
-                                                        try {
-                                                          // try load the class from its full path
-                                                          Class<?> clazz = classLoader.loadClass(p);
-                                                          return clazz.isAssignableFrom(Policy.class);
-                                                        }
-                                                        catch (ClassNotFoundException e) {
-                                                          return true;
-                                                        }
-                                                      })
-                                                      .collect(Collectors.toList());
-      Preconditions.checkArgument(
-          unrecognizedClazz.isEmpty(),
-          "Unrecognized class[%s], ensure that the class is loaded and is a subclass of Policy",
-          unrecognizedClazz
-      );
       this.allowedPolicies = ImmutableList.copyOf(allowedPolicies);
     }
   }
 
   @Override
-  public boolean validate(DataSource ds, Policy policy)
+  public boolean validate(Policy policy)
   {
-    if (ds instanceof RestrictedDataSource) {
-      return allowedPolicies.isEmpty()
-             || allowedPolicies.contains(policy.getClass().getSimpleName())
-             || allowedPolicies.contains(policy.getClass().getName());
-    }
-    return false;
-  }
-
-  @Override
-  public boolean validate(SegmentReference segment, Policy policy)
-  {
-    if (segment instanceof RestrictedSegment) {
-      return allowedPolicies.isEmpty()
-             || allowedPolicies.contains(policy.getClass().getSimpleName())
-             || allowedPolicies.contains(policy.getClass().getName());
-    }
-    return false;
+    return policy != null && (allowedPolicies.isEmpty() || allowedPolicies.contains(policy.getClass().getName()));
   }
 
   @JsonProperty

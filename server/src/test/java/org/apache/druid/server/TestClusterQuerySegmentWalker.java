@@ -156,7 +156,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction();
+    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance());
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
         toolChest.postMergeQueryDecoration(
@@ -241,8 +241,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                                 new ReferenceCountingSegmentQueryRunner<>(
                                     factory,
                                     segmentMapFn.apply(segment.getSegment()),
-                                    segment.getDescriptor(),
-                                    NoopPolicyEnforcer.instance()
+                                    segment.getDescriptor()
                                 ),
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )

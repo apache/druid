@@ -608,7 +608,6 @@ public class ServerManagerTest
         SearchQuery.class,
         factory
     ));
-    policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of("NoRestrictionPolicy"));
     serverManager = Guice.createInjector(BoundFieldModule.of(this)).getInstance(ServerManager.class);
     Interval interval = Intervals.of("P1d/2011-04-01");
     SearchQuery query = searchQuery("test", interval, Granularities.ALL);
@@ -617,14 +616,27 @@ public class ServerManagerTest
         NoRestrictionPolicy.instance()
     ), interval, Granularities.ALL);
 
+    serverManager.getQueryRunnerForIntervals(query, ImmutableList.of(interval)).run(QueryPlus.wrap(query)).toList();
+    // switch to a policy enforcer that restricts all tables
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(NoRestrictionPolicy.class.getName()));
+    serverManager = Guice.createInjector(BoundFieldModule.of(this)).getInstance(ServerManager.class);
+    // fail on query
     DruidException e = Assert.assertThrows(
         DruidException.class,
         () -> serverManager.getQueryRunnerForIntervals(query, ImmutableList.of(interval))
+                           .run(QueryPlus.wrap(query))
+                           .toList()
     );
     Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
     Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals("Failed security validation with dataSource [test]", e.getMessage());
-    Assert.assertNotNull(serverManager.getQueryRunnerForIntervals(queryOnRestricted, ImmutableList.of(interval)));
+    Assert.assertEquals(
+        "Failed security validation with segment [test_2011-03-31T00:00:00.000Z_2011-04-01T00:00:00.000Z_1]",
+        e.getMessage()
+    );
+    // succeed on queryOnRestricted
+    serverManager.getQueryRunnerForIntervals(queryOnRestricted, ImmutableList.of(interval))
+                 .run(QueryPlus.wrap(queryOnRestricted))
+                 .toList();
   }
 
   private void waitForTestVerificationAndCleanup(Future future)

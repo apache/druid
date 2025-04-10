@@ -65,14 +65,19 @@ public class NoopPolicyEnforcerTest
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
 
-    Assert.assertTrue(policyEnforcer.validate(table, null));
-    Assert.assertTrue(policyEnforcer.validate(restricted, policy));
+    Assert.assertTrue(policyEnforcer.validate(null));
+    Assert.assertTrue(policyEnforcer.validate(policy));
+    policyEnforcer.validateOrElseThrow(table, null);
+    policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
 
     Segment baseSegment = new TestSegmentUtils.SegmentForTesting("table", Intervals.ETERNITY, "1");
     SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
-    Assert.assertTrue(policyEnforcer.validate(segment, null));
-    Assert.assertTrue(policyEnforcer.validate(restrictedSegment, policy));
+    Assert.assertTrue(policyEnforcer.validate(null));
+    Assert.assertTrue(policyEnforcer.validate(policy));
+    policyEnforcer.validateOrElseThrow(segment, null);
+    policyEnforcer.validateOrElseThrow(restrictedSegment, policy);
+
   }
 
 }

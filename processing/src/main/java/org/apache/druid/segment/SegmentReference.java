@@ -33,11 +33,12 @@ public interface SegmentReference extends Segment, ReferenceCountedObject
   /**
    * Returns true if the segment complies with the policy restrictions on tables.
    * <p>
-   * This should be called right before the segment is about to be processed by the query stack.
+   * This should be called right before the segment is about to be processed by the query stack, and after
+   * {@link org.apache.druid.query.planning.ExecutionVertex#createSegmentMapFunction(PolicyEnforcer)}.
    */
-  default boolean validate(PolicyEnforcer policyEnforcer)
+  default void validateOrElseThrow(PolicyEnforcer policyEnforcer)
   {
-    return policyEnforcer.validate(this, null);
+    policyEnforcer.validateOrElseThrow(this, null);
   }
 
 }

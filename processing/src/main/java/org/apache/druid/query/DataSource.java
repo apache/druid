@@ -28,7 +28,6 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentReference;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,9 +83,9 @@ public interface DataSource extends Cacheable
 
   /**
    * Decides if this datasource can be accessed globally.
-   *
+   * <p>
    * This means that all servers have a full copy of this datasource.
-   *
+   * <p>
    * Examples: inline table, lookup.
    */
   boolean isGlobal();
@@ -95,7 +94,7 @@ public interface DataSource extends Cacheable
    * Communicates that this {@link DataSource} can be directly used to run a {@link Query}.
    * <p>
    * A Processable datasource must pack the necessary logic into the {@link DataSource#createSegmentMapFunction(Query)}.
-   *
+   * <p>
    * Processable examples are: {@link TableDataSource}, {@link InlineDataSource}, {@link FilteredDataSource}.
    * Non-processable ones are those which need further pre-processing before running them.
    * examples are: {@link QueryDataSource} and join which are not supported directly.
@@ -112,34 +111,24 @@ public interface DataSource extends Cacheable
    * <p>
    * If this datasource contains no table, no changes should occur.
    *
-   * @param policyMap a mapping of table names to policy restrictions. A missing key is different from an empty value:
-   *                  <ul>
-   *                    <li> a missing key means the table has never been permission checked.
-   *                    <li> an empty value indicates the table doesn't have any policy restrictions, it has been permission checked.
+   * @param policyMap      a mapping of table names to policy restrictions. A missing key is different from an empty value:
+   *                       <ul>
+   *                         <li> a missing key means the table has never been permission checked.
+   *                         <li> an empty value indicates the table doesn't have any policy restrictions, it has been permission checked.
+   *                       </ul>
+   * @param policyEnforcer the policy enforcer to enforce the result datasource complies
    * @return the updated datasource, with restrictions applied in the datasource tree
    * @throws IllegalStateException when mapping a RestrictedDataSource, unless the table has a NoRestrictionPolicy in
    *                               the policyMap (used by druid-internal). Missing policy or adding a
    *                               non-NoRestrictionPolicy to RestrictedDataSource would throw.
    */
-  default DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
+  default DataSource withPolicies(Map<String, Optional<Policy>> policyMap, PolicyEnforcer policyEnforcer)
   {
     List<DataSource> children = this.getChildren()
                                     .stream()
-                                    .map(child -> child.withPolicies(policyMap))
+                                    .map(child -> child.withPolicies(policyMap, policyEnforcer))
                                     .collect(Collectors.toList());
     return this.withChildren(children);
-  }
-
-  /**
-   * Returns true if the datasource complies with the policy restrictions on tables.
-   * <p>
-   * This should be called right before the data source is about to be processed by the query stack.
-   */
-  default boolean validate(PolicyEnforcer policyEnforcer)
-  {
-    return this.getChildren()
-               .stream()
-               .allMatch(child -> child.validate(policyEnforcer));
   }
 
   /**

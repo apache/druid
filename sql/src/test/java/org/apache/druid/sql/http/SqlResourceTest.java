@@ -63,6 +63,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
@@ -259,6 +260,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 

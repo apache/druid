@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -154,6 +155,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         joinableFactoryWrapper,
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
   }

@@ -93,7 +93,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
@@ -2711,7 +2710,6 @@ public class CachingClusteredClientTest
             NoQueryLaningStrategy.INSTANCE,
             new ServerConfig()
         ),
-        NoopPolicyEnforcer.instance(),
         new NoopServiceEmitter()
     );
   }

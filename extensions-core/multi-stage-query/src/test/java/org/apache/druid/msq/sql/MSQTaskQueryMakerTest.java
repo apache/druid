@@ -31,7 +31,6 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.inject.util.Modules;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -46,6 +45,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -278,9 +278,17 @@ public class MSQTaskQueryMakerTest
         fieldMapping,
         terminalStageSpecFactory
     );
+    QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
     // Assert
-    DruidException e = Assert.assertThrows(DruidException.class, () -> msqTaskQueryMaker.runQuery(druidQueryMock));
-    Assert.assertTrue(e.getMessage().contains("Failed security validation with dataSource [foo]"));
+    String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
+    MSQTaskReportPayload payload = (MSQTaskReportPayload) fakeOverlordClient.taskReportAsMap(taskId)
+                                                                            .get()
+                                                                            .get(MSQTaskReport.REPORT_KEY)
+                                                                            .getPayload();
+    // Assert
+    Assert.assertTrue(payload.getStatus().getStatus().isFailure());
+    MSQErrorReport errorReport = payload.getStatus().getErrorReport();
+    Assert.assertTrue(errorReport.getFault().getErrorMessage().contains("Failed security validation with segment"));
   }
 
   @Test

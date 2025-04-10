@@ -62,7 +62,6 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Order;
-import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
@@ -117,7 +116,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       final ScanQuery query,
       @Nullable final AtomicLong runningCountForLimit,
       final ObjectMapper jsonMapper,
-      final PolicyEnforcer policyEnforcer,
       final ReadableInput baseInput,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
@@ -126,7 +124,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   {
     super(
         baseInput,
-        policyEnforcer,
         segmentMapFn,
         outputChannelHolder,
         frameWriterFactoryHolder
