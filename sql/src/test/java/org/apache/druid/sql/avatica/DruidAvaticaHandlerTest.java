@@ -339,7 +339,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testSelectCount() throws SQLException
   {
     try (Statement stmt = client.createStatement()) {
-      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo;");
       final List<Map<String, Object>> rows = getRows(resultSet);
       Assert.assertEquals(
           ImmutableList.of(
@@ -1795,13 +1795,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       );
       // ugly error message for statement
       Assert.assertEquals(
-          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: Received an unexpected token [;] (line [1], column [34]), acceptable options: [<EOF>] -> DruidException: Received an unexpected token [;] (line [1], column [34]), acceptable options: [<EOF>] -> SqlParseException: Encountered \";\" at line 1, column 34.\n"
-          + "Was expecting:\n"
-          + "    <EOF> \n"
-          + "     -> ParseException: Encountered \";\" at line 1, column 34.\n"
-          + "Was expecting:\n"
-          + "    <EOF> \n"
-          + "    ",
+          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: Multiple statements detected in SQL string[SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo], but only a single statement is supported -> DruidException: Multiple statements detected in SQL string[SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo], but only a single statement is supported",
           t.getMessage()
       );
     }

@@ -15836,14 +15836,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiStatementSetsContext()
   {
-    Map<String, Object> expectedContext = ImmutableMap.<String, Object>builder()
-                                                      .putAll(QUERY_CONTEXT_DEFAULT)
-                                                      .put("useApproximateCountDistinct", true)
-                                                      .put("timeout", 9000.0)
-                                                      .put("vectorize", "force")
-                                                      .build();
+    HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    expectedContext.put("useApproximateCountDistinct", true);
+    expectedContext.put("timeout", 9000.0);
+    expectedContext.put("vectorize", "force");
+    // sql query id is also set in the base context sent with the query, expect the SET statement to override this
+    expectedContext.put(QueryContexts.CTX_SQL_QUERY_ID, "dummy2");
+
     testBuilder().sql(
-        "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; select 3;"
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; set sqlQueryId = 'dummy2'; select 3;"
     ).expectedQueries(
         ImmutableList.of(
             Druids.newScanQueryBuilder()

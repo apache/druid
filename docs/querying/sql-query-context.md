@@ -60,7 +60,8 @@ For more information, see [Overriding default query context values](../configura
 
 ## Set the query context
 
-You can configure query context parameters in the `context` object of the [JSON API](../api-reference/sql-api.md) or as a [JDBC connection properties object](../api-reference/sql-jdbc.md).
+You can configure query context parameters in the `context` object or as part of the `query` string with [`SET`
+statements](./sql.md#set-statements) if using the [JSON API](../api-reference/sql-api.md) or as a [connection properties object](../api-reference/sql-jdbc.md) when using JDBC.
 
 The following example shows how to set a query context parameter using the JSON API:
 
@@ -68,8 +69,19 @@ The following example shows how to set a query context parameter using the JSON 
 {
   "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
   "context" : {
-    "sqlTimeZone" : "America/Los_Angeles"
+    "sqlTimeZone" : "America/Los_Angeles",
+    "useCache": false
   }
+}
+```
+
+Context parameters can also be set via the HTTP API by including `SET` statements as part of the query string in the
+JSON request body, separated from the query by `;`. Context parameters set by `SET` statements take priority over
+values set in `context`. The follow example expresses the previous example in this form:
+
+```
+{
+  "query" : "SET sqlTimeZone = 'America/Los_Angeles'; SET useCache = false; SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'"
 }
 ```
 

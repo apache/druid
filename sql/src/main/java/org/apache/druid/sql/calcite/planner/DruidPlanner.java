@@ -125,7 +125,7 @@ public class DruidPlanner implements Closeable
   )
   {
     this.frameworkConfig = frameworkConfig;
-    this.planner = new CalcitePlanner(frameworkConfig, allowSetStatementsToBuildContext);
+    this.planner = new CalcitePlanner(frameworkConfig);
     this.plannerContext = plannerContext;
     this.engine = engine;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -155,9 +155,12 @@ public class DruidPlanner implements Closeable
     catch (SqlParseException e1) {
       throw translateException(e1);
     }
-    if (allowSetStatementsToBuildContext && root instanceof SqlNodeList) {
-      final Map<String, Object> contextMap = new LinkedHashMap<>();
+    if (root instanceof SqlNodeList) {
       final SqlNodeList nodeList = (SqlNodeList) root;
+      if (!allowSetStatementsToBuildContext && nodeList.size() > 1) {
+        throw InvalidSqlInput.exception("Multiple statements detected in SQL string[%s], but only a single statement is supported", sql);
+      }
+      final Map<String, Object> contextMap = new LinkedHashMap<>();
       boolean isMissingDruidStatementNode = true;
       // convert 0 or more SET statements into a Map of stuff to add to the query context
       for (int i = 0; i < nodeList.size(); i++) {

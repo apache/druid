@@ -114,14 +114,12 @@ public class CalcitePlanner implements Planner, ViewExpander
   private @Nullable SqlValidator validator;
   private @Nullable SqlNode validatedSqlNode;
 
-  private final boolean allowMultipleStatements;
-
   /**
    * Creates a planner. Not a public API; call
    * {@link org.apache.calcite.tools.Frameworks#getPlanner} instead.
    */
   @SuppressWarnings("method.invocation.invalid")
-  public CalcitePlanner(FrameworkConfig config, boolean allowMultipleStatements)
+  public CalcitePlanner(FrameworkConfig config)
   {
     this.costFactory = config.getCostFactory();
     this.defaultSchema = config.getDefaultSchema();
@@ -136,7 +134,6 @@ public class CalcitePlanner implements Planner, ViewExpander
     this.context = config.getContext();
     this.connectionConfig = connConfig(context);
     this.typeSystem = config.getTypeSystem();
-    this.allowMultipleStatements = allowMultipleStatements;
     reset();
   }
 
@@ -230,7 +227,7 @@ public class CalcitePlanner implements Planner, ViewExpander
     }
     ensure(CalcitePlanner.State.STATE_2_READY);
     SqlParser parser = SqlParser.create(reader, parserConfig);
-    SqlNode sqlNode = allowMultipleStatements ? parser.parseStmtList() : parser.parseStmt();
+    SqlNode sqlNode = parser.parseStmtList();
     state = CalcitePlanner.State.STATE_3_PARSED;
     return sqlNode;
   }

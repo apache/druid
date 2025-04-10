@@ -391,6 +391,26 @@ like `100` (denoting an integer), `100.0` (denoting a floating point value), or 
 timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
 written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
 
+## SET statements
+
+Druid SQL over HTTP supports including 0 or more `SET` statements separated by `;` preceeding the statement to execute
+in order to assign [SQL query context parameter values](../querying/sql-query-context.md).
+
+The syntax of a `SET` statement is
+
+```sql
+SET identifier = literal
+```
+
+For example,
+
+```sql
+SET useApproximateTopN = false;
+SET sqlTimeZone = 'America/Los_Angeles';
+SET timeout = 90000;
+SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 1 ORDER BY 2 DESC
+```
+
 ## Dynamic parameters
 
 Druid SQL supports dynamic parameters using question mark (`?`) syntax, where parameters are bound to `?` placeholders
