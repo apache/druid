@@ -1,0 +1,1513 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ingest/schmdisc_dynamic_rollup_true
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_bool';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_bool) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A01 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_int';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B01 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_int) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_float';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_float) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_str';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_str) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_null';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_null) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_empty';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_empty) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_mixed';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_mixed) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_nested';
++---------------+
+| DATA_TYPE     |
++---------------+
+| COMPLEX<json> |
++---------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(a_nested) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='cnt';
++-----------+
+| DATA_TYPE |
++-----------+
+| BIGINT    |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(cnt) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='t_str_scalar1';
++-----------+
+| DATA_TYPE |
++-----------+
+| VARCHAR   |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(t_str_scalar1) c
+FROM test_array;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='t_null_scalar1';
++-----------+
+| DATA_TYPE |
++-----------+
+| VARCHAR   |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(t_null_scalar1) c
+FROM test_array;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='t_null_scalar2';
++-----------+
+| DATA_TYPE |
++-----------+
+| VARCHAR   |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(t_null_scalar2) c
+FROM test_array;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='t_empty_scalar1';
++-----------+
+| DATA_TYPE |
++-----------+
+| VARCHAR   |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(t_empty_scalar1) c
+FROM test_array;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: A13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='t_empty_scalar2';
++-----------+
+| DATA_TYPE |
++-----------+
+| VARCHAR   |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: B13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(t_empty_scalar2) c
+FROM test_array;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: D01 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: D02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT sum(cnt) s
+FROM test_array;
++---+
+| s |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT __time
+   FROM test_array
+   GROUP BY __time);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = json_value(a_nested, '$[0]' RETURNING boolean array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = json_value(a_nested, '$[7][0]' RETURNING boolean array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[0]' RETURNING boolean array) = json_value(a_nested, '$[7][0]' RETURNING boolean array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = ARRAY[1,
+                     0,
+                     NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[0]' RETURNING boolean array) = ARRAY[1,
+                                                                   0,
+                                                                   NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][0]' RETURNING boolean array) = ARRAY[1,
+                                                                      0,
+                                                                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = ARRAY[NULL,
+                     0,
+                     1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[0]' RETURNING boolean array) = ARRAY[NULL,
+                                                                   0,
+                                                                   1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][0]' RETURNING boolean array) = ARRAY[NULL,
+                                                                      0,
+                                                                      1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = json_value(a_nested, '$[1]' RETURNING bigint array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = json_value(a_nested, '$[7][1]' RETURNING bigint array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[1]' RETURNING bigint array) = json_value(a_nested, '$[7][1]' RETURNING bigint array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = ARRAY[1,
+                    2,
+                    NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[1]' RETURNING bigint array) = ARRAY[1,
+                                                                  2,
+                                                                  NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][1]' RETURNING bigint array) = ARRAY[1,
+                                                                     2,
+                                                                     NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = ARRAY[NULL,
+                    2,
+                    1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[1]' RETURNING bigint array) = ARRAY[NULL,
+                                                                  2,
+                                                                  1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][1]' RETURNING bigint array) = ARRAY[NULL,
+                                                                     2,
+                                                                     1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = json_value(a_nested, '$[2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = json_value(a_nested, '$[7][2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = json_value(a_nested, '$[7][2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = ARRAY[0.1,
+                      0.2,
+                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = ARRAY[0.1,
+                                                                   0.2,
+                                                                   NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][2]' RETURNING decimal array) = ARRAY[0.1,
+                                                                      0.2,
+                                                                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = ARRAY[NULL,
+                      0.2,
+                      0.1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = ARRAY[NULL,
+                                                                   0.2,
+                                                                   0.1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][2]' RETURNING decimal array) = ARRAY[NULL,
+                                                                      0.2,
+                                                                      0.1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = json_value(a_nested, '$[3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = json_value(a_nested, '$[7][3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = json_value(a_nested, '$[7][3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = ARRAY['S1',
+                    'S2',
+                    NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = ARRAY['S1',
+                                                                   'S2',
+                                                                   NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][3]' RETURNING varchar array) = ARRAY['S1',
+                                                                      'S2',
+                                                                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = ARRAY[NULL,
+                    'S2',
+                    'S1'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = ARRAY[NULL,
+                                                                   'S2',
+                                                                   'S1'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][3]' RETURNING varchar array) = ARRAY[NULL,
+                                                                      'S2',
+                                                                      'S1'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[4]' RETURNING varchar array) = json_value(a_nested, '$[7][4]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[5]' RETURNING varchar array) = json_value(a_nested, '$[7][5]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[5]' RETURNING varchar array) = ARRAY['FILLER'];
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][5]' RETURNING varchar array) = ARRAY['FILLER'];
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = json_value(a_nested, '$[6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = ARRAY['true',
+                      '1',
+                      '0.1',
+                      'S1',
+                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = ARRAY['true',
+                                                                   '1',
+                                                                   '0.1',
+                                                                   'S1',
+                                                                   NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][6]' RETURNING varchar array) = ARRAY['true',
+                                                                      '1',
+                                                                      '0.1',
+                                                                      'S1',
+                                                                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = ARRAY[NULL,
+                      'S1',
+                      '0.1',
+                      '1',
+                      'true'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = ARRAY[NULL,
+                                                                   'S1',
+                                                                   '0.1',
+                                                                   '1',
+                                                                   'true'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][6]' RETURNING varchar array) = ARRAY[NULL,
+                                                                      'S1',
+                                                                      '0.1',
+                                                                      '1',
+                                                                      'true'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_bool_scalar1 = 'true';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_bool_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_int_scalar1 = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_int_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_float_scalar1 = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_float_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_str_scalar1 = 'S1';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_str_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_null_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_null_scalar2 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_empty_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_empty_scalar2 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_mixed_scalar1 = 'true';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_dynamic_rollup_true TEST_ID: E00 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_mixed_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 96 Positive tests: 96 Negative tests: 0
+#-------------------------------------------------------------------------

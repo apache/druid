@@ -1,0 +1,2084 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql&numMergeBuffers=3
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A1_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_bool c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_bool;
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A1_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_bool c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_bool);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A1_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_bool c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_bool);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A1_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_bool c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_bool);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A1_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_bool c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_bool
+HAVING a_bool=ARRAY[1,
+                    0,
+                    NULL];
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_int;
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_int);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_int);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_int);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_int
+HAVING a_int=ARRAY[1,
+                   2,
+                   NULL];
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[1]' RETURNING bigint array));
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[1]' RETURNING bigint array));
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[1]' RETURNING bigint array));
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array)
+HAVING json_value(a_nested, '$[1]' RETURNING bigint array)=ARRAY[1,
+                                                                 2,
+                                                                 NULL];
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array);
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[7][1]' RETURNING bigint array));
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[7][1]' RETURNING bigint array));
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[7][1]' RETURNING bigint array));
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
+|              |   4 |
++--------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING json_value(a_nested, '$[7][1]' RETURNING bigint array)=ARRAY[1,
+                                                                    2,
+                                                                    NULL];
++--------------+-----+
+| c            | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_float c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_float;
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_float c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_float);
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_float c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_float);
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
+|                  |   4 |
++------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_float c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_float);
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
+|                  |   4 |
++------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_float c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_float
+HAVING a_float=ARRAY[0.1,
+                     0.2,
+                     NULL];
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A8_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A8_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[2]' RETURNING decimal array));
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A8_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[2]' RETURNING decimal array));
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
+|                  |   4 |
++------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A8_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[2]' RETURNING decimal array));
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
+|                  |   4 |
++------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A8_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array)
+HAVING json_value(a_nested, '$[2]' RETURNING decimal array)=ARRAY[0.1,
+                                                                  0.2,
+                                                                  NULL];
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A9_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array);
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A9_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[7][2]' RETURNING decimal array));
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A9_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[7][2]' RETURNING decimal array));
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
+|                  |   4 |
++------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A9_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[7][2]' RETURNING decimal array));
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
+|                  |   4 |
++------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A9_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING json_value(a_nested, '$[7][2]' RETURNING decimal array)=ARRAY[0.1,
+                                                                     0.2,
+                                                                     NULL];
++------------------+-----+
+| c                | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A10_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_str c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_str;
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A10_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_str c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_str);
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A10_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_str c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_str);
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
+|                |   4 |
++----------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A10_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_str c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_str);
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
+|                |   4 |
++----------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A10_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_str c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_str
+HAVING a_str=ARRAY['S1',
+                   'S2',
+                   NULL];
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
++----------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A11_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A11_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[3]' RETURNING varchar array));
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A11_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[3]' RETURNING varchar array));
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
+|                |   4 |
++----------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A11_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[3]' RETURNING varchar array));
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
+|                |   4 |
++----------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A11_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[3]' RETURNING varchar array)=ARRAY['S1',
+                                                                  'S2',
+                                                                  NULL];
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
++----------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A12_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array);
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A12_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[7][3]' RETURNING varchar array));
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A12_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[7][3]' RETURNING varchar array));
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
+|                |   4 |
++----------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A12_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[7][3]' RETURNING varchar array));
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
+|                |   4 |
++----------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A12_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[7][3]' RETURNING varchar array)=ARRAY['S1',
+                                                                     'S2',
+                                                                     NULL];
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
++----------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A13_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_null c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_null;
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A13_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_null c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_null);
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A13_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_null c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_null);
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
+|                    |   4 |
++--------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A13_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_null c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_null);
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
+|                    |   4 |
++--------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A13_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_null c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_null
+HAVING a_null=ARRAY[NULL,
+                    NULL,
+                    NULL];
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A14_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A14_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[4]' RETURNING varchar array));
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A14_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[4]' RETURNING varchar array));
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
+|                    |   4 |
++--------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A14_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[4]' RETURNING varchar array));
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
+|                    |   4 |
++--------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A14_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[4]' RETURNING varchar array)=ARRAY[NULL,
+                                                                  NULL,
+                                                                  NULL];
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A15_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array);
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A15_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[7][4]' RETURNING varchar array));
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A15_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[7][4]' RETURNING varchar array));
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
+|                    |   4 |
++--------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A15_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[7][4]' RETURNING varchar array));
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
+|                    |   4 |
++--------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A15_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[7][4]' RETURNING varchar array)=ARRAY[NULL,
+                                                                     NULL,
+                                                                     NULL];
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A16_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_empty c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_empty;
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A16_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_empty c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_empty);
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A16_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_empty c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_empty);
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
+|    |   4 |
++----+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A16_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_empty c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_empty);
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
+|    |   4 |
++----+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A16_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_empty c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_empty
+HAVING a_empty=ARRAY['A'];
++---+-----+
+| c | cnt |
++---+-----+
++---+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A17_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A17_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[5]' RETURNING varchar array));
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A17_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[5]' RETURNING varchar array));
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
+|    |   4 |
++----+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A17_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[5]' RETURNING varchar array));
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
+|    |   4 |
++----+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A17_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[5]' RETURNING varchar array)=ARRAY['A'];
++---+-----+
+| c | cnt |
++---+-----+
++---+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A18_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array);
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A18_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[7][5]' RETURNING varchar array));
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A18_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[7][5]' RETURNING varchar array));
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
+|    |   4 |
++----+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A18_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[7][5]' RETURNING varchar array));
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
+|    |   4 |
++----+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A18_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[7][5]' RETURNING varchar array)=ARRAY['A'];
++---+-----+
+| c | cnt |
++---+-----+
++---+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A19_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_mixed c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_mixed;
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A19_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_mixed c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_mixed);
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A19_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_mixed c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_mixed);
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
+|                          |   4 |
++--------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A19_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_mixed c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_mixed);
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
+|                          |   4 |
++--------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A19_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_mixed c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_mixed
+HAVING a_mixed=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A20_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A20_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[6]' RETURNING varchar array));
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A20_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[6]' RETURNING varchar array));
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
+|                          |   4 |
++--------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A20_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[6]' RETURNING varchar array));
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
+|                          |   4 |
++--------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A20_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[6]' RETURNING varchar array)=ARRAY['true',
+                                                                  '1',
+                                                                  '0.1',
+                                                                  'S1',
+                                                                  NULL];
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A21_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array);
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A21_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_value(a_nested, '$[7][6]' RETURNING varchar array));
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A21_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_value(a_nested, '$[7][6]' RETURNING varchar array));
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
+|                          |   4 |
++--------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A21_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_value(a_nested, '$[7][6]' RETURNING varchar array));
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
+|                          |   4 |
++--------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A21_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING json_value(a_nested, '$[7][6]' RETURNING varchar array)=ARRAY['true',
+                                                                     '1',
+                                                                     '0.1',
+                                                                     'S1',
+                                                                     NULL];
++--------------------------+-----+
+| c                        | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A22_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_nested c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                                                                                                                             | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A22_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_nested c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_nested);
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                                                                                                                             | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A22_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_nested c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_nested);
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                                                                                                                             | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
+|                                                                                                                                                                                                                                                                                                                               |   4 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A22_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_nested c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_nested);
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                                                                                                                             | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
+|                                                                                                                                                                                                                                                                                                                               |   4 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A22_B9 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_nested c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_nested
+HAVING a_nested=ARRAY[NULL,
+                      NULL,
+                      NULL];
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7]');
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                   | cnt |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]] |   2 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_query(a_nested, '$[7]'));
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                   | cnt |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]] |   2 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_query(a_nested, '$[7]'));
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                   | cnt |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]] |   2 |
+|                                                                                                                                                                                                                     |   4 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_query(a_nested, '$[7]'));
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                   | cnt |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]] |   2 |
+|                                                                                                                                                                                                                     |   4 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B9 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7]')
+HAVING json_query(a_nested, '$[7]')=ARRAY[NULL,
+                                          NULL,
+                                          NULL];
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7][7]');
++-----------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                         | cnt |
++-----------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]] |   2 |
++-----------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_query(a_nested, '$[7][7]'));
++-----------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                         | cnt |
++-----------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]] |   2 |
++-----------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_query(a_nested, '$[7][7]'));
++-----------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                         | cnt |
++-----------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]] |   2 |
+|                                                                                                           |   4 |
++-----------------------------------------------------------------------------------------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_query(a_nested, '$[7][7]'));
++-----------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                         | cnt |
++-----------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]] |   2 |
+|                                                                                                           |   4 |
++-----------------------------------------------------------------------------------------------------------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B9 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7][7]')
+HAVING json_query(a_nested, '$[7][7]')=ARRAY[NULL,
+                                             NULL,
+                                             NULL];
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_int,
+         json_value(a_nested, '$[2]' RETURNING decimal array),
+         json_value(a_nested, '$[7][3]' RETURNING varchar array);
++--------------+------------------+----------------+-----+
+| a_int        | EXPR$1           | c              | cnt |
++--------------+------------------+----------------+-----+
+| [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] |   2 |
+| [null, 2, 1] | [null, 0.2, 0.1] | [null, S2, S1] |   2 |
++--------------+------------------+----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B3 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_int,
+      json_value(a_nested, '$[2]' RETURNING decimal array),
+      json_value(a_nested, '$[7][3]' RETURNING varchar array));
++--------------+------------------+----------------+-----+
+| a_int        | EXPR$1           | c              | cnt |
++--------------+------------------+----------------+-----+
+| [1, 2, null] |                  |                |   2 |
+| [null, 2, 1] |                  |                |   2 |
+|              | [0.1, 0.2, null] |                |   2 |
+|              | [null, 0.2, 0.1] |                |   2 |
+|              |                  | [S1, S2, null] |   2 |
+|              |                  | [null, S2, S1] |   2 |
++--------------+------------------+----------------+-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B5 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_int, json_value(a_nested, '$[2]' RETURNING decimal array), json_value(a_nested, '$[7][3]' RETURNING varchar array));
++--------------+------------------+----------------+-----+
+| a_int        | EXPR$1           | c              | cnt |
++--------------+------------------+----------------+-----+
+| [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] |   2 |
+| [1, 2, null] | [0.1, 0.2, null] |                |   2 |
+| [1, 2, null] |                  |                |   2 |
+| [null, 2, 1] | [null, 0.2, 0.1] | [null, S2, S1] |   2 |
+| [null, 2, 1] | [null, 0.2, 0.1] |                |   2 |
+| [null, 2, 1] |                  |                |   2 |
+|              |                  |                |   4 |
++--------------+------------------+----------------+-----+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B7 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_int, json_value(a_nested, '$[2]' RETURNING decimal array), json_value(a_nested, '$[7][3]' RETURNING varchar array));
++--------------+------------------+----------------+-----+
+| a_int        | EXPR$1           | c              | cnt |
++--------------+------------------+----------------+-----+
+| [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] |   2 |
+| [1, 2, null] | [0.1, 0.2, null] |                |   2 |
+| [1, 2, null] |                  | [S1, S2, null] |   2 |
+| [1, 2, null] |                  |                |   2 |
+| [null, 2, 1] | [null, 0.2, 0.1] | [null, S2, S1] |   2 |
+| [null, 2, 1] | [null, 0.2, 0.1] |                |   2 |
+| [null, 2, 1] |                  | [null, S2, S1] |   2 |
+| [null, 2, 1] |                  |                |   2 |
+|              | [0.1, 0.2, null] | [S1, S2, null] |   2 |
+|              | [0.1, 0.2, null] |                |   2 |
+|              | [null, 0.2, 0.1] | [null, S2, S1] |   2 |
+|              | [null, 0.2, 0.1] |                |   2 |
+|              |                  | [S1, S2, null] |   2 |
+|              |                  | [null, S2, S1] |   2 |
+|              |                  |                |   4 |
++--------------+------------------+----------------+-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B9 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_int,
+         json_value(a_nested, '$[2]' RETURNING decimal array),
+         json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING a_int=ARRAY[1,
+                   2,
+                   NULL]
+AND json_value(a_nested, '$[2]' RETURNING decimal array)=ARRAY[0.1,
+                                                               0.2,
+                                                               NULL]
+AND json_value(a_nested, '$[7][3]' RETURNING varchar array)=ARRAY['S1',
+                                                                  'S2',
+                                                                  NULL];
++--------------+------------------+----------------+-----+
+| a_int        | EXPR$1           | c              | cnt |
++--------------+------------------+----------------+-----+
+| [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] |   2 |
++--------------+------------------+----------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 116 Positive tests: 113 Negative tests: 3
+#-------------------------------------------------------------------------

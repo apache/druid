@@ -1,0 +1,2945 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_json_cols;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A001 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(__time, '$') c
+FROM test_json_cols;
++---------------+
+| c             |
++---------------+
+| 1640995200000 |
+| 1640995200000 |
+| 1643673600000 |
+| 1643673600000 |
++---------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A002 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(__time, '$'), '$' RETURNING bigint) = 1640995200000;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A003 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(__time, '$'), '$' RETURNING bigint) <> 1640995200000;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A004 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(__time, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A005 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(__time, '$') IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A006 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query('ABCD', '$') c
+FROM test_json_cols;
++--------+
+| c      |
++--------+
+| "ABCD" |
+| "ABCD" |
+| "ABCD" |
+| "ABCD" |
++--------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A007 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query('ABCD', '$'), '$' RETURNING CHAR) = 'ABCD';
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A008 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query('ABCD', '$'), '$' RETURNING CHAR) <> 'ABCD';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A009 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query('ABCD', '$') IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A010 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query('ABCD', '$') IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A011 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(s_str, '$') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| "A" |
+| "A" |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A012 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(s_str, '$'), '$' RETURNING CHAR) = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A013 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(s_str, '$'), '$' RETURNING CHAR) <> 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A014 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_str, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A015 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_str, '$') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A016 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_query(1234, '$'), '$' RETURNING int) c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| 1234 |
+| 1234 |
+| 1234 |
+| 1234 |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A017 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(1234, '$'), '$' RETURNING int) = 1234;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A018 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(1234, '$'), '$' RETURNING int) <> 1234;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A019 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(1234, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A020 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(1234, '$') IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A021 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_query(s_num_int, '$'), '$' RETURNING int) c
+FROM test_json_cols;
++---+
+| c |
++---+
+| 1 |
+| 1 |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A022 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(s_num_int, '$'), '$' RETURNING int) = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A023 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(s_num_int, '$'), '$' RETURNING int) <> 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A024 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_num_int, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A025 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_num_int, '$') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A026 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_query(1234.5678, '$'), '$' RETURNING DOUBLE) c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| 1234.5678 |
+| 1234.5678 |
+| 1234.5678 |
+| 1234.5678 |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A027 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(1234.5678, '$'), '$' RETURNING DOUBLE) = 1234.5678;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A028 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(1234.5678, '$'), '$' RETURNING DOUBLE) <> 1234.5678;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A029 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(1234.5678, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A030 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(1234.5678, '$') IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A031 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_query(s_num_float, '$'), '$' RETURNING DOUBLE) c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A032 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(s_num_float, '$'), '$' RETURNING DOUBLE) = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A033 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(s_num_float, '$'), '$' RETURNING DOUBLE) <> 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A034 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_num_float, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A035 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_num_float, '$') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A036 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(NULL, '$') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A037 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(NULL, '$') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A038 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(NULL, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A039 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(s_null, '$') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A040 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_null, '$') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A041 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(s_null, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A042 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.does.not.exist') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A043 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.does.not.exist') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A044 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(s_str, '$') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| "A" |
+| "A" |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A045 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_str') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| "A" |
+| "A" |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A046 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_str') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| "A" |
+| "A" |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A047 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_array[0].a_str') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| "A" |
+| "A" |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A048 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A049 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_str') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A050 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(s_num_int, '$') c
+FROM test_json_cols;
++---+
+| c |
++---+
+| 1 |
+| 1 |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A051 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_num_int') c
+FROM test_json_cols;
++---+
+| c |
++---+
+| 1 |
+| 1 |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A052 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_num_int') c
+FROM test_json_cols;
++---+
+| c |
++---+
+| 1 |
+| 1 |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A053 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_array[0].a_num_int') c
+FROM test_json_cols;
++---+
+| c |
++---+
+| 1 |
+| 1 |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A054 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_num_int') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A055 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_num_int') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A056 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(s_num_float, '$') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A057 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_num_float') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A058 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_num_float') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A059 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_array[0].a_num_float') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A060 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_num_float') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A061 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_num_float') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A062 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(s_bool, '$') c
+FROM test_json_cols;
++---+
+| c |
++---+
+| 1 |
+| 1 |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A063 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_bool') c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A064 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_bool') c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A065 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_array[0].a_bool') c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A066 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_bool') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A067 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_bool') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A068 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(s_null, '$') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A069 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_null') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A070 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_null') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A071 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_array[0].a_null') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A072 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A073 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_null') IS NOT NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A074 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj, '$') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A075 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj, '$') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A076 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A077 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array, '$') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A078 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array, '$') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A079 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array, '$') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A080 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj_nested, '$.o1') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A081 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj_nested, '$.o1') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A082 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj_nested, '$.o1') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A083 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj_nested, '$.o2') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A084 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj_nested, '$.o2') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A085 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj_nested, '$.o2') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A086 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj_nested, '$.o3') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A087 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj_nested, '$.o3') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A088 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj_nested, '$.o3') IS NOT NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A089 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array_nested, '$[0]') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A090 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array_nested, '$[0]') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A091 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array_nested, '$[0]') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A092 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array_nested, '$[1]') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A093 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array_nested, '$[1]') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A094 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array_nested, '$[1]') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A095 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array_nested, '$[2]') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A096 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array_nested, '$[2]') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A097 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array_nested, '$[2]') IS NOT NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A098 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj_nested, '$.') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
+|                             |
++-----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A099 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_obj_nested, '$.') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A100 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array_nested, '$.') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+| [{},[],null] |
+|              |
+|              |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A101 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c_empty_array_nested, '$.') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A102 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj') c
+FROM test_json_cols;
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                  |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+|                                                                                                                                                                                                    |
+|                                                                                                                                                                                                    |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A103 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_obj') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A104 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0]') c
+FROM test_json_cols;
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                  |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+|                                                                                                                                                                                                    |
+|                                                                                                                                                                                                    |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A105 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_array[0]') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A106 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[0,1]') IS NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A107 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[0:2]') IS NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A108 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[:2]') IS NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A109 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[0:]') IS NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A110 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[-1].a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A111 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[-2].a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A112 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[-1234567890].a_str') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A113 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[0].a_str.length()') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A114 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[0].a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A115 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[1].a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A116 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[2].a_str') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A117 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_array[1234567890].a_str') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A118 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A119 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[0].a_str'), '$') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A120 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[0].a_num_int'), '$') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A121 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[0].a_num_float'), '$') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A122 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[0].a_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A123 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[0].a_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A124 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[0].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A125 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[1].a_str'), '$') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A126 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[1].a_num_int'), '$') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A127 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[1].a_num_float'), '$') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A128 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[1].a_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A129 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[1].a_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A130 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[1].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A131 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[2].a_str'), '$') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A132 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[2].a_num_int'), '$') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A133 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[2].a_num_float'), '$') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A134 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[2].a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A135 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[2].a_num_int') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A136 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[2].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A137 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[1234567890].a_str'), '$') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A138 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[1234567890].a_num_int'), '$') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A139 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_array[1234567890].a_num_float'), '$') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A140 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[1234567890].a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A141 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[1234567890].a_num_int') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A142 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(json_query(c1, '$.a_obj'), '$.a_array[1234567890].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A143 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A144 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A145 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_num_int') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A146 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A147 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_str') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A148 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_num_int') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A149 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_query(c1, '$.a_obj')
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A150 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL json_query(c1, '$.a_array')
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A151 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_query(c1, '$.a_obj.a_str')
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A152 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL json_query(c1, '$.a_obj.a_num_int')
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A153 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_query(c1, '$.a_obj') mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A154 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_query(c1, '$.a_obj.a_str') mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A155 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_query(c1, '$.a_obj.a_num_int') mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A156 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT DISTINCT json_query(c1, '$.a_obj') c
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A157 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DISTINCT json_query(c1, '$.a_obj.a_str') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| "A" |
+|     |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A158 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT DISTINCT json_query(c1, '$.a_obj.a_num_int') c
+FROM test_json_cols;
++---+
+| c |
++---+
+| 1 |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A159 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_query(c1, '$.a_obj') mycol
+   FROM test_json_cols)
+GROUP BY mycol;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A160 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_str') mycol
+FROM test_json_cols
+GROUP BY json_query(c1, '$.a_obj.a_str');
++-------+
+| mycol |
++-------+
+| "A"   |
+|       |
++-------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A161 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_num_int') mycol
+FROM test_json_cols
+GROUP BY json_query(c1, '$.a_obj.a_num_int');
++-------+
+| mycol |
++-------+
+| 1     |
+|       |
++-------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A162 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_query(c1, '$.a_obj') mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A163 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT mycol,
+       count(*) c
+FROM
+  (SELECT c1,
+          json_query(c1, '$.a_str') mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++-------+---+
+| mycol | c |
++-------+---+
+| "A"   | 2 |
++-------+---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A164 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT mycol,
+       count(*) c
+FROM
+  (SELECT c1,
+          json_query(c1, '$.a_num_int') mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++-------+---+
+| mycol | c |
++-------+---+
+| 1     | 2 |
++-------+---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A165 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj') = json_query(c2, '$.a_obj');
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A166 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_str') = json_query(c2, '$.a_obj.a_str');
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A167 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_query(c1, '$.a_obj.a_num_int') = json_query(c2, '$.a_obj.a_num_int');
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A168 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_query(t1.c1, '$.a_obj')=json_query(t2.c1, '$.a_obj');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A169 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_query(t1.c1, '$.a_obj.a_str')=json_query(t2.c1, '$.a_obj.a_str');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A170 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_query(t1.c1, '$.a_obj.a_num_int')=json_query(t2.c1, '$.a_obj.a_num_int');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A171 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_query(t1.c1, '$.a_obj')=json_query(t2.c1, '$.a_obj');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A172 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_query(t1.c1, '$.a_obj.a_str')=json_query(t2.c1, '$.a_obj.a_str');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A173 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_query(t1.c1, '$.a_obj.a_num_int')=json_query(t2.c1, '$.a_obj.a_num_int');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A174 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_query(t1.c1, '$.a_obj')=json_query(t2.c1, '$.a_obj');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A175 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_query(t1.c1, '$.a_obj.a_str')=json_query(t2.c1, '$.a_obj.a_str');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A176 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_query(t1.c1, '$.a_obj.a_num_int')=json_query(t2.c1, '$.a_obj.a_num_int');
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A177 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0]') c
+FROM test_json_cols
+ORDER BY __time;
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                  |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]} |
+|                                                                                                                                                                                                    |
+|                                                                                                                                                                                                    |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A178 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_str') c
+FROM test_json_cols
+ORDER BY __time;
++-----+
+| c   |
++-----+
+| "A" |
+| "A" |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A179 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_num_int') c
+FROM test_json_cols
+ORDER BY __time;
++---+
+| c |
++---+
+| 1 |
+| 1 |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A180 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj') c
+FROM test_json_cols
+LIMIT 1;
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]} |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A181 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_str') c
+FROM test_json_cols
+LIMIT 1;
++-----+
+| c   |
++-----+
+| "A" |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A182 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_num_int') c
+FROM test_json_cols
+LIMIT 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A183 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj') c
+FROM test_json_cols
+OFFSET 1;
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]} |
+|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A184 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_str') c
+FROM test_json_cols
+OFFSET 1;
++-----+
+| c   |
++-----+
+| "A" |
+|     |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A185 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_num_int') c
+FROM test_json_cols
+OFFSET 1;
++---+
+| c |
++---+
+| 1 |
+|   |
+|   |
++---+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A186 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0]') c
+FROM test_json_cols
+UNION ALL
+SELECT json_query(c1, '$.a_obj.a_array[0]') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A187 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_str') c
+FROM test_json_cols
+UNION ALL
+SELECT json_query(c1, '$.a_obj.a_array[0].a_str') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A188 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_num_int') c
+FROM test_json_cols
+UNION ALL
+SELECT json_query(c1, '$.a_obj.a_array[0].a_num_int') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A189 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+
+SELECT json_query(c1, '$.a_obj')
+FROM test_json_cols;
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| EXPR$0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]} |
+| {"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]} |
+|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[JSON_QUERY($10, '$.a_obj', FLAG(WITHOUT_ARRAY), FLAG(SqlJsonQueryEmptyOrErrorBehavior[NULL]), FLAG(SqlJsonQueryEmptyOrErrorBehavior[NULL]))])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A190 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+
+SELECT json_query(c1, '$.a_obj.a_str')
+FROM test_json_cols;
++--------+
+| EXPR$0 |
++--------+
+| "A"    |
+| "A"    |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[JSON_QUERY($10, '$.a_obj.a_str', FLAG(WITHOUT_ARRAY), FLAG(SqlJsonQueryEmptyOrErrorBehavior[NULL]), FLAG(SqlJsonQueryEmptyOrErrorBehavior[NULL]))])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_query TEST_ID: A191 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+
+SELECT json_query(c1, '$.a_obj.a_num_int')
+FROM test_json_cols;
++--------+
+| EXPR$0 |
++--------+
+| 1      |
+| 1      |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[JSON_QUERY($10, '$.a_obj.a_num_int', FLAG(WITHOUT_ARRAY), FLAG(SqlJsonQueryEmptyOrErrorBehavior[NULL]), FLAG(SqlJsonQueryEmptyOrErrorBehavior[NULL]))])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# Total query count 192 Positive tests: 176 Negative tests: 16
+#-------------------------------------------------------------------------
