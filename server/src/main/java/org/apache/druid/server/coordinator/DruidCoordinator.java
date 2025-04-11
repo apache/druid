@@ -145,6 +145,7 @@ public class DruidCoordinator
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final DynamicConfigSyncer dynamicConfigSyncer;
+  private final CloneStatusManager cloneStatusManager;
 
   private volatile boolean started = false;
 
@@ -192,7 +193,7 @@ public class DruidCoordinator
   )
   {
     this(config, metadataManager, serverInventoryView, emitter, scheduledExecutorFactory, overlordClient, taskMaster, loadQueueManager, serviceAnnouncer, self
-    , customDutyGroups, lookupCoordinatorManager, coordLeaderSelector, coordinatorSegmentMetadataCache, centralizedDatasourceSchemaConfig, compactionStatusTracker, null);
+    , customDutyGroups, lookupCoordinatorManager, coordLeaderSelector, coordinatorSegmentMetadataCache, centralizedDatasourceSchemaConfig, compactionStatusTracker, null, null);
   }
 
   @Inject
@@ -213,7 +214,8 @@ public class DruidCoordinator
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       CompactionStatusTracker compactionStatusTracker,
-      DynamicConfigSyncer dynamicConfigSyncer
+      DynamicConfigSyncer dynamicConfigSyncer,
+      CloneStatusManager cloneStatusManager
   )
   {
     this.config = config;
@@ -236,6 +238,7 @@ public class DruidCoordinator
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.dynamicConfigSyncer = dynamicConfigSyncer;
+    this.cloneStatusManager = cloneStatusManager;
 
     this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
   }
@@ -587,7 +590,7 @@ public class DruidCoordinator
         new MarkOvershadowedSegmentsAsUnused(deleteSegments),
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
-        new CloneHistoricals(loadQueueManager),
+        new CloneHistoricals(loadQueueManager, cloneStatusManager),
         new SyncBrokerDuty(dynamicConfigSyncer),
         new CollectLoadQueueStats()
     );

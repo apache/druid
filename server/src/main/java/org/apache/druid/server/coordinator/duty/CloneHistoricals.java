@@ -20,7 +20,9 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
@@ -45,10 +47,12 @@ public class CloneHistoricals implements CoordinatorDuty
 {
   private static final Logger log = new Logger(CloneHistoricals.class);
   private final SegmentLoadQueueManager loadQueueManager;
+  private final CloneStatusManager cloneStatusManager;
 
-  public CloneHistoricals(SegmentLoadQueueManager loadQueueManager)
+  public CloneHistoricals(SegmentLoadQueueManager loadQueueManager, CloneStatusManager cloneStatusManager)
   {
     this.loadQueueManager = loadQueueManager;
+    this.cloneStatusManager = cloneStatusManager;
   }
 
   @Override
@@ -56,6 +60,7 @@ public class CloneHistoricals implements CoordinatorDuty
   {
     final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidCluster cluster = params.getDruidCluster();
 
     if (cloneServers.isEmpty()) {
       // No servers to be cloned.
@@ -63,15 +68,14 @@ public class CloneHistoricals implements CoordinatorDuty
     }
 
     // Create a map of host to historical.
-    final Map<String, ServerHolder> historicalMap = params.getDruidCluster()
-                                                          .getHistoricals()
-                                                          .values()
-                                                          .stream()
-                                                          .flatMap(Collection::stream)
-                                                          .collect(Collectors.toMap(
-                                                              serverHolder -> serverHolder.getServer().getHost(),
-                                                              serverHolder -> serverHolder
-                                                          ));
+    final Map<String, ServerHolder> historicalMap = cluster.getHistoricals()
+                                                           .values()
+                                                           .stream()
+                                                           .flatMap(Collection::stream)
+                                                           .collect(Collectors.toMap(
+                                                               serverHolder -> serverHolder.getServer().getHost(),
+                                                               serverHolder -> serverHolder
+                                                           ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetHistoricalName = entry.getKey();
@@ -84,7 +88,7 @@ public class CloneHistoricals implements CoordinatorDuty
         log.error(
             "Could not process clone mapping[%s] as historical[%s] does not exist.",
             entry,
-            (sourceServer == null ? sourceHistoricalName : targetHistoricalName)
+            (targetServer == null ? sourceHistoricalName : targetHistoricalName)
         );
         continue;
       }
@@ -113,6 +117,8 @@ public class CloneHistoricals implements CoordinatorDuty
         }
       }
     }
+
+    cloneStatusManager.updateStats(historicalMap, cloneServers);
 
     return params;
   }
