@@ -55,7 +55,6 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;

@@ -31,7 +31,6 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
-import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.avatica.DruidMeta;

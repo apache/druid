@@ -49,7 +49,6 @@ import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
