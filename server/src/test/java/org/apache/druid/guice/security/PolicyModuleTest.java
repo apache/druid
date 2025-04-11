@@ -27,9 +27,12 @@ import com.google.inject.ProvisionException;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -94,7 +97,10 @@ public class PolicyModuleTest
   {
     Properties properties = new Properties();
     properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
-    properties.setProperty("druid.policy.enforcer.allowedPolicies", "[\"some-policy-class\"]");
+    properties.setProperty(
+        "druid.policy.enforcer.allowedPolicies",
+        "[\"some-policy-class\", \"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
+    );
     PolicyEnforcer policyEnforcer = Guice.createInjector(
         binder -> binder.bind(Properties.class).toInstance(properties),
         new DruidGuiceExtensions(),
@@ -104,28 +110,11 @@ public class PolicyModuleTest
     ).getInstance(Key.get(PolicyEnforcer.class));
 
     Assert.assertNotNull(policyEnforcer);
-    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(ImmutableList.of("some-policy-class")), policyEnforcer);
-  }
-
-  @Test
-  public void testConfigRestrictAllTablesPolicyEnforcerThrowWithUnrecognizedPolicyClazz()
-  {
-    Properties properties = new Properties();
-    properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
-    properties.setProperty("druid.policy.enforcer.allowedPolicies", "[\"UnrecognizedPolicy\"]");
-
-    Injector injector = Guice.createInjector(
-        binder -> binder.bind(Properties.class).toInstance(properties),
-        new DruidGuiceExtensions(),
-        new ConfigModule(),
-        new JacksonModule(),
-        new PolicyModule()
-    );
-
-    ProvisionException e = Assert.assertThrows(
-        ProvisionException.class,
-        () -> injector.getInstance(Key.get(PolicyEnforcer.class))
-    );
-    Assert.assertTrue(e.getCause().getMessage().contains("Unrecognized class[[UnrecognizedPolicy]]"));
+    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        "some-policy-class",
+        "org.apache.druid.query.policy.NoRestrictionPolicy"
+    )), policyEnforcer);
+    Assert.assertTrue(policyEnforcer.validate(NoRestrictionPolicy.instance()));
+    Assert.assertFalse(policyEnforcer.validate(RowFilterPolicy.from(new NullFilter("some-col", null))));
   }
 }
