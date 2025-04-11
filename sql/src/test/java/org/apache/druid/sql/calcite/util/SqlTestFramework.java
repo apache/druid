@@ -398,7 +398,6 @@ public class SqlTestFramework
     @Override
     public void gatherProperties(Properties properties)
     {
-      properties.setProperty("druid.policy.enforcer.type", "none");
     }
 
     @Override
