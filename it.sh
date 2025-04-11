@@ -23,7 +23,7 @@
 set -e
 
 # Enable for debugging
-set -x
+#set -x
 
 export DRUID_DEV=$(cd $(dirname $0) && pwd)
 
