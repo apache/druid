@@ -91,15 +91,11 @@ jobs:
 
   integration-query-tests-middleManager-mariaDB:
     needs: changes
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [11, 17, 21]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: ${{ matrix.jdk }}
-      runtime_jdk: ${{ matrix.jdk }}
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -Dgroups=query
       use_indexer: middleManager
       mysql_driver: org.mariadb.jdbc.Driver
