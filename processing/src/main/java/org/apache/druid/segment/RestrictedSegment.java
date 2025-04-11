@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -46,11 +47,13 @@ public class RestrictedSegment implements SegmentReference
   protected final SegmentReference delegate;
   protected final Policy policy;
 
-  public RestrictedSegment(
-      SegmentReference delegate,
-      Policy policy
-  )
+  public RestrictedSegment(SegmentReference delegate, Policy policy)
   {
+    // This is a sanity check, a restricted data source should alway wrap a druid table directly.
+    Preconditions.checkArgument(
+        delegate instanceof ReferenceCountingSegment,
+        "delegate must be a ReferenceCountingSegment"
+    );
     this.delegate = delegate;
     this.policy = policy;
   }
@@ -113,7 +116,7 @@ public class RestrictedSegment implements SegmentReference
   @Override
   public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
   {
-    policyEnforcer.validateOrElseThrow(delegate, policy);
+    policyEnforcer.validateOrElseThrow((ReferenceCountingSegment) delegate, policy);
   }
 
   @Override

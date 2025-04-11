@@ -180,9 +180,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   @Override
   public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
   {
-    if (baseObject instanceof QueryableIndexSegment || baseObject instanceof IncrementalIndexSegment) {
-      policyEnforcer.validateOrElseThrow(this, null);
-    }
+    policyEnforcer.validateOrElseThrow(this, null);
   }
 
   @Override

@@ -25,6 +25,10 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 
 /**
@@ -49,7 +53,7 @@ public interface PolicyEnforcer
    * for each {@link TableDataSource} that is not wrapped inside a {@link org.apache.druid.query.RestrictedDataSource},
    * no matter where they appear within the tree.
    *
-   * @param ds     the data source to validate. Always {@link TableDataSource}.
+   * @param ds     the table to validate.
    * @param policy the policy attached to the table; either {@link org.apache.druid.query.RestrictedDataSource#policy} or null.
    * @throws DruidException if the data source does not comply with the policy
    */
@@ -64,9 +68,9 @@ public interface PolicyEnforcer
   }
 
   /**
-   * Validates a {@link SegmentReference} against the policy enforcer. This method is invoked during query execution via
-   * {@link SegmentReference#validateOrElseThrow(PolicyEnforcer)}. The callsite must ensure that the segment reference
-   * is not a deeply linked segment reference, and it must be referenced to a druid table.
+   * Validates a {@link SegmentReference} against the policy enforcer. Prior to query execution, the {@link SegmentReference} tree is walked.
+   * This method is invoked once for each {@link org.apache.druid.segment.RestrictedSegment} and once for each {@link ReferenceCountingSegment}
+   * that is not wrapped inside a {@link org.apache.druid.segment.RestrictedSegment}.
    * <p>
    * Direct invocation of this method is discouraged; use {@link SegmentReference#validateOrElseThrow(PolicyEnforcer)} instead.
    *
@@ -74,14 +78,19 @@ public interface PolicyEnforcer
    * @param policy  the policy on the segment, {@link org.apache.druid.segment.RestrictedSegment#policy} or null for other
    * @throws DruidException if the segment does not comply with the policy
    */
-  default void validateOrElseThrow(SegmentReference segment, Policy policy) throws DruidException
+  default void validateOrElseThrow(ReferenceCountingSegment segment, Policy policy) throws DruidException
   {
-    if (validate(policy)) {
-      return;
+    Segment baseSegment = segment.getBaseSegment();
+    if (baseSegment instanceof QueryableIndexSegment || baseSegment instanceof IncrementalIndexSegment) {
+      if (validate(policy)) {
+        return;
+      }
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build("Failed security validation with segment [%s]", segment.getId());
+    } else {
+      // not a druid table, skip validation
     }
-    throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build("Failed security validation with segment [%s]", segment.getId());
   }
 
   /**

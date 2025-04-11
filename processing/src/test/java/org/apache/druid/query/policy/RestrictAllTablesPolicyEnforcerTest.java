@@ -27,9 +27,7 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
 import org.junit.Assert;
@@ -40,7 +38,8 @@ public class RestrictAllTablesPolicyEnforcerTest
   @Test
   public void test_serialize() throws Exception
   {
-    RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(NoRestrictionPolicy.class.getName()));
+    RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        NoRestrictionPolicy.class.getName()));
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
     String expected = "{\"type\":\"restrictAllTables\",\"allowedPolicies\":[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]}";
@@ -62,11 +61,11 @@ public class RestrictAllTablesPolicyEnforcerTest
   @Test
   public void test_validate() throws Exception
   {
-    RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    final RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
     RowFilterPolicy policy = RowFilterPolicy.from(new NullFilter("some-col", null));
     TableDataSource table = TableDataSource.create("table");
     RestrictedDataSource restricted = RestrictedDataSource.create(table, policy);
-
+    // Test validate data source, fail for TableDataSource, success for RestrictedDataSource
     Assert.assertFalse(policyEnforcer.validate(null));
     Assert.assertTrue(policyEnforcer.validate(policy));
     final DruidException e = Assert.assertThrows(
@@ -80,10 +79,9 @@ public class RestrictAllTablesPolicyEnforcerTest
         e.getMessage()
     );
     policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
-
+    // Test validate segment, fail for ReferenceCountingSegment not wrapped with any policy, success when wrapped with a policy
     Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
-    RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
+    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     Assert.assertFalse(policyEnforcer.validate(null));
     Assert.assertTrue(policyEnforcer.validate(policy));
     final DruidException e2 = Assert.assertThrows(
@@ -96,7 +94,7 @@ public class RestrictAllTablesPolicyEnforcerTest
         "Failed security validation with segment [table_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_1]",
         e2.getMessage()
     );
-    policyEnforcer.validateOrElseThrow(restrictedSegment, policy);
+    policyEnforcer.validateOrElseThrow(segment, policy);
   }
 
   @Test
@@ -116,7 +114,7 @@ public class RestrictAllTablesPolicyEnforcerTest
     policyEnforcer.validateOrElseThrow(table, NoRestrictionPolicy.instance());
 
     Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, null));
     Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, policy));
     policyEnforcer.validateOrElseThrow(segment, NoRestrictionPolicy.instance());

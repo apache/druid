@@ -25,9 +25,7 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.junit.Assert;
@@ -71,12 +69,11 @@ public class NoopPolicyEnforcerTest
     policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
 
     Segment baseSegment = new TestSegmentUtils.SegmentForTesting("table", Intervals.ETERNITY, "1");
-    SegmentReference segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
-    RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
+    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
     Assert.assertTrue(policyEnforcer.validate(null));
     Assert.assertTrue(policyEnforcer.validate(policy));
     policyEnforcer.validateOrElseThrow(segment, null);
-    policyEnforcer.validateOrElseThrow(restrictedSegment, policy);
+    policyEnforcer.validateOrElseThrow(segment, policy);
 
   }
 
