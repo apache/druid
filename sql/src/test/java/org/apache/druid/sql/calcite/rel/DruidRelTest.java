@@ -53,6 +53,7 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -60,6 +61,7 @@ import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.PlannerToolbox;
 import org.apache.druid.sql.calcite.rel.logical.DruidUnion;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
@@ -121,6 +123,9 @@ public class DruidRelTest
     when(mockRelOptCluster.getTypeFactory()).thenReturn(DEFAULT_TYPE_FACTORY);
     when(mockRelOptTable.getRowType()).thenReturn(REC_TYPE);
 
+    PlannerToolbox mockPlannerToolbox = mock(PlannerToolbox.class);
+    when(mockPlannerToolbox.getPolicyEnforcer()).thenReturn(NoopPolicyEnforcer.instance());
+    when(mockPlannerContext.getPlannerToolbox()).thenReturn(mockPlannerToolbox);
     when(mockPlannerContext.getPlannerConfig()).thenReturn(PlannerConfig.builder().build());
     when(mockPlannerContext.getJsonMapper()).thenReturn(JsonMapper.builder().build());
     when(mockPlannerContext.getAuthorizationResult()).thenReturn(AUTHORIZATION_RESULT);

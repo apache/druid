@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -39,15 +38,10 @@ import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.policy.NoRestrictionPolicy;
-import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -2226,43 +2220,6 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       serviceEmitter.flush();
     }
-  }
-
-  @Test
-  public void testQueryThrowOnPolicyEnforcerValidationFailure() throws Exception
-  {
-    final PolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
-    final StreamAppenderatorTester tester = new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
-                                                                                  .basePersistDirectory(temporaryFolder.newFolder())
-                                                                                  .withPolicyEnforcer(policyEnforcer)
-                                                                                  .build();
-    final Appenderator appenderator = tester.getAppenderator();
-
-    // Query on table, fail with policy enforcer
-    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                        .dataSource(StreamAppenderatorTester.DATASOURCE)
-                                        .granularity(Granularities.DAY)
-                                        .intervals(Intervals.ONLY_ETERNITY)
-                                        .build();
-    DruidException e = Assert.assertThrows(
-        DruidException.class,
-        () -> QueryPlus.wrap(query).run(appenderator, ResponseContext.createEmpty())
-    );
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
-
-    // Query on restricted, success
-    final RestrictedDataSource restricted = RestrictedDataSource.create(
-        TableDataSource.create(StreamAppenderatorTester.DATASOURCE),
-        NoRestrictionPolicy.instance());
-    final TimeseriesQuery queryOnRestricted = Druids.newTimeseriesQueryBuilder()
-                                        .dataSource(restricted)
-                                        .granularity(Granularities.DAY)
-                                        .intervals(Intervals.ONLY_ETERNITY)
-                                        .build();
-    Assert.assertNotNull(QueryPlus.wrap(queryOnRestricted).run(appenderator, ResponseContext.createEmpty()).toList());
-
   }
 
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
