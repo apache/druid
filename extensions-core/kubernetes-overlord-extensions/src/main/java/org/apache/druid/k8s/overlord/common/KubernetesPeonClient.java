@@ -196,7 +196,7 @@ public class KubernetesPeonClient
 
   public List<Job> getPeonJobs()
   {
-    boolean overlordNamespaceNotConfigured = this.overlordNamespace == null;
+    boolean overlordNamespaceNotConfigured = this.overlordNamespace == null || this.overlordNamespace.isEmpty();
     return overlordNamespaceNotConfigured
            ? getPeonJobsWithoutOverlordNamespaceKeyLabels()
            : getPeonJobsWithOverlordNamespaceKeyLabels();
