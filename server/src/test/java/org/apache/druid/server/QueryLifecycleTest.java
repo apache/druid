@@ -454,9 +454,14 @@ public class QueryLifecycleTest
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
     replayAll();
 
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        NoRestrictionPolicy.class.getName(),
+        RowFilterPolicy.class.getName()
+    ));
     QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(authenticationResult).allowBasicAccess());
+    // Success, query has a RowFilterPolicy, and is allowed by PolicyEnforcer.
     lifecycle.execute();
   }
 
@@ -466,8 +471,6 @@ public class QueryLifecycleTest
     // Test the path broker receives a native json query from external client, should add restriction on data source
     Policy rowFilterPolicy = RowFilterPolicy.from(new NullFilter("some-column", null));
     Access access = Access.allowWithRestriction(rowFilterPolicy);
-
-    DataSource expectedDataSource = RestrictedDataSource.create(TableDataSource.create(DATASOURCE), rowFilterPolicy);
 
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(DATASOURCE)
@@ -481,19 +484,12 @@ public class QueryLifecycleTest
             .andReturn(access).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).anyTimes();
-    // We're expecting the data source in the query to be transformed to a RestrictedDataSource, with policy.
-    // Any other DataSource would throw AssertionError.
-    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
-                queryMatchDataSource(expectedDataSource),
-                EasyMock.anyObject()
-            ))
-            .andReturn(runner).anyTimes();
-    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
     replayAll();
 
     policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(NoRestrictionPolicy.class.getName()));
     QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
+    // Fail, only NoRestrictionPolicy is allowed.
     DruidException e = Assert.assertThrows(DruidException.class, () -> lifecycle.authorize(authenticationResult));
     Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
     Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
