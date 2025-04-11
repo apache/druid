@@ -99,7 +99,6 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final IngestDestination targetDataSource;
   private final OverlordClient overlordClient;
   private final PlannerContext plannerContext;
-  private final PolicyEnforcer policyEnforcer;
   private final ObjectMapper jsonMapper;
   private final List<Entry<Integer, String>> fieldMapping;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
@@ -108,7 +107,6 @@ public class MSQTaskQueryMaker implements QueryMaker
       @Nullable final IngestDestination targetDataSource,
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
-      final PolicyEnforcer policyEnforcer,
       final ObjectMapper jsonMapper,
       final List<Entry<Integer, String>> fieldMapping,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
@@ -117,7 +115,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     this.targetDataSource = targetDataSource;
     this.overlordClient = Preconditions.checkNotNull(overlordClient, "indexingServiceClient");
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
-    this.policyEnforcer = Preconditions.checkNotNull(policyEnforcer, "policyEnforcer");
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
     this.terminalStageSpecFactory = terminalStageSpecFactory;

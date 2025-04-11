@@ -52,7 +52,7 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
   protected FrameProcessorExecutor exec;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     innerExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec"));
     exec = new FrameProcessorExecutor(innerExec);

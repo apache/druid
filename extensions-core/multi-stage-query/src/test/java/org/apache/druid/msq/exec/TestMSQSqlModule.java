@@ -55,7 +55,6 @@ public class TestMSQSqlModule extends TestDruidModule
   {
     return new MSQTaskSqlEngine(
         indexingServiceClient,
-        NoopPolicyEnforcer.instance(),
         queryJsonMapper,
         new SegmentGenerationTerminalStageSpecFactory()
     );

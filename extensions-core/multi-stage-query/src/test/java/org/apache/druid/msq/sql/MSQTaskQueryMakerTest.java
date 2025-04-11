@@ -223,15 +223,7 @@ public class MSQTaskQueryMakerTest
                                                .build();
     DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
     // Act
-    msqTaskQueryMaker = new MSQTaskQueryMaker(
-        ingestDestination,
-        fakeOverlordClient,
-        plannerContextMock,
-        policyEnforcer,
-        objectMapper,
-        fieldMapping,
-        terminalStageSpecFactory
-    );
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
     QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
     // Assert
     String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
@@ -269,15 +261,7 @@ public class MSQTaskQueryMakerTest
                                                .build();
     DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
     // Act
-    msqTaskQueryMaker = new MSQTaskQueryMaker(
-        ingestDestination,
-        fakeOverlordClient,
-        plannerContextMock,
-        policyEnforcer,
-        objectMapper,
-        fieldMapping,
-        terminalStageSpecFactory
-    );
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
     QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
     // Assert
     String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
@@ -318,15 +302,7 @@ public class MSQTaskQueryMakerTest
                                                .build();
     DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
     // Act
-    msqTaskQueryMaker = new MSQTaskQueryMaker(
-        ingestDestination,
-        fakeOverlordClient,
-        plannerContextMock,
-        policyEnforcer,
-        objectMapper,
-        fieldMapping,
-        terminalStageSpecFactory
-    );
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
     QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
     // Assert
     String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
@@ -374,15 +350,7 @@ public class MSQTaskQueryMakerTest
                                                .build();
     DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
     // Act
-    msqTaskQueryMaker = new MSQTaskQueryMaker(
-        ingestDestination,
-        fakeOverlordClient,
-        plannerContextMock,
-        policyEnforcer,
-        objectMapper,
-        fieldMapping,
-        terminalStageSpecFactory
-    );
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
     QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
     // Assert
     String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
@@ -420,15 +388,7 @@ public class MSQTaskQueryMakerTest
                                                .build();
     DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
     // Act
-    msqTaskQueryMaker = new MSQTaskQueryMaker(
-        ingestDestination,
-        fakeOverlordClient,
-        plannerContextMock,
-        policyEnforcer,
-        objectMapper,
-        fieldMapping,
-        terminalStageSpecFactory
-    );
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
     QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
     // Assert
     String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
@@ -457,15 +417,7 @@ public class MSQTaskQueryMakerTest
                                                .build();
     DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
     // Act
-    msqTaskQueryMaker = new MSQTaskQueryMaker(
-        ingestDestination,
-        fakeOverlordClient,
-        plannerContextMock,
-        policyEnforcer,
-        objectMapper,
-        fieldMapping,
-        terminalStageSpecFactory
-    );
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
     QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
     // Assert
     String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
@@ -501,5 +453,18 @@ public class MSQTaskQueryMakerTest
                                          .boxed()
                                          .collect(toMap(Function.identity(), columns::get))
                                          .entrySet());
+  }
+
+  private MSQTaskQueryMaker getMSQTaskQueryMaker()
+  {
+    // This can't be in setUp() because the fieldMapping are set in the test
+    return new MSQTaskQueryMaker(
+        ingestDestination,
+        fakeOverlordClient,
+        plannerContextMock,
+        objectMapper,
+        fieldMapping,
+        terminalStageSpecFactory
+    );
   }
 }

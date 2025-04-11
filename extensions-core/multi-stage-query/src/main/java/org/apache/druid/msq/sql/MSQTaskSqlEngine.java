@@ -90,20 +90,17 @@ public class MSQTaskSqlEngine implements SqlEngine
   private static final String NAME = "msq-task";
 
   private final OverlordClient overlordClient;
-  private final PolicyEnforcer policyEnforcer;
   private final ObjectMapper jsonMapper;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   @Inject
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
-      final PolicyEnforcer policyEnforcer,
       final ObjectMapper jsonMapper,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
     this.overlordClient = overlordClient;
-    this.policyEnforcer = policyEnforcer;
     this.jsonMapper = jsonMapper;
     this.terminalStageSpecFactory = terminalStageSpecFactory;
   }
@@ -181,7 +178,6 @@ public class MSQTaskSqlEngine implements SqlEngine
         null,
         overlordClient,
         plannerContext,
-        policyEnforcer,
         jsonMapper,
         relRoot.fields,
         terminalStageSpecFactory
@@ -216,7 +212,6 @@ public class MSQTaskSqlEngine implements SqlEngine
         destination,
         overlordClient,
         plannerContext,
-        policyEnforcer,
         jsonMapper,
         relRoot.fields,
         terminalStageSpecFactory
