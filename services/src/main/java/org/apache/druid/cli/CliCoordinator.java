@@ -38,6 +38,7 @@ import com.google.inject.util.Providers;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DirectDruidClientFactory;
+import org.apache.druid.client.DynamicConfigurationManager;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -116,6 +117,7 @@ import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
 import org.apache.druid.server.http.CoordinatorResource;
 import org.apache.druid.server.http.DataSourcesResource;
+import org.apache.druid.server.http.DynamicConfigSyncer;
 import org.apache.druid.server.http.IntervalsResource;
 import org.apache.druid.server.http.LookupCoordinatorResource;
 import org.apache.druid.server.http.MetadataResource;
@@ -224,6 +226,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
+            binder.bind(DynamicConfigSyncer.class).in(LazySingleton.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {

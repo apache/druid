@@ -404,7 +404,8 @@ public class CoordinatorDynamicConfig
                that.dataSourcesToNotKillStalePendingSegmentsIn)
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
-           && Objects.equals(debugDimensions, that.debugDimensions);
+           && Objects.equals(debugDimensions, that.debugDimensions)
+           && Objects.equals(cloneServers, that.cloneServers);
   }
 
   @Override
@@ -424,7 +425,8 @@ public class CoordinatorDynamicConfig
         decommissioningNodes,
         pauseCoordination,
         debugDimensions,
-        turboLoadingNodes
+        turboLoadingNodes,
+        cloneServers
     );
   }
 

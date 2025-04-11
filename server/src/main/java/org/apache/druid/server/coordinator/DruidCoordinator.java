@@ -83,6 +83,7 @@ import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused
 import org.apache.druid.server.coordinator.duty.MetadataAction;
 import org.apache.druid.server.coordinator.duty.PrepareBalancerAndLoadQueues;
 import org.apache.druid.server.coordinator.duty.RunRules;
+import org.apache.druid.server.coordinator.duty.SyncBrokerDuty;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
@@ -94,6 +95,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.DynamicConfigSyncer;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -142,6 +144,7 @@ public class DruidCoordinator
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+  private final DynamicConfigSyncer dynamicConfigSyncer;
 
   private volatile boolean started = false;
 
@@ -169,7 +172,6 @@ public class DruidCoordinator
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
 
-  @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,
       MetadataManager metadataManager,
@@ -187,6 +189,31 @@ public class DruidCoordinator
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       CompactionStatusTracker compactionStatusTracker
+  )
+  {
+    this(config, metadataManager, serverInventoryView, emitter, scheduledExecutorFactory, overlordClient, taskMaster, loadQueueManager, serviceAnnouncer, self
+    , customDutyGroups, lookupCoordinatorManager, coordLeaderSelector, coordinatorSegmentMetadataCache, centralizedDatasourceSchemaConfig, compactionStatusTracker, null);
+  }
+
+  @Inject
+  public DruidCoordinator(
+      DruidCoordinatorConfig config,
+      MetadataManager metadataManager,
+      ServerInventoryView serverInventoryView,
+      ServiceEmitter emitter,
+      ScheduledExecutorFactory scheduledExecutorFactory,
+      OverlordClient overlordClient,
+      LoadQueueTaskMaster taskMaster,
+      SegmentLoadQueueManager loadQueueManager,
+      ServiceAnnouncer serviceAnnouncer,
+      @Self DruidNode self,
+      CoordinatorCustomDutyGroups customDutyGroups,
+      LookupCoordinatorManager lookupCoordinatorManager,
+      @Coordinator DruidLeaderSelector coordLeaderSelector,
+      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      CompactionStatusTracker compactionStatusTracker,
+      DynamicConfigSyncer dynamicConfigSyncer
   )
   {
     this.config = config;
@@ -208,6 +235,7 @@ public class DruidCoordinator
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.dynamicConfigSyncer = dynamicConfigSyncer;
 
     this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
   }
@@ -560,6 +588,7 @@ public class DruidCoordinator
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
         new CloneHistoricals(loadQueueManager),
+        new SyncBrokerDuty(dynamicConfigSyncer),
         new CollectLoadQueueStats()
     );
   }

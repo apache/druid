@@ -53,9 +53,9 @@ public class DruidInternalDynamicConfigResource
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Path("/coordinatorDynamicConfig")
-  public Response getDatasource(final CoordinatorDynamicConfig dynamicConfig)
+  public Response setDatasource(final CoordinatorDynamicConfig dynamicConfig)
   {
     dynamicConfigurationManager.updateCloneServers(dynamicConfig);
-    return Response.ok(dynamicConfigurationManager.getConfig()).build();
+    return Response.ok("OK").build();
   }
 }

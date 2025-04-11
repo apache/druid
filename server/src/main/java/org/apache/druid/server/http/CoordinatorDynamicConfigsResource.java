@@ -49,15 +49,18 @@ public class CoordinatorDynamicConfigsResource
 {
   private final CoordinatorConfigManager manager;
   private final AuditManager auditManager;
+  private final DynamicConfigSyncer dynamicConfigSyncer;
 
   @Inject
   public CoordinatorDynamicConfigsResource(
       CoordinatorConfigManager manager,
-      AuditManager auditManager
+      AuditManager auditManager,
+      DynamicConfigSyncer dynamicConfigSyncer
   )
   {
     this.manager = manager;
     this.auditManager = auditManager;
+    this.dynamicConfigSyncer = dynamicConfigSyncer;
   }
 
   @GET
@@ -84,6 +87,7 @@ public class CoordinatorDynamicConfigsResource
       );
 
       if (setResult.isOk()) {
+        dynamicConfigSyncer.updateConfigIfNeeded();
         return Response.ok().build();
       } else {
         return Response.status(Response.Status.BAD_REQUEST)
