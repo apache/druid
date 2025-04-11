@@ -29,7 +29,7 @@ import com.google.inject.name.Names;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.CachingClusteredClient;
-import org.apache.druid.client.DynamicConfigurationManager;
+import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
@@ -170,7 +170,7 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
-          binder.bind(DynamicConfigurationManager.class).in(ManageLifecycle.class);
+          binder.bind(CoordinatorDynamicConfigView.class).in(ManageLifecycle.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
           Jerseys.addResource(binder, HistoricalResource.class);

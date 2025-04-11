@@ -46,7 +46,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.metrics.TestDynamicConfigurationManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -331,7 +330,7 @@ public class CachingClusteredClientFunctionalityTest
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new NoopServiceEmitter(),
-        new TestDynamicConfigurationManager()
+        null
     );
   }
 

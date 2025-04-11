@@ -51,7 +51,6 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.metrics.TestDynamicConfigurationManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -134,7 +133,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new NoopServiceEmitter(),
-        new TestDynamicConfigurationManager()
+        null
     );
     servers = new ArrayList<>();
   }

@@ -225,7 +225,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorConfig()
+  public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig()
   {
     return FutureUtils.transform(
         client.asyncRequest(

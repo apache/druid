@@ -20,7 +20,7 @@
 package org.apache.druid.server;
 
 import com.google.inject.Inject;
-import org.apache.druid.client.DynamicConfigurationManager;
+import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import javax.ws.rs.Consumes;
@@ -34,12 +34,12 @@ import javax.ws.rs.core.Response;
 @Path("/druid-internal/v1/dynamicConfiguration")
 public class DruidInternalDynamicConfigResource
 {
-  private final DynamicConfigurationManager dynamicConfigurationManager;
+  private final CoordinatorDynamicConfigView coordinatorDynamicConfigView;
 
   @Inject
-  public DruidInternalDynamicConfigResource(DynamicConfigurationManager dynamicConfigurationManager)
+  public DruidInternalDynamicConfigResource(CoordinatorDynamicConfigView coordinatorDynamicConfigView)
   {
-    this.dynamicConfigurationManager = dynamicConfigurationManager;
+    this.coordinatorDynamicConfigView = coordinatorDynamicConfigView;
   }
 
   @GET
@@ -47,7 +47,7 @@ public class DruidInternalDynamicConfigResource
   @Path("/coordinatorDynamicConfig")
   public Response getDatasource()
   {
-    return Response.ok(dynamicConfigurationManager.getConfig()).build();
+    return Response.ok(coordinatorDynamicConfigView.getConfig()).build();
   }
 
   @POST
@@ -55,7 +55,7 @@ public class DruidInternalDynamicConfigResource
   @Path("/coordinatorDynamicConfig")
   public Response setDatasource(final CoordinatorDynamicConfig dynamicConfig)
   {
-    dynamicConfigurationManager.updateCloneServers(dynamicConfig);
+    coordinatorDynamicConfigView.updateCloneServers(dynamicConfig);
     return Response.ok("OK").build();
   }
 }

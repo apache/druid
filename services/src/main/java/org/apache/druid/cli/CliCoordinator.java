@@ -38,7 +38,6 @@ import com.google.inject.util.Providers;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DirectDruidClientFactory;
-import org.apache.druid.client.DynamicConfigurationManager;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;

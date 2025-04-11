@@ -91,5 +91,5 @@ public interface CoordinatorClient
   /**
    * TODO: javadoc
    */
-  ListenableFuture<CoordinatorDynamicConfig> getCoordinatorConfig();
+  ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig();
 }

@@ -117,7 +117,6 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.metrics.TestDynamicConfigurationManager;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
@@ -2712,7 +2711,7 @@ public class CachingClusteredClientTest
             new ServerConfig()
         ),
         new NoopServiceEmitter(),
-        new TestDynamicConfigurationManager()
+        null
     );
   }
 

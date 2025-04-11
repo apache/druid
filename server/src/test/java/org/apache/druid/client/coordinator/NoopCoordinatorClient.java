@@ -92,7 +92,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorConfig()
+  public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig()
   {
     throw new UnsupportedOperationException();
   }

@@ -128,7 +128,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
-  private final DynamicConfigurationManager dynamicConfigurationManager;
+  private final CoordinatorDynamicConfigView coordinatorDynamicConfigView;
 
   @Inject
   public CachingClusteredClient(
@@ -143,7 +143,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
       ServiceEmitter emitter,
-      DynamicConfigurationManager dynamicConfigurationManager
+      CoordinatorDynamicConfigView coordinatorDynamicConfigView
   )
   {
     this.conglomerate = conglomerate;
@@ -157,7 +157,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.emitter = emitter;
-    this.dynamicConfigurationManager = dynamicConfigurationManager;
+    this.coordinatorDynamicConfigView = coordinatorDynamicConfigView;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -297,7 +297,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           strategy,
           useCache,
           populateCache,
-          dynamicConfigurationManager
+          coordinatorDynamicConfigView
       );
     }
 
@@ -609,9 +609,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
           boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
           if (queryUnmanagedServers) {
             // If this is a test query, ignore source servers.
-            return dynamicConfigurationManager.getSourceClusterServers();
+            return coordinatorDynamicConfigView.getSourceClusterServers();
           } else {
-            return dynamicConfigurationManager.getTargetCloneServers();
+            return coordinatorDynamicConfigView.getTargetCloneServers();
           }
         };
 
@@ -795,20 +795,20 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
     private final boolean isSegmentLevelCachingEnable;
-    private final DynamicConfigurationManager dynamicConfigurationManager;
+    private final CoordinatorDynamicConfigView coordinatorDynamicConfigView;
 
     CacheKeyManager(
         final Query<T> query,
         final CacheStrategy<T, Object, Query<T>> strategy,
         final boolean useCache,
         final boolean populateCache,
-        final DynamicConfigurationManager dynamicConfigurationManager
+        final CoordinatorDynamicConfigView coordinatorDynamicConfigView
     )
     {
 
       this.query = query;
       this.strategy = strategy;
-      this.dynamicConfigurationManager = dynamicConfigurationManager;
+      this.coordinatorDynamicConfigView = coordinatorDynamicConfigView;
       this.isSegmentLevelCachingEnable = ((populateCache || useCache)
                                           && !query.context().isBySegment());   // explicit bySegment queries are never cached
 
@@ -841,9 +841,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
           boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
           if (queryUnmanagedServers) {
             // If this is a test query, ignore source servers.
-            return dynamicConfigurationManager.getSourceClusterServers();
+            return coordinatorDynamicConfigView.getSourceClusterServers();
           } else {
-            return dynamicConfigurationManager.getTargetCloneServers();
+            return coordinatorDynamicConfigView.getTargetCloneServers();
           }
         };
         QueryableDruidServer queryableServer = p.getServer().pick(query, new HistoricalFilter(supplier));

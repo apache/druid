@@ -29,13 +29,13 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class DynamicConfigurationManager
+public class CoordinatorDynamicConfigView
 {
-  private static final Logger log = new Logger(DynamicConfigurationManager.class);
+  private static final Logger log = new Logger(CoordinatorDynamicConfigView.class);
   private final CoordinatorClient coordinatorClient;
 
   @Inject
-  public DynamicConfigurationManager(CoordinatorClient coordinatorClient)
+  public CoordinatorDynamicConfigView(CoordinatorClient coordinatorClient)
   {
     this.coordinatorClient = coordinatorClient;
   }
@@ -71,7 +71,7 @@ public class DynamicConfigurationManager
 
     try {
       // TODO: handle exceptions and timeouts
-      CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorConfig().get();
+      CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
       updateCloneServers(coordinatorDynamicConfig);
       log.info("Synced clone servers TRUE [%s]", coordinatorDynamicConfig.getCloneServers());
     }

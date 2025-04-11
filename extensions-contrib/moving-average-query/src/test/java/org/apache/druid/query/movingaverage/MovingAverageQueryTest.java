@@ -74,7 +74,6 @@ import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
-import org.apache.druid.server.metrics.TestDynamicConfigurationManager;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.utils.JvmUtils;
@@ -367,7 +366,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new NoopServiceEmitter(),
-        new TestDynamicConfigurationManager()
+        null
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
