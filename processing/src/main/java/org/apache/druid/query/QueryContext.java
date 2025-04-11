@@ -552,11 +552,12 @@ public class QueryContext
     );
   }
 
-  public boolean getQueryUnmanagedServers()
+  public CloneQueryMode getQueryCloneMode()
   {
-    return getBoolean(
-        QueryContexts.QUERY_UNMANAGED_SERVERS,
-        QueryContexts.DEFAULT_QUERY_UNMANAGED_SERVERS
+    return getEnum(
+        QueryContexts.QUERY_CLONE_MODE,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_QUERY_CLONE_MODE
     );
   }
 

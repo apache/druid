@@ -58,6 +58,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -93,6 +94,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -606,13 +608,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
         Supplier<Set<String>> supplier = () -> {
-          boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
-          if (queryUnmanagedServers) {
-            // If this is a test query, ignore source servers.
-            return coordinatorDynamicConfigView.getSourceClusterServers();
-          } else {
-            return coordinatorDynamicConfigView.getTargetCloneServers();
+          CloneQueryMode cloneQueryMode = query.context().getQueryCloneMode();
+          final Set<String> serversToIgnore = new HashSet<>();
+
+          switch (cloneQueryMode) {
+            case ONLY:
+              // Remove clone sources, so that targets are queried.
+              serversToIgnore.addAll(coordinatorDynamicConfigView.getSourceClusterServers());
+              break;
+            case EXCLUDE:
+              // Remove clone sources, so that targets are queried.
+              serversToIgnore.addAll(coordinatorDynamicConfigView.getTargetCloneServers());
+              break;
+            case INCLUDE:
+              // Don't remove either
+              break;
           }
+          return serversToIgnore;
         };
 
         final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
@@ -838,13 +850,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
         Supplier<Set<String>> supplier = () -> {
-          boolean queryUnmanagedServers = query.context().getQueryUnmanagedServers();
-          if (queryUnmanagedServers) {
-            // If this is a test query, ignore source servers.
-            return coordinatorDynamicConfigView.getSourceClusterServers();
-          } else {
-            return coordinatorDynamicConfigView.getTargetCloneServers();
+          CloneQueryMode cloneQueryMode = query.context().getQueryCloneMode();
+          final Set<String> serversToIgnore = new HashSet<>();
+
+          switch (cloneQueryMode) {
+            case ONLY:
+              // Remove clone sources, so that targets are queried.
+              serversToIgnore.addAll(coordinatorDynamicConfigView.getSourceClusterServers());
+              break;
+            case EXCLUDE:
+              // Remove clone sources, so that targets are queried.
+              serversToIgnore.addAll(coordinatorDynamicConfigView.getTargetCloneServers());
+              break;
+            case INCLUDE:
+              // Don't remove either
+              break;
           }
+          return serversToIgnore;
         };
         QueryableDruidServer queryableServer = p.getServer().pick(query, new HistoricalFilter(supplier));
         if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
