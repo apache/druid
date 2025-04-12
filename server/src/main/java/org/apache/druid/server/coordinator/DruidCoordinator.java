@@ -173,28 +173,6 @@ public class DruidCoordinator
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
 
-  public DruidCoordinator(
-      DruidCoordinatorConfig config,
-      MetadataManager metadataManager,
-      ServerInventoryView serverInventoryView,
-      ServiceEmitter emitter,
-      ScheduledExecutorFactory scheduledExecutorFactory,
-      OverlordClient overlordClient,
-      LoadQueueTaskMaster taskMaster,
-      SegmentLoadQueueManager loadQueueManager,
-      ServiceAnnouncer serviceAnnouncer,
-      @Self DruidNode self,
-      CoordinatorCustomDutyGroups customDutyGroups,
-      LookupCoordinatorManager lookupCoordinatorManager,
-      @Coordinator DruidLeaderSelector coordLeaderSelector,
-      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      CompactionStatusTracker compactionStatusTracker
-  )
-  {
-    this(config, metadataManager, serverInventoryView, emitter, scheduledExecutorFactory, overlordClient, taskMaster, loadQueueManager, serviceAnnouncer, self, customDutyGroups, lookupCoordinatorManager, coordLeaderSelector, coordinatorSegmentMetadataCache, centralizedDatasourceSchemaConfig, compactionStatusTracker, null, null);
-  }
-
   @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,

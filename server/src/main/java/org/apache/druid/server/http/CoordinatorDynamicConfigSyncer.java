@@ -43,16 +43,17 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Updates all brokers with the latest coordinator dynamic config.
+ */
 public class CoordinatorDynamicConfigSyncer
 {
   private static final Logger log = new Logger(CoordinatorDynamicConfigSyncer.class);
-  private static final String BROKER_UPDATE_PATH = "/druid-internal/v1/dynamicConfiguration/coordinatorDynamicConfig";
 
   private final CoordinatorConfigManager configManager;
   private final ServerInventoryView serverInventoryView;
@@ -61,7 +62,7 @@ public class CoordinatorDynamicConfigSyncer
   private final AtomicReference<CoordinatorDynamicConfig> lastKnownConfig = new AtomicReference<>();
   private final ServiceClientFactory clientFactory;
   private final ExecutorService exec;
-  private final List<String> inSyncBrokers;
+  private final Set<String> inSyncBrokers;
 
   @Inject
   public CoordinatorDynamicConfigSyncer(
@@ -76,24 +77,23 @@ public class CoordinatorDynamicConfigSyncer
     this.jsonMapper = jsonMapper;
     this.serverInventoryView = serverInventoryView;
     this.exec = Execs.singleThreaded("DynamicConfigSyncer-%d");
-    this.inSyncBrokers = new ArrayList<>(); // TODO: concurrency
+    this.inSyncBrokers = ConcurrentHashMap.newKeySet();
   }
 
-  public void queueBroadcastConfig()
+  public void broadcastConfigToBrokers()
   {
-    final CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
-    if (!currentDynamicConfig.equals(lastKnownConfig.get())) {
-      // Config has changed, clear the inSync list.
-      lastKnownConfig.set(currentDynamicConfig);
-      inSyncBrokers.clear();
-    }
-
-    for (DruidServerMetadata broker : getCurrentBrokers()) {
-      exec.submit(() -> syncConfigToBroker(broker));
+    invalidateInSyncBrokersIfNeeded();
+    for (DruidServerMetadata broker : getKnownBrokers()) {
+      exec.submit(() -> pushConfigToBroker(broker));
     }
   }
 
-  private void syncConfigToBroker(DruidServerMetadata broker)
+  public synchronized Set<String> getInSyncBrokers()
+  {
+    return Set.copyOf(inSyncBrokers);
+  }
+
+  private void pushConfigToBroker(DruidServerMetadata broker)
   {
     final ServiceLocation brokerLocation = ServiceLocation.fromDruidServerMetadata(broker);
     final ServiceClient brokerClient = clientFactory.makeClient(
@@ -103,14 +103,15 @@ public class CoordinatorDynamicConfigSyncer
     );
 
     try {
+      CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
       final RequestBuilder requestBuilder =
-          new RequestBuilder(HttpMethod.POST, BROKER_UPDATE_PATH)
-              .jsonContent(jsonMapper, configManager.getCurrentDynamicConfig());
+          new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/dynamicConfiguration/coordinatorDynamicConfig")
+              .jsonContent(jsonMapper, currentDynamicConfig);
 
       final BytesFullResponseHolder responseHolder = brokerClient.request(requestBuilder, new BytesFullResponseHandler());
       final HttpResponseStatus status = responseHolder.getStatus();
       if (status.equals(HttpResponseStatus.OK)) {
-        inSyncBrokers.add(broker.getHost());
+        addToInSyncBrokers(currentDynamicConfig, broker.getHost());
       } else {
         log.error(
             "Received status [%s] while posting dynamic configs to broker[%s]",
@@ -129,7 +130,7 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
-  private Set<DruidServerMetadata> getCurrentBrokers()
+  private Set<DruidServerMetadata> getKnownBrokers()
   {
     // TODO: Inventory view seems to be returning only an empty list, local work around for now.
     return ImmutableSet.of(
@@ -140,8 +141,20 @@ public class CoordinatorDynamicConfigSyncer
     );
   }
 
-  public List<String> getInSyncBrokers()
+  private synchronized void invalidateInSyncBrokersIfNeeded()
   {
-    return inSyncBrokers;
+    final CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
+    if (!currentDynamicConfig.equals(lastKnownConfig.get())) {
+      // Config has changed, clear the inSync list.
+      lastKnownConfig.set(currentDynamicConfig);
+      inSyncBrokers.clear();
+    }
+  }
+
+  private synchronized void addToInSyncBrokers(CoordinatorDynamicConfig config, String broker)
+  {
+    if (config.equals(lastKnownConfig.get())) {
+      inSyncBrokers.add(broker);
+    }
   }
 }

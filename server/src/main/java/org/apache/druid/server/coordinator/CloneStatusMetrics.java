@@ -37,7 +37,7 @@ public class CloneStatusMetrics
       @JsonProperty("sourceServer") String sourceServer,
       @JsonProperty("status") Status status,
       @JsonProperty("segmentLoadsRemaining") long segmentLoadsRemaining,
-      @JsonProperty("segmenetsDropsRemaining") long segmenetsDropsRemaining,
+      @JsonProperty("segmentDropsRemaining") long segmenetsDropsRemaining,
       @JsonProperty("bytesRemaining") long bytesRemaining
   )
   {
@@ -60,7 +60,7 @@ public class CloneStatusMetrics
     return segmentLoadsRemaining;
   }
 
-  @JsonProperty("segmenetsDropsRemaining")
+  @JsonProperty("segmentDropsRemaining")
   public long getSegmenetsDropsRemaining()
   {
     return segmenetsDropsRemaining;

@@ -21,6 +21,7 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.duty.DutyGroupStatus;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
@@ -39,11 +40,15 @@ import java.util.List;
 public class CoordinatorResourceTest
 {
   private DruidCoordinator mock;
+  private CloneStatusManager cloneStatusManager;
+  private CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
 
   @Before
   public void setUp()
   {
     mock = EasyMock.createStrictMock(DruidCoordinator.class);
+    cloneStatusManager = EasyMock.createStrictMock(CloneStatusManager.class);
+    coordinatorDynamicConfigSyncer = EasyMock.createStrictMock(CoordinatorDynamicConfigSyncer.class);
   }
 
   @After
@@ -58,7 +63,7 @@ public class CoordinatorResourceTest
     EasyMock.expect(mock.getCurrentLeader()).andReturn("boz").once();
     EasyMock.replay(mock);
 
-    final Response response = new CoordinatorResource(mock, null, null).getLeader();
+    final Response response = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).getLeader();
     Assert.assertEquals("boz", response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -71,12 +76,12 @@ public class CoordinatorResourceTest
     EasyMock.replay(mock);
 
     // true
-    final Response response1 = new CoordinatorResource(mock, null, null).isLeader();
+    final Response response1 = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
     Assert.assertEquals(200, response1.getStatus());
 
     // false
-    final Response response2 = new CoordinatorResource(mock, null, null).isLeader();
+    final Response response2 = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
     Assert.assertEquals(404, response2.getStatus());
   }
@@ -89,7 +94,7 @@ public class CoordinatorResourceTest
             .once();
     EasyMock.replay(mock);
 
-    final Response response = new CoordinatorResource(mock, null, null).getLoadQueue("true", null);
+    final Response response = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).getLoadQueue("true", null);
     Assert.assertEquals(
         ImmutableMap.of(
             "hist1",
@@ -125,7 +130,7 @@ public class CoordinatorResourceTest
     ).once();
     EasyMock.replay(mock);
 
-    final Response response = new CoordinatorResource(mock, null, null).getStatusOfDuties();
+    final Response response = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).getStatusOfDuties();
     Assert.assertEquals(200, response.getStatus());
 
     final Object payload = response.getEntity();

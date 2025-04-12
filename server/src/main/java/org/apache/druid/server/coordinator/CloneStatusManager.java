@@ -33,7 +33,7 @@ public class CloneStatusManager
 
   public CloneStatusManager()
   {
-    this.cloneStatusSnapshot = new AtomicReference<>(ImmutableMap.of());;
+    this.cloneStatusSnapshot = new AtomicReference<>(ImmutableMap.of());
   }
 
   public Map<String, CloneStatusMetrics> getStatusForAllServers()

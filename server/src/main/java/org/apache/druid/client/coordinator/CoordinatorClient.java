@@ -89,7 +89,9 @@ public interface CoordinatorClient
   ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
 
   /**
-   * TODO: javadoc
+   * Gets the latest coordinator dynamic config.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/config}
    */
   ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig();
 }

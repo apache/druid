@@ -71,6 +71,7 @@ import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -167,7 +168,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
   }
 
@@ -476,7 +479,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 
@@ -526,7 +531,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -576,7 +583,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 
@@ -688,7 +697,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 

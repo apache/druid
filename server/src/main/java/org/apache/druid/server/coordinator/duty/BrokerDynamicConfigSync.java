@@ -40,7 +40,7 @@ public class BrokerDynamicConfigSync implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    coordinatorDynamicConfigSyncer.queueBroadcastConfig();
+    coordinatorDynamicConfigSyncer.broadcastConfigToBrokers();
     return params;
   }
 }
