@@ -19,60 +19,72 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.java.util.common.logger.Logger;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class CloneStatusManager
 {
-  private static final Logger log = new Logger(CloneStatusManager.class);
-  @GuardedBy("this")
-  private final Map<String, CloneStatusMetrics> cloneStatusMap;
+  private final AtomicReference<Map<String, CloneStatusMetrics>> cloneStatusSnapshot;
 
   public CloneStatusManager()
   {
-    cloneStatusMap = new HashMap<>();
+    this.cloneStatusSnapshot = new AtomicReference<>(ImmutableMap.of());;
   }
 
-  public Map<String, CloneStatusMetrics> getCloneStatusMap()
+  public Map<String, CloneStatusMetrics> getStatusForAllServers()
   {
-    synchronized (this) {
-      return cloneStatusMap;
-    }
+    return cloneStatusSnapshot.get();
+  }
+
+  public CloneStatusMetrics getStatusForServer(String targetServer)
+  {
+    return cloneStatusSnapshot.get().get(targetServer);
   }
 
   public void updateStats(Map<String, ServerHolder> historicalMap, Map<String, String> cloneServers)
   {
-    synchronized (this) {
-      cloneStatusMap.clear();
+    final Map<String, CloneStatusMetrics> newStatusMap = new HashMap<>();
 
-      for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
-        String targetServerName = entry.getKey();
-        ServerHolder targetServer = historicalMap.get(entry.getKey());
-        String sourceServerName = entry.getValue();
+    for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
+      final String targetServerName = entry.getKey();
+      final ServerHolder targetServer = historicalMap.get(entry.getKey());
+      final String sourceServerName = entry.getValue();
 
-        int segmentsLeft = 0;
-        long bytesLeft = 0;
+      long segmentLoad = 0L;
+      long bytesLeft = 0L;
+      long segmentDrop = 0L;
 
-        if (targetServer == null) {
-          cloneStatusMap.put(targetServerName, new CloneStatusMetrics(sourceServerName, 0, 0, 0, 0));
-          continue;
+      CloneStatusMetrics newStatus;
+      if (targetServer == null) {
+        newStatus = CloneStatusMetrics.unknown(sourceServerName);
+      } else {
+        CloneStatusMetrics.Status status;
+
+        if (!historicalMap.containsKey(sourceServerName)) {
+          status = CloneStatusMetrics.Status.SOURCE_SERVER_MISSING;
+        } else {
+          status = CloneStatusMetrics.Status.LOADING;
         }
 
         for (Map.Entry<DataSegment, SegmentAction> queuedSegment : targetServer.getQueuedSegments().entrySet()) {
           if (queuedSegment.getValue().isLoad()) {
-            segmentsLeft++;
+            segmentLoad += 1;
             bytesLeft += queuedSegment.getKey().getSize();
+          } else {
+            segmentDrop += 1;
           }
         }
-
-        cloneStatusMap.put(targetServerName, new CloneStatusMetrics(sourceServerName, 0, 0, segmentsLeft, bytesLeft));
+        newStatus = new CloneStatusMetrics(sourceServerName, status, segmentLoad, segmentDrop, bytesLeft);
       }
+      newStatusMap.put(targetServerName, newStatus);
     }
+
+    cloneStatusSnapshot.set(newStatusMap);
   }
 }
 

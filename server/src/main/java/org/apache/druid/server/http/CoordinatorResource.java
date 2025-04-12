@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.CloneStatusManager;
+import org.apache.druid.server.coordinator.CloneStatusMetrics;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.timeline.DataSegment;
@@ -46,13 +47,6 @@ public class CoordinatorResource
   private final DruidCoordinator coordinator;
   private final CloneStatusManager cloneStatusManager;
   private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
-
-  public CoordinatorResource(DruidCoordinator coordinator)
-  {
-    this.coordinator = coordinator;
-    this.cloneStatusManager = null;
-    this.coordinatorDynamicConfigSyncer = null;
-  }
 
   @Inject
   public CoordinatorResource(DruidCoordinator coordinator, CloneStatusManager cloneStatusManager, CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer)
@@ -184,8 +178,14 @@ public class CoordinatorResource
   @Path("/cloneStatus")
   @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCloneStatus()
+  public Response getCloneStatus(@QueryParam("targetServer") String targetServer)
   {
-    return Response.ok(cloneStatusManager.getCloneStatusMap()).build();
+    if (targetServer != null) {
+      CloneStatusMetrics statusForServer = cloneStatusManager.getStatusForServer(targetServer);
+      return Response.ok(ImmutableMap.of(targetServer, statusForServer)).build();
+
+    } else {
+      return Response.ok(cloneStatusManager.getStatusForAllServers()).build();
+    }
   }
 }

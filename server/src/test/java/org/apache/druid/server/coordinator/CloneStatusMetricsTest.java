@@ -28,7 +28,7 @@ public class CloneStatusMetricsTest
   @Test
   public void testSerde() throws Exception
   {
-    CloneStatusMetrics metrics = new CloneStatusMetrics("host2", 1, 3012, 10, 100);
+    CloneStatusMetrics metrics = new CloneStatusMetrics("host2", CloneStatusMetrics.Status.LOADING, 3012, 10, 100);
     byte[] bytes = DefaultObjectMapper.INSTANCE.writeValueAsBytes(metrics);
     CloneStatusMetrics deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, CloneStatusMetrics.class);
     Assert.assertEquals(deserialized, metrics);

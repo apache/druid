@@ -27,25 +27,25 @@ import java.util.Objects;
 public class CloneStatusMetrics
 {
   private final String sourceServer;
+  private final Status status;
   private final long segmentLoadsRemaining;
   private final long segmenetsDropsRemaining;
   private final long bytesRemaining;
-  private final long segmentChangesInLastRun;
 
   @JsonCreator
   public CloneStatusMetrics(
       @JsonProperty("sourceServer") String sourceServer,
+      @JsonProperty("status") Status status,
       @JsonProperty("segmentLoadsRemaining") long segmentLoadsRemaining,
       @JsonProperty("segmenetsDropsRemaining") long segmenetsDropsRemaining,
-      @JsonProperty("bytesRemaining") long bytesRemaining,
-      @JsonProperty("segmentChangesInLastRun") long segmentChangesInLastRun
+      @JsonProperty("bytesRemaining") long bytesRemaining
   )
   {
     this.sourceServer = sourceServer;
+    this.status = status;
     this.segmentLoadsRemaining = segmentLoadsRemaining;
     this.segmenetsDropsRemaining = segmenetsDropsRemaining;
     this.bytesRemaining = bytesRemaining;
-    this.segmentChangesInLastRun = segmentChangesInLastRun;
   }
 
   @JsonProperty("sourceServer")
@@ -72,10 +72,15 @@ public class CloneStatusMetrics
     return bytesRemaining;
   }
 
-  @JsonProperty("segmentChangesInLastRun")
-  public long getSegmentChangesInLastRun()
+  @JsonProperty("status")
+  public Status getStatus()
   {
-    return segmentChangesInLastRun;
+    return status;
+  }
+
+  public static CloneStatusMetrics unknown(String sourceServer)
+  {
+    return new CloneStatusMetrics(sourceServer, Status.TARGET_SERVER_MISSING, 0, 0, 0);
   }
 
   @Override
@@ -91,20 +96,14 @@ public class CloneStatusMetrics
     return segmentLoadsRemaining == that.segmentLoadsRemaining
            && segmenetsDropsRemaining == that.segmenetsDropsRemaining
            && bytesRemaining == that.bytesRemaining
-           && segmentChangesInLastRun == that.segmentChangesInLastRun
-           && Objects.equals(sourceServer, that.sourceServer);
+           && Objects.equals(sourceServer, that.sourceServer)
+           && status == that.status;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(
-        sourceServer,
-        segmentLoadsRemaining,
-        segmenetsDropsRemaining,
-        bytesRemaining,
-        segmentChangesInLastRun
-    );
+    return Objects.hash(sourceServer, status, segmentLoadsRemaining, segmenetsDropsRemaining, bytesRemaining);
   }
 
   @Override
@@ -112,10 +111,17 @@ public class CloneStatusMetrics
   {
     return "CloneStatusMetrics{" +
            "sourceServer='" + sourceServer + '\'' +
+           ", status=" + status +
            ", segmentLoadsRemaining=" + segmentLoadsRemaining +
            ", segmenetsDropsRemaining=" + segmenetsDropsRemaining +
            ", bytesRemaining=" + bytesRemaining +
-           ", segmentChangesInLastRun=" + segmentChangesInLastRun +
            '}';
+  }
+
+  public enum Status
+  {
+    SOURCE_SERVER_MISSING,
+    TARGET_SERVER_MISSING,
+    LOADING
   }
 }

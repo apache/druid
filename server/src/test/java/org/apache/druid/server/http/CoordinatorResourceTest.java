@@ -58,7 +58,7 @@ public class CoordinatorResourceTest
     EasyMock.expect(mock.getCurrentLeader()).andReturn("boz").once();
     EasyMock.replay(mock);
 
-    final Response response = new CoordinatorResource(mock).getLeader();
+    final Response response = new CoordinatorResource(mock, null, null).getLeader();
     Assert.assertEquals("boz", response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -71,12 +71,12 @@ public class CoordinatorResourceTest
     EasyMock.replay(mock);
 
     // true
-    final Response response1 = new CoordinatorResource(mock).isLeader();
+    final Response response1 = new CoordinatorResource(mock, null, null).isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
     Assert.assertEquals(200, response1.getStatus());
 
     // false
-    final Response response2 = new CoordinatorResource(mock).isLeader();
+    final Response response2 = new CoordinatorResource(mock, null, null).isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
     Assert.assertEquals(404, response2.getStatus());
   }
@@ -89,7 +89,7 @@ public class CoordinatorResourceTest
             .once();
     EasyMock.replay(mock);
 
-    final Response response = new CoordinatorResource(mock).getLoadQueue("true", null);
+    final Response response = new CoordinatorResource(mock, null, null).getLoadQueue("true", null);
     Assert.assertEquals(
         ImmutableMap.of(
             "hist1",
@@ -125,7 +125,7 @@ public class CoordinatorResourceTest
     ).once();
     EasyMock.replay(mock);
 
-    final Response response = new CoordinatorResource(mock).getStatusOfDuties();
+    final Response response = new CoordinatorResource(mock, null, null).getStatusOfDuties();
     Assert.assertEquals(200, response.getStatus());
 
     final Object payload = response.getEntity();
