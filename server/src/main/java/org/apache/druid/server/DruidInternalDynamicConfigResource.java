@@ -20,8 +20,10 @@
 package org.apache.druid.server;
 
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.http.security.ConfigResourceFilter;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -44,6 +46,7 @@ public class DruidInternalDynamicConfigResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   @Path("/coordinatorDynamicConfig")
   public Response getDatasource()
   {
@@ -52,6 +55,7 @@ public class DruidInternalDynamicConfigResource
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   @Path("/coordinatorDynamicConfig")
   public Response setDatasource(final CoordinatorDynamicConfig dynamicConfig)
   {

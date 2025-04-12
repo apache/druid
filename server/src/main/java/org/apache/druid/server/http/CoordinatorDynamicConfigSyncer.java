@@ -49,9 +49,9 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class DynamicConfigSyncer
+public class CoordinatorDynamicConfigSyncer
 {
-  private static final Logger log = new Logger(DynamicConfigSyncer.class);
+  private static final Logger log = new Logger(CoordinatorDynamicConfigSyncer.class);
   private static final String BROKER_UPDATE_PATH = "/druid-internal/v1/dynamicConfiguration/coordinatorDynamicConfig";
 
   private final CoordinatorConfigManager configManager;
@@ -64,7 +64,7 @@ public class DynamicConfigSyncer
   private final List<String> inSyncBrokers;
 
   @Inject
-  public DynamicConfigSyncer(
+  public CoordinatorDynamicConfigSyncer(
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       final CoordinatorConfigManager configManager,
       @Json final ObjectMapper jsonMapper,

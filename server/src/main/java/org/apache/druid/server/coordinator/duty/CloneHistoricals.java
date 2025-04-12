@@ -49,7 +49,10 @@ public class CloneHistoricals implements CoordinatorDuty
   private final SegmentLoadQueueManager loadQueueManager;
   private final CloneStatusManager cloneStatusManager;
 
-  public CloneHistoricals(SegmentLoadQueueManager loadQueueManager, CloneStatusManager cloneStatusManager)
+  public CloneHistoricals(
+      final SegmentLoadQueueManager loadQueueManager,
+      final CloneStatusManager cloneStatusManager
+  )
   {
     this.loadQueueManager = loadQueueManager;
     this.cloneStatusManager = cloneStatusManager;
@@ -68,21 +71,21 @@ public class CloneHistoricals implements CoordinatorDuty
     }
 
     // Create a map of host to historical.
-    final Map<String, ServerHolder> historicalMap = cluster.getHistoricals()
-                                                           .values()
-                                                           .stream()
-                                                           .flatMap(Collection::stream)
-                                                           .collect(Collectors.toMap(
-                                                               serverHolder -> serverHolder.getServer().getHost(),
-                                                               serverHolder -> serverHolder
-                                                           ));
+    final Map<String, ServerHolder> hostToHistorical = cluster.getHistoricals()
+                                                              .values()
+                                                              .stream()
+                                                              .flatMap(Collection::stream)
+                                                              .collect(Collectors.toMap(
+                                                                  serverHolder -> serverHolder.getServer().getHost(),
+                                                                  serverHolder -> serverHolder
+                                                              ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetHistoricalName = entry.getKey();
-      final ServerHolder targetServer = historicalMap.get(targetHistoricalName);
+      final ServerHolder targetServer = hostToHistorical.get(targetHistoricalName);
 
       final String sourceHistoricalName = entry.getValue();
-      final ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
+      final ServerHolder sourceServer = hostToHistorical.get(sourceHistoricalName);
 
       if (sourceServer == null || targetServer == null) {
         log.error(
@@ -118,7 +121,7 @@ public class CloneHistoricals implements CoordinatorDuty
       }
     }
 
-    cloneStatusManager.updateStats(historicalMap, cloneServers);
+    cloneStatusManager.updateStats(hostToHistorical, cloneServers);
 
     return params;
   }

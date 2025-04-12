@@ -636,6 +636,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
     Assert.assertEquals(turboLoadingNodes, config.getTurboLoadingNodes());
+    Assert.assertEquals(cloneServers, config.getCloneServers());
   }
 
   private static int getDefaultNumBalancerThreads()

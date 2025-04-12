@@ -45,21 +45,21 @@ public class CoordinatorResource
 {
   private final DruidCoordinator coordinator;
   private final CloneStatusManager cloneStatusManager;
-  private final DynamicConfigSyncer dynamicConfigSyncer;
+  private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
 
   public CoordinatorResource(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
     this.cloneStatusManager = null;
-    dynamicConfigSyncer = null;
+    this.coordinatorDynamicConfigSyncer = null;
   }
 
   @Inject
-  public CoordinatorResource(DruidCoordinator coordinator, CloneStatusManager cloneStatusManager, DynamicConfigSyncer dynamicConfigSyncer)
+  public CoordinatorResource(DruidCoordinator coordinator, CloneStatusManager cloneStatusManager, CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer)
   {
     this.coordinator = coordinator;
     this.cloneStatusManager = cloneStatusManager;
-    this.dynamicConfigSyncer = dynamicConfigSyncer;
+    this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
   }
 
   @GET
@@ -173,14 +173,16 @@ public class CoordinatorResource
 
   @GET
   @Path("/brokerConfigurationStatus")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getBrokerStatus()
   {
-    return Response.ok(dynamicConfigSyncer.getInSyncBrokers()).build();
+    return Response.ok(coordinatorDynamicConfigSyncer.getInSyncBrokers()).build();
   }
 
   @GET
   @Path("/cloneStatus")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCloneStatus()
   {

@@ -19,38 +19,18 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class CloneDetails
+public class CloneStatusMetricsTest
 {
-  final String sourceServer;
-  final long segmentsRemaining;
-  final long bytesRemaining;
-
-  @JsonCreator
-  public CloneDetails(@JsonProperty String sourceServer, @JsonProperty long segmentsRemaining, @JsonProperty long bytesRemaining)
+  @Test
+  public void testSerde() throws Exception
   {
-    this.sourceServer = sourceServer;
-    this.segmentsRemaining = segmentsRemaining;
-    this.bytesRemaining = bytesRemaining;
-  }
-
-  @JsonProperty
-  public String getSourceServer()
-  {
-    return sourceServer;
-  }
-
-  @JsonProperty
-  public long getSegmentsRemaining()
-  {
-    return segmentsRemaining;
-  }
-
-  @JsonProperty
-  public long getBytesRemaining()
-  {
-    return bytesRemaining;
+    CloneStatusMetrics metrics = new CloneStatusMetrics("host2", 1, 3012, 10, 100);
+    byte[] bytes = DefaultObjectMapper.INSTANCE.writeValueAsBytes(metrics);
+    CloneStatusMetrics deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, CloneStatusMetrics.class);
+    Assert.assertEquals(deserialized, metrics);
   }
 }

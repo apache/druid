@@ -117,7 +117,7 @@ import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
 import org.apache.druid.server.http.CoordinatorResource;
 import org.apache.druid.server.http.DataSourcesResource;
-import org.apache.druid.server.http.DynamicConfigSyncer;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.IntervalsResource;
 import org.apache.druid.server.http.LookupCoordinatorResource;
 import org.apache.druid.server.http.MetadataResource;
@@ -226,7 +226,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
-            binder.bind(DynamicConfigSyncer.class).in(LazySingleton.class);
+            binder.bind(CoordinatorDynamicConfigSyncer.class).in(LazySingleton.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {

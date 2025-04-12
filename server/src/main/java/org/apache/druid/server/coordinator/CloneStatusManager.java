@@ -31,14 +31,14 @@ public class CloneStatusManager
 {
   private static final Logger log = new Logger(CloneStatusManager.class);
   @GuardedBy("this")
-  private final Map<String, CloneDetails> cloneStatusMap;
+  private final Map<String, CloneStatusMetrics> cloneStatusMap;
 
   public CloneStatusManager()
   {
     cloneStatusMap = new HashMap<>();
   }
 
-  public Map<String, CloneDetails> getCloneStatusMap()
+  public Map<String, CloneStatusMetrics> getCloneStatusMap()
   {
     synchronized (this) {
       return cloneStatusMap;
@@ -59,7 +59,7 @@ public class CloneStatusManager
         long bytesLeft = 0;
 
         if (targetServer == null) {
-          cloneStatusMap.put(targetServerName, new CloneDetails(sourceServerName, 0, 0));
+          cloneStatusMap.put(targetServerName, new CloneStatusMetrics(sourceServerName, 0, 0, 0, 0));
           continue;
         }
 
@@ -70,7 +70,7 @@ public class CloneStatusManager
           }
         }
 
-        cloneStatusMap.put(targetServerName, new CloneDetails(sourceServerName, segmentsLeft, bytesLeft));
+        cloneStatusMap.put(targetServerName, new CloneStatusMetrics(sourceServerName, 0, 0, segmentsLeft, bytesLeft));
       }
     }
   }

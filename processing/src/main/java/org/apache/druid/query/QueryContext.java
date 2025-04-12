@@ -552,12 +552,12 @@ public class QueryContext
     );
   }
 
-  public CloneQueryMode getQueryCloneMode()
+  public CloneQueryMode getCloneQueryMode()
   {
     return getEnum(
-        QueryContexts.QUERY_CLONE_MODE,
+        QueryContexts.CLONE_QUERY_MODE,
         CloneQueryMode.class,
-        QueryContexts.DEFAULT_QUERY_CLONE_MODE
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
     );
   }
 

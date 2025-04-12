@@ -607,7 +607,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
         Supplier<Set<String>> supplier = () -> {
-          CloneQueryMode cloneQueryMode = query.context().getQueryCloneMode();
+          CloneQueryMode cloneQueryMode = query.context().getCloneQueryMode();
           final Set<String> serversToIgnore = new HashSet<>();
 
           switch (cloneQueryMode) {
@@ -849,7 +849,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
         Supplier<Set<String>> supplier = () -> {
-          CloneQueryMode cloneQueryMode = query.context().getQueryCloneMode();
+          CloneQueryMode cloneQueryMode = query.context().getCloneQueryMode();
           final Set<String> serversToIgnore = new HashSet<>();
 
           switch (cloneQueryMode) {
