@@ -63,8 +63,8 @@ public class CloneStatusManager
       if (targetServer == null) {
         newStatus = CloneStatusMetrics.unknown(sourceServerName);
       } else {
-        CloneStatusMetrics.Status status;
 
+        CloneStatusMetrics.Status status;
         if (!historicalMap.containsKey(sourceServerName)) {
           status = CloneStatusMetrics.Status.SOURCE_SERVER_MISSING;
         } else {

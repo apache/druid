@@ -22,8 +22,6 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 
-import javax.annotation.Nullable;
-
 /**
  * Duty to periodically broadcast the coordinator dynamic configuration to all brokers.
  */
@@ -36,7 +34,6 @@ public class BrokerDynamicConfigSync implements CoordinatorDuty
     this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
   }
 
-  @Nullable
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {

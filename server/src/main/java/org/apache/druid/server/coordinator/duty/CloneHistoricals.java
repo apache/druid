@@ -91,7 +91,7 @@ public class CloneHistoricals implements CoordinatorDuty
         log.error(
             "Could not process clone mapping[%s] as historical[%s] does not exist.",
             entry,
-            (targetServer == null ? sourceHistoricalName : targetHistoricalName)
+            (sourceServer == null ? sourceHistoricalName : targetHistoricalName)
         );
         continue;
       }

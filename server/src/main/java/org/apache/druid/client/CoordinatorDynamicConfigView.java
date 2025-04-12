@@ -65,19 +65,13 @@ public class CoordinatorDynamicConfigView
   }
 
   @LifecycleStart
-  public void start() throws InterruptedException
+  public void start() throws Exception
   {
-    log.info("Initializing dynamic configuration.");
+    log.info("Fetching coordinator dynamic configuration.");
 
-    try {
-      // TODO: handle exceptions and timeouts
-      CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
-      updateCloneServers(coordinatorDynamicConfig);
-      log.info("Synced clone servers TRUE [%s]", coordinatorDynamicConfig.getCloneServers());
-    }
-    catch (Exception e) {
-      log.error(e, "Exception");
-      throw new RuntimeException(e);
-    }
+    CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
+    updateCloneServers(coordinatorDynamicConfig);
+
+    log.info("Successfully initialized dynamic config: [%s]", coordinatorDynamicConfig);
   }
 }
