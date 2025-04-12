@@ -83,7 +83,7 @@ import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused
 import org.apache.druid.server.coordinator.duty.MetadataAction;
 import org.apache.druid.server.coordinator.duty.PrepareBalancerAndLoadQueues;
 import org.apache.druid.server.coordinator.duty.RunRules;
-import org.apache.druid.server.coordinator.duty.SyncBrokerDuty;
+import org.apache.druid.server.coordinator.duty.BrokerDynamicConfigSync;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
@@ -192,8 +192,7 @@ public class DruidCoordinator
       CompactionStatusTracker compactionStatusTracker
   )
   {
-    this(config, metadataManager, serverInventoryView, emitter, scheduledExecutorFactory, overlordClient, taskMaster, loadQueueManager, serviceAnnouncer, self
-    , customDutyGroups, lookupCoordinatorManager, coordLeaderSelector, coordinatorSegmentMetadataCache, centralizedDatasourceSchemaConfig, compactionStatusTracker, null, null);
+    this(config, metadataManager, serverInventoryView, emitter, scheduledExecutorFactory, overlordClient, taskMaster, loadQueueManager, serviceAnnouncer, self, customDutyGroups, lookupCoordinatorManager, coordLeaderSelector, coordinatorSegmentMetadataCache, centralizedDatasourceSchemaConfig, compactionStatusTracker, null, null);
   }
 
   @Inject
@@ -591,7 +590,7 @@ public class DruidCoordinator
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
         new CloneHistoricals(loadQueueManager, cloneStatusManager),
-        new SyncBrokerDuty(dynamicConfigSyncer),
+        new BrokerDynamicConfigSync(dynamicConfigSyncer),
         new CollectLoadQueueStats()
     );
   }

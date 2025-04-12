@@ -370,6 +370,7 @@ public class CoordinatorDynamicConfig
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", turboLoadingNodes=" + turboLoadingNodes +
+           ", cloneServers=" + cloneServers +
            '}';
   }
 

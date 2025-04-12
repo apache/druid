@@ -24,11 +24,14 @@ import org.apache.druid.server.http.DynamicConfigSyncer;
 
 import javax.annotation.Nullable;
 
-public class SyncBrokerDuty implements CoordinatorDuty
+/**
+ * Duty to periodically broadcast the coordinator dynamic configuration to all brokers.
+ */
+public class BrokerDynamicConfigSync implements CoordinatorDuty
 {
   private final DynamicConfigSyncer dynamicConfigSyncer;
 
-  public SyncBrokerDuty(DynamicConfigSyncer dynamicConfigSyncer)
+  public BrokerDynamicConfigSync(DynamicConfigSyncer dynamicConfigSyncer)
   {
     this.dynamicConfigSyncer = dynamicConfigSyncer;
   }
@@ -37,7 +40,7 @@ public class SyncBrokerDuty implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    dynamicConfigSyncer.updateConfigIfNeeded();
+    dynamicConfigSyncer.queueBroadcastConfig();
     return params;
   }
 }

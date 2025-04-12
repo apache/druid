@@ -87,7 +87,7 @@ public class CoordinatorDynamicConfigsResource
       );
 
       if (setResult.isOk()) {
-        dynamicConfigSyncer.updateConfigIfNeeded();
+        dynamicConfigSyncer.queueBroadcastConfig();
         return Response.ok().build();
       } else {
         return Response.status(Response.Status.BAD_REQUEST)
