@@ -73,7 +73,8 @@ public class CompactionStatus
       Evaluator::rollupIsUpToDate,
       Evaluator::dimensionsSpecIsUpToDate,
       Evaluator::metricsSpecIsUpToDate,
-      Evaluator::transformSpecFilterIsUpToDate
+      Evaluator::transformSpecFilterIsUpToDate,
+      Evaluator::projectionsAreUpToDate
   );
 
   private final State state;
@@ -336,6 +337,16 @@ public class CompactionStatus
           "indexSpec",
           Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
           objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
+          String::valueOf
+      );
+    }
+
+    private CompactionStatus projectionsAreUpToDate()
+    {
+      return CompactionStatus.completeIfEqual(
+          "projections",
+          compactionConfig.getProjections(),
+          lastCompactionState.getProjections(),
           String::valueOf
       );
     }
