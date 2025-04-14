@@ -22,7 +22,8 @@ package org.apache.druid.query.groupby.having;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.math.BigDecimal;
@@ -37,6 +38,10 @@ class HavingSpecMetricComparator
 
   static int compare(String aggregationName, Number value, Map<String, AggregatorFactory> aggregators, Object metricValueObj)
   {
+    if (value == null) {
+      throw DruidException.defensive("Unexpected null match value");
+    }
+
     if (metricValueObj != null) {
       if (aggregators != null && aggregators.containsKey(aggregationName)) {
         metricValueObj = aggregators.get(aggregationName).finalizeComputation(metricValueObj);
@@ -52,7 +57,7 @@ class HavingSpecMetricComparator
           // Invert the comparison since we're providing n, value backwards.
           return -compareDoubleToLong(value.doubleValue(), n);
         } else {
-          throw new ISE("Number was[%s]?!?", value.getClass().getName());
+          throw DruidException.defensive("Number was[%s]?!?", value.getClass().getName());
         }
       } else if (metricValueObj instanceof Double || metricValueObj instanceof Float) {
         // Cast floats to doubles, it's fine since doubles can represent all float values.
@@ -63,7 +68,7 @@ class HavingSpecMetricComparator
         } else if (value instanceof Double || value instanceof Float) {
           return Doubles.compare(n, value.doubleValue());
         } else {
-          throw new ISE("Number was[%s]?!?", value.getClass().getName());
+          throw DruidException.defensive("Number was[%s]?!?", value.getClass().getName());
         }
       } else if (metricValueObj instanceof String) {
         String metricValueStr = (String) metricValueObj;
@@ -74,6 +79,10 @@ class HavingSpecMetricComparator
           double d = Double.parseDouble(metricValueStr);
           return Double.compare(d, value.doubleValue());
         }
+      } else if (metricValueObj == null) {
+        // Finalized value was null. Use nulls-first ordering. The matchable "value" cannot be null, so the result
+        // must be -1.
+        return -1;
       } else if (aggregators != null && aggregators.containsKey(aggregationName)) {
         // Use custom comparator in case of custom aggregation types
         AggregatorFactory aggregatorFactory = aggregators.get(aggregationName);
@@ -83,10 +92,10 @@ class HavingSpecMetricComparator
                                     aggregatorFactory.deserialize(value)
                                 );
       } else {
-        throw new ISE("Unknown type of metric value: %s", metricValueObj);
+        throw InvalidInput.exception("Unknown type of metric value[%s]", metricValueObj);
       }
     } else {
-      return Double.compare(0, value.doubleValue());
+      throw DruidException.defensive("Unexpected null metric value");
     }
   }
 
