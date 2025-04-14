@@ -26,6 +26,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -36,7 +37,12 @@ class HavingSpecMetricComparator
 {
   static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
 
-  static int compare(String aggregationName, Number value, Map<String, AggregatorFactory> aggregators, Object metricValueObj)
+  static int compare(
+      String aggregationName,
+      Number value,
+      @Nullable Map<String, AggregatorFactory> aggregators,
+      Object metricValueObj
+  )
   {
     if (value == null) {
       throw DruidException.defensive("Unexpected null match value");
