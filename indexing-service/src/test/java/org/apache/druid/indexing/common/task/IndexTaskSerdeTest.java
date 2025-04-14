@@ -124,6 +124,7 @@ public class IndexTaskSerdeTest
         100,
         1234,
         null,
+        null,
         null
     );
     assertSerdeTuningConfig(tuningConfig);

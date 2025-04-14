@@ -104,7 +104,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
                   .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()))
                   .build(),
         appenderatorConfig,
-        new SegmentGenerationMetrics(),
+        new SegmentGenerationMetrics(false),
         new NoopDataSegmentPusher(),
         TestHelper.makeJsonMapper(),
         TestHelper.getTestIndexIO(),

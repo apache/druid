@@ -167,7 +167,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
-    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics(false);
     buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
     final TaskRealtimeMetricsMonitor metricsMonitor =
         TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, buildSegmentsMeters);

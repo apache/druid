@@ -19,51 +19,115 @@
 
 package org.apache.druid.segment.realtime;
 
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+
+@RunWith(JUnitParamsRunner.class)
 public class SegmentGenerationMetricsTest
 {
-  private SegmentGenerationMetrics metrics;
-
-  @Before
-  public void setup()
-  {
-    metrics = new SegmentGenerationMetrics();
-  }
-
   @Test
-  public void testSnapshotBeforeProcessing()
+  @Parameters({"true", "false"})
+  public void testSnapshotBeforeProcessing(boolean messageGapAggStats)
   {
+    final SegmentGenerationMetrics metrics = new SegmentGenerationMetrics(messageGapAggStats);
+    assertMessageGapAggregateMetricsReset(metrics);
     SegmentGenerationMetrics snapshot = metrics.snapshot();
-    Assert.assertEquals(0L, snapshot.messageGap());
+    assertMessageGapAggregateMetricsReset(metrics);
     // invalid value
     Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
 
   @Test
-  public void testSnapshotAfterProcessingOver()
+  @Parameters({"true", "false"})
+  public void testSnapshotAfterProcessingOver(boolean messageGapAggStats)
   {
-    metrics.reportMessageMaxTimestamp(System.currentTimeMillis() - 20L);
+    final SegmentGenerationMetrics metrics = new SegmentGenerationMetrics(messageGapAggStats);
+
+    metrics.reportMessageGap(20L);
+    metrics.reportMessageMaxTimestamp(20L);
     metrics.reportMaxSegmentHandoffTime(7L);
+
     SegmentGenerationMetrics snapshot = metrics.snapshot();
+
     Assert.assertTrue(snapshot.messageGap() >= 20L);
-    Assert.assertEquals(7, snapshot.maxSegmentHandoffTime());
+    if (messageGapAggStats) {
+      Assert.assertEquals(20L, snapshot.minMessageGap());
+      Assert.assertEquals(20L, snapshot.maxMessageGap());
+      Assert.assertEquals(snapshot.minMessageGap(), snapshot.maxMessageGap());
+      Assert.assertEquals(20L, snapshot.avgMessageGap(), 0);
+      Assert.assertEquals(7, snapshot.maxSegmentHandoffTime());
+    } else {
+      assertMessageGapAggregateMetricsReset(snapshot);
+    }
   }
 
   @Test
-  public void testProcessingOverAfterSnapshot()
+  @Parameters({"true", "false"})
+  public void testProcessingOverAfterSnapshot(boolean messageGapAggStats)
   {
+    final SegmentGenerationMetrics metrics = new SegmentGenerationMetrics(messageGapAggStats);
+
     metrics.reportMessageMaxTimestamp(10);
+    metrics.reportMessageGap(1);
     metrics.reportMaxSegmentHandoffTime(7L);
     // Should reset to invalid value
     metrics.snapshot();
     metrics.markProcessingDone();
     SegmentGenerationMetrics snapshot = metrics.snapshot();
-    // Message gap must be invalid after processing is done
-    Assert.assertTrue(0 > snapshot.messageGap());
+
+    // Latest message gap must be invalid after processing is done
+    Assert.assertEquals(-1, snapshot.messageGap());
+    // Message gap aggregate metrics are persisted past snapshot if enabled
+    if (messageGapAggStats) {
+      Assert.assertEquals(0, snapshot.numMessageGapEvent());
+      Assert.assertEquals(Long.MIN_VALUE, snapshot.maxMessageGap());
+      Assert.assertEquals(Long.MAX_VALUE, snapshot.minMessageGap());
+      Assert.assertEquals(0, snapshot.avgMessageGap(), 0);
+    } else {
+      assertMessageGapAggregateMetricsReset(snapshot);
+      assertMessageGapAggregateMetricsReset(metrics);
+    }
     // value must be invalid
     Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
+  }
+
+  @Test
+  @Parameters({"true", "false"})
+  public void testMessageGapAggregateMetrics(boolean messageGapAggStats)
+  {
+    final SegmentGenerationMetrics metrics = new SegmentGenerationMetrics(messageGapAggStats);
+
+    for (int i = 0; i < 5; ++i) {
+      metrics.reportMessageGap(i * 30);
+    }
+    metrics.reportMessageMaxTimestamp(10L);
+    metrics.reportMaxSegmentHandoffTime(7L);
+    metrics.markProcessingDone();
+    SegmentGenerationMetrics snapshot = metrics.snapshot();
+    // Latest message gap must be invalid after processing is done
+    Assert.assertEquals(-1, snapshot.messageGap());
+
+    if (messageGapAggStats) {
+      Assert.assertEquals(5, snapshot.numMessageGapEvent());
+      Assert.assertEquals(0, snapshot.minMessageGap());
+      Assert.assertEquals(120, snapshot.maxMessageGap());
+      Assert.assertEquals(60.0, snapshot.avgMessageGap(), 0);
+    } else {
+      assertMessageGapAggregateMetricsReset(snapshot);
+    }
+
+    Assert.assertEquals(7L, snapshot.maxSegmentHandoffTime());
+  }
+
+  private static void assertMessageGapAggregateMetricsReset(final SegmentGenerationMetrics metrics)
+  {
+    Assert.assertEquals(0, metrics.numMessageGapEvent());
+    Assert.assertEquals(Long.MIN_VALUE, metrics.maxMessageGap());
+    Assert.assertEquals(Long.MAX_VALUE, metrics.minMessageGap());
+    Assert.assertEquals(0, metrics.avgMessageGap(), 0);
   }
 }

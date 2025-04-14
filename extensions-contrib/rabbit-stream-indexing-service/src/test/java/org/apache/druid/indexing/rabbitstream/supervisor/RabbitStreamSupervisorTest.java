@@ -162,6 +162,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null,
         null,
         100,
+        null,
         null
     );
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
