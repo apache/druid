@@ -744,9 +744,12 @@ It is possible to run task pods in a different namespace from the rest of your D
 If you are running multiple Druid clusters and would like to have a dedicated namespace for all your task pods, you can make the following changes to the runtime properties for your Overlord deployment:
 
 - `druid.indexer.runner.namespace`: The namespace where the task pods will run. It can be the same as the namespace where your Druid cluster is deployed, or different from it. In the latter case, you need to define the following `overlordNamespace`.
-- `druid.indexer.runner.overlordNamespace`: The namespace where the Overlord resides. This must be defined when tasks are scheduled in different namespace. When unprovided, Druid will assume that the entire cluster operates within a single namespace and will default to `druid.indexer.runner.namespace`.
+- `druid.indexer.runner.overlordNamespace`: The namespace where the Overlord resides. This must be defined when tasks are scheduled in different namespace.
+- `druid.indexer.runner.k8sTaskPodNamePrefix` (Optional):  Self-defined field to differentiate which task pods are created from which namespace. More information [here](#differentiating-task-pods-created-from-multiple-namespaces).
 
-Warning: Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces. When `druid.indexer.runner.overlordNamespace` is configured, users should ensure that all running tasks are stopped when changing these values. Failure to do so will cause the Overlord to lose track of running tasks, and re-launch them. This may lead to duplicate data and possibly metadata inconsistency issues.
+Warning: When `druid.indexer.runner.overlordNamespace` and `druid.indexer.runner.k8sTaskPodNamePrefix` is configured, users should ensure that all running tasks are stopped when changing these values. Failure to do so will cause the Overlord to lose track of running tasks, and re-launch them. This may lead to duplicate data and possibly metadata inconsistency issues.
+
+Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces. Should you need to deploy a Druid cluster on a namespace `N1` that is already running tasks from another namespace `N2`, take note to set `druid.indexer.runner.overlordNamespace` to `druid.indexer.runner.namespace` (which is `N1`). Failure to do so will result in the cluster in `N1` detecting task pods created from both `N1` and `N2`.    
 
 ##### Differentiating Task Pods Created From Multiple Namespaces
 
@@ -772,7 +775,7 @@ Should you require the needed permissions for interacting across Kubernetes name
 | Property | Possible Values | Description | Default | Required |
 | --- | --- | --- | --- | --- |
 | `druid.indexer.runner.namespace` | `String` | If Overlord and task pods are running in different namespaces, specify the Overlord namespace. | - | Yes |
-| `druid.indexer.runner.overlordNamespace` | `String` | Only applicable when using Custom Template Pod Adapter. If Overlord and task pods are running in different namespaces, specify the Overlord namespace. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `druid.indexer.runner.namespace` | No |
+| `druid.indexer.runner.overlordNamespace` | `String` | Only applicable when using Custom Template Pod Adapter. If Overlord and task pods are running in different namespaces, specify the Overlord namespace. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
 | `druid.indexer.runner.k8sTaskPodNamePrefix` | `String` |  Use this if you want to change your task name to contain a more human-readable prefix. Maximum 30 characters. Special characters `: - . _` will be ignored. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
 | `druid.indexer.runner.debugJobs` | `boolean` | Clean up K8s jobs after tasks complete. | False | No |
 | `druid.indexer.runner.sidecarSupport` | `boolean` | Deprecated, specify adapter type as runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` instead. If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod. | False | No |

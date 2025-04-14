@@ -46,8 +46,7 @@ public class KubernetesTaskRunnerConfig
   // For cases where we want task pods to run on different namespace from the overlord, we need to specify the namespace of the overlord here.
   // Else, we can simply leave this field alone.
   @JsonProperty
-  @Nullable
-  private String overlordNamespace;
+  private String overlordNamespace = "";
 
   @JsonProperty
   private boolean debugJobs = false;

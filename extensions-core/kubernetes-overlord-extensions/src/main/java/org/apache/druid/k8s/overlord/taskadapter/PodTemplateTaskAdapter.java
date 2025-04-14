@@ -268,7 +268,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
     Preconditions.checkNotNull(config.getNamespace(), "When using Custom Pod Templates, druid.indexer.runner.namespace cannot be null.");
-    String overlordNamespace = config.getOverlordNamespace() == null || config.getOverlordNamespace().isEmpty() ? config.getNamespace() : config.getOverlordNamespace();
+    String overlordNamespace = config.getOverlordNamespace().isEmpty() ? config.getNamespace() : config.getOverlordNamespace();
 
     return ImmutableMap.<String, String>builder()
         .putAll(config.getLabels())
