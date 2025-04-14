@@ -240,7 +240,6 @@ public class KubernetesTaskRunnerConfig
     return namespace;
   }
 
-  @Nullable
   public String getOverlordNamespace()
   {
     return overlordNamespace;
