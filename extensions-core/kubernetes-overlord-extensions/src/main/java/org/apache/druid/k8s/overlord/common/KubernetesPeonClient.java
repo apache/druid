@@ -33,7 +33,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;

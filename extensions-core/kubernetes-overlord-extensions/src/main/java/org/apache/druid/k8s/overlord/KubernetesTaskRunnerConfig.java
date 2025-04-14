@@ -26,7 +26,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
