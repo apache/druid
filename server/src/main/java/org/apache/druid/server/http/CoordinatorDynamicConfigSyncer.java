@@ -20,9 +20,9 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.discovery.DiscoveryDruidNode;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
@@ -36,8 +36,6 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.StandardRetryPolicy;
-import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -47,6 +45,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Updates all brokers with the latest coordinator dynamic config.
@@ -56,8 +55,8 @@ public class CoordinatorDynamicConfigSyncer
   private static final Logger log = new Logger(CoordinatorDynamicConfigSyncer.class);
 
   private final CoordinatorConfigManager configManager;
-  private final ServerInventoryView serverInventoryView;
   private final ObjectMapper jsonMapper;
+  private final DruidNodeDiscoveryProvider druidNodeDiscovery;
 
   private final AtomicReference<CoordinatorDynamicConfig> lastKnownConfig = new AtomicReference<>();
   private final ServiceClientFactory clientFactory;
@@ -69,13 +68,13 @@ public class CoordinatorDynamicConfigSyncer
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       final CoordinatorConfigManager configManager,
       @Json final ObjectMapper jsonMapper,
-      final ServerInventoryView serverInventoryView
+      final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
   )
   {
     this.clientFactory = clientFactory;
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
-    this.serverInventoryView = serverInventoryView;
+    this.druidNodeDiscovery = druidNodeDiscoveryProvider;
     this.exec = Execs.singleThreaded("DynamicConfigSyncer-%d");
     this.inSyncBrokers = ConcurrentHashMap.newKeySet();
   }
@@ -83,7 +82,7 @@ public class CoordinatorDynamicConfigSyncer
   public void broadcastConfigToBrokers()
   {
     invalidateInSyncBrokersIfNeeded();
-    for (DruidServerMetadata broker : getKnownBrokers()) {
+    for (ServiceLocation broker : getKnownBrokers()) {
       exec.submit(() -> pushConfigToBroker(broker));
     }
   }
@@ -93,9 +92,8 @@ public class CoordinatorDynamicConfigSyncer
     return Set.copyOf(inSyncBrokers);
   }
 
-  private void pushConfigToBroker(DruidServerMetadata broker)
+  private void pushConfigToBroker(ServiceLocation brokerLocation)
   {
-    final ServiceLocation brokerLocation = ServiceLocation.fromDruidServerMetadata(broker);
     final ServiceClient brokerClient = clientFactory.makeClient(
         NodeRole.BROKER.getJsonName(),
         new FixedServiceLocator(brokerLocation),
@@ -111,12 +109,12 @@ public class CoordinatorDynamicConfigSyncer
       final BytesFullResponseHolder responseHolder = brokerClient.request(requestBuilder, new BytesFullResponseHandler());
       final HttpResponseStatus status = responseHolder.getStatus();
       if (status.equals(HttpResponseStatus.OK)) {
-        addToInSyncBrokers(currentDynamicConfig, broker.getHost());
+        addToInSyncBrokers(currentDynamicConfig, brokerLocation.getHost());
       } else {
         log.error(
             "Received status [%s] while posting dynamic configs to broker[%s]",
             status.getCode(),
-            broker.getHostAndPort()
+            brokerLocation
         );
       }
     }
@@ -125,20 +123,18 @@ public class CoordinatorDynamicConfigSyncer
       log.error(
           e,
           "Exception while syncing dynamic configuration to broker[%s]",
-          broker.getHostAndPort()
+          brokerLocation
       );
     }
   }
 
-  private Set<DruidServerMetadata> getKnownBrokers()
+  private Set<ServiceLocation> getKnownBrokers()
   {
-    // TODO: Inventory view seems to be returning only an empty list, local work around for now.
-    return ImmutableSet.of(
-        new DruidServerMetadata(
-            "localhost:8082",
-            "localhost:8082",
-            null, 0, ServerType.BROKER, "tier1", 0)
-    );
+    return druidNodeDiscovery.getForNodeRole(NodeRole.BROKER)
+                             .getAllNodes()
+                             .stream()
+                             .map(DiscoveryDruidNode::toServiceLocation)
+                             .collect(Collectors.toSet());
   }
 
   private synchronized void invalidateInSyncBrokersIfNeeded()
