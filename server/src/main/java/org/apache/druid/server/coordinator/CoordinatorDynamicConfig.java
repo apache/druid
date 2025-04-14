@@ -394,6 +394,7 @@ public class CoordinatorDynamicConfig
            && replicateAfterLoadTimeout == that.replicateAfterLoadTimeout
            && maxSegmentsInNodeLoadingQueue == that.maxSegmentsInNodeLoadingQueue
            && useRoundRobinSegmentAssignment == that.useRoundRobinSegmentAssignment
+           && smartSegmentLoading == that.smartSegmentLoading
            && pauseCoordination == that.pauseCoordination
            && Objects.equals(
                specificDataSourcesToKillUnusedSegmentsIn,
@@ -419,6 +420,9 @@ public class CoordinatorDynamicConfig
         replicationThrottleLimit,
         balancerComputeThreads,
         maxSegmentsInNodeLoadingQueue,
+        useRoundRobinSegmentAssignment,
+        smartSegmentLoading,
+        replicateAfterLoadTimeout,
         specificDataSourcesToKillUnusedSegmentsIn,
         killTaskSlotRatio,
         maxKillTaskSlots,

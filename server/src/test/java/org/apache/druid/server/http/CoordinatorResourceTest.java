@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.CloneStatusManager;
+import org.apache.druid.server.coordinator.CloneStatusMetrics;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.duty.DutyGroupStatus;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
@@ -36,6 +37,8 @@ import org.junit.Test;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class CoordinatorResourceTest
 {
@@ -150,5 +153,42 @@ public class CoordinatorResourceTest
     Assert.assertEquals(now, observedStatus.getLastRunEnd());
     Assert.assertEquals(100L, observedStatus.getAvgRuntimeMillis());
     Assert.assertEquals(500L, observedStatus.getAvgRunGapMillis());
+  }
+
+  @Test
+  public void testGetBrokerStatus()
+  {
+    EasyMock.expect(coordinatorDynamicConfigSyncer.getInSyncBrokers()).andReturn(Set.of("brok1")).once();
+    EasyMock.replay(mock);
+    EasyMock.replay(coordinatorDynamicConfigSyncer);
+    EasyMock.replay(cloneStatusManager);
+
+    final Response response = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).getBrokerStatus();
+    Assert.assertEquals(200, response.getStatus());
+
+    Assert.assertEquals(Set.of("brok1"), response.getEntity());
+  }
+
+  @Test
+  public void testGetCloneStatus()
+  {
+    Map<String, CloneStatusMetrics> statusMetrics = ImmutableMap.of(
+        "hist1", new CloneStatusMetrics("hist3", CloneStatusMetrics.Status.LOADING, 2, 0, 1000),
+        "hist2", CloneStatusMetrics.unknown("hist4")
+    );
+
+    EasyMock.expect(cloneStatusManager.getStatusForAllServers()).andReturn(statusMetrics).once();
+    EasyMock.expect(cloneStatusManager.getStatusForServer("hist2")).andReturn(CloneStatusMetrics.unknown("hist4")).once();
+    EasyMock.replay(mock);
+    EasyMock.replay(coordinatorDynamicConfigSyncer);
+    EasyMock.replay(cloneStatusManager);
+
+    Response response = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).getCloneStatus(null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(statusMetrics, response.getEntity());
+
+    response = new CoordinatorResource(mock, cloneStatusManager, coordinatorDynamicConfigSyncer).getCloneStatus("hist2");
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(Map.of("hist2", CloneStatusMetrics.unknown("hist4")), response.getEntity());
   }
 }

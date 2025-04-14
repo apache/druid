@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,5 +33,14 @@ public class CloneStatusMetricsTest
     byte[] bytes = DefaultObjectMapper.INSTANCE.writeValueAsBytes(metrics);
     CloneStatusMetrics deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, CloneStatusMetrics.class);
     Assert.assertEquals(deserialized, metrics);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(CloneStatusMetrics.class)
+                  .withNonnullFields("sourceServer", "status")
+                  .usingGetClass()
+                  .verify();
   }
 }

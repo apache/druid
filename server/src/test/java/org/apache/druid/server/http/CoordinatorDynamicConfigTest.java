@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.utils.JvmUtils;
@@ -642,5 +643,14 @@ public class CoordinatorDynamicConfigTest
   private static int getDefaultNumBalancerThreads()
   {
     return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(CoordinatorDynamicConfig.class)
+                  .withIgnoredFields("validDebugDimensions")
+                  .usingGetClass()
+                  .verify();
   }
 }
