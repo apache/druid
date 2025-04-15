@@ -871,7 +871,7 @@ public class SqlTestFramework
           new DefaultQueryConfig(ImmutableMap.of()),
           new SqlLifecycleManager()
       );
-      this.statementFactory = new TestDirectMultiStatmentFactory(toolbox, framework.engine, plannerFactory);
+      this.statementFactory = new TestMultiStatementFactory(toolbox, framework.engine, plannerFactory);
       componentSupplier.populateViews(viewManager, plannerFactory);
     }
 
@@ -1300,13 +1300,13 @@ public class SqlTestFramework
    * SqlStatementFactory which overrides direct statement creation to allow calcite tests to test multi-part set
    * statements e.g. like 'SET vectorize = 'force'; SET useApproxCountDistinct = true; SELECT 1 + 1'
    */
-  static class TestDirectMultiStatmentFactory extends SqlStatementFactory
+  static class TestMultiStatementFactory extends SqlStatementFactory
   {
     private final SqlToolbox toolbox;
     private final SqlEngine engine;
     private final PlannerFactory plannerFactory;
 
-    public TestDirectMultiStatmentFactory(SqlToolbox lifecycleToolbox, SqlEngine engine, PlannerFactory plannerFactory)
+    public TestMultiStatementFactory(SqlToolbox lifecycleToolbox, SqlEngine engine, PlannerFactory plannerFactory)
     {
       super(lifecycleToolbox);
       this.toolbox = lifecycleToolbox;

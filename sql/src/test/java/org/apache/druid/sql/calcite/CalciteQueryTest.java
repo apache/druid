@@ -15883,7 +15883,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000",
         DruidException.class,
-        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000] - only SET statments are permitted before the final statement"
+        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000] - only SET statements are permitted before the final statement"
     );
   }
 
@@ -15903,7 +15903,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2",
         DruidException.class,
-        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2] - only SET statments are permitted before the final statement"
+        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2] - only SET statements are permitted before the final statement"
     );
   }
 }

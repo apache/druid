@@ -315,7 +315,7 @@ public class DruidPlanner implements Closeable
           contextMap.put(sqlSetOption.getName().getSimple(), SqlResults.coerce(plannerContext.getJsonMapper(), SqlResults.Context.fromPlannerContext(plannerContext), value.getValue(), value.getTypeName(), "set"));
         } else if (i < nodeList.size() - 1) {
           // only SET statements can appear before the last statement
-          throw InvalidSqlInput.exception("Invalid sql statement list[%s] - only SET statments are permitted before the final statement",
+          throw InvalidSqlInput.exception("Invalid sql statement list[%s] - only SET statements are permitted before the final statement",
                                           sql
           );
         } else {

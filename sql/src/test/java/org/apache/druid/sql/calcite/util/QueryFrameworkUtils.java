@@ -118,7 +118,7 @@ public class QueryFrameworkUtils
         new SqlLifecycleManager()
     );
     if (allowMultiStatementParsingForDirectStatements) {
-      return new SqlTestFramework.TestDirectMultiStatmentFactory(toolbox, engine, plannerFactory);
+      return new SqlTestFramework.TestMultiStatementFactory(toolbox, engine, plannerFactory);
     }
     return new SqlStatementFactory(toolbox);
   }

@@ -1084,7 +1084,7 @@ public class MSQInsertTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsArraySetStatemet(String contextName, Map<String, Object> context)
+  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsArraySetStatement(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
