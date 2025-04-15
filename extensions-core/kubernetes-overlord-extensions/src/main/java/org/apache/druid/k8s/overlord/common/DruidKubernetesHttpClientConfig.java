@@ -30,7 +30,6 @@ public class DruidKubernetesHttpClientConfig
   private int workerPoolSize = VertxOptions.DEFAULT_WORKER_POOL_SIZE;
 
   @JsonProperty
-  @Min(1)
   private int eventLoopPoolSize = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
 
   @JsonProperty
