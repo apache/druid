@@ -153,7 +153,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
         if (emitValue != null && !Double.isNaN(emitValue.doubleValue())) {
           final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
           for (final String dimension : kafkaConsumerMetric.getDimensions()) {
-            if (!dimension.equals(CLIENT_ID_TAG)) {
+            if (!CLIENT_ID_TAG.equals(dimension)) {
               builder.setDimension(dimension, metricName.tags().get(dimension));
             }
           }
