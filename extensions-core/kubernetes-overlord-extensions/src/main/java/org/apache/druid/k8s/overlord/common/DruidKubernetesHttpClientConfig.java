@@ -22,8 +22,6 @@ package org.apache.druid.k8s.overlord.common;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.VertxOptions;
 
-import javax.validation.constraints.Min;
-
 public class DruidKubernetesHttpClientConfig
 {
   @JsonProperty
