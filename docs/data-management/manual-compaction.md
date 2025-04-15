@@ -146,6 +146,8 @@ The compaction task has two kinds of `inputSpec`:
 
 ## Compaction transform spec
 
+Only filters are supported for compaction transform specs. If you include something other than a filter, such as an expression, Druid ignores the field.
+
 |Field|Description|Required|
 |-----|-----------|--------|
 |`filter`| The `filter` conditionally filters input rows during compaction. Only rows that pass the filter will be included in the compacted segments. Any of Druid's standard [query filters](../querying/filters.md) can be used. Defaults to 'null', which will not filter any row. |No|
