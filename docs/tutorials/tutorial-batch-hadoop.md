@@ -114,7 +114,7 @@ docker exec -it druid-hadoop-demo bash
 
 The startup script `bootstrap.sh`:
 * creates the necessary directories
-* preloads an inputfile to HDFS
+* loads an input file to HDFS
 * places the hadoop configuration into the shared volume as `hadoop-conf.tgz`
 
 ## Configure Druid to use Hadoop
