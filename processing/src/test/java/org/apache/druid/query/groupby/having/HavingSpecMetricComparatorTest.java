@@ -19,10 +19,14 @@
 
 package org.apache.druid.query.groupby.having;
 
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.math.BigDecimal;
+
 /**
+ *
  */
 public class HavingSpecMetricComparatorTest
 {
@@ -99,6 +103,53 @@ public class HavingSpecMetricComparatorTest
     Assert.assertEquals(0, HavingSpecMetricComparator.compareDoubleToLong(0D, 0));
     Assert.assertEquals(0, HavingSpecMetricComparator.compareDoubleToLong(-0D, 0));
     Assert.assertEquals(1, HavingSpecMetricComparator.compareDoubleToLong((double) Long.MAX_VALUE + 1, Long.MAX_VALUE));
-    Assert.assertEquals(-1, HavingSpecMetricComparator.compareDoubleToLong((double) Long.MIN_VALUE - 1, Long.MIN_VALUE));
+    Assert.assertEquals(
+        -1,
+        HavingSpecMetricComparator.compareDoubleToLong((double) Long.MIN_VALUE - 1, Long.MIN_VALUE)
+    );
+  }
+
+  @Test
+  public void testNullValue()
+  {
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> HavingSpecMetricComparator.compare("metric", null, null, 10)
+    );
+
+    Assert.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
+  }
+
+  @Test
+  public void testNullMetricValue()
+  {
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> HavingSpecMetricComparator.compare("metric", 10, null, null)
+    );
+
+    Assert.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
+  }
+
+  @Test
+  public void testUnsupportedNumberTypeLongValue()
+  {
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> HavingSpecMetricComparator.compare("metric", BigDecimal.valueOf(10), null, 10)
+    );
+
+    Assert.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
+  }
+
+  @Test
+  public void testUnsupportedNumberTypeDoubleValue()
+  {
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> HavingSpecMetricComparator.compare("metric", BigDecimal.valueOf(10), null, 10d)
+    );
+
+    Assert.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
   }
 }

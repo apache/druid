@@ -24,6 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
@@ -206,6 +209,23 @@ public class HavingSpecTest
     Assert.assertFalse(spec.eval(getTestRow(100.56f)));
     Assert.assertFalse(spec.eval(getTestRow(90.53f)));
     Assert.assertFalse(spec.eval(getTestRow(Long.MAX_VALUE)));
+  }
+
+  @Test
+  public void testEqualHavingSpecWithAggregator()
+  {
+    EqualToHavingSpec spec = new EqualToHavingSpec("metric", 1.0d);
+    spec.setQuery(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(new DoubleLastAggregatorFactory("metric", "metric", null))
+                    .build()
+    );
+    Assert.assertTrue(spec.eval(getTestRow(new SerializablePairLongDouble(0L, 1d))));
+    Assert.assertFalse(spec.eval(getTestRow(new SerializablePairLongDouble(0L, 1.1d))));
+    Assert.assertFalse(spec.eval(getTestRow(new SerializablePairLongDouble(0L, null))));
   }
 
   private static class CountingHavingSpec implements HavingSpec
