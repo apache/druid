@@ -25,15 +25,18 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.LocatedSegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -86,6 +89,7 @@ public class ClientInfoResource
   private SegmentMetadataQueryConfig segmentMetadataQueryConfig;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
+  private final CoordinatorDynamicConfigView configView;
 
   @Inject
   public ClientInfoResource(
@@ -93,7 +97,8 @@ public class ClientInfoResource
       TimelineServerView timelineServerView,
       SegmentMetadataQueryConfig segmentMetadataQueryConfig,
       AuthConfig authConfig,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      CoordinatorDynamicConfigView configView
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -102,6 +107,7 @@ public class ClientInfoResource
                                       new SegmentMetadataQueryConfig() : segmentMetadataQueryConfig;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
+    this.configView = configView;
   }
 
   @GET
@@ -300,6 +306,7 @@ public class ClientInfoResource
       @PathParam("dataSourceName") String datasource,
       @QueryParam("intervals") String intervals,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
+      @QueryParam("cloneQueryMode") CloneQueryMode cloneQueryMode,
       @Context final HttpServletRequest req
   )
   {
@@ -308,7 +315,8 @@ public class ClientInfoResource
       intervalList.add(Intervals.of(interval.trim()));
     }
     List<Interval> condensed = JodaUtils.condenseIntervals(intervalList);
-    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates);
+    HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode == null ? CloneQueryMode.EXCLUDE : cloneQueryMode);
+    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates, historicalFilter);
   }
 
   protected DateTime getCurrentTime()

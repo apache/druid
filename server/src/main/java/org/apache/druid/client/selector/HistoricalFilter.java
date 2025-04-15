@@ -21,8 +21,11 @@ package org.apache.druid.client.selector;
 
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.query.CloneQueryMode;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -30,11 +33,33 @@ import java.util.stream.Collectors;
 
 public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<QueryableDruidServer>>, Int2ObjectRBTreeMap<Set<QueryableDruidServer>>>
 {
-  public static final HistoricalFilter IDENTITIY_FILTER = new HistoricalFilter(ImmutableSet::of);
+  public static final HistoricalFilter IDENTITY_FILTER = new HistoricalFilter(ImmutableSet::of);
 
   public HistoricalFilter(Supplier<Set<String>> serversToIgnoreSupplier)
   {
     this.serversToIgnoreSupplier = serversToIgnoreSupplier;
+  }
+
+  public HistoricalFilter(CoordinatorDynamicConfigView configView, CloneQueryMode cloneQueryMode)
+  {
+    this.serversToIgnoreSupplier = () -> {
+      final Set<String> serversToIgnore = new HashSet<>();
+
+      switch (cloneQueryMode) {
+        case ONLY:
+          // Remove clone sources, so that targets are queried.
+          serversToIgnore.addAll(configView.getSourceClusterServers());
+          break;
+        case EXCLUDE:
+          // Remove clone sources, so that targets are queried.
+          serversToIgnore.addAll(configView.getTargetCloneServers());
+          break;
+        case INCLUDE:
+          // Don't remove either
+          break;
+      }
+      return serversToIgnore;
+    };
   }
 
   private final Supplier<Set<String>> serversToIgnoreSupplier;

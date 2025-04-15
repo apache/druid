@@ -121,11 +121,6 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
   }
 
-  public List<DruidServerMetadata> getCandidates(final int numCandidates)
-  {
-    return getCandidates(numCandidates, HistoricalFilter.IDENTITIY_FILTER);
-  }
-
   public List<DruidServerMetadata> getCandidates(final int numCandidates, HistoricalFilter filter)
   {
     List<DruidServerMetadata> candidates;
@@ -150,11 +145,6 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
   }
 
-  public List<DruidServerMetadata> getAllServers()
-  {
-    return getAllServers(HistoricalFilter.IDENTITIY_FILTER);
-  }
-
   public List<DruidServerMetadata> getAllServers(HistoricalFilter filter)
   {
     final List<DruidServerMetadata> servers = new ArrayList<>();
@@ -175,12 +165,6 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
 
     return servers;
-  }
-
-  @Nullable
-  public <T> QueryableDruidServer pick(@Nullable Query<T> query)
-  {
-    return pick(query, HistoricalFilter.IDENTITIY_FILTER);
   }
 
   @Nullable

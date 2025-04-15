@@ -23,11 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -53,6 +56,7 @@ import java.io.InputStream;
 public class BrokerQueryResource extends QueryResource
 {
   private final TimelineServerView brokerServerView;
+  private final CoordinatorDynamicConfigView configView;
 
   @Inject
   public BrokerQueryResource(
@@ -64,7 +68,8 @@ public class BrokerQueryResource extends QueryResource
       AuthorizerMapper authorizerMapper,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode,
-      TimelineServerView brokerServerView
+      TimelineServerView brokerServerView,
+      CoordinatorDynamicConfigView configView
   )
   {
     super(
@@ -78,6 +83,7 @@ public class BrokerQueryResource extends QueryResource
         selfNode
     );
     this.brokerServerView = brokerServerView;
+    this.configView = configView;
   }
 
   @POST
@@ -89,6 +95,7 @@ public class BrokerQueryResource extends QueryResource
       InputStream in,
       @QueryParam("pretty") String pretty,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
+      @QueryParam("cloneQueryMode") CloneQueryMode cloneQueryMode,
       @Context final HttpServletRequest req
   ) throws IOException
   {
@@ -96,12 +103,14 @@ public class BrokerQueryResource extends QueryResource
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
       ExecutionVertex ev = ExecutionVertex.of(query);
+      HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode == null ? CloneQueryMode.EXCLUDE : cloneQueryMode);
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,
               ev.getBaseTableDataSource(),
               ev.getEffectiveQuerySegmentSpec().getIntervals(),
-              numCandidates
+              numCandidates,
+              historicalFilter
           )
       );
     }
