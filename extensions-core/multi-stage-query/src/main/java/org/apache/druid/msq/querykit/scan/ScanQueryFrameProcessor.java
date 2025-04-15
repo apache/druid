@@ -193,7 +193,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler) throws IOException
+  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler)
+      throws IOException
   {
     if (cursor == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
@@ -275,7 +276,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       // If asCursor() fails, we need to close nextCursorHolder immediately.
       try {
         nextCursor = nextCursorHolder.asCursor();
-      } catch (Throwable t) {
+      }
+      catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, nextCursorHolder);
       }
 
