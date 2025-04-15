@@ -855,7 +855,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 6.7.2
+version: 6.13.1
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -880,6 +880,18 @@ libraries:
   - io.fabric8: kubernetes-model-resource
   - io.fabric8: kubernetes-model-scheduling
   - io.fabric8: kubernetes-model-storageclass
+---
+
+name: vertx
+license_category: binary
+module: extensions-core/kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 4.5.8
+libraries:
+  - io.vertx: vertx-auth-common
+  - io.vertx: vertx-core
+  - io.vertx: vertx-web-client
+  - io.vertx: vertx-web-common
 ---
 
 name: kubernetes official java client
@@ -1051,7 +1063,7 @@ name: org.snakeyaml snakeyaml-engine
 license_category: binary
 module: extensions-core/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.7
 libraries:
   - org.snakeyaml: snakeyaml-engine
 

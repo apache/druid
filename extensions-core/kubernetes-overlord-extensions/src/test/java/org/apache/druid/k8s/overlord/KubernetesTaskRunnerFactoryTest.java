@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -55,7 +56,8 @@ public class KubernetesTaskRunnerFactoryTest
         .withCapacity(1)
         .build();
     taskLogs = new NoopTaskLogs();
-    druidKubernetesClient = new DruidKubernetesClient(new ConfigBuilder().build());
+    druidKubernetesClient =
+        new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build());
     taskAdapter = new TestTaskAdapter();
   }
 
