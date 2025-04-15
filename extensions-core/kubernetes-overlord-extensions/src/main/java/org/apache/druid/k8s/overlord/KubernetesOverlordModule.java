@@ -125,15 +125,15 @@ public class KubernetesOverlordModule implements DruidModule
   @LazySingleton
   public DruidKubernetesClient makeKubernetesClient(KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig, Lifecycle lifecycle)
   {
-    DruidKubernetesClient client;
+    final DruidKubernetesClient client;
+    final Config config = new ConfigBuilder().build();
+
     if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
-      Config config = new ConfigBuilder().build();
       config.setHttpsProxy(null);
       config.setHttpProxy(null);
-      client = new DruidKubernetesClient(config);
-    } else {
-      client = new DruidKubernetesClient();
     }
+
+    client = new DruidKubernetesClient(config);
 
     lifecycle.addHandler(
         new Lifecycle.Handler()
