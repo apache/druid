@@ -437,6 +437,14 @@ public class KafkaRecordSupplierTest
     Assert.assertTrue(monitor.monitor(emitter));
     emitter.verifyEmitted("kafka/consumer/bytesConsumed", 1);
     emitter.verifyEmitted("kafka/consumer/recordsConsumed", 1);
+    emitter.verifyEmitted("kafka/consumer/fetch", 1);
+    emitter.verifyEmitted("kafka/consumer/recordsLag", 2); // per partition
+    emitter.verifyEmitted("kafka/consumer/fetchRate", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchLatencyAvg", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchLatencyMax", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchSizeAvg", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchSizeMax", 1);
+    emitter.verifyEmitted("kafka/consumer/recordsPerRequestAvg", 1);
 
     recordSupplier.close();
     Assert.assertFalse(monitor.monitor(emitter));
