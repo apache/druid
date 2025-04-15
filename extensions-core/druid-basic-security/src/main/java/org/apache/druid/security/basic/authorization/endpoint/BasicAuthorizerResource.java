@@ -629,7 +629,9 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
+    final Response response = resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
+    performAuditIfSuccess(authorizerName, req, response, "Update user authorization for authorizer[%s]", authorizerName);
+    return response;
   }
 
   /**
@@ -647,7 +649,9 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
+    final Response response = resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
+    performAuditIfSuccess(authorizerName, req, response, "Update authorization for authorizer[%s]", authorizerName);
+    return response;
   }
 
   /**
@@ -665,7 +669,10 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
+     
+    final Response response = resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
+    performAuditIfSuccess(authorizerName, req, response, "Update group mappings for authorizer[%s]", authorizerName);
+    return response;
   }
 
   private boolean isSuccess(Response response)
