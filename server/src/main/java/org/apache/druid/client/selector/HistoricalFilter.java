@@ -48,7 +48,7 @@ public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<Querya
       switch (cloneQueryMode) {
         case ONLY:
           // Remove clone sources, so that targets are queried.
-          serversToIgnore.addAll(configView.getSourceClusterServers());
+          serversToIgnore.addAll(configView.getSourceCloneServers());
           break;
         case EXCLUDE:
           // Remove clone sources, so that targets are queried.

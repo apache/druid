@@ -28,10 +28,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.CachingClusteredClient;
-import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.client.TestCoordinatorDynamicConfigView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -323,20 +323,7 @@ public class CachingClusteredClientBenchmark
         forkJoinPool,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new NoopServiceEmitter(),
-        new CoordinatorDynamicConfigView(null)
-        {
-          @Override
-          public Set<String> getTargetCloneServers()
-          {
-            return Set.of();
-          }
-
-          @Override
-          public Set<String> getSourceClusterServers()
-          {
-            return Set.of();
-          }
-        }
+        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
     );
   }
 

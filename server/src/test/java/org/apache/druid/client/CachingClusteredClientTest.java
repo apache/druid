@@ -26,7 +26,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -145,7 +144,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -2712,20 +2710,7 @@ public class CachingClusteredClientTest
             new ServerConfig()
         ),
         new NoopServiceEmitter(),
-        new CoordinatorDynamicConfigView(null)
-        {
-          @Override
-          public Set<String> getTargetCloneServers()
-          {
-            return ImmutableSet.of();
-          }
-
-          @Override
-          public Set<String> getSourceClusterServers()
-          {
-            return ImmutableSet.of();
-          }
-        }
+        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
     );
   }
 

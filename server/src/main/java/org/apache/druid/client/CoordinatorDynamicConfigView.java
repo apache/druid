@@ -53,7 +53,7 @@ public class CoordinatorDynamicConfigView
     return coordinatorDynamicConfig.getCloneServers().keySet();
   }
 
-  public Set<String> getSourceClusterServers()
+  public Set<String> getSourceCloneServers()
   {
     CoordinatorDynamicConfig coordinatorDynamicConfig = config.get();
     return new HashSet<>(coordinatorDynamicConfig.getCloneServers().values());
