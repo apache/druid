@@ -101,7 +101,7 @@
         <jetty.version>9.4.57.v20241219</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.12.7.20221012</jackson.version>
-        <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
+        <codehaus.jackson.version>1.9.14-MULE-002</codehaus.jackson.version>
         <log4j.version>2.22.1</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
