@@ -26,6 +26,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
@@ -41,6 +42,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.net.URL;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -109,7 +111,7 @@ public class CoordinatorDynamicConfigSyncer
       final BytesFullResponseHolder responseHolder = brokerClient.request(requestBuilder, new BytesFullResponseHandler());
       final HttpResponseStatus status = responseHolder.getStatus();
       if (status.equals(HttpResponseStatus.OK)) {
-        addToInSyncBrokers(currentDynamicConfig, brokerLocation.getHost());
+        addToInSyncBrokers(currentDynamicConfig, brokerLocation);
       } else {
         log.error(
             "Received status [%s] while posting dynamic configs to broker[%s]",
@@ -147,10 +149,11 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
-  private synchronized void addToInSyncBrokers(CoordinatorDynamicConfig config, String broker)
+  private synchronized void addToInSyncBrokers(CoordinatorDynamicConfig config, ServiceLocation broker)
   {
+    final URL url = broker.toURL("");
     if (config.equals(lastKnownConfig.get())) {
-      inSyncBrokers.add(broker);
+      inSyncBrokers.add(StringUtils.format("%s:%s", url.getHost(), url.getPort()));
     }
   }
 }
