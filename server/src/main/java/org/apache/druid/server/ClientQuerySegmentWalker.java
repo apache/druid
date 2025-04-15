@@ -607,7 +607,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * @param parentQueryResourceId Parent Query's Query Resource ID
    * @return DataSource populated with the subqueries
    */
-  private DataSource generateSubqueryIds(
+  public static DataSource generateSubqueryIds(
       DataSource rootDataSource,
       @Nullable final String parentQueryId,
       @Nullable final String parentSqlQueryId,
@@ -654,7 +654,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * @param parentQueryResourceId        Parent query's resource Id
    * @return Populates the subqueries from the map
    */
-  private DataSource insertSubqueryIds(
+  private static DataSource insertSubqueryIds(
       DataSource currentDataSource,
       Map<QueryDataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds,
       @Nullable final String parentQueryId,

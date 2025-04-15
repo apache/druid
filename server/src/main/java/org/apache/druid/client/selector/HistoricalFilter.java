@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<QueryableDruidServer>>, Int2ObjectRBTreeMap<Set<QueryableDruidServer>>>
 {
-  public static HistoricalFilter IDENTITIY_FILTER = new HistoricalFilter(ImmutableSet::of);
+  public static final HistoricalFilter IDENTITIY_FILTER = new HistoricalFilter(ImmutableSet::of);
 
   public HistoricalFilter(Supplier<Set<String>> serversToIgnoreSupplier)
   {
