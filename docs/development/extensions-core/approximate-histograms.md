@@ -9,7 +9,7 @@ title: "Approximate Histogram aggregators"
   ~ distributed with this work for additional information
   ~ regarding copyright ownership.  The ASF licenses this file
   ~ to you under the Apache License, Version 2.0 (the
-  ~ "License"); you may not use this file except in compliance
+  ~ "License"); you may not use this file except in comfpliance
   ~ with the License.  You may obtain a copy of the License at
   ~
   ~   http://www.apache.org/licenses/LICENSE-2.0
@@ -23,17 +23,18 @@ title: "Approximate Histogram aggregators"
   -->
 
 
+:::caution
+ The Approximate Histogram aggregator is deprecated. Use [DataSketches Quantiles](../extensions-core/datasketches-quantiles.md) instead, which provides a superior distribution-independent algorithm with formal error guarantees.
+:::
+
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-histogram` in the extensions load list.
 
 The `druid-histogram` extension provides an approximate histogram aggregator and a fixed buckets histogram aggregator.
 
 <a name="approximate-histogram-aggregator"></a>
 
-## Approximate Histogram aggregator (Deprecated)
+## Approximate Histogram aggregator 
 
-:::info
- The Approximate Histogram aggregator is deprecated. Please use [DataSketches Quantiles](../extensions-core/datasketches-quantiles.md) instead which provides a superior distribution-independent algorithm with formal error guarantees.
-:::
 
 This aggregator is based on
 [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf)
