@@ -20,25 +20,20 @@
 package org.apache.druid.k8s.overlord.common;
 
 import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import io.fabric8.kubernetes.client.vertx.VertxHttpClientFactory;
 
 public class DruidKubernetesClient implements KubernetesClientApi
 {
-
-  private final Config config;
   private final KubernetesClient kubernetesClient;
 
-  public DruidKubernetesClient()
+  public DruidKubernetesClient(Config kubernetesClientConfig)
   {
-    this(new ConfigBuilder().build());
-  }
-
-  public DruidKubernetesClient(Config config)
-  {
-    this.config = config;
-    this.kubernetesClient = new KubernetesClientBuilder().withConfig(config).build();
+    this.kubernetesClient = new KubernetesClientBuilder()
+        .withHttpClientFactory(new VertxHttpClientFactory())
+        .withConfig(kubernetesClientConfig)
+        .build();
   }
 
   @Override
@@ -47,8 +42,10 @@ public class DruidKubernetesClient implements KubernetesClientApi
     return executor.executeRequest(kubernetesClient);
   }
 
-  /** This client automatically gets closed by the druid lifecycle, it should not be closed when used as it is
+  /**
+   * This client automatically gets closed by the druid lifecycle, it should not be closed when used as it is
    * meant to be reused.
+   *
    * @return re-useable KubernetesClient
    */
   @Override
