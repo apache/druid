@@ -79,6 +79,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -268,7 +269,15 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
                   null
               )
           );
-      final Cursor nextCursor = nextCursorHolder.asCursor();
+
+      final Cursor nextCursor;
+
+      // If asCursor() fails, we need to close nextCursorHolder immediately.
+      try {
+        nextCursor = nextCursorHolder.asCursor();
+      } catch (Throwable t) {
+        throw CloseableUtils.closeAndWrapInCatch(t, nextCursorHolder);
+      }
 
       if (nextCursor == null) {
         // No cursors!
