@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 export INSTALL_K3S_VERSION=v1.21.14+k3s1
 export KUBECONFIG=$HOME/.kube/config
