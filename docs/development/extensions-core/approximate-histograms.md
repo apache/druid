@@ -24,7 +24,7 @@ title: "Approximate Histogram aggregators"
 
 
 :::caution
- The Approximate Histogram aggregator is deprecated. Use [DataSketches Quantiles](../extensions-core/datasketches-quantiles.md) instead, which provides a superior distribution-independent algorithm with formal error guarantees.
+ The Approximate Histogram aggregator is deprecated. Use [DataSketches Quantiles](../extensions-core/datasketches-quantiles.md) instead as it provides a superior distribution-independent algorithm with formal error guarantees.
 :::
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-histogram` in the extensions load list.
