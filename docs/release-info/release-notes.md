@@ -144,7 +144,6 @@ curl -X POST --header "Content-Type: application/json" -d @supervisor.json local
 ##### Other streaming ingestion improvements
 
 - Improved the efficiency of streaming ingestion by fetching active tasks from memory. This reduces the number of calls to the metadata store for active datasource task payloads [#16098](https://github.com/apache/druid/pull/16098)
-- Improved how Druid behaves when resubmitting supervisors or when task publishing takes a long time [#17509](https://github.com/apache/druid/pull/17509)
 
 ### Querying
 
@@ -287,6 +286,7 @@ The Kafka supervisor now includes additional lag metrics for how many minutes of
 
 - You can now ingest payloads larger than 128KiB when using HDFS as deep storage for Middle Manager-less ingestion [#17742](https://github.com/apache/druid/pull/17742)
 - You can now run task pods in a namespace different from the rest of the cluster [#17738](https://github.com/apache/druid/pull/17738)
+- You can now name your K8s job names using `druid.indexer.runner.k8sTaskPodNamePrefix` [#17749](https://github.com/apache/druid/pull/17749)
 - The logging level is now set to info. Previously, it was set to debug [#17752](https://github.com/apache/druid/pull/17752)
 - Druid now supports lazy loading of pod templates so that any config changes you make are deployed more quickly [#17701](https://github.com/apache/druid/pull/17701)
 - Removed startup probe so that peon tasks can start up properly without being killed by Kubernetes [#17784](https://github.com/apache/druid/pull/17784)
@@ -339,22 +339,16 @@ This feature is introduced in Druid 33.0.
 
 [#17653](https://github.com/apache/druid/pull/17653)
 
-### Incompatible changes
-
-#### Front-coded dictionaries
-
-Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
-
-Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
-
-For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
-
-
 ### Developer notes
 
 #### Dependency updates
 
+- Added `GraalJS` to enable Javascript-backed selector strategies [#17843](https://github.com/apache/druid/pull/17843)
+
+
 The following dependencies have had their versions bumped:
 
-- `netty4` from version 4.1.116 to 4.1.118
-- Added `GraalJS` to enable Javascript-backed selector strategies [#17843](https://github.com/apache/druid/pull/17843)
+- `netty4` to version 4.1.118 
+- `async-http-client` to version 3.0.1 [#17646](https://github.com/apache/druid/pull/17646)
+- `jetty` to version 9.4.57.v20241219 [#17879](https://github.com/apache/druid/pull/17879)
+- `parquet-avro` to version 1.15.1 [#17874](https://github.com/apache/druid/pull/17874)
