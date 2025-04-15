@@ -2414,6 +2414,7 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram

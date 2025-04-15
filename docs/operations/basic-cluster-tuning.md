@@ -40,11 +40,10 @@ The biggest contributions to heap usage on Historicals are:
 - Partial unmerged query results from segments
 - The stored maps for [lookups](../querying/lookups.md).
 
-A general rule-of-thumb for sizing the Historical heap is `(0.5GiB * number of CPU cores)`, with an upper limit of ~24GiB.
+A general rule-of-thumb for sizing the Historical heap is `(0.5GiB * number of CPU cores)`.
 
-This rule-of-thumb scales using the number of CPU cores as a convenient proxy for hardware size and level of concurrency (note: this formula is not a hard rule for sizing Historical heaps).
-
-Having a heap that is too large can result in excessively long GC collection pauses, the ~24GiB upper limit is imposed to avoid this.
+This is a starting point, not a hard rule for sizing Historical heaps.
+Note that with certain garbage collectors, having a large heap can result in excessively long GC pauses. For heaps larger than about 24GiB, we recommend using a collector that can handle large heaps, such as Shenandoah or ZGC.
 
 If caching is enabled on Historicals, the cache is stored on heap, sized by `druid.cache.sizeInBytes`.
 

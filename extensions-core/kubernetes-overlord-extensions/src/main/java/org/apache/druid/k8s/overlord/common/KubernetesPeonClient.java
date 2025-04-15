@@ -33,7 +33,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -47,7 +46,6 @@ public class KubernetesPeonClient
 
   private final KubernetesClientApi clientApi;
   private final String namespace;
-  private final boolean overlordMaybeInAnotherNamespace;
   private final String overlordNamespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
@@ -55,7 +53,7 @@ public class KubernetesPeonClient
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
       String namespace,
-      @Nullable String overlordNamespace,
+      String overlordNamespace,
       boolean debugJobs,
       ServiceEmitter emitter
   )
@@ -65,7 +63,6 @@ public class KubernetesPeonClient
     this.overlordNamespace = overlordNamespace;
     this.debugJobs = debugJobs;
     this.emitter = emitter;
-    this.overlordMaybeInAnotherNamespace = overlordNamespace != null;
   }
 
   public KubernetesPeonClient(
@@ -75,7 +72,7 @@ public class KubernetesPeonClient
       ServiceEmitter emitter
   )
   {
-    this(clientApi, namespace, null, debugJobs, emitter);
+    this(clientApi, namespace, "", debugJobs, emitter);
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -198,10 +195,9 @@ public class KubernetesPeonClient
 
   public List<Job> getPeonJobs()
   {
-    if (overlordMaybeInAnotherNamespace) {
-      return getPeonJobsWithOverlordNamespaceKeyLabels();
-    }
-    return getPeonJobsWithoutOverlordNamespaceKeyLabels();
+    return this.overlordNamespace.isEmpty()
+           ? getPeonJobsWithoutOverlordNamespaceKeyLabels()
+           : getPeonJobsWithOverlordNamespaceKeyLabels();
   }
 
   private List<Job> getPeonJobsWithoutOverlordNamespaceKeyLabels()
