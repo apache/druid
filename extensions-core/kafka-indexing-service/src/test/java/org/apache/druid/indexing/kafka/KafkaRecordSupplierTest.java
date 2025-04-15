@@ -445,6 +445,8 @@ public class KafkaRecordSupplierTest
     emitter.verifyEmitted("kafka/consumer/fetchSizeAvg", 1);
     emitter.verifyEmitted("kafka/consumer/fetchSizeMax", 1);
     emitter.verifyEmitted("kafka/consumer/recordsPerRequestAvg", 1);
+    emitter.verifyEmitted("kafka/consumer/incomingBytes", 2);
+    emitter.verifyEmitted("kafka/consumer/outgoingBytes", 2);
 
     recordSupplier.close();
     Assert.assertFalse(monitor.monitor(emitter));

@@ -103,6 +103,18 @@ public class KafkaConsumerMonitor extends AbstractMonitor
               "kafka/consumer/recordsPerRequestAvg",
               Set.of(CLIENT_ID_TAG, "topic"),
               KafkaConsumerMetric.MetricType.GAUGE
+          ),
+          new KafkaConsumerMetric(
+              "outgoing-byte-total",
+              "kafka/consumer/outgoingBytes",
+              Set.of(CLIENT_ID_TAG, "node-id"),
+              KafkaConsumerMetric.MetricType.COUNTER
+          ),
+          new KafkaConsumerMetric(
+              "incoming-byte-total",
+              "kafka/consumer/incomingBytes",
+              Set.of(CLIENT_ID_TAG, "node-id"),
+              KafkaConsumerMetric.MetricType.COUNTER
           )
       ).collect(Collectors.toMap(KafkaConsumerMetric::getKafkaMetricName, Function.identity()));
 
