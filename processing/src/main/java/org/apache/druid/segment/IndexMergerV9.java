@@ -533,12 +533,27 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int i = 0; i < dimensions.size(); i++) {
         final String dimension = dimensions.get(i);
-        DimensionMergerV9 merger = mergers.get(i);
+        final DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
-        if (!merger.hasOnlyNulls()) {
-          ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
-          makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
+        final ColumnDescriptor columnDesc;
+        if (merger.hasOnlyNulls()) {
+          // synthetic null column descriptor if merger participates in generic null column stuff
+          // always write a null column if hasOnlyNulls is true. This is correct regardless of how storeEmptyColumns is
+          // set because:
+          // - if storeEmptyColumns is true, the base table also does this,
+          // - if storeEmptyColumns is false, the base table omits the column from the dimensions list as if it does not
+          //   exist, however for projections the dimensions list is always populated by the projection schema, so a
+          //   column always needs to exist to not run into null pointer exceptions.
+          columnDesc = ColumnDescriptor
+              .builder()
+              .setValueType(columnFormats.get(dimension).getLogicalType().getType())
+              .addSerde(new NullColumnPartSerde(rowCount, indexSpec.getBitmapSerdeFactory()))
+              .build();
+        } else {
+          // use merger descriptor, merger either has values or handles it own null column storage details
+          columnDesc = merger.makeColumnDescriptor();
         }
+        makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
       }
 
       progress.stopSection(section2);
