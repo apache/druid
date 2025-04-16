@@ -119,10 +119,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
             // Stop the current latch and create a new one
             leader = false;
-            CloseableUtils.closeAndSuppressExceptions(
-                createNewLeaderLatchWithListener(),
-                e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
-            );
+            closeLeaderLatchQuietly();
 
             try {
               listener.stopBeingLeader();
@@ -131,7 +128,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               log.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
             }
 
-            startLeaderLatch();
+            startLeaderLatchQuietly();
           }
         },
         listenerExecutor
@@ -212,7 +209,15 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     listenerExecutor.shutdownNow();
   }
 
-  private void startLeaderLatch()
+  private void closeLeaderLatchQuietly()
+  {
+    CloseableUtils.closeAndSuppressExceptions(
+        createNewLeaderLatchWithListener(),
+        e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
+    );
+  }
+
+  private void startLeaderLatchQuietly()
   {
     try {
       //Small delay before starting the latch so that others waiting are chosen to become leader.
