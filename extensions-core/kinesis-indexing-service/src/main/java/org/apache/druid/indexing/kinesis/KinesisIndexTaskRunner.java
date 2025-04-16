@@ -36,7 +36,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -59,16 +58,10 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   KinesisIndexTaskRunner(
       KinesisIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
-      AuthorizerMapper authorizerMapper,
       LockGranularity lockGranularityToUse
   )
   {
-    super(
-        task,
-        parser,
-        authorizerMapper,
-        lockGranularityToUse
-    );
+    super(task, parser, lockGranularityToUse);
     this.task = task;
   }
 
