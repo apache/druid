@@ -105,29 +105,33 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
             }
             catch (Exception ex) {
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
-              stopAndCreateNewLeaderLatch();
-              startLeaderLatch();
+              notLeader();
             }
           }
 
           @Override
           public void notLeader()
           {
-            try {
-              if (!leader) {
-                log.warn("I'm being asked to stop being leader. But I am not the leader. Ignored event.");
-                return;
-              }
+            if (!leader) {
+              log.warn("I'm being asked to stop being leader. But I am not the leader. Ignored event.");
+              return;
+            }
 
-              leader = false;
-              // give others a chance to become leader.
-              stopAndCreateNewLeaderLatch();
+            // Stop the current latch and create a new one
+            leader = false;
+            CloseableUtils.closeAndSuppressExceptions(
+                createNewLeaderLatchWithListener(),
+                e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
+            );
+
+            try {
               listener.stopBeingLeader();
-              startLeaderLatch();
             }
             catch (Exception ex) {
               log.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
             }
+
+            startLeaderLatch();
           }
         },
         listenerExecutor
@@ -208,16 +212,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     listenerExecutor.shutdownNow();
   }
 
-  private void stopAndCreateNewLeaderLatch()
-  {
-    CloseableUtils.closeAndSuppressExceptions(
-        createNewLeaderLatchWithListener(),
-        e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
-    );
-
-    leader = false;
-  }
-
   private void startLeaderLatch()
   {
     try {
@@ -225,11 +219,11 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
       Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
       leaderLatch.get().start();
     }
-    catch (Exception e) {
+    catch (Throwable t) {
       // If an exception gets thrown out here, then the node will zombie out 'cause it won't be looking for
       // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
       // Curator likes to have "throws Exception" on methods so it might happen...
-      log.makeAlert(e, "I am a zombie").emit();
+      log.makeAlert(t, "I am a zombie").emit();
     }
   }
 }

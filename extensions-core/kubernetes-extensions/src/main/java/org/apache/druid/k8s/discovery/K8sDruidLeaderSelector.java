@@ -78,6 +78,7 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
           }
           catch (Throwable ex) {
             LOGGER.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
+            listener.stopBeingLeader();
             closeLeaderLatchQuietly();
             leader = false;
             //Exit and Kubernetes would simply create a new replacement pod.
