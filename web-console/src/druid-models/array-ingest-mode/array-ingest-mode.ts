@@ -16,15 +16,6 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+export type ArrayIngestMode = 'array' | 'mvd';
 
-import { ArrayModeSwitch } from './array-mode-switch';
-
-describe('ArrayModeSwitch', () => {
-  it('matches snapshot', () => {
-    const arrayInput = <ArrayModeSwitch arrayMode="multi-values" changeArrayMode={() => {}} />;
-
-    const { container } = render(arrayInput);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+export const DEFAULT_ARRAY_INGEST_MODE: ArrayIngestMode = 'array';

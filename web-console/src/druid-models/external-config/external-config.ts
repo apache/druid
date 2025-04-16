@@ -32,7 +32,7 @@ import {
 import * as JSONBig from 'json-bigint-native';
 
 import { nonEmptyArray } from '../../utils';
-import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
 import type { InputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
 
@@ -129,7 +129,7 @@ export function externalConfigToTableExpression(config: ExternalConfig): SqlExpr
 export function externalConfigToInitDimensions(
   config: ExternalConfig,
   timeExpression: SqlExpression | undefined,
-  arrayMode: ArrayMode,
+  arrayIngestMode: ArrayIngestMode,
 ): SqlExpression[] {
   return (timeExpression ? [timeExpression.setAlias('__time')] : [])
     .concat(
@@ -137,7 +137,7 @@ export function externalConfigToInitDimensions(
         const columnName = columnDeclaration.getColumnName();
         if (timeExpression && timeExpression.containsColumnName(columnName)) return;
         return C(columnName).applyIf(
-          arrayMode === 'multi-values' && columnDeclaration.columnType.isArray(),
+          arrayIngestMode === 'mvd' && columnDeclaration.columnType.isArray(),
           ex => F('ARRAY_TO_MV', ex).as(columnName),
         );
       }),

@@ -19,19 +19,21 @@
 import { Switch } from '@blueprintjs/core';
 import React from 'react';
 
-import type { ArrayMode } from '../../druid-models';
+import type { ArrayIngestMode } from '../../druid-models';
 import { getLink } from '../../links';
 import { ExternalLink } from '../external-link/external-link';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { PopoverText } from '../popover-text/popover-text';
 
-export interface ArrayModeSwitchProps {
-  arrayMode: ArrayMode;
-  changeArrayMode(newArrayMode: ArrayMode): void;
+export interface ArrayIngestModeSwitchProps {
+  arrayIngestMode: ArrayIngestMode;
+  changeArrayIngestMode(arrayIngestMode: ArrayIngestMode): void;
 }
 
-export const ArrayModeSwitch = React.memo(function ArrayModeSwitch(props: ArrayModeSwitchProps) {
-  const { arrayMode, changeArrayMode } = props;
+export const ArrayIngestModeSwitch = React.memo(function ArrayIngestModeSwitch(
+  props: ArrayIngestModeSwitchProps,
+) {
+  const { arrayIngestMode, changeArrayIngestMode } = props;
 
   return (
     <FormGroupWithInfo
@@ -54,8 +56,8 @@ export const ArrayModeSwitch = React.memo(function ArrayModeSwitch(props: ArrayM
       <Switch
         label="Store ARRAYs as MVDs"
         className="legacy-switch"
-        checked={arrayMode === 'multi-values'}
-        onChange={() => changeArrayMode(arrayMode === 'arrays' ? 'multi-values' : 'arrays')}
+        checked={arrayIngestMode === 'mvd'}
+        onChange={() => changeArrayIngestMode(arrayIngestMode === 'array' ? 'mvd' : 'array')}
       />
     </FormGroupWithInfo>
   );

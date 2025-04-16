@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
+
 export type SelectDestination = 'taskReport' | 'durableStorage';
-export type ArrayIngestMode = 'array' | 'mvd';
 export type TaskAssignment = 'auto' | 'max';
 export type SqlJoinAlgorithm = 'broadcast' | 'sortMerge';
 

@@ -26,6 +26,7 @@ import {
   SqlStar,
 } from 'druid-query-toolkit';
 
+import { partitionSetStatements } from './explain';
 import type { RowColumn } from './general';
 import { offsetToRowColumn } from './general';
 
@@ -136,26 +137,41 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
   let remainingText = text;
   let offset = 0;
   let m: RegExpExecArray | null = null;
-  do {
-    m = /SELECT|WITH|INSERT|REPLACE|EXPLAIN/i.exec(remainingText);
-    if (m) {
-      const sql = findSqlQueryPrefix(remainingText.slice(m.index));
-      const advanceBy = m.index + m[0].length; // Skip the initial word
-      if (sql) {
-        const endIndex = m.index + sql.length;
-        found.push({
-          index: found.length,
-          startOffset: offset + m.index,
-          startRowColumn: offsetToRowColumn(text, offset + m.index)!,
-          endOffset: offset + endIndex,
-          endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
-          sql: cleanSqlQueryPrefix(sql),
-        });
-      }
-      remainingText = remainingText.slice(advanceBy);
-      offset += advanceBy;
+  // Have an upper bound to how many queries we might extract from a long text
+  for (let i = 0; i < 1e3; i++) {
+    m = /SET|SELECT|WITH|INSERT|REPLACE|EXPLAIN/i.exec(remainingText);
+    if (!m) break;
+
+    const sql = findSqlQueryPrefix(remainingText.slice(m.index));
+    if (sql) {
+      const endIndex = m.index + sql.length;
+      found.push({
+        index: found.length,
+        startOffset: offset + m.index,
+        startRowColumn: offsetToRowColumn(text, offset + m.index)!,
+        endOffset: offset + endIndex,
+        endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
+        sql: cleanSqlQueryPrefix(sql),
+      });
     }
-  } while (m);
+
+    let advanceBy = m.index;
+    const initialWord = m[0].toUpperCase();
+    if (sql && initialWord === 'SET') {
+      const startOfSetStatements = remainingText.slice(m.index);
+      const [setPart, queryPart] = partitionSetStatements(startOfSetStatements);
+      advanceBy += setPart.length;
+      const nextWord = /SELECT|WITH|INSERT|REPLACE/i.exec(queryPart);
+      if (nextWord) {
+        advanceBy += nextWord[0].length;
+      }
+    } else {
+      advanceBy += initialWord.length; // Skip the initial word only
+    }
+
+    remainingText = remainingText.slice(advanceBy);
+    offset += advanceBy;
+  }
 
   return found;
 }

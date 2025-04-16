@@ -123,8 +123,6 @@ describe('spec conversion', () => {
     expect(converted.queryString).toMatchSnapshot();
 
     expect(converted.queryContext).toEqual({
-      maxParseExceptions: 3,
-      maxNumTasks: 5,
       indexSpec: {
         dimensionCompression: 'lzf',
       },
@@ -653,8 +651,6 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toMatchSnapshot();
 
-    expect(converted.queryContext).toEqual({
-      arrayIngestMode: 'array',
-    });
+    expect(converted.queryContext).toEqual({});
   });
 });

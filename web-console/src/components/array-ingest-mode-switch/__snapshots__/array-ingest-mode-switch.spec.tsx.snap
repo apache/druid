@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ArrayModeSwitch matches snapshot 1`] = `
+exports[`ArrayIngestModeSwitch matches snapshot 1`] = `
 <div
   class="bp5-form-group form-group-with-info"
 >

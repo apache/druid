@@ -29,13 +29,13 @@ import {
 } from 'druid-query-toolkit';
 
 import { filterMap, oneOf } from '../../utils';
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
 import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToInitDimensions,
   externalConfigToTableExpression,
   fitExternalConfigPattern,
 } from '../external-config/external-config';
-import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import { guessDataSourceNameFromInputSource } from '../ingestion-spec/ingestion-spec';
 
 export type IngestMode = 'insert' | 'replace';
@@ -50,6 +50,7 @@ function removeTopLevelArrayToMvOrUndefined(dimension: SqlExpression): SqlExpres
 export interface IngestQueryPattern {
   destinationTableName: string;
   mode: IngestMode;
+  arrayIngestMode: ArrayIngestMode;
   overwriteWhere?: SqlExpression;
   mainExternalName: string;
   mainExternalConfig: ExternalConfig;
@@ -58,23 +59,26 @@ export interface IngestQueryPattern {
   metrics?: readonly SqlExpression[];
   partitionedBy: string;
   clusteredBy: readonly number[];
+  forceSegmentSortByTime: boolean;
 }
 
 export function externalConfigToIngestQueryPattern(
   config: ExternalConfig,
   timeExpression: SqlExpression | undefined,
   partitionedByHint: string | undefined,
-  arrayMode: ArrayMode,
+  arrayIngestMode: ArrayIngestMode,
 ): IngestQueryPattern {
   return {
     destinationTableName: guessDataSourceNameFromInputSource(config.inputSource) || 'data',
     mode: 'replace',
+    arrayIngestMode,
     mainExternalName: 'ext',
     mainExternalConfig: config,
     filters: [],
-    dimensions: externalConfigToInitDimensions(config, timeExpression, arrayMode),
+    dimensions: externalConfigToInitDimensions(config, timeExpression, arrayIngestMode),
     partitionedBy: partitionedByHint || (timeExpression ? 'day' : 'all'),
     clusteredBy: [],
+    forceSegmentSortByTime: true,
   };
 }
 
@@ -146,6 +150,10 @@ export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
       `Can not have * in SELECT in the data loader flow, the columns need to be explicitly listed out`,
     );
   }
+
+  const queryContext = query.getContext();
+  const arrayIngestMode = queryContext['arrayIngestMode'] ?? 'array';
+  const forceSegmentSortByTime = queryContext['forceSegmentSortByTime'] ?? true;
 
   let destinationTableName: string;
   let mode: IngestMode;
@@ -229,6 +237,7 @@ export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
   return {
     destinationTableName,
     mode,
+    arrayIngestMode,
     overwriteWhere,
     mainExternalName,
     mainExternalConfig,
@@ -237,6 +246,7 @@ export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
     metrics,
     partitionedBy,
     clusteredBy,
+    forceSegmentSortByTime,
   };
 }
 
@@ -248,6 +258,7 @@ export function ingestQueryPatternToQuery(
   const {
     destinationTableName,
     mode,
+    arrayIngestMode,
     overwriteWhere,
     mainExternalName,
     mainExternalConfig,
@@ -256,8 +267,21 @@ export function ingestQueryPatternToQuery(
     metrics,
     partitionedBy,
     clusteredBy,
+    forceSegmentSortByTime,
   } = ingestQueryPattern;
+
+  const queryContext: Record<string, any> = {
+    arrayIngestMode,
+    finalizeAggregations: false,
+    groupByEnableMultiValueUnnesting: false,
+  };
+
+  if (!forceSegmentSortByTime) {
+    queryContext.forceSegmentSortByTime = forceSegmentSortByTime;
+  }
+
   return SqlQuery.from(T(mainExternalName))
+    .changeContext(queryContext)
     .applyIf(!preview, q =>
       mode === 'insert'
         ? q.changeInsertIntoTable(destinationTableName)
