@@ -181,7 +181,8 @@ public class RabbitStreamIndexTaskTuningConfigTest
                     "maxSavedParseExceptions=0, " +
                     "numPersistThreads=1, " +
                     "maxRecordsPerPoll=null, " +
-                    "maxColumnsToMerge=-1}";
+                    "maxColumnsToMerge=-1, " +
+                    "messageGapAggStatsEnabled=false}";
 
 
     Assert.assertEquals(resStr, config.toString());

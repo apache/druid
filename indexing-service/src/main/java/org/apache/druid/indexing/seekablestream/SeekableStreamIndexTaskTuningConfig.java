@@ -69,6 +69,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final int numPersistThreads;
   private final int maxColumnsToMerge;
 
+  private final boolean messageGapAggStatsEnabled;
+
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
       @Nullable Integer maxRowsInMemory,
@@ -91,7 +93,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
-      @Nullable Integer maxColumnsToMerge
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean messageGapAggStatsEnabled
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -141,8 +144,9 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
     this.numPersistThreads = numPersistThreads == null ?
-                                DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
+                             DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
     this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
+    this.messageGapAggStatsEnabled = messageGapAggStatsEnabled != null && messageGapAggStatsEnabled;
   }
 
   @Override
@@ -301,6 +305,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   }
 
   @Override
+  @JsonProperty
+  public boolean getMessageGapAggStatsEnabled()
+  {
+    return messageGapAggStatsEnabled;
+  }
+
+  @Override
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -327,6 +338,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
            numPersistThreads == that.numPersistThreads &&
            maxColumnsToMerge == that.maxColumnsToMerge &&
+           messageGapAggStatsEnabled == that.messageGapAggStatsEnabled &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -360,7 +372,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        messageGapAggStatsEnabled
     );
   }
 

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.AtomicDouble;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,6 +55,23 @@ public class SegmentGenerationMetrics
   private final AtomicBoolean processingDone = new AtomicBoolean(false);
 
   private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
+
+  // Message gap accounting
+  private final AtomicLong minMessageGap = new AtomicLong(Long.MAX_VALUE);
+  private final AtomicLong maxMessageGap = new AtomicLong(Long.MIN_VALUE);
+  private final AtomicLong numMessageGap = new AtomicLong(0);
+  private final AtomicDouble avgMessageGap = new AtomicDouble(0);
+  private final boolean messageGapAggStatsEnabled;
+
+  public SegmentGenerationMetrics(final boolean messageGapAggStatsEnabled)
+  {
+    this.messageGapAggStatsEnabled = messageGapAggStatsEnabled;
+  }
+
+  public boolean isMessageGapAggStatsEnabled()
+  {
+    return messageGapAggStatsEnabled;
+  }
 
   public void incrementRowOutputCount(long numRows)
   {
@@ -103,6 +121,14 @@ public class SegmentGenerationMetrics
   public void setSinkCount(long sinkCount)
   {
     this.sinkCount.set(sinkCount);
+  }
+
+  public void reportMessageGap(final long messageGap)
+  {
+    final long numEvent = this.numMessageGap.incrementAndGet();
+    this.avgMessageGap.getAndUpdate(oldAvg -> oldAvg + ((messageGap - oldAvg) / numEvent));
+    this.minMessageGap.getAndAccumulate(messageGap, Math::min);
+    this.maxMessageGap.getAndAccumulate(messageGap, Math::max);
   }
 
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
@@ -170,6 +196,7 @@ public class SegmentGenerationMetrics
   {
     return pushedRows.get();
   }
+
   public long mergeTimeMillis()
   {
     return mergeTimeMillis.get();
@@ -195,6 +222,26 @@ public class SegmentGenerationMetrics
     return sinkCount.get();
   }
 
+  public long maxMessageGap()
+  {
+    return maxMessageGap.get();
+  }
+
+  public long minMessageGap()
+  {
+    return minMessageGap.get();
+  }
+
+  public double avgMessageGap()
+  {
+    return avgMessageGap.get();
+  }
+
+  public long numMessageGapEvent()
+  {
+    return numMessageGap.get();
+  }
+
   public long messageGap()
   {
     return messageGap.get();
@@ -207,7 +254,7 @@ public class SegmentGenerationMetrics
 
   public SegmentGenerationMetrics snapshot()
   {
-    final SegmentGenerationMetrics retVal = new SegmentGenerationMetrics();
+    final SegmentGenerationMetrics retVal = new SegmentGenerationMetrics(messageGapAggStatsEnabled);
     retVal.dedupCount.set(dedupCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
     retVal.numPersists.set(numPersists.get());
@@ -220,19 +267,26 @@ public class SegmentGenerationMetrics
     retVal.persistCpuTime.set(persistCpuTime.get());
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
-    retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
     retVal.mergedRows.set(mergedRows.get());
     retVal.pushedRows.set(pushedRows.get());
 
     long messageGapSnapshot = 0;
-    final long maxTimestamp = retVal.messageMaxTimestamp.get();
+    final long maxTimestamp = messageMaxTimestamp.get();
+    retVal.messageMaxTimestamp.set(maxTimestamp);
     if (processingDone.get()) {
       messageGapSnapshot = NO_EMIT_MESSAGE_GAP;
     } else if (maxTimestamp > 0) {
       messageGapSnapshot = System.currentTimeMillis() - maxTimestamp;
     }
     retVal.messageGap.set(messageGapSnapshot);
+
+    if (messageGapAggStatsEnabled) {
+      retVal.numMessageGap.set(numMessageGap.get());
+      retVal.avgMessageGap.set(avgMessageGap.get());
+      retVal.minMessageGap.set(minMessageGap.get());
+      retVal.maxMessageGap.set(maxMessageGap.get());
+    }
 
     reset();
 
@@ -242,5 +296,9 @@ public class SegmentGenerationMetrics
   private void reset()
   {
     maxSegmentHandoffTime.set(NO_EMIT_SEGMENT_HANDOFF_TIME);
+    minMessageGap.set(Long.MAX_VALUE);
+    maxMessageGap.set(Long.MIN_VALUE);
+    avgMessageGap.set(0);
+    numMessageGap.set(0);
   }
 }

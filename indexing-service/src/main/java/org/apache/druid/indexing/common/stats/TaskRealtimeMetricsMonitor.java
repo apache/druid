@@ -60,7 +60,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     this.rowIngestionMeters = rowIngestionMeters;
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.metricTags = metricTags;
-    previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
+    previousSegmentGenerationMetrics = new SegmentGenerationMetrics(segmentGenerationMetrics.isMessageGapAggStatsEnabled());
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
 
@@ -130,6 +130,19 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     long messageGap = metrics.messageGap();
     if (messageGap >= 0) {
       emitter.emit(builder.setMetric("ingest/events/messageGap", messageGap));
+    }
+
+    final long minMessageGap = metrics.minMessageGap();
+    final long maxMessageGap = metrics.maxMessageGap();
+    // Best-effort way to ensure parity amongst emitted metrics
+    if (metrics.isMessageGapAggStatsEnabled()) {
+      if (minMessageGap != Long.MAX_VALUE) {
+        emitter.emit(builder.setMetric("ingest/events/minMessageGap", minMessageGap));
+      }
+      if (maxMessageGap != Long.MIN_VALUE) {
+        emitter.emit(builder.setMetric("ingest/events/maxMessageGap", maxMessageGap));
+      }
+      emitter.emit(builder.setMetric("ingest/events/avgMessageGap", metrics.avgMessageGap()));
     }
 
     long maxSegmentHandoffTime = metrics.maxSegmentHandoffTime();

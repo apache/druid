@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
@@ -99,6 +100,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -126,6 +128,7 @@ public class StreamAppenderator implements Appenderator
   public static final int ROUGH_OVERHEAD_PER_SINK = 5000;
   // Rough estimate of memory footprint of empty FireHydrant based on actual heap dumps
   public static final int ROUGH_OVERHEAD_PER_HYDRANT = 1000;
+  public static final int NUMBER_OF_PERSIST_REASONS = 4;
 
   private static final EmittingLogger log = new EmittingLogger(StreamAppenderator.class);
   private static final int WARN_DELAY = 1000;
@@ -153,6 +156,7 @@ public class StreamAppenderator implements Appenderator
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
   private final boolean useMaxMemoryEstimates;
+  private final boolean messageGapAggStats;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -192,11 +196,13 @@ public class StreamAppenderator implements Appenderator
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
+  private volatile ScheduledExecutorService timeExecutor = null;
   // use intermediate executor so that deadlock conditions can be prevented
   // where persist and push Executor try to put tasks in each other queues
   // thus creating circular dependency
   private volatile ListeningExecutorService intermediateTempExecutor = null;
   private volatile long nextFlush;
+  private volatile long currTimeMs = System.currentTimeMillis();
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
 
@@ -254,6 +260,7 @@ public class StreamAppenderator implements Appenderator
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
+    this.messageGapAggStats = metrics.isMessageGapAggStatsEnabled();
 
     this.exec = Executors.newScheduledThreadPool(
         1,
@@ -291,6 +298,15 @@ public class StreamAppenderator implements Appenderator
     initializeExecutors();
     resetNextFlush();
     sinkSchemaAnnouncer.start();
+
+    if (timeExecutor != null) {
+      timeExecutor.scheduleAtFixedRate(
+          () -> currTimeMs = System.currentTimeMillis(),
+          0,
+          1,
+          TimeUnit.MILLISECONDS
+      );
+    }
     return retVal;
   }
 
@@ -340,6 +356,12 @@ public class StreamAppenderator implements Appenderator
       throw e;
     }
 
+    // cache volatile locally so it's likely to be a register read later
+    final long systemTime = currTimeMs;
+    if (messageGapAggStats) {
+      metrics.reportMessageGap(systemTime - row.getTimestampFromEpoch());
+    }
+
     if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
@@ -357,40 +379,43 @@ public class StreamAppenderator implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    List<String> persistReasons = new ArrayList<>();
+    final String[] persistReasons = new String[NUMBER_OF_PERSIST_REASONS];
 
     if (!sink.canAppendRow()) {
       persist = true;
-      persistReasons.add("No more rows can be appended to sink");
+      persistReasons[0] = "No more rows can be appended to sink";
     }
-    if (System.currentTimeMillis() > nextFlush) {
+    if (systemTime > nextFlush) {
       persist = true;
-      persistReasons.add(StringUtils.format(
+      persistReasons[1] = StringUtils.format(
           "current time[%d] is greater than nextFlush[%d]",
-          System.currentTimeMillis(),
+          systemTime,
           nextFlush
-      ));
+      );
     }
     if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
-      persistReasons.add(StringUtils.format(
+      persistReasons[2] = StringUtils.format(
           "rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d]",
           rowsCurrentlyInMemory.get(),
           tuningConfig.getMaxRowsInMemory()
-      ));
+      );
     }
     if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
       persist = true;
-      persistReasons.add(StringUtils.format(
+      persistReasons[3] = StringUtils.format(
           "(estimated) bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
           maxBytesTuningConfig
-      ));
+      );
     }
     if (persist) {
+      final String persistReasonsStr = Arrays.stream(persistReasons)
+                                             .filter(Objects::nonNull)
+                                             .collect(Collectors.joining(", "));
       if (allowIncrementalPersists) {
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
-        log.info("Flushing in-memory data to disk because %s.", String.join(",", persistReasons));
+        log.info("Flushing in-memory data to disk because %s.", persistReasonsStr);
 
         long bytesToBePersisted = 0L;
         for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
@@ -456,7 +481,10 @@ public class StreamAppenderator implements Appenderator
             MoreExecutors.directExecutor()
         );
       } else {
-        log.info("Marking ready for non-incremental async persist due to reasons[%s].", persistReasons);
+        log.info(
+            "Marking ready for non-incremental async persist due to reasons[%s].",
+            persistReasonsStr
+        );
         isPersistRequired = true;
       }
     }
@@ -1057,9 +1085,14 @@ public class StreamAppenderator implements Appenderator
           intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
           "intermediateTempExecutor not terminated"
       );
+      Preconditions.checkState(
+          timeExecutor == null || timeExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "timeExecutor not terminated"
+      );
       persistExecutor = null;
       pushExecutor = null;
       intermediateTempExecutor = null;
+      timeExecutor = null;
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -1124,7 +1157,7 @@ public class StreamAppenderator implements Appenderator
    * Unannounces the given base segment and all its upgraded versions.
    *
    * @param baseSegment base segment
-   * @param sink sink corresponding to the base segment
+   * @param sink        sink corresponding to the base segment
    * @return the set of all segment ids associated with the base segment containing the upgraded ids and itself.
    */
   private Set<SegmentIdWithShardSpec> unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
@@ -1268,6 +1301,16 @@ public class StreamAppenderator implements Appenderator
           Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-abandon", 0)
       );
     }
+
+    if (timeExecutor == null) {
+      timeExecutor = Executors.newScheduledThreadPool(
+          1,
+          new ThreadFactoryBuilder()
+              .setDaemon(true)
+              .setNameFormat("StreamAppenderator-TimeKeeper-%s")
+              .build()
+      );
+    }
   }
 
   private void shutdownExecutors()
@@ -1286,6 +1329,10 @@ public class StreamAppenderator implements Appenderator
 
     if (exec != null) {
       exec.shutdownNow();
+    }
+
+    if (timeExecutor != null) {
+      timeExecutor.shutdownNow();
     }
   }
 

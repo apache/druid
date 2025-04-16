@@ -155,7 +155,8 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         null,
         2,
-        5
+        5,
+        null
     );
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
@@ -198,7 +199,8 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         42,
         2,
-        -1
+        -1,
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -251,7 +253,8 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         2,
         -1,
-        "extra string"
+        "extra string",
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -277,6 +280,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
     Assert.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
     Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assert.assertEquals(base.getMessageGapAggStatsEnabled(), deserialized.getMessageGapAggStatsEnabled());
   }
 
   @Test

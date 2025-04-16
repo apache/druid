@@ -32,8 +32,9 @@ public class SegmentGeneratorMetricsWrapper extends SegmentGenerationMetrics
 {
   private final SegmentGenerationProgressCounter segmentGenerationProgressCounter;
 
-  public SegmentGeneratorMetricsWrapper(SegmentGenerationProgressCounter segmentGenerationProgressCounter)
+  public SegmentGeneratorMetricsWrapper(SegmentGenerationProgressCounter segmentGenerationProgressCounter, boolean messageGapAggStatsEnabled)
   {
+    super(messageGapAggStatsEnabled);
     this.segmentGenerationProgressCounter = segmentGenerationProgressCounter;
   }
 

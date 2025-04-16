@@ -136,7 +136,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new SegmentGenerationMetrics()
+        new SegmentGenerationMetrics(false)
     );
 
     driver.startJob(null);
@@ -174,7 +174,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new SegmentGenerationMetrics()
+        new SegmentGenerationMetrics(false)
     );
 
     driver.startJob(null);
@@ -212,7 +212,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new SegmentGenerationMetrics()
+        new SegmentGenerationMetrics(false)
     );
 
     driver.startJob(null);
@@ -263,7 +263,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new SegmentGenerationMetrics()
+        new SegmentGenerationMetrics(false)
     );
 
     driver.startJob(null);
