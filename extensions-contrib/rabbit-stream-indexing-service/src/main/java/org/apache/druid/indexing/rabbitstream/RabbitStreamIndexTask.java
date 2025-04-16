@@ -89,8 +89,8 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
     return new IncrementalPublishingRabbitStreamIndexTaskRunner(
         this,
         dataSchema.getParser(),
-        authorizerMapper,
-        lockGranularityToUse);
+        lockGranularityToUse
+    );
   }
 
   @Override
