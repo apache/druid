@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -37,23 +38,31 @@ import java.util.stream.Stream;
 
 public class KafkaConsumerMonitor extends AbstractMonitor
 {
+  private static final Logger log = new Logger(KafkaConsumerMonitor.class);
+
   private volatile boolean stopAfterNext = false;
 
   private static final String CLIENT_ID_TAG = "client-id";
+  private static final String TOPIC_TAG = "topic";
+  private static final String PARTITION_TAG = "partition";
+  private static final String NODE_ID_TAG = "node-id";
 
-  // Kafka metric name -> Kafka metric descriptor
+  /**
+   * Kafka metric name -> Kafka metric descriptor. Taken from
+   * https://kafka.apache.org/documentation/#consumer_fetch_monitoring.
+   */
   private static final Map<String, KafkaConsumerMetric> METRICS =
       Stream.of(
           new KafkaConsumerMetric(
               "bytes-consumed-total",
               "kafka/consumer/bytesConsumed",
-              Set.of(CLIENT_ID_TAG, "topic"),
+              Set.of(CLIENT_ID_TAG, TOPIC_TAG),
               KafkaConsumerMetric.MetricType.COUNTER
           ),
           new KafkaConsumerMetric(
               "records-consumed-total",
               "kafka/consumer/recordsConsumed",
-              Set.of(CLIENT_ID_TAG, "topic"),
+              Set.of(CLIENT_ID_TAG, TOPIC_TAG),
               KafkaConsumerMetric.MetricType.COUNTER
           ),
           new KafkaConsumerMetric(
@@ -83,37 +92,37 @@ public class KafkaConsumerMonitor extends AbstractMonitor
           new KafkaConsumerMetric(
               "fetch-size-avg",
               "kafka/consumer/fetchSizeAvg",
-              Set.of(CLIENT_ID_TAG, "topic"),
+              Set.of(CLIENT_ID_TAG, TOPIC_TAG),
               KafkaConsumerMetric.MetricType.GAUGE
           ),
           new KafkaConsumerMetric(
               "fetch-size-max",
               "kafka/consumer/fetchSizeMax",
-              Set.of(CLIENT_ID_TAG, "topic"),
+              Set.of(CLIENT_ID_TAG, TOPIC_TAG),
               KafkaConsumerMetric.MetricType.GAUGE
           ),
           new KafkaConsumerMetric(
               "records-lag",
               "kafka/consumer/recordsLag",
-              Set.of(CLIENT_ID_TAG, "topic", "partition"),
+              Set.of(CLIENT_ID_TAG, TOPIC_TAG, PARTITION_TAG),
               KafkaConsumerMetric.MetricType.GAUGE
           ),
           new KafkaConsumerMetric(
               "records-per-request-avg",
               "kafka/consumer/recordsPerRequestAvg",
-              Set.of(CLIENT_ID_TAG, "topic"),
+              Set.of(CLIENT_ID_TAG, TOPIC_TAG),
               KafkaConsumerMetric.MetricType.GAUGE
           ),
           new KafkaConsumerMetric(
               "outgoing-byte-total",
               "kafka/consumer/outgoingBytes",
-              Set.of(CLIENT_ID_TAG, "node-id"),
+              Set.of(CLIENT_ID_TAG, NODE_ID_TAG),
               KafkaConsumerMetric.MetricType.COUNTER
           ),
           new KafkaConsumerMetric(
               "incoming-byte-total",
               "kafka/consumer/incomingBytes",
-              Set.of(CLIENT_ID_TAG, "node-id"),
+              Set.of(CLIENT_ID_TAG, NODE_ID_TAG),
               KafkaConsumerMetric.MetricType.COUNTER
           )
       ).collect(Collectors.toMap(KafkaConsumerMetric::getKafkaMetricName, Function.identity()));
@@ -133,6 +142,9 @@ public class KafkaConsumerMonitor extends AbstractMonitor
       final MetricName metricName = entry.getKey();
       final KafkaConsumerMetric kafkaConsumerMetric = METRICS.get(metricName.name());
 
+      // Certain metrics are emitted both as grand totals and broken down by various tags; we want to ignore the
+      // grand total and only emit the broken-down metrics. To do this, we check that metricName.tags() equals the
+      // set of expected dimensions.
       if (kafkaConsumerMetric != null &&
           kafkaConsumerMetric.getDimensions().equals(metricName.tags().keySet())) {
         final Number newValue = (Number) entry.getValue().metricValue();
