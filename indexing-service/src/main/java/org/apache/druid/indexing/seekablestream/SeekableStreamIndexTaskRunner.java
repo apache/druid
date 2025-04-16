@@ -1450,6 +1450,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    */
   private void authorizationCheck(final HttpServletRequest request)
   {
+    if (authorizerMapper == null) {
+      throw DruidException.defensive("Cannot authorize request since AuthorizerMapper is not initialized yet.");
+    }
     AuthorizationUtils.verifyUnrestrictedAccessToDatasource(request, task.getDataSource(), authorizerMapper);
   }
 
