@@ -51,9 +51,7 @@ import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -75,9 +73,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?>> runnerSupplier;
-
-  @MonotonicNonNull
-  protected AuthorizerMapper authorizerMapper;
 
   public SeekableStreamIndexTask(
       final String id,
