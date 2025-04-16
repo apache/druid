@@ -252,7 +252,8 @@ public class SeekableStreamAppenderatorConfig implements AppenderatorConfig
       final DruidProcessingConfig processingConfig
   )
   {
-    final long directMemoryForProcessing =
+    // Queries requires one processing buffer per thread, plus all the merge buffers.
+    final long directMemoryForQueries =
         (long) processingConfig.intermediateComputeSizeBytes() *
         (processingConfig.getNumThreads() + processingConfig.getNumMergeBuffers());
 
@@ -264,7 +265,7 @@ public class SeekableStreamAppenderatorConfig implements AppenderatorConfig
     catch (UnsupportedOperationException e) {
       // Cannot find direct memory, assume it was configured according to our guidelines (at least big enough to
       // hold one extra processing buffer).
-      directMemorySizeBytes = directMemoryForProcessing + processingConfig.intermediateComputeSizeBytes();
+      directMemorySizeBytes = directMemoryForQueries + processingConfig.intermediateComputeSizeBytes();
 
       log.noStackTrace().warn(
           e,
@@ -275,7 +276,7 @@ public class SeekableStreamAppenderatorConfig implements AppenderatorConfig
     }
 
     return (int) Math.min(
-        (directMemorySizeBytes - directMemoryForProcessing) / APPENDERATOR_MERGE_ROUGH_DIRECT_MEMORY_PER_COLUMN,
+        (directMemorySizeBytes - directMemoryForQueries) / APPENDERATOR_MERGE_ROUGH_DIRECT_MEMORY_PER_COLUMN,
         Integer.MAX_VALUE
     );
   }
