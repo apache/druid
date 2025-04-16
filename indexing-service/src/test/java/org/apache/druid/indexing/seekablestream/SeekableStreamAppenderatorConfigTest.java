@@ -19,21 +19,78 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.query.DruidProcessingBufferConfig;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.utils.RuntimeInfo;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
+
+import java.io.File;
 
 public class SeekableStreamAppenderatorConfigTest
 {
+  @Test
+  public void test_fromTuningConfig()
+  {
+    final SeekableStreamIndexTaskTuningConfig tuningConfig = Mockito.mock(SeekableStreamIndexTaskTuningConfig.class);
+    Mockito.when(tuningConfig.isReportParseExceptions()).thenReturn(true);
+    Mockito.when(tuningConfig.getMaxPendingPersists()).thenReturn(2);
+    Mockito.when(tuningConfig.isSkipBytesInMemoryOverheadCheck()).thenReturn(true);
+    Mockito.when(tuningConfig.getIntermediatePersistPeriod()).thenReturn(Period.days(3));
+    Mockito.when(tuningConfig.getBasePersistDirectory()).thenReturn(new File("/nonexistent/tmp"));
+    Mockito.when(tuningConfig.getMaxRowsInMemory()).thenReturn(11);
+    Mockito.when(tuningConfig.getMaxBytesInMemory()).thenReturn(12L);
+    Mockito.when(tuningConfig.getIndexSpec())
+           .thenReturn(IndexSpec.builder().withMetricCompression(CompressionStrategy.NONE).build());
+    Mockito.when(tuningConfig.getIndexSpecForIntermediatePersists())
+           .thenReturn(IndexSpec.builder().withMetricCompression(CompressionStrategy.NONE).build());
+    Mockito.when(tuningConfig.getNumPersistThreads()).thenReturn(13);
+    Mockito.when(tuningConfig.getMaxRowsPerSegment()).thenReturn(14);
+    Mockito.when(tuningConfig.getMaxTotalRows()).thenReturn(15L);
+    Mockito.when(tuningConfig.getMaxColumnsToMerge()).thenReturn(16);
+    Mockito.when(tuningConfig.isSkipBytesInMemoryOverheadCheck()).thenReturn(true);
+    Mockito.when(tuningConfig.getMaxColumnsToMerge()).thenReturn(123);
+
+    final SeekableStreamAppenderatorConfig appenderatorConfig =
+        SeekableStreamAppenderatorConfig.fromTuningConfig(tuningConfig, null);
+
+    Assert.assertEquals(tuningConfig.isReportParseExceptions(), appenderatorConfig.isReportParseExceptions());
+    Assert.assertEquals(tuningConfig.getMaxPendingPersists(), appenderatorConfig.getMaxPendingPersists());
+    Assert.assertEquals(
+        tuningConfig.isSkipBytesInMemoryOverheadCheck(),
+        appenderatorConfig.isSkipBytesInMemoryOverheadCheck()
+    );
+    Assert.assertEquals(tuningConfig.getIntermediatePersistPeriod(), appenderatorConfig.getIntermediatePersistPeriod());
+    Assert.assertEquals(tuningConfig.getBasePersistDirectory(), appenderatorConfig.getBasePersistDirectory());
+    Assert.assertEquals(tuningConfig.getMaxRowsInMemory(), appenderatorConfig.getMaxRowsInMemory());
+    Assert.assertEquals(tuningConfig.getMaxBytesInMemory(), appenderatorConfig.getMaxBytesInMemory());
+    Assert.assertEquals(tuningConfig.getIndexSpec(), appenderatorConfig.getIndexSpec());
+    Assert.assertEquals(
+        tuningConfig.getIndexSpecForIntermediatePersists(),
+        appenderatorConfig.getIndexSpecForIntermediatePersists()
+    );
+    Assert.assertEquals(tuningConfig.getNumPersistThreads(), appenderatorConfig.getNumPersistThreads());
+    Assert.assertEquals(tuningConfig.getMaxRowsPerSegment(), appenderatorConfig.getMaxRowsPerSegment());
+    Assert.assertEquals(tuningConfig.getMaxTotalRows(), appenderatorConfig.getMaxTotalRows());
+    Assert.assertEquals(tuningConfig.getMaxColumnsToMerge(), appenderatorConfig.getMaxColumnsToMerge());
+    Assert.assertEquals(
+        tuningConfig.isSkipBytesInMemoryOverheadCheck(),
+        appenderatorConfig.isSkipBytesInMemoryOverheadCheck()
+    );
+    Assert.assertEquals(tuningConfig.getMaxColumnsToMerge(), appenderatorConfig.getMaxColumnsToMerge());
+  }
+
   @Test
   public void test_calculateDefaultMaxColumnsToMerge_direct2g_xmx1g_maxBytesAuto_2proc_1merge()
   {
@@ -105,7 +162,8 @@ public class SeekableStreamAppenderatorConfigTest
     Assert.assertEquals(
         1017,
         SeekableStreamAppenderatorConfig.calculateDefaultMaxColumnsToMerge(
-            new RuntimeInfo() {
+            new RuntimeInfo()
+            {
               @Override
               public long getDirectMemorySizeBytes()
               {
@@ -116,6 +174,14 @@ public class SeekableStreamAppenderatorConfigTest
             new MockTuningConfig(20_000_000L, 500_000_000L)
         )
     );
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(SeekableStreamAppenderatorConfig.class)
+                  .usingGetClass()
+                  .verify();
   }
 
   private static class MockProcessingConfig extends DruidProcessingConfig
