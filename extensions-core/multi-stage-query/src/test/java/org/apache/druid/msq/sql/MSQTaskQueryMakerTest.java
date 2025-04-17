@@ -40,8 +40,11 @@ import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
@@ -55,15 +58,23 @@ import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupingEngine;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
@@ -75,6 +86,9 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -138,6 +152,10 @@ public class MSQTaskQueryMakerTest
   @Bind
   private QueryProcessingPool queryProcessingPool;
   @Bind
+  private GroupingEngine groupingEngine;
+  @Bind
+  private JoinableFactoryWrapper joinableFactoryWrapper;
+  @Bind
   @Nullable
   private DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   @Bind(lazy = true)
@@ -167,13 +185,20 @@ public class MSQTaskQueryMakerTest
         anyBoolean()
     )).thenAnswer(invocation -> (Supplier<?>) () -> {
       SegmentId segmentId = (SegmentId) invocation.getArguments()[0];
-      return ReferenceCountingResourceHolder.fromCloseable(walker.getSegment(segmentId));
+      return new ReferenceCountingResourceHolder(walker.getSegment(segmentId), () -> {
+        // no-op closer, we don't want to close the segment
+      });
     });
 
     objectMapper = TestHelper.makeJsonMapper();
     jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     queryProcessingPool = new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool"));
+    groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+        new GroupByQueryConfig(),
+        TestGroupByBuffers.createDefault()
+    ).getGroupingEngine();
+    joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     policyEnforcer = NoopPolicyEnforcer.instance();
     terminalStageSpecFactory = new SegmentGenerationTerminalStageSpecFactory();
     when(plannerContextMock.getLookupLoadingSpec()).thenReturn(LookupLoadingSpec.NONE);
@@ -269,7 +294,6 @@ public class MSQTaskQueryMakerTest
                                                                             .get()
                                                                             .get(MSQTaskReport.REPORT_KEY)
                                                                             .getPayload();
-    // Assert
     Assert.assertTrue(payload.getStatus().getStatus().isFailure());
     MSQErrorReport errorReport = payload.getStatus().getErrorReport();
     Assert.assertTrue(errorReport.getFault().getErrorMessage().contains("Failed security validation with segment"));
@@ -434,6 +458,191 @@ public class MSQTaskQueryMakerTest
         new Object[]{"xabc"}
     );
     assertResultsEquals("select v from lookyloo", expectedResults, payload.getResults().getResults());
+  }
+
+  @Test
+  public void testJoinFailWithPolicyValidationOnLeftChild() throws Exception
+  {
+    // Arrange
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim1", ColumnType.STRING)
+                                               .add("j0.a0", ColumnType.LONG)
+                                               .build();
+    fieldMapping = buildFieldMapping(resultSignature);
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create(CalciteTests.DATASOURCE1),
+        RowFilterPolicy.from(new EqualityFilter(
+            "dim1",
+            ColumnType.STRING,
+            "abc",
+            null
+        ))
+    );
+    QueryDataSource rightChild = new QueryDataSource(new GroupByQuery.Builder().setInterval(Intervals.ETERNITY)
+                                                                               .setDataSource(restrictedDataSource)
+                                                                               .addAggregator(new CountAggregatorFactory(
+                                                                                   "a0"))
+                                                                               .setGranularity(Granularities.ALL)
+                                                                               .build());
+    JoinDataSource joinDataSourceLeftChildNoRestriction = JoinDataSource.create(
+        TableDataSource.create(CalciteTests.DATASOURCE1),
+        rightChild,
+        "j0.",
+        JoinConditionAnalysis.forExpression(
+            "1",
+            "j0.",
+            ExprMacroTable.nil()
+        ),
+        JoinType.INNER,
+        null,
+        null,
+        null
+    );
+    Query queryLeftChildNoRestriction = new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                                     .eternityInterval()
+                                                                     .dataSource(joinDataSourceLeftChildNoRestriction)
+                                                                     .columns(resultSignature.getColumnNames())
+                                                                     .columnTypes(resultSignature.getColumnTypes())
+                                                                     .build();
+    DruidQuery druidQueryMock = buildDruidQueryMock(queryLeftChildNoRestriction, resultSignature);
+    // Act
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
+    QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
+    // Assert
+    String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
+    MSQTaskReportPayload payload = (MSQTaskReportPayload) fakeOverlordClient.taskReportAsMap(taskId)
+                                                                            .get()
+                                                                            .get(MSQTaskReport.REPORT_KEY)
+                                                                            .getPayload();
+    Assert.assertTrue(payload.getStatus().getStatus().isFailure());
+    MSQErrorReport errorReport = payload.getStatus().getErrorReport();
+    Assert.assertTrue(errorReport.getFault().getErrorMessage().contains("Failed security validation with segment"));
+  }
+
+  @Test
+  public void testJoinFailWithPolicyValidationOnRightChild() throws Exception
+  {
+    // Arrange
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim1", ColumnType.STRING)
+                                               .add("j0.a0", ColumnType.LONG)
+                                               .build();
+    fieldMapping = buildFieldMapping(resultSignature);
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create(CalciteTests.DATASOURCE1),
+        RowFilterPolicy.from(new EqualityFilter(
+            "dim1",
+            ColumnType.STRING,
+            "abc",
+            null
+        ))
+    );
+    QueryDataSource rightChildNoRestriction = new QueryDataSource(new GroupByQuery.Builder().setInterval(Intervals.ETERNITY)
+                                                                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                                                                            .addAggregator(new CountAggregatorFactory(
+                                                                                                "a0"))
+                                                                                            .setGranularity(
+                                                                                                Granularities.ALL)
+                                                                                            .build());
+    JoinDataSource joinDataSourceRightChildNoRestriction = JoinDataSource.create(
+        restrictedDataSource,
+        rightChildNoRestriction,
+        "j0.",
+        JoinConditionAnalysis.forExpression(
+            "1",
+            "j0.",
+            ExprMacroTable.nil()
+        ),
+        JoinType.INNER,
+        null,
+        null,
+        null
+    );
+    Query queryRightChildNoRestriction = new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                                      .eternityInterval()
+                                                                      .dataSource(joinDataSourceRightChildNoRestriction)
+                                                                      .columns(resultSignature.getColumnNames())
+                                                                      .columnTypes(resultSignature.getColumnTypes())
+                                                                      .build();
+    DruidQuery druidQueryMock = buildDruidQueryMock(queryRightChildNoRestriction, resultSignature);
+    // Act
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
+    QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
+    // Assert
+    String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
+    MSQTaskReportPayload payload = (MSQTaskReportPayload) fakeOverlordClient.taskReportAsMap(taskId)
+                                                                            .get()
+                                                                            .get(MSQTaskReport.REPORT_KEY)
+                                                                            .getPayload();
+    Assert.assertTrue(payload.getStatus().getStatus().isFailure());
+    MSQErrorReport errorReport = payload.getStatus().getErrorReport();
+    Assert.assertTrue(errorReport.getFault().getErrorMessage().contains("Failed security validation with segment"));
+  }
+
+  @Test
+  public void testJoinPassedPolicyValidation() throws Exception
+  {
+    // Arrange
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim1", ColumnType.STRING)
+                                               .add("j0.a0", ColumnType.LONG)
+                                               .build();
+    fieldMapping = buildFieldMapping(resultSignature);
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create(CalciteTests.DATASOURCE1),
+        RowFilterPolicy.from(new EqualityFilter(
+            "dim1",
+            ColumnType.STRING,
+            "abc",
+            null
+        ))
+    );
+    QueryDataSource rightChild = new QueryDataSource(new GroupByQuery.Builder().setInterval(Intervals.ETERNITY)
+                                                                               .setDataSource(restrictedDataSource)
+                                                                               .addAggregator(new CountAggregatorFactory(
+                                                                                   "a0"))
+                                                                               .setGranularity(Granularities.ALL)
+                                                                               .build());
+    JoinDataSource joinDataSource = JoinDataSource.create(
+        restrictedDataSource,
+        rightChild,
+        "j0.",
+        JoinConditionAnalysis.forExpression(
+            "1",
+            "j0.",
+            ExprMacroTable.nil()
+        ),
+        JoinType.INNER,
+        null,
+        null,
+        null
+    );
+    Query query = new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                               .eternityInterval()
+                                               .dataSource(joinDataSource)
+                                               .columns(resultSignature.getColumnNames())
+                                               .columnTypes(resultSignature.getColumnTypes())
+                                               .build();
+    DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
+    // Act
+    msqTaskQueryMaker = getMSQTaskQueryMaker();
+    QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
+    // Assert
+    String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
+    MSQTaskReportPayload payload = (MSQTaskReportPayload) fakeOverlordClient.taskReportAsMap(taskId)
+                                                                            .get()
+                                                                            .get(MSQTaskReport.REPORT_KEY)
+                                                                            .getPayload();
+    Assert.assertTrue(payload.getStatus().getStatus().isSuccess());
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{"abc", 1L});
+    assertResultsEquals(
+        "select dim1, q.c from foo, (select count(*) c from foo) q",
+        expectedResults,
+        payload.getResults().getResults()
+    );
   }
 
   private static DruidQuery buildDruidQueryMock(Query query, RowSignature resultSignature)

@@ -351,6 +351,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     } else {
       return BroadcastJoinSegmentMapFnProcessor.create(
           query,
+          frameContext.policyEnforcer(),
           broadcastInputs,
           frameContext.memoryParameters().getBroadcastBufferMemory()
       );
