@@ -62,6 +62,7 @@ import org.eclipse.aether.util.repository.DefaultProxySelector;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -77,6 +78,8 @@ public class PullDependencies implements Runnable
   private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
       "https://repo1.maven.org/maven2/"
   );
+
+  private static final HashMap<Artifact, File> ARTIFACT_FILE_HASH_MAP = new HashMap<>();
 
   private static final Dependencies PROVIDED_BY_CORE_DEPENDENCIES =
       Dependencies.builder()
@@ -260,14 +263,24 @@ public class PullDependencies implements Runnable
 
     final File extensionsDir = new File(extensionsConfig.getDirectory());
     final File hadoopDependenciesDir = new File(extensionsConfig.getHadoopDependenciesDir());
+    File commonDependenciesDir = null;
+    if (extensionsConfig.getCommonDependenciesDir() != null) {
+      commonDependenciesDir = new File(extensionsConfig.getCommonDependenciesDir());
+    }
 
     try {
       if (clean) {
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
+        if (commonDependenciesDir != null) {
+          FileUtils.deleteDirectory(commonDependenciesDir);
+        }
       }
       FileUtils.mkdirp(extensionsDir);
       FileUtils.mkdirp(hadoopDependenciesDir);
+      if (commonDependenciesDir != null) {
+        FileUtils.mkdirp(commonDependenciesDir);
+      }
     }
     catch (IOException e) {
       log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);
@@ -289,7 +302,7 @@ public class PullDependencies implements Runnable
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
         createExtensionDirectory(coordinate, currExtensionDir);
 
-        downloadExtension(versionedArtifact, currExtensionDir);
+        downloadExtension(versionedArtifact, currExtensionDir, commonDependenciesDir);
       }
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
 
@@ -308,7 +321,7 @@ public class PullDependencies implements Runnable
         currExtensionDir = new File(currExtensionDir, versionedArtifact.getVersion());
         createExtensionDirectory(hadoopCoordinate, currExtensionDir);
 
-        downloadExtension(versionedArtifact, currExtensionDir, hadoopExclusions);
+        downloadExtension(versionedArtifact, currExtensionDir, hadoopExclusions, null);
       }
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
     }
@@ -341,12 +354,12 @@ public class PullDependencies implements Runnable
    * @param versionedArtifact The maven artifact of the extension
    * @param toLocation        The location where this extension will be downloaded to
    */
-  private void downloadExtension(Artifact versionedArtifact, File toLocation)
+  private void downloadExtension(Artifact versionedArtifact, File toLocation, File commonDependenciesDir)
   {
-    downloadExtension(versionedArtifact, toLocation, PROVIDED_BY_CORE_DEPENDENCIES);
+    downloadExtension(versionedArtifact, toLocation, PROVIDED_BY_CORE_DEPENDENCIES, commonDependenciesDir);
   }
 
-  private void downloadExtension(Artifact versionedArtifact, File toLocation, Dependencies exclusions)
+  private void downloadExtension(Artifact versionedArtifact, File toLocation, Dependencies exclusions, File commonDependenciesDir)
   {
     final CollectRequest collectRequest = new CollectRequest();
     collectRequest.setRoot(new Dependency(versionedArtifact, JavaScopes.RUNTIME));
@@ -400,8 +413,14 @@ public class PullDependencies implements Runnable
       for (Artifact artifact : artifacts) {
         if (exclusions.contain(artifact)) {
           log.debug("Skipped Artifact[%s]", artifact);
+        } else if (commonDependenciesDir != null && ARTIFACT_FILE_HASH_MAP.containsKey(artifact)) {
+          log.info("Copying file [%s] to common dependencies directory [%s]", artifact.getFile().getName(), commonDependenciesDir.getAbsolutePath());
+          org.apache.commons.io.FileUtils.copyFileToDirectory(artifact.getFile(), commonDependenciesDir);
+          org.apache.commons.io.FileUtils.deleteQuietly(ARTIFACT_FILE_HASH_MAP.get(artifact));
         } else {
           log.info("Adding file [%s] at [%s]", artifact.getFile().getName(), toLocation.getAbsolutePath());
+          File file = new File(toLocation, artifact.getFile().getName());
+          ARTIFACT_FILE_HASH_MAP.put(artifact, file);
           org.apache.commons.io.FileUtils.copyFileToDirectory(artifact.getFile(), toLocation);
         }
       }
