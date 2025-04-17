@@ -309,7 +309,7 @@ public class KafkaSupervisorIOConfigTest
     autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
     autoScalerConfig.put("scaleActionStartDelayMillis", 0);
     autoScalerConfig.put("scaleActionPeriodMillis", 100);
-    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("taskCountMax", 10);
     autoScalerConfig.put("taskCountMin", 1);
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
@@ -345,10 +345,51 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertNotNull(kafkaSupervisorIOConfig1.getAutoScalerConfig());
     Assert.assertTrue(kafkaSupervisorIOConfig1.getAutoScalerConfig().getEnableTaskAutoScaler());
     Assert.assertEquals(1, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMin());
-    Assert.assertEquals(2, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMax());
+    Assert.assertEquals(10, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMax());
     Assert.assertEquals(
         1200000,
         kafkaSupervisorIOConfig1.getAutoScalerConfig().getMinTriggerScaleActionFrequencyMillis()
+    );
+
+    autoScalerConfig.put("taskCountStart", 5);
+    kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+        "test",
+        null,
+        null,
+        1,
+        1,
+        new Period("PT1H"),
+        consumerProperties,
+        mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false
+    );
+    Assert.assertEquals(5, kafkaSupervisorIOConfig.getTaskCount().intValue());
+
+    Assert.assertThrows(
+        "taskCountMin <= taskCountStart <= taskCountMax",
+        RuntimeException.class, () -> {
+          autoScalerConfig.put("taskCountStart", 11); // > max task count
+          mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
+        }
+    );
+
+    Assert.assertThrows(
+        "taskCountMin <= taskCountStart <= taskCountMax",
+        RuntimeException.class, () -> {
+          autoScalerConfig.put("taskCountStart", 0); // < min task count
+          mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
+        }
     );
   }
 
