@@ -149,6 +149,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                   new StringFirstAggregatorFactory("stringFirst", "col", null, 1024),
                   new StringLastAggregatorFactory("stringLast", "col", null, 1024),
                   new StringAnyAggregatorFactory("stringAny", "col", 1024, true),
+                  new StringMinAggregatorFactory("stringMin", "col", 1024, true),
+                  new StringMaxAggregatorFactory("stringMax", "col", 1024, true),
                   // sketch aggs
                   new CardinalityAggregatorFactory("cardinality", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
                   new HyperUniquesAggregatorFactory("hyperUnique", "hyperunique"),
@@ -191,6 +193,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                   new FinalizingFieldAccessPostAggregator("stringFirst-finalize", "stringFirst"),
                   new FinalizingFieldAccessPostAggregator("stringLast-finalize", "stringLast"),
                   new FinalizingFieldAccessPostAggregator("stringAny-finalize", "stringAny"),
+                  new FinalizingFieldAccessPostAggregator("stringMin-finalize", "stringMin"),
+                  new FinalizingFieldAccessPostAggregator("stringMax-finalize", "stringMax"),
                   // finalized sketch
                   new FinalizingFieldAccessPostAggregator("cardinality-finalize", "cardinality"),
                   new FinalizingFieldAccessPostAggregator("hyperUnique-finalize", "hyperUnique"),
@@ -229,6 +233,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                     .add("stringFirst", null)
                     .add("stringLast", null)
                     .add("stringAny", ColumnType.STRING)
+                    .add("stringMin", ColumnType.STRING)
+                    .add("stringMax", ColumnType.STRING)
                     .add("cardinality", null)
                     .add("hyperUnique", null)
                     .add("histogram", null)
@@ -259,6 +265,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                     .add("stringFirst-finalize", ColumnType.STRING)
                     .add("stringLast-finalize", ColumnType.STRING)
                     .add("stringAny-finalize", ColumnType.STRING)
+                    .add("stringMin-finalize", ColumnType.STRING)
+                    .add("stringMax-finalize", ColumnType.STRING)
                     .add("cardinality-finalize", ColumnType.DOUBLE)
                     .add("hyperUnique-finalize", ColumnType.DOUBLE)
                     .add("histogram-finalize", HistogramAggregatorFactory.TYPE_VISUAL)
@@ -309,6 +317,10 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
         new StringLastAggregatorFactory("col", "col", null, 1024),
         new StringAnyAggregatorFactory("col", "col", 1024, true),
         new StringAnyAggregatorFactory("col", "col", 1024, false),
+        new StringMinAggregatorFactory("col", "col", 1024, true),
+        new StringMinAggregatorFactory("col", "col", 1024, false),
+        new StringMaxAggregatorFactory("col", "col", 1024, true),
+        new StringMaxAggregatorFactory("col", "col", 1024, false),
         // sketch aggs
         new CardinalityAggregatorFactory("col", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
         new HyperUniquesAggregatorFactory("col", "hyperunique"),

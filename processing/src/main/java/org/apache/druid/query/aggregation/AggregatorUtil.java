@@ -36,6 +36,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
@@ -167,6 +168,10 @@ public class AggregatorUtil
   // DDSketch aggregator
   public static final byte DDSKETCH_CACHE_TYPE_ID = 0x50;
 
+  // String min / max aggregator
+  public static final byte STRING_MIN_CACHE_TYPE_ID = 0x51;
+  public static final byte STRING_MAX_CACHE_TYPE_ID = 0x52;
+
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators
    * required to compute the output column.
@@ -234,6 +239,53 @@ public class AggregatorUtil
       }
     }
     return new Pair<>(condensedAggs, condensedPostAggs);
+  }
+
+  /**
+   * Only one of fieldName and fieldExpression should be non-null
+   */
+  static ColumnValueSelector<String> makeColumnValueSelectorWithStringDefault(
+      final ColumnSelectorFactory columnSelectorFactory,
+      @Nullable final String fieldName,
+      @Nullable final Expr fieldExpression
+  )
+  {
+    if ((fieldName == null) == (fieldExpression == null)) {
+      throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
+    }
+
+    if (fieldName != null) {
+      return columnSelectorFactory.makeColumnValueSelector(fieldName);
+    } else {
+      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(
+          columnSelectorFactory,
+          fieldExpression
+      );
+
+      class ExpressionStringColumnSelector extends ObjectColumnSelector<String>
+          implements BaseObjectColumnValueSelector<String>
+      {
+        @Override
+        public String getObject()
+        {
+          final ExprEval<?> exprEval = baseSelector.getObject();
+          return exprEval == null ? null : exprEval.asString();
+        }
+
+        @Override
+        public Class<? extends String> classOfObject()
+        {
+          return String.class;
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("baseSelector", baseSelector);
+        }
+      }
+      return new ExpressionStringColumnSelector();
+    }
   }
 
   /**
@@ -414,8 +466,8 @@ public class AggregatorUtil
 
   public static Supplier<byte[]> getSimpleAggregatorCacheKeySupplier(
       byte aggregatorType,
-      String fieldName,
-      Supplier<Expr> fieldExpression
+      @Nullable String fieldName,
+      @Nullable Supplier<Expr> fieldExpression
   )
   {
     return Suppliers.memoize(() -> {
@@ -437,7 +489,7 @@ public class AggregatorUtil
    * Whether a simple numeric aggregator should use {@link BaseObjectColumnValueSelector#getObject()}, and coerce the
    * result to number, rather than using a primitive method like {@link BaseLongColumnValueSelector#getLong()}.
    *
-   * @param fieldName field name, or null if the aggregator is expression-based
+   * @param fieldName             field name, or null if the aggregator is expression-based
    * @param columnSelectorFactory column selector factory
    */
   public static boolean shouldUseObjectColumnAggregatorWrapper(
