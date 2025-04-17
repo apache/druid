@@ -317,7 +317,7 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
     }
 
     if (comparison > 0) {
-      // value precedes bucket, so bail out
+      // value preceedes bucket, so bail out
       return ~(bucketIndexBase + adjustIndex);
     }
 

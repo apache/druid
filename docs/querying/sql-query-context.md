@@ -60,10 +60,12 @@ For more information, see [Overriding default query context values](../configura
 
 ## Set the query context
 
-You can configure query context parameters in the `context` object or as part of the `query` string with [`SET`
-statements](./sql.md#set-statements) if using the [JSON API](../api-reference/sql-api.md) or as a [connection properties object](../api-reference/sql-jdbc.md) when using JDBC.
+How query context parameters are set differs depending on whether you are using the [JSON API](../api-reference/sql-api.md) or [JDBC](../api-reference/sql-jdbc.md).
 
-The following example shows how to set a query context parameter using the JSON API:
+### Set the query context when using JSON API
+When using the JSON API, you can configure query context parameters in the `context` object of the request.
+
+For example:
 
 ```
 {
@@ -75,9 +77,11 @@ The following example shows how to set a query context parameter using the JSON 
 }
 ```
 
-Context parameters can also be set via the HTTP API by including `SET` statements as part of the query string in the
-JSON request body, separated from the query by `;`. Context parameters set by `SET` statements take priority over
-values set in `context`. The follow example expresses the previous example in this form:
+Context parameters can also be set by including [`SET` statements](./sql.md#set-statements) as part of the `query`
+string in the request, separated from the query by `;`. Context parameters set by `SET` statements take priority over
+values set in `context`.
+
+The following example expresses the previous example in this form:
 
 ```
 {
@@ -85,7 +89,10 @@ values set in `context`. The follow example expresses the previous example in th
 }
 ```
 
-The following example shows how to set query context parameters using JDBC:
+### Set the query context when using JDBC
+If using JDBC, context parameters can be set using [connection properties object](../api-reference/sql-jdbc.md).
+
+For example:
 
 ```java
 String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";

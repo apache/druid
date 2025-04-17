@@ -1321,7 +1321,7 @@ public class SqlTestFramework
       return new DirectStatement(toolbox, sqlRequest)
       {
         @Override
-        protected DruidPlanner getPlanner()
+        protected DruidPlanner createPlanner()
         {
           return plannerFactory.createPlanner(
               engine,

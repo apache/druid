@@ -60,7 +60,7 @@ public class HttpStatement extends DirectStatement
   }
 
   @Override
-  protected DruidPlanner getPlanner()
+  protected DruidPlanner createPlanner()
   {
     return sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,

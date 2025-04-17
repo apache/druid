@@ -630,6 +630,9 @@ public class PlannerContext
     this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
   }
 
+  /**
+   * Add additional query context parameters, overriding any existing values.
+   */
   public void addAllToQueryContext(Map<String, Object> toAdd)
   {
     this.queryContext.putAll(toAdd);

@@ -259,7 +259,7 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
     }
 
     if (comparison > 0) {
-      // value precedes bucket, so bail out
+      // value preceedes bucket, so bail out
       return -(bucketIndexBase + adjustIndex) - 1;
     }
 

@@ -31,6 +31,7 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSetOption;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.tools.FrameworkConfig;
@@ -121,7 +122,7 @@ public class DruidPlanner implements Closeable
       final PlannerContext plannerContext,
       final SqlEngine engine,
       final PlannerHook hook,
-      boolean allowSetStatementsToBuildContext
+      final boolean allowSetStatementsToBuildContext
   )
   {
     this.frameworkConfig = frameworkConfig;
@@ -292,14 +293,21 @@ public class DruidPlanner implements Closeable
     planner.close();
   }
 
+  /**
+   * If an {@link SqlNode} is a {@link SqlNodeList}, it must consist of 0 or more {@link SqlSetOption} followed by a
+   * single {@link SqlNode} which is NOT a {@link SqlSetOption}. All {@link SqlSetOption} will be converted into a
+   * context parameters {@link Map} and added to the {@link PlannerContext} with
+   * {@link PlannerContext#addAllToQueryContext(Map)}. The final {@link SqlNode} of the {@link SqlNodeList} is returned
+   * by this method as the {@link SqlNode} which should actually be validated and executed, and will have access to the
+   * modified query context through the {@link PlannerContext}. {@link SqlSetOption} override any existing query
+   * context parameter values.
+   */
   private SqlNode processStatementList(SqlNode root, String sql)
   {
     if (root instanceof SqlNodeList) {
       final SqlNodeList nodeList = (SqlNodeList) root;
       if (!allowSetStatementsToBuildContext && nodeList.size() > 1) {
-        throw InvalidSqlInput.exception("Multiple statements detected in SQL string[%s], but only a single statement is supported",
-                                        sql
-        );
+        throw InvalidSqlInput.exception("SQL query string must contain only a single statement");
       }
       final Map<String, Object> contextMap = new LinkedHashMap<>();
       boolean isMissingDruidStatementNode = true;
@@ -309,14 +317,27 @@ public class DruidPlanner implements Closeable
         if (sqlNode instanceof SqlSetOption) {
           final SqlSetOption sqlSetOption = (SqlSetOption) sqlNode;
           if (!(sqlSetOption.getValue() instanceof SqlLiteral)) {
-            throw InvalidSqlInput.exception("Invalid sql SET statement[%s], value must be a literal", sqlSetOption);
+            throw InvalidSqlInput.exception(
+                "Assigned value must be a literal for SET statement[%s]",
+                sqlSetOption.toSqlString(CalciteSqlDialect.DEFAULT)
+            );
           }
           final SqlLiteral value = (SqlLiteral) sqlSetOption.getValue();
-          contextMap.put(sqlSetOption.getName().getSimple(), SqlResults.coerce(plannerContext.getJsonMapper(), SqlResults.Context.fromPlannerContext(plannerContext), value.getValue(), value.getTypeName(), "set"));
+          contextMap.put(
+              sqlSetOption.getName().getSimple(),
+              SqlResults.coerce(
+                  plannerContext.getJsonMapper(),
+                  SqlResults.Context.fromPlannerContext(plannerContext),
+                  value.getValue(),
+                  value.getTypeName(),
+                  "set"
+              )
+          );
         } else if (i < nodeList.size() - 1) {
           // only SET statements can appear before the last statement
-          throw InvalidSqlInput.exception("Invalid sql statement list[%s] - only SET statements are permitted before the final statement",
-                                          sql
+          throw InvalidSqlInput.exception(
+              "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[%s]",
+              sqlNode.toSqlString(CalciteSqlDialect.DEFAULT)
           );
         } else {
           // last SqlNode
@@ -325,10 +346,7 @@ public class DruidPlanner implements Closeable
         }
       }
       if (isMissingDruidStatementNode) {
-        throw InvalidSqlInput.exception(
-            "Invalid sql statement list[%s] - statement list must end with a statement that is not a SET",
-            sql
-        );
+        throw InvalidSqlInput.exception("Statement list is missing a non-SET statement to execute");
       }
       plannerContext.addAllToQueryContext(contextMap);
     }

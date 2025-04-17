@@ -308,7 +308,7 @@ public class NullableOffsetsHeader implements Serializer
     offsetIndex += byteCardinality;
 
     // After getting the cumulative cardinality upto the 64 bit boundary immediately
-    // preceding the 64 bits that contains our index, we need to accumulate the
+    // preceeding the 64 bits that contains our index, we need to accumulate the
     // cardinality up to the byte including our index.
     for (int byteIndex = baseByteIndex; byteIndex < bytePos; byteIndex++) {
       // Read the bit set for this byte within the 64 bits that need counting.

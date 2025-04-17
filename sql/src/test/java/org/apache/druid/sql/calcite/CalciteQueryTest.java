@@ -15873,7 +15873,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "set useApproximateCountDistinct = TRUE; set timeout = 90000",
         DruidException.class,
-        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; set timeout = 90000] - statement list must end with a statement that is not a SET"
+        "Statement list is missing a non-SET statement to execute"
     );
   }
 
@@ -15883,7 +15883,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000",
         DruidException.class,
-        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000] - only SET statements are permitted before the final statement"
+        "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[SELECT 1 + 1]"
     );
   }
 
@@ -15893,7 +15893,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "set useApproximateCountDistinct = vectorize; SELECT 1 + 1;",
         DruidException.class,
-        "Invalid sql SET statement[SET `useApproximateCountDistinct` = `vectorize`], value must be a literal"
+        "Assigned value must be a literal for SET statement[SET \"useApproximateCountDistinct\" = \"vectorize\"]"
     );
   }
 
@@ -15903,7 +15903,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2",
         DruidException.class,
-        "Invalid sql statement list[set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2] - only SET statements are permitted before the final statement"
+        "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[SELECT 1]"
     );
   }
 }

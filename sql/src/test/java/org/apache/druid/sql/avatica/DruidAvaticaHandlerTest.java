@@ -1795,7 +1795,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       );
       // ugly error message for statement
       Assert.assertEquals(
-          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: Multiple statements detected in SQL string[SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo], but only a single statement is supported -> DruidException: Multiple statements detected in SQL string[SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo], but only a single statement is supported",
+          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: SQL query string must contain only a single statement -> DruidException: SQL query string must contain only a single statement",
           t.getMessage()
       );
     }

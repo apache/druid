@@ -206,7 +206,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       throw new ISE("Can plan a query only once.");
     }
     long planningStartNanos = System.nanoTime();
-    try (DruidPlanner planner = getPlanner()) {
+    try (DruidPlanner planner = createPlanner()) {
       validate(planner);
       authorize(planner, authorizer());
 
@@ -240,7 +240,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
   }
 
-  protected DruidPlanner getPlanner()
+  protected DruidPlanner createPlanner()
   {
     return sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
