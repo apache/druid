@@ -119,13 +119,15 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
             // Stop the current latch and create a new one
             leader = false;
-            closeLeaderLatchQuietly();
+            closeAndRecreateLeaderLatchQuietly();
 
             try {
               listener.stopBeingLeader();
             }
-            catch (Exception ex) {
-              log.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
+            catch (Throwable ex) {
+              // Shutdown the service since it is now in a non-deterministic state and might never recover
+              log.makeAlert(ex, "listener.stopBeingLeader() failed. Shutting down service.").emit();
+              System.exit(1);
             }
 
             startLeaderLatchQuietly();
@@ -209,7 +211,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     listenerExecutor.shutdownNow();
   }
 
-  private void closeLeaderLatchQuietly()
+  private void closeAndRecreateLeaderLatchQuietly()
   {
     CloseableUtils.closeAndSuppressExceptions(
         createNewLeaderLatchWithListener(),

@@ -80,7 +80,6 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
           public void stopBeingLeader()
           {
             logger.info("listener1.stopBeingLeader().");
-            throw new RuntimeException("I said I am Rogue.");
           }
         }
     );
@@ -118,7 +117,6 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
           public void stopBeingLeader()
           {
             logger.info("listener2.stopBeingLeader().");
-            throw new RuntimeException("I am broken.");
           }
         }
     );
