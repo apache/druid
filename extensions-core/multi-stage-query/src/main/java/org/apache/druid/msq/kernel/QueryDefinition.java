@@ -20,6 +20,7 @@
 package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -29,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.QueryContext;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,17 +52,31 @@ public class QueryDefinition
   private final Map<StageId, StageDefinition> stageDefinitions;
   private final StageId finalStage;
 
+  @JsonProperty("ext")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private final QDExtension ext;
+
+  static class QDExtension
+  {
+    public QueryContext context;
+  }
+
   private QueryDefinition(
       final Map<StageId, StageDefinition> stageDefinitions,
-      final StageId finalStage
+      final StageId finalStage,
+      QDExtension ext1
   )
   {
     this.stageDefinitions = stageDefinitions;
     this.finalStage = finalStage;
+    this.ext = ext1;
   }
 
   @JsonCreator
-  static QueryDefinition create(@JsonProperty("stages") final List<StageDefinition> stageDefinitions)
+  static QueryDefinition create(
+      @JsonProperty("stages") final List<StageDefinition> stageDefinitions,
+      @JsonProperty("ext") QDExtension ext
+      )
   {
     final Map<StageId, StageDefinition> stageMap = new HashMap<>();
     final Set<StageId> nonFinalStages = new HashSet<>();
@@ -87,9 +103,11 @@ public class QueryDefinition
     final int finalStageCandidates = stageMap.size() - nonFinalStages.size();
 
     if (finalStageCandidates == 1) {
+
       return new QueryDefinition(
           stageMap,
-          Iterables.getOnlyElement(Sets.difference(stageMap.keySet(), nonFinalStages))
+          Iterables.getOnlyElement(Sets.difference(stageMap.keySet(), nonFinalStages)),
+          ext
       );
     } else {
       throw new IAE("Must have a single final stage, but found [%d] candidates", finalStageCandidates);
