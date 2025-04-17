@@ -41,7 +41,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -62,7 +61,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     extends AbstractTask implements ChatHandler, PendingSegmentAllocatingTask
 {
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
-  private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
 
   protected final DataSchema dataSchema;
   protected final SeekableStreamIndexTaskTuningConfig tuningConfig;
@@ -195,7 +193,10 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getSegmentLoaderConfig(),
         getId(),
         dataSchema,
-        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+        SeekableStreamAppenderatorConfig.fromTuningConfig(
+            tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+            toolbox.getProcessingConfig()
+        ),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getJsonMapper(),
