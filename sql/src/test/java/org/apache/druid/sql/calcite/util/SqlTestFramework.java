@@ -48,6 +48,7 @@ import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -72,6 +73,7 @@ import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.quidem.TestSqlModule;
@@ -402,6 +404,7 @@ public class SqlTestFramework
     public DruidModule getCoreModule()
     {
       return DruidModuleCollection.of(
+          new PolicyModule(),
           new LookylooModule(),
           new SegmentWranglerModule(),
           new ExpressionModule(),
@@ -849,6 +852,7 @@ public class SqlTestFramework
           framework.injector.getInstance(JoinableFactoryWrapper.class),
           framework.builder.catalogResolver,
           authConfig != null ? authConfig : new AuthConfig(),
+          NoopPolicyEnforcer.instance(),
           new DruidHookDispatcher()
       );
       componentSupplier.finalizePlanner(this);

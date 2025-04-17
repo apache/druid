@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,15 +28,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.Cursors;
-import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexCursorFactory;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.loading.LoadSpec;
@@ -45,9 +36,11 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -57,7 +50,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-
+/**
+ * Test utility class for creating test segments and load specs.
+ */
 public class TestSegmentUtils
 {
   @JsonTypeName("test")
@@ -126,14 +121,14 @@ public class TestSegmentUtils
     }
   }
 
-  public static class SegmentForTesting implements Segment
+  public static class SegmentForTesting extends QueryableIndexSegment implements Segment
   {
     private final String datasource;
     private final String version;
     private final Interval interval;
     private final Object lock = new Object();
     private volatile boolean closed = false;
-    private final QueryableIndex index = new QueryableIndex()
+    private static final QueryableIndex INDEX = new QueryableIndex()
     {
       @Override
       public Interval getDataInterval()
@@ -200,9 +195,10 @@ public class TestSegmentUtils
 
     public SegmentForTesting(String datasource, Interval interval, String version)
     {
+      super(INDEX, SegmentId.of(datasource, interval, version, 0));
       this.datasource = datasource;
-      this.version = version;
       this.interval = interval;
+      this.version = version;
     }
 
     public String getVersion()
@@ -235,13 +231,24 @@ public class TestSegmentUtils
     @Override
     public QueryableIndex asQueryableIndex()
     {
-      return index;
+      return INDEX;
     }
 
     @Override
     public CursorFactory asCursorFactory()
     {
-      return new QueryableIndexCursorFactory(index);
+      return new QueryableIndexCursorFactory(INDEX);
+    }
+
+    @Override
+    public <T> T as(@Nonnull Class<T> clazz)
+    {
+      if (clazz.equals(QueryableIndex.class)) {
+        return (T) asQueryableIndex();
+      } else if (clazz.equals(CursorFactory.class)) {
+        return (T) asCursorFactory();
+      }
+      return null;
     }
 
     @Override
@@ -251,6 +258,25 @@ public class TestSegmentUtils
         closed = true;
       }
     }
+  }
+
+  public static DataSegment makeTombstoneSegment(String dataSource, String version, Interval interval)
+  {
+    return new DataSegment(
+        dataSource,
+        interval,
+        version,
+        ImmutableMap.of("version", version,
+                        "interval", interval,
+                        "type",
+                        DataSegment.TOMBSTONE_LOADSPEC_TYPE
+        ),
+        Arrays.asList("dim1", "dim2", "dim3"),
+        Arrays.asList("metric1", "metric2"),
+        TombstoneShardSpec.INSTANCE,
+        IndexIO.CURRENT_VERSION_ID,
+        1L
+    );
   }
 
   public static DataSegment makeSegment(String dataSource, String version, Interval interval)

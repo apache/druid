@@ -33,12 +33,12 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.schema.Schema;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -49,8 +49,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
@@ -127,6 +125,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     };
     injector = Guice.createInjector(
         new JacksonModule(),
+        new PolicyModule(),
         binder -> {
           binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
@@ -182,20 +181,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   public void testExtensionCalciteRule()
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    PlannerToolbox toolbox = new PlannerToolbox(
-        injector.getInstance(DruidOperatorTable.class),
-        macroTable,
-        mapper,
-        injector.getInstance(PlannerConfig.class),
-        rootSchema,
-        joinableFactoryWrapper,
-        CatalogResolver.NULL_RESOLVER,
-        "druid",
-        new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        AuthConfig.newBuilder().build(),
-        new DruidHookDispatcher()
-    );
+    PlannerToolbox toolbox = injector.getInstance(PlannerFactory.class);
 
     PlannerContext context = PlannerContext.create(
         toolbox,
@@ -215,20 +201,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   public void testConfigurableBloat()
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    PlannerToolbox toolbox = new PlannerToolbox(
-            injector.getInstance(DruidOperatorTable.class),
-            macroTable,
-            mapper,
-            injector.getInstance(PlannerConfig.class),
-            rootSchema,
-            joinableFactoryWrapper,
-            CatalogResolver.NULL_RESOLVER,
-            "druid",
-            new CalciteRulesManager(ImmutableSet.of()),
-            CalciteTests.TEST_AUTHORIZER_MAPPER,
-            AuthConfig.newBuilder().build(),
-            new DruidHookDispatcher()
-    );
+    PlannerToolbox toolbox = injector.getInstance(PlannerFactory.class);
 
     PlannerContext contextWithBloat = PlannerContext.create(
             toolbox,

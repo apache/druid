@@ -44,6 +44,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -61,6 +62,7 @@ public class DartWorkerContext implements WorkerContext
   private final WorkerId workerId;
   private final DruidNode selfNode;
   private final ObjectMapper jsonMapper;
+  private final PolicyEnforcer policyEnforcer;
   private final Injector injector;
   private final DartWorkerClient workerClient;
   private final DruidProcessingConfig processingConfig;
@@ -84,6 +86,7 @@ public class DartWorkerContext implements WorkerContext
       final String controllerHost,
       final DruidNode selfNode,
       final ObjectMapper jsonMapper,
+      final PolicyEnforcer policyEnforcer,
       final Injector injector,
       final DartWorkerClient workerClient,
       final DruidProcessingConfig processingConfig,
@@ -102,6 +105,7 @@ public class DartWorkerContext implements WorkerContext
     this.workerId = WorkerId.fromDruidNode(selfNode, queryId);
     this.selfNode = selfNode;
     this.jsonMapper = jsonMapper;
+    this.policyEnforcer = policyEnforcer;
     this.injector = injector;
     this.workerClient = workerClient;
     this.processingConfig = processingConfig;
@@ -131,6 +135,12 @@ public class DartWorkerContext implements WorkerContext
   public ObjectMapper jsonMapper()
   {
     return jsonMapper;
+  }
+
+  @Override
+  public PolicyEnforcer policyEnforcer()
+  {
+    return policyEnforcer;
   }
 
   @Override

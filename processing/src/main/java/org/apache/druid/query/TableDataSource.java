@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyEnforcer;
 
 import java.util.Collections;
 import java.util.Map;
@@ -80,14 +81,11 @@ public class TableDataSource extends LeafDataSource
   }
 
   @Override
-  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
+  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap, PolicyEnforcer policyEnforcer)
   {
     Optional<Policy> policy = policyMap.getOrDefault(name, Optional.empty());
-    if (!policy.isPresent()) {
-      // Skip adding restriction on table if there's no policy restriction found.
-      return this;
-    }
-    return RestrictedDataSource.create(this, policy.get());
+    policyEnforcer.validateOrElseThrow(this, policy.orElse(null));
+    return policy.isEmpty() ? this : RestrictedDataSource.create(this, policy.get());
   }
 
   @Override

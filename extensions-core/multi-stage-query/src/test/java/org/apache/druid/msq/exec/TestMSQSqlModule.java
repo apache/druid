@@ -50,11 +50,13 @@ public class TestMSQSqlModule extends TestDruidModule
 
   @Provides
   @LazySingleton
-  public MSQTaskSqlEngine createEngine(
-      ObjectMapper queryJsonMapper,
-      MSQTestOverlordServiceClient indexingServiceClient)
+  public MSQTaskSqlEngine createEngine(ObjectMapper queryJsonMapper, MSQTestOverlordServiceClient indexingServiceClient)
   {
-    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper, new SegmentGenerationTerminalStageSpecFactory());
+    return new MSQTaskSqlEngine(
+        indexingServiceClient,
+        queryJsonMapper,
+        new SegmentGenerationTerminalStageSpecFactory()
+    );
   }
 
   @Provides

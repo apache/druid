@@ -27,6 +27,7 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.SegmentWrangler;
@@ -44,6 +45,8 @@ import java.io.File;
  */
 public interface FrameContext extends Closeable
 {
+  PolicyEnforcer policyEnforcer();
+
   SegmentWrangler segmentWrangler();
 
   GroupingEngine groupingEngine();

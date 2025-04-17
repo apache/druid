@@ -62,6 +62,7 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -213,6 +214,7 @@ public class QueryStackTests
         segmentWrangler,
         joinableFactoryWrapper,
         scheduler,
+        NoopPolicyEnforcer.instance(),
         emitter
     );
   }
