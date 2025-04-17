@@ -150,8 +150,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.serverCapabilities = fetchSegmentLoadingCapabilities();
   }
 
-  @VisibleForTesting
-  SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
+  private SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
   {
     try {
       final URL segmentLoadingCapabilitiesURL = new URL(

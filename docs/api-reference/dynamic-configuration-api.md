@@ -106,7 +106,9 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "useRoundRobinSegmentAssignment": true,
     "smartSegmentLoading": true,
     "debugDimensions": null,
-    "turboLoadingNodes": []
+    "turboLoadingNodes": [],
+    "cloneServers": {}
+
 }
 ```
 
@@ -174,7 +176,8 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config" \
   "replicateAfterLoadTimeout": false,
   "maxNonPrimaryReplicantsToLoad": 2147483647,
   "useRoundRobinSegmentAssignment": true,
-  "turboLoadingNodes": []
+  "turboLoadingNodes": [],
+  "cloneServers": {}
 }'
 ```
 
@@ -206,7 +209,8 @@ Content-Length: 683
   "replicateAfterLoadTimeout": false,
   "maxNonPrimaryReplicantsToLoad": 2147483647,
   "useRoundRobinSegmentAssignment": true,
-  "turboLoadingNodes": []
+  "turboLoadingNodes": [],
+  "cloneServers": {}
 }
 ```
 

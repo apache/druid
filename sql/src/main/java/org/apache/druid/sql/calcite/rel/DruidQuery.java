@@ -76,7 +76,7 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -889,8 +889,8 @@ public class DruidQuery
    */
   private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {
-    final DataSourceAnalysis analysis = dataSource.getAnalysis();
-    return !analysis.getBaseQuery().isPresent() && analysis.isTableBased();
+    ExecutionVertex ev = ExecutionVertex.ofDataSource(dataSource);
+    return ev.isTableBased();
   }
 
   private static Filtration toFiltration(
@@ -925,7 +925,8 @@ public class DruidQuery
       return true;
     }
 
-    if (dataSource.getAnalysis().isConcreteAndTableBased()) {
+    ExecutionVertex ev = ExecutionVertex.ofDataSource(dataSource);
+    if (ev.isProcessable() && ev.isTableBased()) {
       // Always OK: queries on concrete tables (regular Druid datasources) use segment-based cursors
       // (IncrementalIndex or QueryableIndex). These clip query interval to data interval, making wide query
       // intervals safer. They do not have special checks for granularity and interval safety.
@@ -1475,7 +1476,7 @@ public class DruidQuery
     }
 
     // This is not yet supported
-    if (dataSource.isConcrete()) {
+    if (dataSource.isProcessable()) {
       return null;
     }
     if (dataSource instanceof TableDataSource) {
@@ -1537,7 +1538,7 @@ public class DruidQuery
       return null;
     }
 
-    if (dataSource.isConcrete()) {
+    if (dataSource.isProcessable()) {
       // Currently only non-time orderings of subqueries are allowed.
       setPlanningErrorOrderByNonTimeIsUnsupported();
       return null;

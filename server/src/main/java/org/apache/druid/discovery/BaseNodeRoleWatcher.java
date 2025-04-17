@@ -187,7 +187,7 @@ public class BaseNodeRoleWatcher
         return;
       }
 
-      LOGGER.info("Node [%s] of role [%s] went offline.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
+      LOGGER.warn("Node [%s] of role [%s] went offline.", druidNode.getDruidNode().getUriToUse(), nodeRole.getJsonName());
 
       removeNode(druidNode);
     }
