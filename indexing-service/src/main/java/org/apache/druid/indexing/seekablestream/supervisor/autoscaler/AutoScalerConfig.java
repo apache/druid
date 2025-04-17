@@ -39,7 +39,7 @@ public interface AutoScalerConfig
   long getMinTriggerScaleActionFrequencyMillis();
   int getTaskCountMax();
   int getTaskCountMin();
-  int getTaskCountStart();
+  Integer getTaskCountStart();
   SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter);
 }
 

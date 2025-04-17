@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
@@ -42,7 +43,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final double triggerScaleInFractionThreshold;
   private int taskCountMax;
   private int taskCountMin;
-  private int taskCountStart;
+  @Nullable private Integer taskCountStart;
   private final int scaleInStep;
   private final int scaleOutStep;
   private final boolean enableTaskAutoScaler;
@@ -92,7 +93,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
       }
       this.taskCountMax = taskCountMax;
       this.taskCountMin = taskCountMin;
-      this.taskCountStart = taskCountStart != null ? taskCountStart : taskCountMin;
+      this.taskCountStart = taskCountStart;
     }
 
     this.scaleInStep = scaleInStep != null ? scaleInStep : 1;
@@ -165,7 +166,9 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
 
   @Override
   @JsonProperty
-  public int getTaskCountStart()
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getTaskCountStart()
   {
     return taskCountStart;
   }
