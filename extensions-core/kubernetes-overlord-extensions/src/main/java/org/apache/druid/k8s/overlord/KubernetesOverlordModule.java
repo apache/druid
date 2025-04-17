@@ -57,6 +57,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
@@ -85,6 +86,7 @@ public class KubernetesOverlordModule implements DruidModule
                                                                + ".k8sAndWorker";
   private static final String RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING = K8SANDWORKER_PROPERTIES_PREFIX
                                                                         + ".runnerStrategy.%s";
+  private static final String HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
 
   @Override
   public void configure(Binder binder)
@@ -119,21 +121,27 @@ public class KubernetesOverlordModule implements DruidModule
     configureTaskLogs(binder);
 
     Jerseys.addResource(binder, KubernetesTaskExecutionConfigResource.class);
+
+    JsonConfigProvider.bind(binder, HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesHttpClientConfig.class);
   }
 
   @Provides
   @LazySingleton
-  public DruidKubernetesClient makeKubernetesClient(KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig, Lifecycle lifecycle)
+  public DruidKubernetesClient makeKubernetesClient(
+      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      DruidKubernetesHttpClientConfig httpClientConfig,
+      Lifecycle lifecycle
+  )
   {
-    DruidKubernetesClient client;
+    final DruidKubernetesClient client;
+    final Config config = new ConfigBuilder().build();
+
     if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
-      Config config = new ConfigBuilder().build();
       config.setHttpsProxy(null);
       config.setHttpProxy(null);
-      client = new DruidKubernetesClient(config);
-    } else {
-      client = new DruidKubernetesClient();
     }
+
+    client = new DruidKubernetesClient(httpClientConfig, config);
 
     lifecycle.addHandler(
         new Lifecycle.Handler()

@@ -27,10 +27,24 @@ cd $HADOOP_HOME/share/hadoop/common ; for cp in ${ACP//,/ }; do  echo == $cp; cu
 sed s/HOSTNAME/$HOSTNAME/ /usr/local/hadoop/etc/hadoop/core-site.xml.template > /usr/local/hadoop/etc/hadoop/core-site.xml
 
 
+export PATH+=:$HADOOP_HOME/bin
+export PATH+=:$HADOOP_HOME/sbin
+
 start_sshd
 $HADOOP_HOME/sbin/start-dfs.sh
 $HADOOP_HOME/sbin/start-yarn.sh
 $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver
+
+
+if [ ! -e .inited ] ; then
+	echo " * initialize hdfs for first run"
+	wait-for-port 9000
+	hdfs dfs -mkdir -p /druid/segments /quickstart /user
+	hdfs dfs -chmod -R 777 /druid /quickstart /user /tmp
+	hdfs dfs -put wikiticker-2015-09-12-sampled.json.gz /quickstart/wikiticker-2015-09-12-sampled.json.gz
+	tar -C $HADOOP_HOME/etc/hadoop -czf /shared/hadoop-conf.tgz .
+	touch .inited
+fi
 
 if [[ $1 == "-d" ]]; then
   while true; do sleep 1000; done

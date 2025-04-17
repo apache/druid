@@ -1204,12 +1204,18 @@ public class IndexMergerV9 implements IndexMerger
     List<List<IndexableAdapter>> currentPhases = getMergePhases(indexes, maxColumnsToMerge);
     List<File> currentOutputs = new ArrayList<>();
 
-    log.debug("base outDir: " + outDir);
+    log.debug("Base outDir[%s]", outDir);
 
     try {
       int tierCounter = 0;
       while (true) {
-        log.info("Merging %d phases, tiers finished processed so far: %d.", currentPhases.size(), tierCounter);
+        log.info(
+            "Merging phases[%,d] (indexes[%,d], maxColumnsToMerge[%,d]), tiers finished processed so far[%,d].",
+            currentPhases.size(),
+            indexes.size(),
+            maxColumnsToMerge,
+            tierCounter
+        );
         for (List<IndexableAdapter> phase : currentPhases) {
           final File phaseOutDir;
           final boolean isFinalPhase = currentPhases.size() == 1;
@@ -1221,8 +1227,8 @@ public class IndexMergerV9 implements IndexMerger
             phaseOutDir = FileUtils.createTempDir();
             tempDirs.add(phaseOutDir);
           }
-          log.info("Merging phase with %d indexes.", phase.size());
-          log.debug("phase outDir: " + phaseOutDir);
+          log.info("Merging phase with index count[%,d].", phase.size());
+          log.debug("Phase outDir[%s]", phaseOutDir);
 
           File phaseOutput = merge(
               phase,
