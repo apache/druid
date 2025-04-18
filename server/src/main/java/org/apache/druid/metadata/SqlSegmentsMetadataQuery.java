@@ -894,32 +894,40 @@ public class SqlSegmentsMetadataQuery
 
   public List<Interval> retrieveUnusedSegmentIntervals(
       final String dataSource,
-      final DateTime minStartTime,
+      @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
       final DateTime maxUsedStatusLastUpdatedTime
   )
   {
+    final boolean filterByStartTime = minStartTime != null;
+
     // Handle cases where used_status_last_updated IS NULL for backward compatibility
     final String sql = StringUtils.format(
         "SELECT start, %2$send%2$s FROM %1$s"
         + " WHERE dataSource = :dataSource AND used = false"
-        + " AND %2$send%2$s <= :end AND start >= :start"
+        + " AND %2$send%2$s <= :end %3$s"
         + " AND used_status_last_updated IS NOT NULL"
         + " AND used_status_last_updated <= :used_status_last_updated"
         + " ORDER BY start, %2$send%2$s",
         dbTables.getSegmentsTable(),
-        connector.getQuoteString()
+        connector.getQuoteString(),
+        filterByStartTime ? " AND start >= :start" : ""
     );
 
-    List<Interval> unusedIntervals = handle
+    Query<Map<String, Object>> query = handle
         .createQuery(sql)
         .setFetchSize(connector.getStreamingFetchSize())
         .setMaxRows(limit)
         .bind("dataSource", dataSource)
         .bind("end", maxEndTime.toString())
-        .bind("start", minStartTime.toString())
-        .bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString())
+        .bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString());
+
+    if (filterByStartTime) {
+      query.bind("start", minStartTime.toString());
+    }
+
+    List<Interval> unusedIntervals = query
         .map((index, r, ctx) -> mapToInterval(r, dataSource))
         .list();
 

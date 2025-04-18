@@ -103,7 +103,6 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -279,10 +278,9 @@ public class DruidCoordinator
   public Map<String, Double> getDatasourceToLoadStatus()
   {
     final Map<String, Double> loadStatus = new HashMap<>();
-    final Collection<ImmutableDruidDataSource> dataSources =
-        metadataManager.segments().getDataSourceSnapshot().getDataSourcesWithAllUsedSegments();
+    final DataSourcesSnapshot snapshot = metadataManager.segments().getDataSourceSnapshot();
 
-    for (ImmutableDruidDataSource dataSource : dataSources) {
+    for (ImmutableDruidDataSource dataSource : snapshot.getDataSourcesWithAllUsedSegments()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int numPublishedSegments = segments.size();
 
@@ -342,8 +340,7 @@ public class DruidCoordinator
   {
     return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
         metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
-        metadataManager.segments()
-                       .getDataSourceSnapshot(),
+        metadataManager.segments().getDataSourceSnapshot(),
         CompactionEngine.NATIVE
     );
   }

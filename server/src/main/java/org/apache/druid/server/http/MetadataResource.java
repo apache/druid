@@ -294,8 +294,7 @@ public class MetadataResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response getDataSourceWithUsedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    ImmutableDruidDataSource dataSource =
-        segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -312,8 +311,7 @@ public class MetadataResource
       @QueryParam("full") @Nullable String full
   )
   {
-    ImmutableDruidDataSource dataSource =
-        segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -413,7 +411,7 @@ public class MetadataResource
       @QueryParam("includeUnused") @Nullable Boolean includeUnused
   )
   {
-    ImmutableDruidDataSource dataSource = segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSourceName);
+    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -497,7 +495,7 @@ public class MetadataResource
     return Response.status(Response.Status.OK).entity(broadcastSegments).build();
   }
 
-  private ImmutableDruidDataSource getImmutableDatasource(String dataSource)
+  private ImmutableDruidDataSource getDataSource(String dataSource)
   {
     return segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSource);
   }

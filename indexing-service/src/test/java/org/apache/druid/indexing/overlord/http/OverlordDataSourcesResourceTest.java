@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord.http;
 
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.Intervals;
@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
-import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -55,7 +54,7 @@ public class OverlordDataSourcesResourceTest
                           .startingAt(WIKI_SEGMENTS_START)
                           .eachOfSizeInMb(500);
 
-  private TestSegmentsMetadataManager segmentsMetadataManager;
+  private TestIndexerMetadataStorageCoordinator storageCoordinator;
 
   private OverlordDataSourcesResource dataSourcesResource;
 
@@ -63,20 +62,17 @@ public class OverlordDataSourcesResourceTest
   public void setup()
   {
     AuditManager auditManager = EasyMock.createStrictMock(AuditManager.class);
-    final TestIndexerMetadataStorageCoordinator metadataStorageCoordinator
-        = new TestIndexerMetadataStorageCoordinator();
-    segmentsMetadataManager = metadataStorageCoordinator.getSegmentsMetadataManager();
+    storageCoordinator = new TestIndexerMetadataStorageCoordinator();
 
     TaskMaster taskMaster = new TaskMaster(null, null);
     dataSourcesResource = new OverlordDataSourcesResource(
         taskMaster,
-        metadataStorageCoordinator,
+        storageCoordinator,
         auditManager
     );
     taskMaster.becomeFullLeader();
 
-    WIKI_SEGMENTS_10X1D.forEach(segmentsMetadataManager::addSegment);
-    metadataStorageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_10X1D), null);
+    storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_10X1D), null);
   }
 
   @Test
@@ -202,7 +198,7 @@ public class OverlordDataSourcesResourceTest
         segment -> DataSegment.builder(segment).version(version2).build()
     ).collect(Collectors.toList());
 
-    wikiSegmentsV2.forEach(segmentsMetadataManager::addSegment);
+    storageCoordinator.commitSegments(Set.copyOf(wikiSegmentsV2), null);
 
     // Mark all segments as unused
     Response response = dataSourcesResource.markAllSegmentsAsUnused(
@@ -218,11 +214,8 @@ public class OverlordDataSourcesResourceTest
     );
     verifyNumSegmentsUpdated(10, response);
 
-    final ImmutableDruidDataSource dataSource = segmentsMetadataManager
-        .getDataSourceSnapshot().getDataSource(TestDataSource.WIKI);
-    Assert.assertNotNull(dataSource);
-
-    final Collection<DataSegment> usedSegments = dataSource.getSegments();
+    final Collection<DataSegment> usedSegments =
+        storageCoordinator.retrieveAllUsedSegments(TestDataSource.WIKI, Segments.INCLUDING_OVERSHADOWED);
     Assert.assertEquals(10, usedSegments.size());
     for (DataSegment segment : usedSegments) {
       Assert.assertEquals(version2, segment.getVersion());

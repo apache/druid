@@ -416,7 +416,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
 
     // New segment is returned since we call with force poll
     segments = sqlSegmentsMetadataManager
-        .getDataSourceSnapshot()
+        .forceUpdateAndGetSnapshot()
         .getAllUsedNonOvershadowedSegments(TestDataSource.WIKI, theInterval);
     Assert.assertEquals(Set.of(wikiSegment1, wikiSegment3), segments);
   }

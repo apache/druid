@@ -1065,7 +1065,7 @@ public class KillUnusedSegmentsTest
   private DataSegment createAndAddUsedSegment(final String dataSource, final Interval interval, final String version)
   {
     final DataSegment segment = createSegment(dataSource, interval, version);
-    SqlSegmentsMetadataManagerTestBase.publishSegment(connector, config, TestHelper.JSON_MAPPER, segment);
+    SqlSegmentsMetadataManagerTestBase.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
     return segment;
   }
 
@@ -1077,13 +1077,14 @@ public class KillUnusedSegmentsTest
   )
   {
     final DataSegment segment = createAndAddUsedSegment(dataSource, interval, version);
-    SqlSegmentsMetadataManagerTestBase.markSegmentsAsUnused(
+    int numUpdatedSegments = SqlSegmentsMetadataManagerTestBase.markSegmentsAsUnused(
         Set.of(segment.getId()),
         derbyConnectorRule.getConnector(),
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        TestHelper.JSON_MAPPER
+        TestHelper.JSON_MAPPER,
+        lastUpdatedTime
     );
-    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment.getId().toString(), lastUpdatedTime);
+    Assert.assertEquals(1, numUpdatedSegments);
   }
 
   private DataSegment createSegment(final String dataSource, final Interval interval, final String version)

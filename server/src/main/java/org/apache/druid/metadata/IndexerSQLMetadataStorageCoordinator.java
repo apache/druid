@@ -348,7 +348,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<Interval> getUnusedSegmentIntervals(
       String dataSource,
-      DateTime minStartTime,
+      @Nullable DateTime minStartTime,
       DateTime maxEndTime,
       int limit,
       DateTime maxUsedStatusLastUpdatedTime

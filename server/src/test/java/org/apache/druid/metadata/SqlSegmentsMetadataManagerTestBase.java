@@ -34,6 +34,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -112,19 +113,20 @@ public class SqlSegmentsMetadataManagerTestBase
 
   protected int markSegmentsAsUnused(SegmentId... segmentIds)
   {
-    return markSegmentsAsUnused(Set.of(segmentIds), connector, storageConfig, jsonMapper);
+    return markSegmentsAsUnused(Set.of(segmentIds), connector, storageConfig, jsonMapper, DateTimes.nowUtc());
   }
 
   public static int markSegmentsAsUnused(
       Set<SegmentId> segmentIds,
       SQLMetadataConnector connector,
       MetadataStorageTablesConfig storageConfig,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      DateTime updateTime
   )
   {
     return connector.retryWithHandle(
         handle -> SqlSegmentsMetadataQuery.forHandle(handle, connector, storageConfig, jsonMapper)
-                                          .markSegmentsAsUnused(segmentIds, DateTimes.nowUtc())
+                                          .markSegmentsAsUnused(segmentIds, updateTime)
     );
   }
 

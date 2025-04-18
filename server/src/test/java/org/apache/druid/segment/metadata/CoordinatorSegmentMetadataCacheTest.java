@@ -1806,6 +1806,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   private CoordinatorSegmentMetadataCache setupForColdDatasourceSchemaTest(ServiceEmitter emitter)
   {
     // foo has both hot and cold segments
+    final String fingerprint1 = "fingerprint-1";
+    final String fingerprint2 = "fingerprint-2";
     DataSegment coldSegment =
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -1826,11 +1828,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                    .build();
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
-    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, "foo-fingerprint"));
-    segmentStatsMap.put(singleColdSegment.getId(), new SegmentMetadata(20L, "cold-fingerprint"));
+    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, fingerprint1));
+    segmentStatsMap.put(singleColdSegment.getId(), new SegmentMetadata(20L, fingerprint2));
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put(
-        "foo-fingerprint",
+        fingerprint1,
         new SchemaPayload(RowSignature.builder()
                                       .add("dim1", ColumnType.STRING)
                                       .add("c1", ColumnType.STRING)
@@ -1838,7 +1840,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                       .build())
     );
     schemaPayloadMap.put(
-        "cold-fingerprint",
+        fingerprint2,
         new SchemaPayload(
             RowSignature.builder()
                               .add("f1", ColumnType.STRING)
@@ -1851,24 +1853,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
-    Map<SegmentId, DataSegment> segmentMap = new HashMap<>();
-    segmentMap.put(coldSegment.getId(), coldSegment);
-    segmentMap.put(segment1.getId(), segment1);
-    segmentMap.put(segment2.getId(), segment2);
-    druidDataSources.add(new ImmutableDruidDataSource(
-        coldSegment.getDataSource(),
-        Collections.emptyMap(),
-        segmentMap
-    ));
-    druidDataSources.add(new ImmutableDruidDataSource(
-        singleColdSegment.getDataSource(),
-        Collections.emptyMap(),
-        Collections.singletonMap(singleColdSegment.getId(), singleColdSegment)
-    ));
-
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
-           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(segment1, segment2)));
+    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot()).thenReturn(
+        DataSourcesSnapshot.fromUsedSegments(List.of(segment1, segment2, coldSegment, singleColdSegment))
+    );
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),

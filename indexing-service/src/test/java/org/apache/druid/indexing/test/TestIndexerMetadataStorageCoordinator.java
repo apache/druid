@@ -56,11 +56,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   private int deleteSegmentsCount = 0;
 
-  public TestSegmentsMetadataManager getSegmentsMetadataManager()
-  {
-    return segmentsMetadataManager;
-  }
-
   @Override
   public DataSourceMetadata retrieveDataSourceMetadata(String dataSource)
   {
@@ -94,7 +89,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return Set.of();
+    return Set.copyOf(
+        segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSource).getSegments()
+    );
   }
 
   @Override
@@ -364,7 +361,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public List<Interval> getUnusedSegmentIntervals(
       String dataSource,
-      DateTime minStartTime,
+      @Nullable DateTime minStartTime,
       DateTime maxEndTime,
       int limit,
       DateTime maxUsedStatusLastUpdatedTime
@@ -376,29 +373,29 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public int markAllNonOvershadowedSegmentsAsUsed(String dataSource)
   {
-    return 0;
+    return segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSource);
   }
 
   @Override
   public int markNonOvershadowedSegmentsAsUsed(
       String dataSource,
       Interval interval,
-      @org.jetbrains.annotations.Nullable List<String> versions
+      @Nullable List<String> versions
   )
   {
-    return 0;
+    return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSource, interval, versions);
   }
 
   @Override
   public int markNonOvershadowedSegmentsAsUsed(String dataSource, Set<SegmentId> segmentIds)
   {
-    return 0;
+    return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSource, segmentIds);
   }
 
   @Override
   public boolean markSegmentAsUsed(SegmentId segmentId)
   {
-    return false;
+    return segmentsMetadataManager.markSegmentAsUsed(segmentId.toString());
   }
 
   @Override
