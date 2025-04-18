@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata.segment.cache;
 
+import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.SegmentId;
@@ -74,7 +75,7 @@ class SegmentRecord
       serializedId = r.getString("id");
       dataSource = r.getString("dataSource");
 
-      final DateTime lastUpdatedTime = nullSafeDate(r.getString(
+      final DateTime lastUpdatedTime = nullAndEmptySafeDate(r.getString(
           "used_status_last_updated"));
 
       final SegmentId segmentId = SegmentId.tryParse(dataSource, serializedId);
@@ -96,8 +97,8 @@ class SegmentRecord
   }
 
   @Nullable
-  private static DateTime nullSafeDate(String date)
+  private static DateTime nullAndEmptySafeDate(String date)
   {
-    return date == null ? null : DateTimes.of(date);
+    return Strings.isNullOrEmpty(date) ? null : DateTimes.of(date);
   }
 }

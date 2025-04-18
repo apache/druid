@@ -106,7 +106,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
     return new KinesisIndexTaskRunner(
         this,
         dataSchema.getParser(),
-        authorizerMapper,
         lockGranularityToUse
     );
   }

@@ -109,7 +109,7 @@ public class Metric
   // CACHE UPDATE METRICS
 
   /**
-   * Total number of segments deleted from the cache in the latest sync.
+   * Total number of datasources removed from the cache if they have no segments anymore.
    */
   public static final String DELETED_DATASOURCES = METRIC_NAME_PREFIX + "dataSource/deleted";
 

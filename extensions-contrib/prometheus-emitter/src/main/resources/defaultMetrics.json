@@ -44,6 +44,13 @@
   "jetty/threadPool/max" : { "dimensions" : [], "type" : "gauge", "help": "Number of maximum threads allocatable."},
   "jetty/threadPool/queueSize" : { "dimensions" : [], "type" : "gauge", "help": "Size of the worker queue."},
 
+  "mergeBuffer/used": { "dimensions":  [], "type":  "gauge", "help":  "Number of merge buffers used"},
+  "mergeBuffer/acquisitionTimeNs": { "dimensions":  [], "type":  "timer", "help":  "Total time in nanoseconds to acquire merge buffer for groupBy queries."},
+  "mergeBuffer/queries": { "dimensions":  [], "type":  "gauge", "help":  "Number of groupBy queries that acquired a batch of buffers from the merge buffer pool."},
+  "groupBy/spilledQueries": { "dimensions":  [], "type":  "gauge", "help":  "Number of groupBy queries that have spilled onto the disk."},
+  "groupBy/spilledBytes": { "dimensions":  [], "type":  "gauge", "help":  "Number of bytes spilled on the disk by the groupBy queries."},
+  "groupBy/mergeDictionarySize": { "dimensions":  [], "type":  "gauge", "help":  "Size of on-heap merge dictionary in bytes."},
+
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "gauge", "help": "Number of entries in cache"},
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "gauge", "help": "Size of cache in bytes."},
   "query/cache/delta/hits" : { "dimensions" : [], "type" : "gauge", "help": "Number of cache hits."},
@@ -176,7 +183,7 @@
   "metadata/kill/rule/count" : { "dimensions" : [], "type" : "count", "help": "Total number of rules that were automatically deleted from metadata store per each Coordinator kill rule duty run."},
   "metadata/kill/datasource/count" : { "dimensions" : [], "type" : "count", "help": "Total number of datasource metadata that were automatically deleted from metadata store per each Coordinator kill datasource duty run."},
 
-  "service/heartbeat" : { "dimensions" : ["dataSource", "type"], "type" : "gauge", "help":  "Metric indicating the service is up. This metric is only available if the ServiceStatusMonitor module is included."},
+  "service/heartbeat" : { "dimensions" : ["dataSource", "type", "leader"], "type" : "gauge", "help":  "Metric indicating the service is up. This metric is only available if the ServiceStatusMonitor module is included."},
 
   "segment/max" : { "dimensions" : [], "type" : "gauge", "help": "Maximum byte limit available for segments."},
   "segment/used" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Bytes used for served segments."},

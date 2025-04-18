@@ -21,6 +21,9 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -30,8 +33,11 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -43,6 +49,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 public class CompactionStatusTest
 {
@@ -319,6 +326,109 @@ public class CompactionStatusTest
         OBJECT_MAPPER
     );
     Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenProjectionsMatch()
+  {
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+    final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
+        "foo",
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+        ),
+        List.of(
+            new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+            new StringDimensionSchema("a")
+        ),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long")
+        }
+    );
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec,
+        currentGranularitySpec,
+        List.of(projection1)
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withProjections(List.of(projection1))
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(Collections.singletonList(segment)),
+        compactionConfig,
+        OBJECT_MAPPER
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenProjectionsMismatch()
+  {
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+    final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
+        "1",
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+        ),
+        List.of(
+            new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+            new StringDimensionSchema("a")
+        ),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long")
+        }
+    );
+    final AggregateProjectionSpec projection2 = new AggregateProjectionSpec(
+        "2",
+        VirtualColumns.EMPTY,
+        Collections.emptyList(),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long")
+        }
+    );
+
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec,
+        currentGranularitySpec,
+        List.of(projection1)
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withProjections(List.of(projection1, projection2))
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(Collections.singletonList(segment)),
+        compactionConfig,
+        OBJECT_MAPPER
+    );
+    Assert.assertFalse(status.isComplete());
   }
 
   private void verifyCompactionStatusIsPendingBecause(

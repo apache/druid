@@ -251,6 +251,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           new AggregatorFactory[]{
               new LongSumAggregatorFactory("_c_sum", "c")
           }
+      ),
+      new AggregateProjectionSpec(
+          "missing_column",
+          VirtualColumns.EMPTY,
+          List.of(new StringDimensionSchema("missing")),
+          new AggregatorFactory[]{
+              new LongSumAggregatorFactory("csum", "c")
+          }
       )
   );
 
@@ -314,7 +322,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                         ))
                         .collect(Collectors.toList());
 
-  @Parameterized.Parameters(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
+  @Parameterized.Parameters(name = "name: {0}, sortByDim: {5}, autoSchema: {6}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -326,7 +334,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                               new StringDimensionSchema("b"),
                               new LongDimensionSchema("c"),
                               new DoubleDimensionSchema("d"),
-                              new FloatDimensionSchema("e")
+                              new FloatDimensionSchema("e"),
+                              new StringDimensionSchema("missing")
                           )
                       );
 
@@ -362,55 +371,58 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                             .collect(Collectors.toList());
 
     for (boolean incremental : new boolean[]{true, false}) {
-      for (boolean sortByDim : new boolean[]{/*true,*/ false}) {
-        for (boolean autoSchema : new boolean[]{/*true,*/ false}) {
-          final DimensionsSpec dims;
-          final DimensionsSpec rollupDims;
-          if (sortByDim) {
-            if (autoSchema) {
-              dims = dimsOrdered.withDimensions(autoDims);
-              rollupDims = rollupDimsOrdered.withDimensions(rollupAutoDims);
+      for (boolean sortByDim : new boolean[]{true, false}) {
+        for (boolean autoSchema : new boolean[]{false, true}) {
+          for (boolean writeNullColumns : new boolean[]{true, false}) {
+
+            final DimensionsSpec dims;
+            final DimensionsSpec rollupDims;
+            if (sortByDim) {
+              if (autoSchema) {
+                dims = dimsOrdered.withDimensions(autoDims);
+                rollupDims = rollupDimsOrdered.withDimensions(rollupAutoDims);
+              } else {
+                dims = dimsOrdered;
+                rollupDims = rollupDimsOrdered;
+              }
             } else {
-              dims = dimsOrdered;
-              rollupDims = rollupDimsOrdered;
+              if (autoSchema) {
+                dims = dimsTimeOrdered.withDimensions(autoDims);
+                rollupDims = rollupDimsTimeOrdered.withDimensions(autoDims);
+              } else {
+                dims = dimsTimeOrdered;
+                rollupDims = rollupDimsTimeOrdered;
+              }
             }
-          } else {
-            if (autoSchema) {
-              dims = dimsTimeOrdered.withDimensions(autoDims);
-              rollupDims = rollupDimsTimeOrdered.withDimensions(autoDims);
+            if (incremental) {
+              IncrementalIndex index = CLOSER.register(makeBuilder(dims, autoSchema, writeNullColumns).buildIncrementalIndex());
+              IncrementalIndex rollupIndex = CLOSER.register(
+                  makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildIncrementalIndex()
+              );
+              constructors.add(new Object[]{
+                  "incrementalIndex",
+                  new IncrementalIndexCursorFactory(index),
+                  new IncrementalIndexTimeBoundaryInspector(index),
+                  new IncrementalIndexCursorFactory(rollupIndex),
+                  new IncrementalIndexTimeBoundaryInspector(rollupIndex),
+                  sortByDim,
+                  autoSchema
+              });
             } else {
-              dims = dimsTimeOrdered;
-              rollupDims = rollupDimsTimeOrdered;
+              QueryableIndex index = CLOSER.register(makeBuilder(dims, autoSchema, writeNullColumns).buildMMappedIndex());
+              QueryableIndex rollupIndex = CLOSER.register(
+                  makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildMMappedIndex()
+              );
+              constructors.add(new Object[]{
+                  "queryableIndex",
+                  new QueryableIndexCursorFactory(index),
+                  QueryableIndexTimeBoundaryInspector.create(index),
+                  new QueryableIndexCursorFactory(rollupIndex),
+                  QueryableIndexTimeBoundaryInspector.create(rollupIndex),
+                  sortByDim,
+                  autoSchema
+              });
             }
-          }
-          if (incremental) {
-            IncrementalIndex index = CLOSER.register(makeBuilder(dims, autoSchema).buildIncrementalIndex());
-            IncrementalIndex rollupIndex = CLOSER.register(
-                makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildIncrementalIndex()
-            );
-            constructors.add(new Object[]{
-                "incrementalIndex",
-                new IncrementalIndexCursorFactory(index),
-                new IncrementalIndexTimeBoundaryInspector(index),
-                new IncrementalIndexCursorFactory(rollupIndex),
-                new IncrementalIndexTimeBoundaryInspector(rollupIndex),
-                sortByDim,
-                autoSchema
-            });
-          } else {
-            QueryableIndex index = CLOSER.register(makeBuilder(dims, autoSchema).buildMMappedIndex());
-            QueryableIndex rollupIndex = CLOSER.register(
-                makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildMMappedIndex()
-            );
-            constructors.add(new Object[]{
-                "queryableIndex",
-                new QueryableIndexCursorFactory(index),
-                QueryableIndexTimeBoundaryInspector.create(index),
-                new QueryableIndexCursorFactory(rollupIndex),
-                QueryableIndexTimeBoundaryInspector.create(rollupIndex),
-                sortByDim,
-                autoSchema
-            });
           }
         }
       }
@@ -793,6 +805,43 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(
         new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)},
         results.get(1).getArray()
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimMissing()
+  {
+    // test can use the single dimension projection
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("missing")
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(1, rowCount);
+    }
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertArrayEquals(
+        new Object[]{null, 19L},
+        results.get(0).getArray()
     );
   }
 
@@ -1390,17 +1439,29 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(
-        new Object[]{"afoo", 7L},
-        results.get(0).getArray()
-    );
-    Assert.assertArrayEquals(
-        new Object[]{"bfoo", 12L},
-        results.get(1).getArray()
-    );
+    if (!(projectionsCursorFactory instanceof QueryableIndexCursorFactory) || !autoSchema) {
+      Assert.assertArrayEquals(
+          new Object[]{"afoo", 7L},
+          results.get(0).getArray()
+      );
+      Assert.assertArrayEquals(
+          new Object[]{"bfoo", 12L},
+          results.get(1).getArray()
+      );
+    } else {
+      // inconsistent ordering since query isn't ordering
+      Assert.assertArrayEquals(
+          new Object[]{"bfoo", 12L},
+          results.get(0).getArray()
+      );
+      Assert.assertArrayEquals(
+          new Object[]{"afoo", 7L},
+          results.get(1).getArray()
+      );
+    }
   }
 
-  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema)
+  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)
   {
     File tmp = FileUtils.createTempDir();
     CLOSER.register(tmp::delete);
@@ -1414,6 +1475,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                  .withProjections(autoSchema ? AUTO_PROJECTIONS : PROJECTIONS)
                                                  .build()
                        )
+                       .writeNullColumns(writeNullColumns)
                        .rows(ROWS);
   }
 
@@ -1432,6 +1494,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                  .withProjections(autoSchema ? AUTO_ROLLUP_PROJECTIONS : ROLLUP_PROJECTIONS)
                                                  .build()
                        )
+                       .writeNullColumns(true)
                        .rows(ROLLUP_ROWS);
   }
 

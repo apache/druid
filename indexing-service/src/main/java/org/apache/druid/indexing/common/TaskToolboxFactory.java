@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.rpc.StandardRetryPolicy;
@@ -88,6 +89,7 @@ public class TaskToolboxFactory
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
+  private final Provider<DruidProcessingConfig> processingConfigProvider;
   private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
   private final Provider<MonitorScheduler> monitorSchedulerProvider;
@@ -133,6 +135,7 @@ public class TaskToolboxFactory
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
+      Provider<DruidProcessingConfig> processingConfigProvider,
       QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       Provider<MonitorScheduler> monitorSchedulerProvider,
@@ -175,6 +178,7 @@ public class TaskToolboxFactory
     this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
+    this.processingConfigProvider = processingConfigProvider;
     this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.monitorSchedulerProvider = monitorSchedulerProvider;
@@ -231,6 +235,7 @@ public class TaskToolboxFactory
         .serverAnnouncer(serverAnnouncer)
         .handoffNotifierFactory(handoffNotifierFactory)
         .queryRunnerFactoryConglomerateProvider(queryRunnerFactoryConglomerateProvider)
+        .processingConfigProvider(processingConfigProvider)
         .queryProcessingPool(queryProcessingPool)
         .joinableFactory(joinableFactory)
         .monitorSchedulerProvider(monitorSchedulerProvider)
