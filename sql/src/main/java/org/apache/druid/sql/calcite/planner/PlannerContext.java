@@ -129,16 +129,10 @@ public class PlannerContext
   private final ExpressionParser expressionParser;
   private final String sql;
   private final PlannerConfig plannerConfig;
-  private final DateTime localNow;
   private final SqlEngine engine;
   private final Map<String, Object> queryContext;
-  private final String sqlQueryId;
-  private final boolean stringifyArrays;
-  private final boolean useBoundsAndSelectors;
-  private final boolean pullUpLookup;
-  private final boolean reverseLookup;
-  private final boolean useGranularity;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+  private final DateTime defaultUtcNow;
   private final PlannerHook hook;
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
@@ -162,12 +156,6 @@ public class PlannerContext
       final PlannerToolbox plannerToolbox,
       final String sql,
       final PlannerConfig plannerConfig,
-      final DateTime localNow,
-      final boolean stringifyArrays,
-      final boolean useBoundsAndSelectors,
-      final boolean pullUpLookup,
-      final boolean reverseLookup,
-      final boolean useGranularity,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -179,20 +167,14 @@ public class PlannerContext
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.engine = engine;
     this.queryContext = new LinkedHashMap<>(queryContext);
-    this.localNow = Preconditions.checkNotNull(localNow, "localNow");
-    this.stringifyArrays = stringifyArrays;
-    this.useBoundsAndSelectors = useBoundsAndSelectors;
-    this.pullUpLookup = pullUpLookup;
-    this.reverseLookup = reverseLookup;
-    this.useGranularity = useGranularity;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
 
     String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
-      sqlQueryId = UUID.randomUUID().toString();
+      this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
     }
-    this.sqlQueryId = sqlQueryId;
+    this.defaultUtcNow = new DateTime(DateTimeZone.UTC);
   }
 
   public static PlannerContext create(
@@ -203,74 +185,10 @@ public class PlannerContext
       final PlannerHook hook
   )
   {
-    final DateTime utcNow;
-    final DateTimeZone timeZone;
-    final boolean stringifyArrays;
-    final boolean useBoundsAndSelectors;
-    final boolean pullUpLookup;
-    final boolean reverseLookup;
-    final boolean useGranularity;
-
-    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
-    final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
-    final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
-    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
-    final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
-    final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
-    final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
-
-    if (tsParam != null) {
-      utcNow = new DateTime(tsParam, DateTimeZone.UTC);
-    } else {
-      utcNow = new DateTime(DateTimeZone.UTC);
-    }
-
-    if (tzParam != null) {
-      timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
-    } else {
-      timeZone = plannerToolbox.plannerConfig().getSqlTimeZone();
-    }
-
-    if (stringifyParam != null) {
-      stringifyArrays = Numbers.parseBoolean(stringifyParam);
-    } else {
-      stringifyArrays = true;
-    }
-
-    if (useBoundsAndSelectorsParam != null) {
-      useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
-    } else {
-      useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
-    }
-
-    if (pullUpLookupParam != null) {
-      pullUpLookup = Numbers.parseBoolean(pullUpLookupParam);
-    } else {
-      pullUpLookup = DEFAULT_SQL_PULL_UP_LOOKUP;
-    }
-
-    if (reverseLookupParam != null) {
-      reverseLookup = Numbers.parseBoolean(reverseLookupParam);
-    } else {
-      reverseLookup = DEFAULT_SQL_REVERSE_LOOKUP;
-    }
-
-    if (useGranularityParam != null) {
-      useGranularity = Numbers.parseBoolean(useGranularityParam);
-    } else {
-      useGranularity = DEFAULT_SQL_USE_GRANULARITY;
-    }
-
     return new PlannerContext(
         plannerToolbox,
         sql,
         plannerToolbox.plannerConfig().withOverrides(queryContext),
-        utcNow.withZone(timeZone),
-        stringifyArrays,
-        useBoundsAndSelectors,
-        pullUpLookup,
-        reverseLookup,
-        useGranularity,
         engine,
         queryContext,
         hook
@@ -350,12 +268,23 @@ public class PlannerContext
 
   public DateTime getLocalNow()
   {
-    return localNow;
+    final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
+    final DateTime utcNow;
+    if (tsParam != null) {
+      utcNow = new DateTime(tsParam, DateTimeZone.UTC);
+    } else {
+      utcNow = defaultUtcNow;
+    }
+    return utcNow.withZone(getTimeZone());
   }
 
   public DateTimeZone getTimeZone()
   {
-    return localNow.getZone();
+    final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
+    if (tzParam != null) {
+      return DateTimes.inferTzFromString(String.valueOf(tzParam));
+    }
+    return plannerToolbox.plannerConfig().getSqlTimeZone();
   }
 
   public JoinableFactoryWrapper getJoinableFactoryWrapper()
@@ -405,7 +334,11 @@ public class PlannerContext
 
   public boolean isStringifyArrays()
   {
-    return stringifyArrays;
+    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
+    if (stringifyParam != null) {
+      return Numbers.parseBoolean(stringifyParam);
+    }
+    return true;
   }
 
   /**
@@ -417,7 +350,11 @@ public class PlannerContext
    */
   public boolean isUseBoundsAndSelectors()
   {
-    return useBoundsAndSelectors;
+    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
+    if (useBoundsAndSelectorsParam != null) {
+      return Numbers.parseBoolean(useBoundsAndSelectorsParam);
+    }
+    return DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
   }
 
   /**
@@ -425,7 +362,7 @@ public class PlannerContext
    */
   public boolean isUseLegacyInFilter()
   {
-    return useBoundsAndSelectors;
+    return isUseBoundsAndSelectors();
   }
 
   /**
@@ -434,7 +371,11 @@ public class PlannerContext
    */
   public boolean isPullUpLookup()
   {
-    return pullUpLookup;
+    final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
+    if (pullUpLookupParam != null) {
+      return Numbers.parseBoolean(pullUpLookupParam);
+    }
+    return DEFAULT_SQL_PULL_UP_LOOKUP;
   }
 
   /**
@@ -443,7 +384,11 @@ public class PlannerContext
    */
   public boolean isReverseLookup()
   {
-    return reverseLookup;
+    final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
+    if (reverseLookupParam != null) {
+      return Numbers.parseBoolean(reverseLookupParam);
+    }
+    return DEFAULT_SQL_REVERSE_LOOKUP;
   }
 
   /**
@@ -453,7 +398,12 @@ public class PlannerContext
    */
   public boolean isUseGranularity()
   {
-    return useGranularity;
+    final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
+    if (useGranularityParam != null) {
+      return Numbers.parseBoolean(useGranularityParam);
+    } else {
+      return DEFAULT_SQL_USE_GRANULARITY;
+    }
   }
 
   public List<TypedValue> getParameters()
@@ -483,7 +433,7 @@ public class PlannerContext
 
   public String getSqlQueryId()
   {
-    return sqlQueryId;
+    return (String) queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
   }
 
   public CopyOnWriteArrayList<String> getNativeQueryIds()
@@ -518,6 +468,7 @@ public class PlannerContext
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory, List<TypedValue> parameters)
   {
+    final DateTime localNow = getLocalNow();
     class DruidDataContext implements DataContext
     {
       private final Map<String, Object> base_context = ImmutableMap.of(

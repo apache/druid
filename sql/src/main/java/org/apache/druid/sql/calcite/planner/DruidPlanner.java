@@ -156,7 +156,7 @@ public class DruidPlanner implements Closeable
     catch (SqlParseException e1) {
       throw translateException(e1);
     }
-    root = processStatementList(root, sql);
+    root = processStatementList(root);
     root = rewriteParameters(root);
     hook.captureSqlNode(root);
     handler = createHandler(root);
@@ -302,7 +302,7 @@ public class DruidPlanner implements Closeable
    * modified query context through the {@link PlannerContext}. {@link SqlSetOption} override any existing query
    * context parameter values.
    */
-  private SqlNode processStatementList(SqlNode root, String sql)
+  private SqlNode processStatementList(SqlNode root)
   {
     if (root instanceof SqlNodeList) {
       final SqlNodeList nodeList = (SqlNodeList) root;
