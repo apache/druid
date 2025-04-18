@@ -339,7 +339,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testSelectCount() throws SQLException
   {
     try (Statement stmt = client.createStatement()) {
-      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo;");
       final List<Map<String, Object>> rows = getRows(resultSet);
       Assert.assertEquals(
           ImmutableList.of(
@@ -1783,6 +1783,36 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     exec.shutdown();
     server.close();
+  }
+
+  @Test
+  public void testMultiStatementFails() throws SQLException
+  {
+    try (Statement stmt = client.createStatement()) {
+      Throwable t = Assert.assertThrows(
+          AvaticaSqlException.class,
+          () -> stmt.executeQuery("SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo")
+      );
+      // ugly error message for statement
+      Assert.assertEquals(
+          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: SQL query string must contain only a single statement -> DruidException: SQL query string must contain only a single statement",
+          t.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testMultiPreparedStatementFails() throws SQLException
+  {
+    Throwable t = Assert.assertThrows(
+        AvaticaSqlException.class,
+        () -> client.prepareStatement("SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo")
+    );
+    // sad error message for prepared statement
+    Assert.assertEquals(
+        "Error -1 (00000) : while preparing SQL: SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo",
+        t.getMessage()
+    );
   }
 
   // Test the async feature using DBI, as used internally in Druid.

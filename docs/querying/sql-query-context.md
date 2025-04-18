@@ -60,20 +60,39 @@ For more information, see [Overriding default query context values](../configura
 
 ## Set the query context
 
-You can configure query context parameters in the `context` object of the [JSON API](../api-reference/sql-api.md) or as a [JDBC connection properties object](../api-reference/sql-jdbc.md).
+How query context parameters are set differs depending on whether you are using the [JSON API](../api-reference/sql-api.md) or [JDBC](../api-reference/sql-jdbc.md).
 
-The following example shows how to set a query context parameter using the JSON API:
+### Set the query context when using JSON API
+When using the JSON API, you can configure query context parameters in the `context` object of the request.
+
+For example:
 
 ```
 {
   "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
   "context" : {
-    "sqlTimeZone" : "America/Los_Angeles"
+    "sqlTimeZone" : "America/Los_Angeles",
+    "useCache": false
   }
 }
 ```
 
-The following example shows how to set query context parameters using JDBC:
+Context parameters can also be set by including [`SET` statements](./sql.md#set-statements) as part of the `query`
+string in the request, separated from the query by `;`. Context parameters set by `SET` statements take priority over
+values set in `context`.
+
+The following example expresses the previous example in this form:
+
+```
+{
+  "query" : "SET sqlTimeZone = 'America/Los_Angeles'; SET useCache = false; SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'"
+}
+```
+
+### Set the query context when using JDBC
+If using JDBC, context parameters can be set using [connection properties object](../api-reference/sql-jdbc.md).
+
+For example:
 
 ```java
 String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";

@@ -22,6 +22,7 @@ package org.apache.druid.sql;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.http.SqlQuery;
 
 import javax.servlet.http.HttpServletRequest;
@@ -56,6 +57,18 @@ public class HttpStatement extends DirectStatement
         req.getRemoteAddr()
     );
     this.req = req;
+  }
+
+  @Override
+  protected DruidPlanner createPlanner()
+  {
+    return sqlToolbox.plannerFactory.createPlanner(
+        sqlToolbox.engine,
+        queryPlus.sql(),
+        queryContext,
+        hook,
+        true
+    );
   }
 
   @Override
