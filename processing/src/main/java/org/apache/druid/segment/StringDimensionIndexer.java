@@ -134,7 +134,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     }
 
     // size of encoded array + dictionary size change
-    final long effectiveSizeBytes = 16L + ((long)encodedDimensionValues.length * Integer.BYTES)
+    final long effectiveSizeBytes = 16L + ((long) encodedDimensionValues.length * Integer.BYTES)
                                     + (dimLookup.sizeInBytes() - oldDictSizeInBytes);
     return new EncodedKeyComponent<>(encodedDimensionValues, effectiveSizeBytes);
   }
