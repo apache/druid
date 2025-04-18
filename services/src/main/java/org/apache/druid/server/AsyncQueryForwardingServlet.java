@@ -26,6 +26,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.sun.jersey.server.impl.application.WebApplicationImpl;
+import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.calcite.avatica.remote.ProtobufTranslation;
 import org.apache.calcite.avatica.remote.ProtobufTranslationImpl;
 import org.apache.calcite.avatica.remote.Service;
@@ -273,7 +275,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
     } else if (isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
       try {
-        SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
+        SqlQuery inputSqlQuery = SqlQuery.from(request, objectMapper);
         inputSqlQuery = buildSqlQueryWithId(inputSqlQuery);
         request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
         if (routeSqlByStrategy) {
@@ -470,6 +472,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       byte[] bytes = objectMapper.writeValueAsBytes(content);
       proxyRequest.content(new BytesContentProvider(bytes));
       proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
+      proxyRequest.getHeaders().put(HttpHeader.CONTENT_TYPE, MediaType.APPLICATION_JSON);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

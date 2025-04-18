@@ -52,14 +52,19 @@ public class ITSqlQueryTest
   @Inject
   IntegrationTestingConfig config;
 
-  interface IExecutable {
+  interface IExecutable
+  {
     void execute(String endpoint) throws IOException;
   }
 
   private void executeWithRetry(String contentType, IExecutable executable)
   {
-    String endpoint = StringUtils.format("%s/druid/v2/sql/", config.getBrokerUrl());
+    executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getBrokerUrl()), contentType, executable);
+    executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getRouterUrl()), contentType, executable);
+  }
 
+  private void executeWithRetry(String endpoint, String contentType, IExecutable executable)
+  {
     Throwable lastException = null;
     for (int i = 1; i <= 5; i++) {
       LOG.info("Query to %s with Content-Type = %s, tries = %s", endpoint, contentType, i);
