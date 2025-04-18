@@ -15844,7 +15844,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     expectedContext.put(QueryContexts.CTX_SQL_QUERY_ID, "dummy2");
 
     testBuilder().sql(
-        "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; set sqlQueryId = 'dummy2'; select 3;"
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; set sqlQueryId = 'dummy2'; select 3;;;"
     ).expectedQueries(
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -15863,6 +15863,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     ).expectedResults(
         ImmutableList.of(
             new Object[]{3}
+        )
+    ).run();
+  }
+
+  @Test
+  public void testMultiStatementSetsContextTimezone()
+  {
+    cannotVectorizeUnlessFallback();
+    testBuilder().sql(
+        "SET sqlTimeZone = 'America/Los_Angeles';\n"
+        + "SELECT\n"
+        + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))"
+    ).expectedQueries(
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'America/Los_Angeles'),'YEAR','America/Los_Angeles')",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_LOS_ANGELES)
+                        .build()
+        )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{1999L, 1L},
+            new Object[]{2000L, 3L},
+            new Object[]{2001L, 2L}
         )
     ).run();
   }
