@@ -218,9 +218,6 @@ public class SqlQuery
       if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
         sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
       }
-      if (sql == null || sql.trim().isEmpty()) {
-        throw new IAE("SQL query is empty");
-      }
       return new SqlQuery(sql, null, false, false, false, null, null);
     }
   }

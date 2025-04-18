@@ -58,13 +58,13 @@ public class ITSqlQueryTest
 
   private void executeWithRetry(String contentType, IExecutable executable)
   {
-    String endpoint = "/druid/v2/sql/";
+    String endpoint = StringUtils.format("%s/druid/v2/sql/", config.getBrokerUrl());
 
     Throwable lastException = null;
     for (int i = 1; i <= 5; i++) {
       LOG.info("Query to %s with Content-Type = %s, tries = %s", endpoint, contentType, i);
       try {
-        executable.execute(StringUtils.format("%s%s", config.getBrokerUrl(), endpoint));
+        executable.execute(endpoint);
         return;
       }
       catch (IOException e) {
@@ -166,6 +166,28 @@ public class ITSqlQueryTest
               HttpEntity entity = response.getEntity();
               String responseBody = entity != null ? EntityUtils.toString(entity).trim() : null;
               Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
+            }
+          }
+        }
+    );
+  }
+
+  @Test
+  public void testEmptyQuery()
+  {
+    executeWithRetry(
+        "text/plain",
+        (endpoint) -> {
+          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+            HttpPost request = new HttpPost(endpoint);
+            request.setHeader("Content-Type", "text/plain");
+
+            try (CloseableHttpResponse response = client.execute(request)) {
+              Assert.assertEquals(400, response.getStatusLine().getStatusCode());
+
+              HttpEntity entity = response.getEntity();
+              String responseBody = entity != null ? EntityUtils.toString(entity).trim() : null;
+              Assert.assertTrue(responseBody.contains("invalidInput"));
             }
           }
         }
