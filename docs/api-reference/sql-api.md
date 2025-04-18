@@ -49,7 +49,8 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 
 #### JSON Format Request body
 
-To send queries in JSON format, the 'Content-Type' in the HTTP request MUST be `application/json`.
+To send queries in JSON format, the `Content-Type` in the HTTP request MUST be `application/json`.
+If there're multiple `Content-Type` headers, the **first** one is used.
 
 The request body takes the following properties:
 
@@ -105,10 +106,13 @@ The request body takes the following properties:
 ##### Text Format Request body
 
 Druid also allows you to submit SQL queries in text format which is simpler than above JSON format. 
-To do this, just leave the `Content-Type` rquest header blank or set it to anything other than `application/json`.
-The whole request body is treated as a single SQL query string.
+To do this, just leave the `Content-Type` rquest header blank or set it to anything other than `application/json`. 
+If there're multiple `Content-Type` headers, the **first** one is used.
 
-In this request format, the `resultFormat` of response is always `object` with the HTTP response header Content-Type: application/json.
+In this format, the whole request body is treated as a single SQL query string.
+
+For response, the `resultFormat` is always `object` with the HTTP response header `Content-Type: application/json`.
+
 If you want more control over the query context or response format, use the above JSON format request body instead.
 
 ```commandline
