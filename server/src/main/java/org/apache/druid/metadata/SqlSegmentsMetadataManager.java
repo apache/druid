@@ -30,13 +30,10 @@ import com.google.common.util.concurrent.Futures;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -72,7 +69,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Implementation of {@link SegmentsMetadataManager}, that periodically polls
  * used segments from the metadata store to build a {@link DataSourcesSnapshot}.
  */
-@ManageLifecycle
 public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 {
   private static final EmittingLogger log = new EmittingLogger(SqlSegmentsMetadataManager.class);
@@ -243,7 +239,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  @LifecycleStart
   public void start()
   {
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
@@ -260,7 +255,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  @LifecycleStop
   public void stop()
   {
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();

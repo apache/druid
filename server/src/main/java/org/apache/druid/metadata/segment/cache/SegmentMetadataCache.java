@@ -66,9 +66,15 @@ public interface SegmentMetadataCache
   boolean isSyncedForRead();
 
   /**
+   * Waits until the cache finishes the next sync with the metadata store or
+   * until the timeout elapses, whichever is sooner.
+   */
+  void awaitNextSync(long timeoutMillis);
+
+  /**
    * @return Latest snapshot of the datasources with all their used segments.
    */
-  DataSourcesSnapshot getDatasourcesSnapshot();
+  DataSourcesSnapshot getDataSourcesSnapshot();
 
   /**
    * Performs a thread-safe read action on the cache for the given datasource.

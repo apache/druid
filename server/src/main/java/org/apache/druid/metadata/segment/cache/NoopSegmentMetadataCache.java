@@ -72,7 +72,13 @@ public class NoopSegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public DataSourcesSnapshot getDatasourcesSnapshot()
+  public void awaitNextSync(long timeoutMillis)
+  {
+
+  }
+
+  @Override
+  public DataSourcesSnapshot getDataSourcesSnapshot()
   {
     throw new UnsupportedOperationException();
   }

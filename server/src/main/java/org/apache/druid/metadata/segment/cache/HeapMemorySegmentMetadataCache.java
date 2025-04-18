@@ -64,6 +64,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -257,10 +258,20 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public DataSourcesSnapshot getDatasourcesSnapshot()
+  public DataSourcesSnapshot getDataSourcesSnapshot()
   {
     verifyCacheIsUsableAndAwaitSyncIf(cacheMode == UsageMode.ALWAYS || cacheMode == UsageMode.IF_SYNCED);
     return datasourcesSnapshot.get();
+  }
+
+  @Override
+  public void awaitNextSync(long timeoutMillis)
+  {
+    final DateTime lastSyncTime = syncFinishTime.get();
+    final Supplier<Boolean> lastSyncTimeIsNotUpdated =
+        () -> Objects.equals(syncFinishTime.get(), lastSyncTime);
+
+    waitForCacheToFinishSyncWhile(lastSyncTimeIsNotUpdated, timeoutMillis);
   }
 
   @Override
@@ -343,6 +354,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
 
     synchronized (cacheStateLock) {
+      final Supplier<Boolean> leaderSyncIsPending =
+          () -> currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING
+                || currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED;
+
       switch (currentCacheState) {
         case STOPPED:
           throw InternalServerError.exception("Segment metadata cache has not been started yet.");
@@ -351,7 +366,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         case LEADER_FIRST_SYNC_PENDING:
         case LEADER_FIRST_SYNC_STARTED:
           if (shouldWait) {
-            waitForCacheToFinishSync();
+            waitForCacheToFinishSyncWhile(leaderSyncIsPending, READY_TIMEOUT_MILLIS);
             verifyCacheIsUsableAndAwaitSyncIf(true);
           }
         case LEADER_READY:
@@ -365,17 +380,17 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * {@link CacheState#LEADER_FIRST_SYNC_PENDING} or
    * {@link CacheState#LEADER_FIRST_SYNC_STARTED}.
    */
-  private void waitForCacheToFinishSync()
+  private void waitForCacheToFinishSyncWhile(Supplier<Boolean> waitCondition, long timeoutMillis)
   {
     synchronized (cacheStateLock) {
       log.info("Waiting for cache to finish sync with metadata store.");
-      while (currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING
-             || currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED) {
+      while (waitCondition.get()) {
         try {
-          cacheStateLock.wait(READY_TIMEOUT_MILLIS);
+          cacheStateLock.wait(timeoutMillis);
         }
         catch (InterruptedException e) {
           log.noStackTrace().info(e, "Interrupted while waiting for cache to be ready");
+          throw DruidException.defensive(e, "Interrupted while waiting for cache to be ready");
         }
         catch (Exception e) {
           log.error(e, "Error while waiting for cache to be ready");

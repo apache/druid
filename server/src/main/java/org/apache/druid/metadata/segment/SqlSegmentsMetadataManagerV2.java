@@ -62,6 +62,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
 
   private final SegmentsMetadataManager delegate;
   private final SegmentMetadataCache segmentMetadataCache;
+  private final SegmentsMetadataManagerConfig managerConfig;
   private final CentralizedDatasourceSchemaConfig schemaConfig;
 
   public SqlSegmentsMetadataManagerV2(
@@ -80,6 +81,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
         managerConfig, tablesConfig, connector, segmentSchemaCache,
         centralizedDatasourceSchemaConfig, serviceEmitter
     );
+    this.managerConfig = managerConfig.get();
     this.segmentMetadataCache = segmentMetadataCache;
     this.schemaConfig = centralizedDatasourceSchemaConfig;
   }
@@ -142,7 +144,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   public DataSourcesSnapshot getRecentDataSourcesSnapshot()
   {
     if (useCacheToBuildTimeline()) {
-      return segmentMetadataCache.getDatasourcesSnapshot();
+      return segmentMetadataCache.getDataSourcesSnapshot();
     } else {
       return delegate.getRecentDataSourcesSnapshot();
     }
@@ -152,8 +154,9 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   public DataSourcesSnapshot forceUpdateDataSourcesSnapshot()
   {
     if (useCacheToBuildTimeline()) {
-      // TODO: we cannot force the cache to refresh, we can just wait
-      return segmentMetadataCache.getDatasourcesSnapshot();
+      long timeoutMillis = managerConfig.getPollDuration().toStandardDuration().getMillis() * 2;
+      segmentMetadataCache.awaitNextSync(timeoutMillis);
+      return segmentMetadataCache.getDataSourcesSnapshot();
     } else {
       return delegate.forceUpdateDataSourcesSnapshot();
     }
