@@ -1,0 +1,2925 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C1_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_bool, '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C2_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[0]' RETURNING boolean array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C3_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][0]' RETURNING boolean array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C4_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_int, '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C5_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[1]' RETURNING bigint array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C6_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][1]' RETURNING bigint array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C7_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_float, '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C8_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[2]' RETURNING decimal array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C9_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][2]' RETURNING decimal array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C10_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_str, '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C11_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[3]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C12_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][3]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C13_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_null, '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C14_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[4]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C15_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][4]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----------+
+| col       |
++-----------+
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
+| [0, 1, 2] |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C16_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_empty, '$.') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C17_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[5]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C18_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][5]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C19_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_mixed, '$.') AS col
+FROM test_array;
++-----------------+
+| col             |
++-----------------+
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
++-----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C20_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[6]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----------------+
+| col             |
++-----------------+
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
++-----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C21_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][6]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----------------+
+| col             |
++-----------------+
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
+| [0, 1, 2, 3, 4] |
++-----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C22_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(a_nested, '$.') AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [0, 1, 2, 3, 4, 5, 6, 7] |
+| [0, 1, 2, 3, 4, 5, 6, 7] |
+| [0, 1, 2, 3, 4, 5, 6, 7] |
+| [0, 1, 2, 3, 4, 5, 6, 7] |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C23_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B1_C24_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_keys(json_value(a_nested, '$[7][7]' RETURNING varchar array), '$.') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C1_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_bool) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| {"k":[1,0,null]} |
+| {"k":[1,0,null]} |
+| {"k":[null,0,1]} |
+| {"k":[null,0,1]} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C2_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| {"k":[1,0,null]} |
+| {"k":[1,0,null]} |
+| {"k":[null,0,1]} |
+| {"k":[null,0,1]} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C3_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| {"k":[1,0,null]} |
+| {"k":[1,0,null]} |
+| {"k":[null,0,1]} |
+| {"k":[null,0,1]} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C4_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_int) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| {"k":[1,2,null]} |
+| {"k":[1,2,null]} |
+| {"k":[null,2,1]} |
+| {"k":[null,2,1]} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C5_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| {"k":[1,2,null]} |
+| {"k":[1,2,null]} |
+| {"k":[null,2,1]} |
+| {"k":[null,2,1]} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C6_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| {"k":[1,2,null]} |
+| {"k":[1,2,null]} |
+| {"k":[null,2,1]} |
+| {"k":[null,2,1]} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C7_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_float) AS col
+FROM test_array;
++----------------------+
+| col                  |
++----------------------+
+| {"k":[0.1,0.2,null]} |
+| {"k":[0.1,0.2,null]} |
+| {"k":[null,0.2,0.1]} |
+| {"k":[null,0.2,0.1]} |
++----------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C8_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
++----------------------+
+| col                  |
++----------------------+
+| {"k":[0.1,0.2,null]} |
+| {"k":[0.1,0.2,null]} |
+| {"k":[null,0.2,0.1]} |
+| {"k":[null,0.2,0.1]} |
++----------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C9_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
++----------------------+
+| col                  |
++----------------------+
+| {"k":[0.1,0.2,null]} |
+| {"k":[0.1,0.2,null]} |
+| {"k":[null,0.2,0.1]} |
+| {"k":[null,0.2,0.1]} |
++----------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C10_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_str) AS col
+FROM test_array;
++------------------------+
+| col                    |
++------------------------+
+| {"k":["S1","S2",null]} |
+| {"k":["S1","S2",null]} |
+| {"k":[null,"S2","S1"]} |
+| {"k":[null,"S2","S1"]} |
++------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C11_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------+
+| col                    |
++------------------------+
+| {"k":["S1","S2",null]} |
+| {"k":["S1","S2",null]} |
+| {"k":[null,"S2","S1"]} |
+| {"k":[null,"S2","S1"]} |
++------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C12_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------+
+| col                    |
++------------------------+
+| {"k":["S1","S2",null]} |
+| {"k":["S1","S2",null]} |
+| {"k":[null,"S2","S1"]} |
+| {"k":[null,"S2","S1"]} |
++------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C13_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_null) AS col
+FROM test_array;
++------------------------+
+| col                    |
++------------------------+
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
++------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C14_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------+
+| col                    |
++------------------------+
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
++------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C15_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------+
+| col                    |
++------------------------+
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
+| {"k":[null,null,null]} |
++------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C16_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_empty) AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| {"k":[]} |
+| {"k":[]} |
+| {"k":[]} |
+| {"k":[]} |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C17_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| {"k":[]} |
+| {"k":[]} |
+| {"k":[]} |
+| {"k":[]} |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C18_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| {"k":[]} |
+| {"k":[]} |
+| {"k":[]} |
+| {"k":[]} |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C19_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_mixed) AS col
+FROM test_array;
++------------------------------------+
+| col                                |
++------------------------------------+
+| {"k":["true","1","0.1","S1",null]} |
+| {"k":["true","1","0.1","S1",null]} |
+| {"k":[null,"S1","0.1","1","true"]} |
+| {"k":[null,"S1","0.1","1","true"]} |
++------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C20_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------------------+
+| col                                |
++------------------------------------+
+| {"k":["true","1","0.1","S1",null]} |
+| {"k":["true","1","0.1","S1",null]} |
+| {"k":[null,"S1","0.1","1","true"]} |
+| {"k":[null,"S1","0.1","1","true"]} |
++------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C21_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------------------+
+| col                                |
++------------------------------------+
+| {"k":["true","1","0.1","S1",null]} |
+| {"k":["true","1","0.1","S1",null]} |
+| {"k":[null,"S1","0.1","1","true"]} |
+| {"k":[null,"S1","0.1","1","true"]} |
++------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C22_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value a_nested) AS col
+FROM test_array;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                                                                                                                                                                                                                 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"k":[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]]} |
+| {"k":[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]]} |
+| {"k":[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]]} |
+| {"k":[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]]} |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C23_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| {"k":null} |
+| {"k":null} |
+| {"k":null} |
+| {"k":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B2_C24_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'k' value json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| {"k":null} |
+| {"k":null} |
+| {"k":null} |
+| {"k":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C1_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_bool) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C2_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C3_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C4_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_int) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C5_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C6_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C7_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_float) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C8_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C9_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C10_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_str) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C11_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C12_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C13_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_null) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C14_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C15_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C16_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_empty) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C17_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C18_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C19_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_mixed) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C20_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C21_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C22_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(a_nested) AS col
+FROM test_array;
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                                                                           |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [$[2], $[7][6], $[7][7][3], $[3], $[7][7][2], $[4], $[7][7][5], $[5], $[7][7][4], $[6], $[7][7][6], $[7][0], $[7][1], $[7][2], $[7][3], $[0], $[7][4], $[7][7][1], $[1], $[7][5], $[7][7][0]] |
+| [$[2], $[7][6], $[7][7][3], $[3], $[7][7][2], $[4], $[7][7][5], $[5], $[7][7][4], $[6], $[7][7][6], $[7][0], $[7][1], $[7][2], $[7][3], $[0], $[7][4], $[7][7][1], $[1], $[7][5], $[7][7][0]] |
+| [$[2], $[7][6], $[7][7][3], $[3], $[7][7][2], $[4], $[7][7][5], $[5], $[7][7][4], $[6], $[7][7][6], $[7][0], $[7][1], $[7][2], $[7][3], $[0], $[7][4], $[7][7][1], $[1], $[7][5], $[7][7][0]] |
+| [$[2], $[7][6], $[7][7][3], $[3], $[7][7][2], $[4], $[7][7][5], $[5], $[7][7][4], $[6], $[7][7][6], $[7][0], $[7][1], $[7][2], $[7][3], $[0], $[7][4], $[7][7][1], $[1], $[7][5], $[7][7][0]] |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C23_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B3_C24_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_paths(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| [$] |
+| [$] |
+| [$] |
+| [$] |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C1_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_bool, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C2_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[0]' RETURNING boolean array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C3_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][0]' RETURNING boolean array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C4_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_int, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C5_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[1]' RETURNING bigint array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C6_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][1]' RETURNING bigint array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C7_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_float, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C8_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[2]' RETURNING decimal array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C9_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][2]' RETURNING decimal array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C10_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_str, '$[0]') AS col
+FROM test_array;
++------+
+| col  |
++------+
+| "S1" |
+| "S1" |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C11_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[3]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++------+
+| col  |
++------+
+| "S1" |
+| "S1" |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C12_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][3]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++------+
+| col  |
++------+
+| "S1" |
+| "S1" |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C13_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_null, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C14_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[4]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C15_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][4]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C16_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_empty, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C17_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[5]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C18_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][5]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C19_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_mixed, '$[0]') AS col
+FROM test_array;
++--------+
+| col    |
++--------+
+| "true" |
+| "true" |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C20_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[6]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++--------+
+| col    |
++--------+
+| "true" |
+| "true" |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C21_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][6]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++--------+
+| col    |
++--------+
+| "true" |
+| "true" |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C22_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[0]') AS col
+FROM test_array;
++-------------------+
+| col               |
++-------------------+
+| [null,false,true] |
+| [null,false,true] |
+| [true,false,null] |
+| [true,false,null] |
++-------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C23_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B4_C24_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(json_value(a_nested, '$[7][7]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C1_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_bool, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C2_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[0]' RETURNING boolean array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C3_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][0]' RETURNING boolean array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C4_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_int, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C5_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[1]' RETURNING bigint array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C6_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][1]' RETURNING bigint array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C7_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_float, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C8_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[2]' RETURNING decimal array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C9_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][2]' RETURNING decimal array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C10_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_str, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| S1  |
+| S1  |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C11_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[3]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| S1  |
+| S1  |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C12_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][3]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| S1  |
+| S1  |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C13_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_null, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C14_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[4]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C15_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][4]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C16_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_empty, '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C17_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[5]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C18_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][5]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C19_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(a_mixed, '$[0]') AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C20_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[6]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C21_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][6]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C23_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B5_C24_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_value(json_value(a_nested, '$[7][7]' RETURNING varchar array), '$[0]') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C1_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C2_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C3_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING parse_json(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C4_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C5_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C6_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING parse_json(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C7_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C8_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C9_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING parse_json(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C10_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C11_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C12_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING parse_json(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C13_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C14_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C15_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING parse_json(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C16_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C17_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C18_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING parse_json(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C19_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C20_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C21_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING parse_json(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C22_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C23_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B6_C24_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING parse_json(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C1_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C2_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C3_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING try_parse_json(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C4_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C5_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C6_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING try_parse_json(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C7_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C8_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C9_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING try_parse_json(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C10_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C11_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C12_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C13_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C14_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C15_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C16_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C17_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C18_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C19_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C20_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C21_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C22_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C23_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C24_D1 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C1_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_bool) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,0,null] |
+| [1,0,null] |
+| [null,0,1] |
+| [null,0,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C2_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,0,null] |
+| [1,0,null] |
+| [null,0,1] |
+| [null,0,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C3_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,0,null] |
+| [1,0,null] |
+| [null,0,1] |
+| [null,0,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C4_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_int) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,2,null] |
+| [1,2,null] |
+| [null,2,1] |
+| [null,2,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C5_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,2,null] |
+| [1,2,null] |
+| [null,2,1] |
+| [null,2,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C6_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,2,null] |
+| [1,2,null] |
+| [null,2,1] |
+| [null,2,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C7_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_float) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [0.1,0.2,null] |
+| [0.1,0.2,null] |
+| [null,0.2,0.1] |
+| [null,0.2,0.1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C8_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [0.1,0.2,null] |
+| [0.1,0.2,null] |
+| [null,0.2,0.1] |
+| [null,0.2,0.1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C9_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [0.1,0.2,null] |
+| [0.1,0.2,null] |
+| [null,0.2,0.1] |
+| [null,0.2,0.1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C10_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_str) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| ["S1","S2",null] |
+| ["S1","S2",null] |
+| [null,"S2","S1"] |
+| [null,"S2","S1"] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C11_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| ["S1","S2",null] |
+| ["S1","S2",null] |
+| [null,"S2","S1"] |
+| [null,"S2","S1"] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C12_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| ["S1","S2",null] |
+| ["S1","S2",null] |
+| [null,"S2","S1"] |
+| [null,"S2","S1"] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C13_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_null) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C14_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C15_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C16_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_empty) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C17_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C18_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C19_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_mixed) AS col
+FROM test_array;
++------------------------------+
+| col                          |
++------------------------------+
+| ["true","1","0.1","S1",null] |
+| ["true","1","0.1","S1",null] |
+| [null,"S1","0.1","1","true"] |
+| [null,"S1","0.1","1","true"] |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C20_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------------+
+| col                          |
++------------------------------+
+| ["true","1","0.1","S1",null] |
+| ["true","1","0.1","S1",null] |
+| [null,"S1","0.1","1","true"] |
+| [null,"S1","0.1","1","true"] |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C21_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------------+
+| col                          |
++------------------------------+
+| ["true","1","0.1","S1",null] |
+| ["true","1","0.1","S1",null] |
+| [null,"S1","0.1","1","true"] |
+| [null,"S1","0.1","1","true"] |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C22_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_nested) AS col
+FROM test_array;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                                                                                                                                                                                                           |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C23_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C24_D1 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 192 Positive tests: 144 Negative tests: 48
+#-------------------------------------------------------------------------

@@ -1,0 +1,95 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A01 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 'Not even a size') AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A02 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, -1) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A03 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 0) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A04 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 1) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A05 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 2147483648) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A06 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 2147483647) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+Not enough capacity for even one row
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A07 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 100000000) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+Not enough capacity for even one row
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 100000) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
++--------------------------------------------------------------------------+
+| col                                                                      |
++--------------------------------------------------------------------------+
+| [AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA] |
++--------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 9 Positive tests: 2 Negative tests: 7
+#-------------------------------------------------------------------------

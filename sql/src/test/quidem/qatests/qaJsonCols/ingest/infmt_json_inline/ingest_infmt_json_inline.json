@@ -1,0 +1,233 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "{\"timestamp\":\"2022-01-01T00:00:00\",\"s_str\":\"A\",\"s_num_int\":1,\"s_num_float\":0.1,\"s_bool\":true,\"s_null\":null,\"c_empty_obj\":{},\"c_empty_array\":[],\"c_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"c_empty_array_nested\":[{},[],null],\"c1\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]}]},\"c2\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]}]}}\n{\"timestamp\":\"2022-01-01T00:00:00\",\"s_str\":\"A\",\"s_num_int\":1,\"s_num_float\":0.1,\"s_bool\":true,\"s_null\":null,\"c_empty_obj\":{},\"c_empty_array\":[],\"c_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"c_empty_array_nested\":[{},[],null],\"c1\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]}]},\"c2\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null],\"a_obj\":{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},\"a_array\":[{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]},{\"a_str\":\"A\",\"a_num_int\":1,\"a_num_float\":0.1,\"a_bool\":true,\"a_null\":null,\"a_empty_obj\":{},\"a_empty_array\":[],\"a_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"a_empty_array_nested\":[{},[],null]}]}]}}\n{\"timestamp\":\"2022-02-01T00:00:00\",\"s_str\":null,\"s_num_int\":null,\"s_num_float\":null,\"s_bool\":null,\"s_null\":null,\"c_empty_obj\":null,\"c_empty_array\":null,\"c_empty_obj_nested\":null,\"c_empty_array_nested\":null,\"c1\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]}]},\"c2\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]}]}}\n{\"timestamp\":\"2022-02-01T00:00:00\",\"s_str\":null,\"s_num_int\":null,\"s_num_float\":null,\"s_bool\":null,\"s_null\":null,\"c_empty_obj\":null,\"c_empty_array\":null,\"c_empty_obj_nested\":null,\"c_empty_array_nested\":null,\"c1\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]}]},\"c2\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null],\"b_obj\":{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},\"b_array\":[{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]},{\"b_str\":\"A\",\"b_num_int\":1,\"b_num_float\":0.1,\"b_bool\":true,\"b_null\":null,\"b_empty_obj\":{},\"b_empty_array\":[],\"b_empty_obj_nested\":{\"o1\":{},\"o2\":[],\"o3\":null},\"b_empty_array_nested\":[{},[],null]}]}]}}\n"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 100,
+        "maxTotalRows": 100
+      },
+      "maxNumConcurrentSubTasks": 2
+    },
+    "dataSchema": {
+      "dataSource": "test_json_cols",
+      "granularitySpec": {
+        "segmentGranularity": "month",
+        "queryGranularity": null,
+        "rollup": true
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "name": "s_str",
+            "type": "auto"
+          },
+          {
+            "name": "s_num_int",
+            "type": "auto"
+          },
+          {
+            "name": "s_num_float",
+            "type": "auto"
+          },
+          {
+            "name": "s_bool",
+            "type": "auto"
+          },
+          {
+            "name": "s_null",
+            "type": "auto"
+          },
+          {
+            "name": "c_empty_obj",
+            "type": "auto"
+          },
+          {
+            "name": "c_empty_array",
+            "type": "auto"
+          },
+          {
+            "name": "c_empty_obj_nested",
+            "type": "auto"
+          },
+          {
+            "name": "c_empty_array_nested",
+            "type": "auto"
+          },
+          {
+            "name": "c1",
+            "type": "auto"
+          },
+          {
+            "name": "c2",
+            "type": "auto"
+          },
+          {
+            "name": "t_obj",
+            "type": "auto"
+          },
+          {
+            "name": "t_array",
+            "type": "auto"
+          },
+          {
+            "name": "t_str1",
+            "type": "auto"
+          },
+          {
+            "name": "t_num_int1",
+            "type": "auto"
+          },
+          {
+            "name": "t_num_float1",
+            "type": "auto"
+          },
+          {
+            "name": "t_bool1",
+            "type": "auto"
+          },
+          {
+            "name": "t_null1",
+            "type": "auto"
+          },
+          {
+            "name": "t_empty_obj",
+            "type": "auto"
+          },
+          {
+            "name": "t_empty_array",
+            "type": "auto"
+          },
+          {
+            "name": "t_str2",
+            "type": "auto"
+          },
+          {
+            "name": "t_num_int2",
+            "type": "long"
+          },
+          {
+            "name": "t_num_float2",
+            "type": "auto"
+          },
+          {
+            "name": "t_bool2",
+            "type": "auto"
+          },
+          {
+            "name": "t_null2",
+            "type": "auto"
+          },
+          {
+            "name": "t_new",
+            "type": "auto"
+          }
+        ]
+      },
+      "metricsSpec": [
+        {
+          "name": "cnt",
+          "type": "count"
+        }
+      ],
+      "transformSpec": {
+        "transforms": [
+          {
+            "type": "expression",
+            "name": "t_obj",
+            "expression": "parse_json(to_json_string(json_query(c1, '$.a_obj')))"
+          },
+          {
+            "type": "expression",
+            "name": "t_array",
+            "expression": "json_query(c1, '$.a_array[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_str1",
+            "expression": "json_query(s_str, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_int1",
+            "expression": "json_query(s_num_int, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_float1",
+            "expression": "json_query(s_num_float, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_bool1",
+            "expression": "json_query(s_bool, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_null1",
+            "expression": "json_query(s_null, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_empty_obj",
+            "expression": "json_query(c_empty_array_nested, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_empty_array",
+            "expression": "json_query(c_empty_obj_nested, '$.o2')"
+          },
+          {
+            "type": "expression",
+            "name": "t_str2",
+            "expression": "json_query(c1, '$.a_str')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_int2",
+            "expression": "json_query(c1, '$.a_obj.a_num_int')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_float2",
+            "expression": "json_query(c1, '$.a_array[0].a_num_float')"
+          },
+          {
+            "type": "expression",
+            "name": "t_bool2",
+            "expression": "json_query(c1, '$.a_array[1].a_bool')"
+          },
+          {
+            "type": "expression",
+            "name": "t_null2",
+            "expression": "json_query(c1, '$.a_null')"
+          },
+          {
+            "type": "expression",
+            "name": "t_new",
+            "expression": "json_object('c1', c1, 'c2', c2)"
+          }
+        ]
+      }
+    }
+  },
+  "context": {
+    "storeEmptyColumns": true
+  }
+}

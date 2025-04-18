@@ -1,0 +1,2020 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_hashed_rollup_false
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_json_cols;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D01 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT __time
+   FROM test_json_cols
+   GROUP BY __time);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_str, '$.') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_num_int, '$.') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_num_float, '$.') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_bool, '$.') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_null, '$.') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj, '$.') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array, '$.') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj_nested, '$.') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
+|                             |
++-----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array_nested, '$.') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+| [{},[],null] |
+|              |
+|              |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_str = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_num_int = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_num_float = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D14 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_bool = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D15 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_null IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D16 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT c_empty_obj
+FROM test_json_cols;
++-------------+
+| c_empty_obj |
++-------------+
+| {}          |
+| {}          |
+|             |
+|             |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D17 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT c_empty_array
+FROM test_json_cols;
++---------------+
+| c_empty_array |
++---------------+
+| []            |
+| []            |
+|               |
+|               |
++---------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D18 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT c_empty_obj_nested
+FROM test_json_cols;
++-----------------------------+
+| c_empty_obj_nested          |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
+|                             |
++-----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D19 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT c_empty_array_nested
+FROM test_json_cols;
++----------------------+
+| c_empty_array_nested |
++----------------------+
+| [{},[],null]         |
+| [{},[],null]         |
+|                      |
+|                      |
++----------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D20 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D21 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D22 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D23 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D24 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D25 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D26 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D27 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
+|                             |
++-----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D28 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+| [{},[],null] |
+|              |
+|              |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D29 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D30 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D31 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D32 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D33 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D34 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D35 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D36 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
+|                             |
++-----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D37 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+| [{},[],null] |
+|              |
+|              |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D38 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D39 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D40 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D41 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D42 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D43 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D44 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+|    |
+|    |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D45 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
+|                             |
++-----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D46 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+| [{},[],null] |
+|              |
+|              |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D47 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D48 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D49 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D50 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D51 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D52 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D53 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D54 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D55 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D56 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D57 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D58 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D59 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D60 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D61 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D62 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D63 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D64 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D65 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D66 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D67 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D68 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D69 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D70 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D71 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D72 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: D73 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F01 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F02 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_num_int') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F03 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F04 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_bool') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F05 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F06 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F07 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F08 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F09 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F10 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F11 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F12 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_num_int') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F13 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F14 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_bool') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F15 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F16 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F17 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F18 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F19 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F20 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F21 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_str1, '$.') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F22 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_int1, '$.') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F23 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_float1, '$.') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F24 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_bool1, '$.') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F25 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_null1, '$.') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F26 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_empty_obj, '$.') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F27 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_empty_array, '$.') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F28 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_str1 = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F29 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_int1 = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F30 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_float1 = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F31 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_bool1 = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F32 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_null1 IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F33 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT t_empty_obj
+FROM test_json_cols;
++-------------+
+| t_empty_obj |
++-------------+
+|             |
+|             |
+|             |
+|             |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F34 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT t_empty_array
+FROM test_json_cols;
++---------------+
+| t_empty_array |
++---------------+
+|               |
+|               |
+|               |
+|               |
++---------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F35 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_str2, '$.') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F36 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_int2, '$.') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F37 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_float2, '$.') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F38 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_bool2, '$.') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F39 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_null2, '$.') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F40 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_str2 = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F41 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_int2 = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F42 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_float2 = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F43 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_bool2 = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F44 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_null2 IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F45 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F46 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_num_int') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F47 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_num_float') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F48 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_bool') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F49 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F50 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F51 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F52 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: F53 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: A01 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT sum(cnt) s
+FROM test_json_cols;
++---+
+| s |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 128 Positive tests: 128 Negative tests: 0
+#-------------------------------------------------------------------------

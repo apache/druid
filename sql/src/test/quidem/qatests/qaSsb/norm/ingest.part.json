@@ -1,0 +1,99 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaSsb/norm/data",
+        "filter" : "part.tbl.gz"
+      },
+      "inputFormat": {
+        "type": "tsv",
+        "columns": [
+          "p_partkey",
+          "p_name",
+          "p_mfgr",
+          "p_category",
+          "p_brand1",
+          "p_color",
+          "p_type",
+          "p_size",
+          "p_container"
+        ],
+        "findColumnsFromHeader": false,
+        "delimiter": "|"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 1000000,
+        "maxTotalRows": 500000000
+      },
+      "maxNumConcurrentSubTasks": 4
+    },
+    "dataSchema": {
+      "dataSource": "ssb_norm_part",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "!!!_no_such_column_!!!",
+        "format": "auto",
+        "missingValue": "2010-01-01T00:00:00Z"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "p_partkey"
+          },
+          {
+            "type": "string",
+            "name": "p_name",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_mfgr",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_category",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_brand1",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_color",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_type",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "p_size"
+          },
+          {
+            "type": "string",
+            "name": "p_container",
+            "createBitmapIndex": true
+          }
+        ]
+      } 
+    }
+  }
+}

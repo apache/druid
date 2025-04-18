@@ -1,0 +1,363 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaSsb/denorm/data",
+        "filter" : "ssb.tsv.gz"
+      },
+      "inputFormat": {
+        "type": "tsv",
+        "columns": [
+          "lo_orderkey",
+          "lo_linenumber",
+          "lo_custkey",
+          "lo_partkey",
+          "lo_suppkey",
+          "lo_orderdate",
+          "lo_orderpriority",
+          "lo_shippriority",
+          "lo_quantity",
+          "lo_extendedprice",
+          "lo_ordtotalprice",
+          "lo_discount",
+          "lo_revenue",
+          "lo_supplycost",
+          "lo_tax",
+          "lo_commitdate",
+          "lo_shipmode",
+          "c_custkey",
+          "c_name",
+          "c_address",
+          "c_city",
+          "c_nation",
+          "c_region",
+          "c_phone",
+          "c_mktsegment",
+          "s_suppkey",
+          "s_name",
+          "s_address",
+          "s_city",
+          "s_nation",
+          "s_region",
+          "s_phone",
+          "p_partkey",
+          "p_name",
+          "p_mfgr",
+          "p_category",
+          "p_brand1",
+          "p_color",
+          "p_type",
+          "p_size",
+          "p_container",
+          "d_datekey",
+          "d_date",
+          "d_dayofweek",
+          "d_month",
+          "d_year",
+          "d_yearmonthnum",
+          "d_yearmonth",
+          "d_daynuminweek",
+          "d_daynuminmonth",
+          "d_daynuminyear",
+          "d_monthnuminyear",
+          "d_weeknuminyear",
+          "d_sellingseason",
+          "d_lastdayinweekfl",
+          "d_lastdayinmonthfl",
+          "d_holidayfl",
+          "d_weekdayfl",
+          "order_date"
+        ],
+        "findColumnsFromHeader": false,
+        "delimiter": "|"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      },
+      "maxNumConcurrentSubTasks": 4
+    },
+    "dataSchema": {
+      "dataSource": "ssb_denorm",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "order_date",
+        "format": "MM/dd/yyyy"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "lo_orderkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_linenumber"
+          },
+          {
+            "type": "long",
+            "name": "lo_custkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_partkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_suppkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_orderdate"
+          },
+          {
+            "type": "string",
+            "name": "lo_orderpriority",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "lo_shippriority",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "lo_quantity"
+          },
+          {
+            "type": "long",
+            "name": "lo_extendedprice"
+          },
+          {
+            "type": "long",
+            "name": "lo_ordtotalprice"
+          },
+          {
+            "type": "long",
+            "name": "lo_discount"
+          },
+          {
+            "type": "long",
+            "name": "lo_revenue"
+          },
+          {
+            "type": "long",
+            "name": "lo_supplycost"
+          },
+          {
+            "type": "long",
+            "name": "lo_tax"
+          },
+          {
+            "type": "long",
+            "name": "lo_commitdate"
+          },
+          {
+            "type": "string",
+            "name": "lo_shipmode",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "c_custkey"
+          },
+          {
+            "type": "string",
+            "name": "c_name",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_address",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_city",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_nation",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_region",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_phone",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_mktsegment",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "s_suppkey"
+          },
+          {
+            "type": "string",
+            "name": "s_name",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_address",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_city",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_nation",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_region",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_phone",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "p_partkey"
+          },
+          {
+            "type": "string",
+            "name": "p_name",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_mfgr",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_category",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_brand1",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_color",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "p_type",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "p_size"
+          },
+          {
+            "type": "string",
+            "name": "p_container",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "d_datekey"
+          },
+          {
+            "type": "string",
+            "name": "d_date",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "d_dayofweek",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "d_month",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "d_year"
+          },
+          {
+            "type": "long",
+            "name": "d_yearmonthnum"
+          },
+          {
+            "type": "string",
+            "name": "d_yearmonth",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "d_daynuminweek"
+          },
+          {
+            "type": "long",
+            "name": "d_daynuminmonth"
+          },
+          {
+            "type": "long",
+            "name": "d_daynuminyear"
+          },
+          {
+            "type": "long",
+            "name": "d_monthnuminyear"
+          },
+          {
+            "type": "long",
+            "name": "d_weeknuminyear"
+          },
+          {
+            "type": "string",
+            "name": "d_sellingseason",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "d_lastdayinweekfl"
+          },
+          {
+            "type": "long",
+            "name": "d_lastdayinmonthfl"
+          },
+          {
+            "type": "long",
+            "name": "d_holidayfl"
+          },
+          {
+            "type": "long",
+            "name": "d_weekdayfl"
+          }
+        ]
+      } 
+    }
+  }
+}

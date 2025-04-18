@@ -1,0 +1,216 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "sql/src/test/quidem/qatests/qaArray/ingest/data",
+        "filter": "funcs.json.gz"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "hashed",
+        "numShards": 1,
+        "partitionDimensions": [
+          "cnt"
+        ]
+      },
+      "forceGuaranteedRollup": true,
+      "maxNumConcurrentSubTasks": 1
+    },
+    "dataSchema": {
+      "dataSource": "test_array",
+      "granularitySpec": {
+        "segmentGranularity": "month",
+        "queryGranularity": null,
+        "rollup": true
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "name": "a_bool",
+            "type": "auto"
+          },
+          {
+            "name": "a_int",
+            "type": "auto"
+          },
+          {
+            "name": "a_float",
+            "type": "auto"
+          },
+          {
+            "name": "a_str",
+            "type": "auto"
+          },
+          {
+            "name": "a_null",
+            "type": "auto"
+          },
+          {
+            "name": "a_empty",
+            "type": "auto"
+          },
+          {
+            "name": "a_mixed",
+            "type": "auto"
+          },
+          {
+            "name": "a_nested",
+            "type": "auto"
+          },
+          {
+            "name": "t_bool_scalar1",
+            "type": "auto"
+          },
+          {
+            "name": "t_bool_scalar2",
+            "type": "auto"
+          },
+          {
+            "name": "t_int_scalar1",
+            "type": "auto"
+          },
+          {
+            "name": "t_int_scalar2",
+            "type": "auto"
+          },
+          {
+            "name": "t_float_scalar1",
+            "type": "auto"
+          },
+          {
+            "name": "t_float_scalar2",
+            "type": "auto"
+          },
+          {
+            "name": "t_str_scalar1",
+            "type": "auto"
+          },
+          {
+            "name": "t_str_scalar2",
+            "type": "auto"
+          },
+          {
+            "name": "t_null_scalar1",
+            "type": "auto"
+          },
+          {
+            "name": "t_null_scalar2",
+            "type": "auto"
+          },
+          {
+            "name": "t_empty_scalar1",
+            "type": "auto"
+          },
+          {
+            "name": "t_empty_scalar2",
+            "type": "auto"
+          },
+          {
+            "name": "t_mixed_scalar1",
+            "type": "auto"
+          },
+          {
+            "name": "t_mixed_scalar2",
+            "type": "auto"
+          }
+        ]
+      },
+      "metricsSpec": [
+        {
+          "name": "cnt",
+          "type": "count"
+        }
+      ],
+      "transformSpec": {
+        "transforms": [
+          {
+            "type": "expression",
+            "name": "t_bool_scalar1",
+            "expression": "json_value(a_bool, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_bool_scalar2",
+            "expression": "json_value(a_nested, '$[0][0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_int_scalar1",
+            "expression": "json_value(a_int, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_int_scalar2",
+            "expression": "json_value(a_nested, '$[1][0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_float_scalar1",
+            "expression": "json_value(a_float, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_float_scalar2",
+            "expression": "json_value(a_nested, '$[2][0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_str_scalar1",
+            "expression": "json_value(a_str, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_str_scalar2",
+            "expression": "json_value(a_nested, '$[3][0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_null_scalar1",
+            "expression": "json_value(a_null, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_null_scalar2",
+            "expression": "json_value(a_nested, '$[4][0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_empty_scalar1",
+            "expression": "json_value(a_empty, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_empty_scalar2",
+            "expression": "json_value(a_nested, '$[5][0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_mixed_scalar1",
+            "expression": "json_value(a_mixed, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_mixed_scalar2",
+            "expression": "json_value(a_nested, '$[6][0]')"
+          }
+        ]
+      }
+    }
+  },
+  "context": {
+    "storeEmptyColumns": true
+  }
+}

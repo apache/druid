@@ -1,0 +1,2037 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
+!set outputformat mysql
+SELECT count(*) cnt
+FROM test_json_cols;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A001 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(value 'A' KEY 'a') c
+FROM test_json_cols;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A002 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' vAlUe 'A') c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A003 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'A1', KEY 'b' value 'A2', KEY 'c' value 'A3') c
+FROM test_json_cols;
++------------------------------+
+| c                            |
++------------------------------+
+| {"a":"A1","b":"A2","c":"A3"} |
+| {"a":"A1","b":"A2","c":"A3"} |
+| {"a":"A1","b":"A2","c":"A3"} |
+| {"a":"A1","b":"A2","c":"A3"} |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A004 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'A1', 'b':'A2', 'c':'A3') c
+FROM test_json_cols;
++------------------------------+
+| c                            |
++------------------------------+
+| {"a":"A1","b":"A2","c":"A3"} |
+| {"a":"A1","b":"A2","c":"A3"} |
+| {"a":"A1","b":"A2","c":"A3"} |
+| {"a":"A1","b":"A2","c":"A3"} |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A005 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'aAa' value 'A1', KEY 'AaA' value 'A2', KEY 'AAa' value 'A3') c
+FROM test_json_cols;
++------------------------------------+
+| c                                  |
++------------------------------------+
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
++------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A006 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('aAa':'A1', 'AaA':'A2', 'AAa':'A3') c
+FROM test_json_cols;
++------------------------------------+
+| c                                  |
++------------------------------------+
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
+| {"aAa":"A1","AaA":"A2","AAa":"A3"} |
++------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A007 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'aaa' value 'A1', KEY 'aaa' value 'A2', KEY 'aaa' value 'A3') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| {"aaa":"A3"} |
+| {"aaa":"A3"} |
+| {"aaa":"A3"} |
+| {"aaa":"A3"} |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A008 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('aaa':'A1', 'aaa':'A2', 'aaa':'A3') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| {"aaa":"A3"} |
+| {"aaa":"A3"} |
+| {"aaa":"A3"} |
+| {"aaa":"A3"} |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A009 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'A') c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A010 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'A') c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A011 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY '123' value 'A') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"123":"A"} |
+| {"123":"A"} |
+| {"123":"A"} |
+| {"123":"A"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A012 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('123':'A') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"123":"A"} |
+| {"123":"A"} |
+| {"123":"A"} |
+| {"123":"A"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A013 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY '日本' value 'A') c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"日本":"A"} |
+| {"日本":"A"} |
+| {"日本":"A"} |
+| {"日本":"A"} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A014 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('日本':'A') c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"日本":"A"} |
+| {"日本":"A"} |
+| {"日本":"A"} |
+| {"日本":"A"} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A015 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a'||'b'||'c' value 'A') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"abc":"A"} |
+| {"abc":"A"} |
+| {"abc":"A"} |
+| {"abc":"A"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A016 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a'||'b'||'c':'A') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"abc":"A"} |
+| {"abc":"A"} |
+| {"abc":"A"} |
+| {"abc":"A"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A017 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY '"This is My Key"' value 'A') c
+FROM test_json_cols;
++----------------------------+
+| c                          |
++----------------------------+
+| {"\"This is My Key\"":"A"} |
+| {"\"This is My Key\"":"A"} |
+| {"\"This is My Key\"":"A"} |
+| {"\"This is My Key\"":"A"} |
++----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A018 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('"This is My Key"':'A') c
+FROM test_json_cols;
++----------------------------+
+| c                          |
++----------------------------+
+| {"\"This is My Key\"":"A"} |
+| {"\"This is My Key\"":"A"} |
+| {"\"This is My Key\"":"A"} |
+| {"\"This is My Key\"":"A"} |
++----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A019 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_value(s_str, '$') value 'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A020 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_value(s_str, '$'):'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A021 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 123 value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A022 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(123:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A023 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 1+1 value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A024 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(1+1:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A025 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_value(s_num_int, '$' RETURNING bigint) value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A026 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_value(s_num_int, '$' RETURNING bigint):'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A027 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 0.123 value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A028 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(0.123:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A029 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 0.1+0.1 value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A030 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(0.1+0.1:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A031 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_value(s_num_float, '$' RETURNING DOUBLE) value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A032 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_value(s_num_float, '$' RETURNING DOUBLE):'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A033 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY TRUE value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A034 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(TRUE:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A035 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY (1=2) value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A036 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object((1=2):'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A037 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_value(s_bool, '$' RETURNING boolean) value 'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A038 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_value(s_bool, '$' RETURNING boolean):'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A039 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY NULL value 'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A040 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(NULL:'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A041 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_value(s_null, '$') value 'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A042 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_value(s_null, '$'):'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A043 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_value(c1, '$.doesnotexist') value 'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A044 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_value(c1, '$.doesnotexist'):'A') c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A045 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY __time value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A046 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(__time:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A047 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY CURRENT_TIMESTAMP value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A048 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(CURRENT_TIMESTAMP:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A049 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY c1 value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A050 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(c1:'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A051 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_query(c1, '$.a_array[0].a_obj') value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A052 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_query(c1, '$.a_array[0].a_obj'):'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A053 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY json_object(KEY c2 value 'B') value 'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A054 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(json_object(KEY c2 value 'B'):'A') c
+FROM test_json_cols;
+field name must be a STRING
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A055 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'A') c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A056 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'A') c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
+| {"a":"A"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A057 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value '123') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"a":"123"} |
+| {"a":"123"} |
+| {"a":"123"} |
+| {"a":"123"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A058 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'123') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"a":"123"} |
+| {"a":"123"} |
+| {"a":"123"} |
+| {"a":"123"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A059 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value '日本') c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":"日本"} |
+| {"a":"日本"} |
+| {"a":"日本"} |
+| {"a":"日本"} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A060 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'日本') c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":"日本"} |
+| {"a":"日本"} |
+| {"a":"日本"} |
+| {"a":"日本"} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A061 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'a'||'b'||'c') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"a":"abc"} |
+| {"a":"abc"} |
+| {"a":"abc"} |
+| {"a":"abc"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A062 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'a'||'b'||'c') c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"a":"abc"} |
+| {"a":"abc"} |
+| {"a":"abc"} |
+| {"a":"abc"} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A063 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value '"This is My Key"') c
+FROM test_json_cols;
++----------------------------+
+| c                          |
++----------------------------+
+| {"a":"\"This is My Key\""} |
+| {"a":"\"This is My Key\""} |
+| {"a":"\"This is My Key\""} |
+| {"a":"\"This is My Key\""} |
++----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A064 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'"This is My Key"') c
+FROM test_json_cols;
++----------------------------+
+| c                          |
++----------------------------+
+| {"a":"\"This is My Key\""} |
+| {"a":"\"This is My Key\""} |
+| {"a":"\"This is My Key\""} |
+| {"a":"\"This is My Key\""} |
++----------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A065 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_value(s_str, '$')) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":"A"}  |
+| {"a":"A"}  |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A066 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_value(s_str, '$')) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":"A"}  |
+| {"a":"A"}  |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A067 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 123) c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":123} |
+| {"a":123} |
+| {"a":123} |
+| {"a":123} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A068 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':123) c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":123} |
+| {"a":123} |
+| {"a":123} |
+| {"a":123} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A069 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 1+1) c
+FROM test_json_cols;
++---------+
+| c       |
++---------+
+| {"a":2} |
+| {"a":2} |
+| {"a":2} |
+| {"a":2} |
++---------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A070 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':1+1) c
+FROM test_json_cols;
++---------+
+| c       |
++---------+
+| {"a":2} |
+| {"a":2} |
+| {"a":2} |
+| {"a":2} |
++---------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A071 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_value(s_num_int, '$' RETURNING bigint)) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":1}    |
+| {"a":1}    |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A072 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_value(s_num_int, '$' RETURNING bigint)) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":1}    |
+| {"a":1}    |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A073 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 0.123) c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"a":0.123} |
+| {"a":0.123} |
+| {"a":0.123} |
+| {"a":0.123} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A074 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':0.123) c
+FROM test_json_cols;
++-------------+
+| c           |
++-------------+
+| {"a":0.123} |
+| {"a":0.123} |
+| {"a":0.123} |
+| {"a":0.123} |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A075 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 0.1+0.1) c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":0.2} |
+| {"a":0.2} |
+| {"a":0.2} |
+| {"a":0.2} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A076 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':0.1+0.1) c
+FROM test_json_cols;
++-----------+
+| c         |
++-----------+
+| {"a":0.2} |
+| {"a":0.2} |
+| {"a":0.2} |
+| {"a":0.2} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A077 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_value(s_num_float, '$' RETURNING DOUBLE)) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":0.1}  |
+| {"a":0.1}  |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A078 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_value(s_num_float, '$' RETURNING DOUBLE)) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":0.1}  |
+| {"a":0.1}  |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A079 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value TRUE) c
+FROM test_json_cols;
++---------+
+| c       |
++---------+
+| {"a":1} |
+| {"a":1} |
+| {"a":1} |
+| {"a":1} |
++---------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A080 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':true) c
+FROM test_json_cols;
++---------+
+| c       |
++---------+
+| {"a":1} |
+| {"a":1} |
+| {"a":1} |
+| {"a":1} |
++---------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A081 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value (1=2)) c
+FROM test_json_cols;
++---------+
+| c       |
++---------+
+| {"a":0} |
+| {"a":0} |
+| {"a":0} |
+| {"a":0} |
++---------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A082 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':(1=2)) c
+FROM test_json_cols;
++---------+
+| c       |
++---------+
+| {"a":0} |
+| {"a":0} |
+| {"a":0} |
+| {"a":0} |
++---------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A083 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_value(s_bool, '$' RETURNING boolean)) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":1}    |
+| {"a":1}    |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A084 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_value(s_bool, '$' RETURNING boolean)) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":1}    |
+| {"a":1}    |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A085 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value NULL) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A086 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':null) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A087 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_value(s_null, '$')) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A088 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_value(s_null, '$')) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A089 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_value(c1, '$.doesnotexist')) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A090 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_value(c1, '$.doesnotexist')) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A091 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value __time) c
+FROM test_json_cols;
++---------------------+
+| c                   |
++---------------------+
+| {"a":1640995200000} |
+| {"a":1640995200000} |
+| {"a":1643673600000} |
+| {"a":1643673600000} |
++---------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A092 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':__time) c
+FROM test_json_cols;
++---------------------+
+| c                   |
++---------------------+
+| {"a":1640995200000} |
+| {"a":1640995200000} |
+| {"a":1643673600000} |
+| {"a":1643673600000} |
++---------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A093 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT json_object(KEY 'a' value CURRENT_TIMESTAMP) c
+   FROM test_json_cols);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A094 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT json_object('a':current_timestamp) c
+   FROM test_json_cols);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A095 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value c_empty_obj) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":{}}   |
+| {"a":{}}   |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A096 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':c_empty_obj) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":null} |
+| {"a":null} |
+| {"a":{}}   |
+| {"a":{}}   |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A097 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value c_empty_array) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":[]}   |
+| {"a":[]}   |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A098 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':c_empty_array) c
+FROM test_json_cols;
++------------+
+| c          |
++------------+
+| {"a":[]}   |
+| {"a":[]}   |
+| {"a":null} |
+| {"a":null} |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A099 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value c_empty_obj_nested) c
+FROM test_json_cols;
++-----------------------------------+
+| c                                 |
++-----------------------------------+
+| {"a":null}                        |
+| {"a":null}                        |
+| {"a":{"o1":{},"o2":[],"o3":null}} |
+| {"a":{"o1":{},"o2":[],"o3":null}} |
++-----------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A100 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':c_empty_obj_nested) c
+FROM test_json_cols;
++-----------------------------------+
+| c                                 |
++-----------------------------------+
+| {"a":null}                        |
+| {"a":null}                        |
+| {"a":{"o1":{},"o2":[],"o3":null}} |
+| {"a":{"o1":{},"o2":[],"o3":null}} |
++-----------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A101 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value c_empty_array_nested) c
+FROM test_json_cols;
++--------------------+
+| c                  |
++--------------------+
+| {"a":[{},[],null]} |
+| {"a":[{},[],null]} |
+| {"a":null}         |
+| {"a":null}         |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A102 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':c_empty_array_nested) c
+FROM test_json_cols;
++--------------------+
+| c                  |
++--------------------+
+| {"a":[{},[],null]} |
+| {"a":[{},[],null]} |
+| {"a":null}         |
+| {"a":null}         |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A103 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value c1) c
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A104 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':c1) c
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A105 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_query(c1, '$.a_array[0].a_obj')) c
+FROM test_json_cols;
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                        |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":null}                                                                                                                                                                                               |
+| {"a":null}                                                                                                                                                                                               |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A106 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_query(c1, '$.a_array[0].a_obj')) c
+FROM test_json_cols;
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                        |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":null}                                                                                                                                                                                               |
+| {"a":null}                                                                                                                                                                                               |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A107 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_object(KEY 'b' value 'B')) c
+FROM test_json_cols;
++-----------------+
+| c               |
++-----------------+
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
++-----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A108 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_object(KEY 'b' value 'B')) c
+FROM test_json_cols;
++-----------------+
+| c               |
++-----------------+
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
++-----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A109 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object(KEY 'a' value c1) IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A110 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object('a':c1) IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A111 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object(KEY 'a' value c1) IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A112 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object('a':c1) IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A113 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object(KEY 'a' value c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A114 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object('a':c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A115 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL json_object(KEY 'a' value c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A116 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL json_object('a':c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A117 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_object(KEY 'a' value c1) mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A118 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_object('a':c1) mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A119 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT DISTINCT json_object(KEY 'a' value c1) c
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A120 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT DISTINCT json_object('a':c1) c
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A121 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object(KEY 'a' value c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A122 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object('a':c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A123 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT c1,
+          json_object(KEY 'a' value c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A124 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT c1,
+          json_object('a':c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A125 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object(KEY 'a' value c1) = json_object(KEY 'a' value c1);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A126 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object('a':c1) = json_object('a':c1);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A127 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_object(KEY 'a' value t1.c1)=json_object(KEY 'a' value t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A128 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_object('a':t1.c1)=json_object('a':t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A129 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_object(KEY 'a' value t1.c1)=json_object(KEY 'a' value t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A130 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_object('a':t1.c1)=json_object('a':t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A131 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_object(KEY 'a' value t1.c1)=json_object(KEY 'a' value t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A132 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_object('a':t1.c1)=json_object('a':t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A133 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+ORDER BY __time;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A134 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+ORDER BY __time;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A135 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+LIMIT 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A136 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+LIMIT 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A137 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+OFFSET 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A138 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+OFFSET 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A139 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+UNION ALL
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A140 TYPE: NEGATIVE TEST
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+UNION ALL
+SELECT json_object('a':'b') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A141 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+
+SELECT json_object(KEY 'a' value c1)
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| EXPR$0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[JSON_OBJECT(FLAG(NULL_ON_NULL), 'a', $10)])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A142 TYPE: POSITIVE TEST
+#-------------------------------------------------------------------------
+
+SELECT json_object('a':c1)
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| EXPR$0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[JSON_OBJECT(FLAG(NULL_ON_NULL), 'a', $10)])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# Total query count 143 Positive tests: 98 Negative tests: 45
+#-------------------------------------------------------------------------
