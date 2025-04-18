@@ -66,7 +66,6 @@ public class ControllerHolder
 
   public ControllerHolder(
       final Controller controller,
-      final ControllerContext controllerContext,
       final String sqlQueryId,
       final String sql,
       final String controllerHost,
@@ -75,7 +74,7 @@ public class ControllerHolder
   )
   {
     this.controller = Preconditions.checkNotNull(controller, "controller");
-    this.controllerContext = controllerContext;
+    this.controllerContext = controller.getControllerContext();
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
     this.sql = sql;
     this.controllerHost = controllerHost;

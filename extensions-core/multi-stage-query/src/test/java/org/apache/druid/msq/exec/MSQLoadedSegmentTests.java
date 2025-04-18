@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -121,7 +121,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
     testSelectQuery()
         .setSql("select cnt, dim1 from foo")
         .setExpectedMSQSpec(
-            MSQSpec.builder()
+            LegacyMSQSpec.builder()
                    .query(
                        newScanQueryBuilder()
                            .dataSource(CalciteTests.DATASOURCE1)
@@ -185,7 +185,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
     testSelectQuery()
         .setSql("select cnt, dim1 from foo order by dim1")
         .setExpectedMSQSpec(
-            MSQSpec.builder()
+            LegacyMSQSpec.builder()
                    .query(
                        newScanQueryBuilder()
                            .dataSource(CalciteTests.DATASOURCE1)
@@ -244,7 +244,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
         .setExpectedMSQSpec(
-            MSQSpec.builder()
+            LegacyMSQSpec.builder()
                    .query(GroupByQuery.builder()
                                       .setDataSource(CalciteTests.DATASOURCE1)
                                       .setInterval(querySegmentSpec(Filtration
@@ -304,7 +304,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")
         .setExpectedMSQSpec(
-            MSQSpec.builder()
+            LegacyMSQSpec.builder()
                    .query(GroupByQuery.builder()
                                       .setDataSource(CalciteTests.DATASOURCE1)
                                       .setInterval(Intervals.of("2003-01-01T00:00:00.000Z/2005-01-01T00:00:00.000Z"))
@@ -353,7 +353,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")
         .setExpectedMSQSpec(
-            MSQSpec.builder()
+            LegacyMSQSpec.builder()
                    .query(GroupByQuery.builder()
                                       .setDataSource(CalciteTests.DATASOURCE1)
                                       .setInterval(Intervals.of("2003-01-01T00:00:00.000Z/2005-01-01T00:00:00.000Z"))

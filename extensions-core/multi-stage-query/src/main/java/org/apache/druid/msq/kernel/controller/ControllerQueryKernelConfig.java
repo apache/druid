@@ -214,6 +214,19 @@ public class ControllerQueryKernelConfig
     {
     }
 
+    public Builder(ControllerQueryKernelConfig controllerQueryKernelConfig)
+    {
+      this.maxRetainedPartitionSketchBytes = controllerQueryKernelConfig.maxRetainedPartitionSketchBytes;
+      this.maxConcurrentStages = controllerQueryKernelConfig.maxConcurrentStages;
+      this.pipeline = controllerQueryKernelConfig.pipeline;
+      this.durableStorage = controllerQueryKernelConfig.durableStorage;
+      this.faultTolerant = controllerQueryKernelConfig.faultTolerance;
+      this.destination = controllerQueryKernelConfig.destination;
+      this.controllerHost = controllerQueryKernelConfig.controllerHost;
+      this.workerIds = controllerQueryKernelConfig.workerIds;
+      this.workerContextMap = controllerQueryKernelConfig.workerContextMap;
+    }
+
     public Builder maxRetainedPartitionSketchBytes(final int maxRetainedPartitionSketchBytes)
     {
       this.maxRetainedPartitionSketchBytes = maxRetainedPartitionSketchBytes;
@@ -282,5 +295,10 @@ public class ControllerQueryKernelConfig
           workerContextMap
       );
     }
+  }
+
+  public Builder toBuilder()
+  {
+    return new Builder(this);
   }
 }

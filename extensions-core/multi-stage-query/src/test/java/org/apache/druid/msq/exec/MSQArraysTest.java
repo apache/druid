@@ -28,7 +28,7 @@ import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -781,7 +781,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ")")
                      .setQueryContext(adjustedContext)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -852,7 +852,7 @@ public class MSQArraysTest extends MSQTestBase
                              + ")\n"
                              + "ORDER BY arrayString DESC")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -916,7 +916,7 @@ public class MSQArraysTest extends MSQTestBase
                              + ")\n"
                              + "ORDER BY arrayLong")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -980,7 +980,7 @@ public class MSQArraysTest extends MSQTestBase
                              + ")\n"
                              + "ORDER BY arrayDouble")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -1029,7 +1029,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ")")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -1078,7 +1078,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ")")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(

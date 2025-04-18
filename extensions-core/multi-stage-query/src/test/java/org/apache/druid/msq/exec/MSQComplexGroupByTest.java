@@ -28,7 +28,7 @@ import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -400,7 +400,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " )\n"
                              + " ORDER BY 1")
                      .setQueryContext(ImmutableMap.of())
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(newScanQueryBuilder()
                                                         .dataSource(dataFileExternalDataSource)
@@ -459,7 +459,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " ORDER BY 1")
                      .setQueryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
                      .setExpectedMSQSpec(
-                         MSQSpec
+                         LegacyMSQSpec
                              .builder()
                              .query(
                                  GroupByQuery
@@ -551,7 +551,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " ORDER BY 1")
                      .setQueryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
                      .setExpectedMSQSpec(
-                         MSQSpec
+                         LegacyMSQSpec
                              .builder()
                              .query(
                                  GroupByQuery

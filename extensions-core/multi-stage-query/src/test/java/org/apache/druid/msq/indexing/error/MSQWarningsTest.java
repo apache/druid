@@ -25,7 +25,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -140,7 +140,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery)
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -168,7 +168,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -193,7 +193,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery)
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -222,7 +222,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery)
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -251,7 +251,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -282,7 +282,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -311,7 +311,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(
                                     defaultQuery.withOverriddenContext(userContext)
                                                 .withOverriddenContext(
@@ -345,7 +345,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery)
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -421,7 +421,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1566172800000L, 10L}))
                      .setExpectedMSQSpec(
-                         MSQSpec.builder()
+                         LegacyMSQSpec.builder()
                                 .query(defaultQuery.withOverriddenContext(userContext))
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())

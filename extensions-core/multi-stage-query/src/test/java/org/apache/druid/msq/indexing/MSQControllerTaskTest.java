@@ -55,9 +55,9 @@ public class MSQControllerTaskTest
       Intervals.of("2011-04-01/2011-04-03")
   );
 
-  private static MSQSpec.Builder msqSpecBuilder()
+  private static LegacyMSQSpec.Builder msqSpecBuilder()
   {
-    return MSQSpec
+    return LegacyMSQSpec
         .builder()
         .destination(
             new DataSourceMSQDestination("target", Granularities.DAY, null, INTERVALS, null, null, null)
@@ -96,7 +96,7 @@ public class MSQControllerTaskTest
   @Test
   public void testGetLookupLoadingSpecUsingLookupLoadingInfoInContext()
   {
-    MSQSpec.Builder builder = MSQSpec
+    LegacyMSQSpec.Builder builder = LegacyMSQSpec
         .builder()
         .query(new Druids.ScanQueryBuilder()
                    .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
@@ -224,7 +224,7 @@ public class MSQControllerTaskTest
     );
   }
 
-  private static MSQControllerTask createControllerTask(MSQSpec.Builder specBuilder)
+  private static MSQControllerTask createControllerTask(LegacyMSQSpec.Builder specBuilder)
   {
     return new MSQControllerTask("controller_1", specBuilder.build(), null, null, null, null, null, null, null);
   }

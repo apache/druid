@@ -45,7 +45,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
@@ -57,6 +57,7 @@ import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -91,6 +92,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -233,7 +235,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    MSQSpec msqSpec = new MSQSpec(
+    LegacyMSQSpec msqSpec = new LegacyMSQSpec(
         GroupByQuery.builder()
                     .setDataSource("foo")
                     .setInterval(Intervals.ONLY_ETERNITY)
@@ -276,7 +278,9 @@ public class MSQInsertTest extends MSQTestBase
             null
         ),
         WorkerAssignmentStrategy.MAX,
-        MSQTuningConfig.defaultConfig()
+        MSQTuningConfig.defaultConfig(),
+        Collections.emptyList(),
+        QueryContext.empty()
     );
 
     ImmutableMap<String, Object> sqlContext =
