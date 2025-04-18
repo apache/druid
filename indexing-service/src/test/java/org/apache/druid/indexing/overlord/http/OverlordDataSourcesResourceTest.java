@@ -70,7 +70,6 @@ public class OverlordDataSourcesResourceTest
     TaskMaster taskMaster = new TaskMaster(null, null);
     dataSourcesResource = new OverlordDataSourcesResource(
         taskMaster,
-        segmentsMetadataManager,
         metadataStorageCoordinator,
         auditManager
     );
@@ -220,7 +219,7 @@ public class OverlordDataSourcesResourceTest
     verifyNumSegmentsUpdated(10, response);
 
     final ImmutableDruidDataSource dataSource = segmentsMetadataManager
-        .getImmutableDataSourceWithUsedSegments(TestDataSource.WIKI);
+        .getDataSourceSnapshot().getDataSource(TestDataSource.WIKI);
     Assert.assertNotNull(dataSource);
 
     final Collection<DataSegment> usedSegments = dataSource.getSegments();

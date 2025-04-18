@@ -143,7 +143,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
    * the theoretical situation of two tasks scheduled in {@link #start()} calling {@link #poll()} concurrently, if
    * the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions occurs quickly.
    *
-   * {@link SqlSegmentsMetadataManager} also have a similar issue.
+   * {@link SegmentsMetadataManager} also has a similar issue.
    */
   private long currentStartOrder = -1;
   private ScheduledExecutorService exec = null;

@@ -41,8 +41,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -109,7 +109,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
-  private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final SegmentsMetadataManager segmentsMetadataManager;
   private final Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
   private final ServiceEmitter emitter;
   private volatile SegmentReplicationStatus segmentReplicationStatus = null;
@@ -134,7 +134,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       ServiceEmitter emitter,
       SegmentSchemaCache segmentSchemaCache,
       SegmentSchemaBackFillQueue segmentSchemaBackfillQueue,
-      SqlSegmentsMetadataManager sqlSegmentsMetadataManager,
+      SegmentsMetadataManager segmentsMetadataManager,
       Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier
   )
   {
@@ -143,7 +143,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.segmentSchemaCache = segmentSchemaCache;
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
-    this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
+    this.segmentsMetadataManager = segmentsMetadataManager;
     this.segmentsMetadataManagerConfigSupplier = segmentsMetadataManagerConfigSupplier;
     this.emitter = emitter;
     this.coldSchemaExec = Execs.scheduledSingleThreaded("DruidColdSchema-ScheduledExecutor-%d");
@@ -437,12 +437,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       final DataSourceInformation cold
   )
   {
-    if (hot == null && cold == null) {
-      return Optional.empty();
-    } else if (hot != null && cold == null) {
+    if (hot == null) {
+      return Optional.ofNullable(cold);
+    } else if (cold == null) {
       return Optional.of(hot);
-    } else if (hot == null && cold != null) {
-      return Optional.of(cold);
     } else {
       final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
 
@@ -572,7 +570,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     int datasources = 0, dataSourceWithColdSegments = 0, totalColdSegments = 0;
 
     Collection<ImmutableDruidDataSource> immutableDataSources =
-        sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
+        segmentsMetadataManager.getDataSourceSnapshot().getDataSourcesWithAllUsedSegments();
 
     for (ImmutableDruidDataSource dataSource : immutableDataSources) {
       datasources++;
@@ -884,7 +882,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
 
     ImmutableDruidDataSource druidDataSource =
-        sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(segment.getDataSource());
+        segmentsMetadataManager.getDataSourceSnapshot().getDataSource(segment.getDataSource());
 
     if (druidDataSource != null && druidDataSource.getSegment(id) != null) {
       markSegmentAsNeedRefresh(id);

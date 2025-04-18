@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -33,13 +32,16 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.curator.shaded.com.google.common.base.Charsets;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -76,7 +78,9 @@ import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -739,15 +743,19 @@ public class DataSourcesResourceTest
             .andThrow(new RuntimeException(new HttpResponseException(responseHolder))).once();
     EasyMock.replay(overlordClient);
 
-    EasyMock.expect(segmentsMetadataManager.markSegmentAsUsed(segment.getId().toString()))
-            .andReturn(true).once();
-    EasyMock.replay(segmentsMetadataManager);
-
     Response response = dataSourcesResource.markSegmentAsUsed(segment.getDataSource(), segment.getId().toString());
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new SegmentUpdateResponse(1), response.getEntity());
+    Assert.assertEquals(404, response.getStatus());
 
-    EasyMock.verify(overlordClient, segmentsMetadataManager);
+    final Object payload = response.getEntity();
+    Assert.assertTrue(payload instanceof ErrorResponse);
+
+    final ErrorResponse errorResponse = (ErrorResponse) payload;
+    Assert.assertEquals(
+        "Could not update segments since Overlord is on an older version.",
+        errorResponse.getAsMap().get("errorMessage")
+    );
+
+    EasyMock.verify(overlordClient);
   }
 
   @Test
@@ -1433,15 +1441,10 @@ public class DataSourcesResourceTest
   @Test
   public void testGetDatasourceLoadstatusNoSegmentForInterval()
   {
-    List<DataSegment> segments = ImmutableList.of();
     // Test when datasource fully loaded
     EasyMock.expect(
-        segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
-            EasyMock.eq(TestDataSource.WIKI),
-            EasyMock.anyObject(Interval.class),
-            EasyMock.anyBoolean()
-        )
-    ).andReturn(Optional.of(segments)).once();
+        segmentsMetadataManager.getDataSourceSnapshot()
+    ).andReturn(DataSourcesSnapshot.fromUsedSegments(List.of())).once();
     EasyMock.replay(segmentsMetadataManager);
 
     Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, null, null);
@@ -1451,9 +1454,10 @@ public class DataSourcesResourceTest
   @Test
   public void testGetDatasourceLoadstatusDefault()
   {
+    final DateTime now = DateTimes.nowUtc();
     DataSegment datasource1Segment1 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-01/P1D"),
+        new Interval(now.minusDays(5), Period.days(1)),
         "",
         null,
         null,
@@ -1465,7 +1469,7 @@ public class DataSourcesResourceTest
 
     DataSegment datasource1Segment2 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-22/P1D"),
+        new Interval(now.minusDays(4), Period.days(1)),
         "",
         null,
         null,
@@ -1476,7 +1480,7 @@ public class DataSourcesResourceTest
     );
     DataSegment datasource2Segment1 = new DataSegment(
         TestDataSource.KOALA,
-        Intervals.of("2010-01-01/P1D"),
+        new Interval(now.minusDays(3), Period.days(1)),
         "",
         null,
         null,
@@ -1496,8 +1500,8 @@ public class DataSourcesResourceTest
     );
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq(TestDataSource.WIKI), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
-            .andReturn(Optional.of(segments)).once();
+    EasyMock.expect(segmentsMetadataManager.getDataSourceSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(completedLoadInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
@@ -1511,8 +1515,8 @@ public class DataSourcesResourceTest
     EasyMock.reset(segmentsMetadataManager, inventoryView);
 
     // Test when datasource half loaded
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq(TestDataSource.WIKI), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
-            .andReturn(Optional.of(segments)).once();
+    EasyMock.expect(segmentsMetadataManager.getDataSourceSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(halfLoadedInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
@@ -1528,9 +1532,10 @@ public class DataSourcesResourceTest
   @Test
   public void testGetDatasourceLoadstatusSimple()
   {
+    final DateTime now = DateTimes.nowUtc();
     DataSegment datasource1Segment1 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-01/P1D"),
+        new Interval(now.minusDays(5), Period.days(1)),
         "",
         null,
         null,
@@ -1542,7 +1547,7 @@ public class DataSourcesResourceTest
 
     DataSegment datasource1Segment2 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-22/P1D"),
+        new Interval(now.minusDays(4), Period.days(1)),
         "",
         null,
         null,
@@ -1553,7 +1558,7 @@ public class DataSourcesResourceTest
     );
     DataSegment datasource2Segment1 = new DataSegment(
         TestDataSource.KOALA,
-        Intervals.of("2010-01-01/P1D"),
+        new Interval(now.minusDays(3), Period.days(1)),
         "",
         null,
         null,
@@ -1573,8 +1578,8 @@ public class DataSourcesResourceTest
     );
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq(TestDataSource.WIKI), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
-            .andReturn(Optional.of(segments)).once();
+    EasyMock.expect(segmentsMetadataManager.getDataSourceSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(completedLoadInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
@@ -1588,8 +1593,8 @@ public class DataSourcesResourceTest
     EasyMock.reset(segmentsMetadataManager, inventoryView);
 
     // Test when datasource half loaded
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq(TestDataSource.WIKI), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
-            .andReturn(Optional.of(segments)).once();
+    EasyMock.expect(segmentsMetadataManager.getDataSourceSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(halfLoadedInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
 
@@ -1605,9 +1610,10 @@ public class DataSourcesResourceTest
   @Test
   public void testGetDatasourceLoadstatusFull()
   {
+    final DateTime now = DateTimes.nowUtc();
     DataSegment datasource1Segment1 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-01/P1D"),
+        new Interval(now.minusDays(4), Period.days(1)),
         "",
         null,
         null,
@@ -1619,7 +1625,7 @@ public class DataSourcesResourceTest
 
     DataSegment datasource1Segment2 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-22/P1D"),
+        new Interval(now.minusDays(3), Period.days(1)),
         "",
         null,
         null,
@@ -1639,10 +1645,10 @@ public class DataSourcesResourceTest
     underReplicationCountsPerDataSourcePerTier.put("tier2", tier2);
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq(TestDataSource.WIKI), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
-            .andReturn(Optional.of(segments)).once();
+    EasyMock.expect(segmentsMetadataManager.getDataSourceSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, false))
+    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(EasyMock.anyObject(), EasyMock.eq(false)))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);
@@ -1663,9 +1669,10 @@ public class DataSourcesResourceTest
   @Test
   public void testGetDatasourceLoadstatusFullAndComputeUsingClusterView()
   {
+    final DateTime now = DateTimes.nowUtc();
     DataSegment datasource1Segment1 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-01/P1D"),
+        new Interval(now.minusDays(5), Period.days(1)),
         "",
         null,
         null,
@@ -1677,7 +1684,7 @@ public class DataSourcesResourceTest
 
     DataSegment datasource1Segment2 = new DataSegment(
         TestDataSource.WIKI,
-        Intervals.of("2010-01-22/P1D"),
+        new Interval(now.minusDays(4), Period.days(1)),
         "",
         null,
         null,
@@ -1697,10 +1704,10 @@ public class DataSourcesResourceTest
     underReplicationCountsPerDataSourcePerTier.put("tier2", tier2);
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq(TestDataSource.WIKI), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
-            .andReturn(Optional.of(segments)).once();
+    EasyMock.expect(segmentsMetadataManager.getDataSourceSnapshot())
+            .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, true))
+    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(EasyMock.anyObject(), EasyMock.eq(true)))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);

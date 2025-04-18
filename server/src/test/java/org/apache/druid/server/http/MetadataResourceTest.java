@@ -56,7 +56,6 @@ import org.mockito.stubbing.Answer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -105,12 +104,12 @@ public class MetadataResourceTest
 
     DataSourcesSnapshot dataSourcesSnapshot = Mockito.mock(DataSourcesSnapshot.class);
     Mockito.doReturn(dataSourcesSnapshot)
-           .when(segmentsMetadataManager).getSnapshotOfDataSourcesWithAllUsedSegments();
+           .when(segmentsMetadataManager).getDataSourceSnapshot();
     Mockito.doReturn(ImmutableList.of(druidDataSource1))
            .when(dataSourcesSnapshot).getDataSourcesWithAllUsedSegments();
     Mockito.doReturn(druidDataSource1)
-           .when(segmentsMetadataManager)
-           .getImmutableDataSourceWithUsedSegments(DATASOURCE1);
+           .when(dataSourcesSnapshot)
+           .getDataSource(DATASOURCE1);
 
     coordinator = Mockito.mock(DruidCoordinator.class);
     Mockito.doReturn(2).when(coordinator).getReplicationFactor(segments[0].getId());
@@ -132,7 +131,7 @@ public class MetadataResourceTest
            .retrieveSegmentForId(DATASOURCE1, segments[5].getId().toString());
 
     Mockito.doAnswer(mockIterateAllUnusedSegmentsForDatasource())
-           .when(segmentsMetadataManager)
+           .when(storageCoordinator)
            .iterateAllUnusedSegmentsForDatasource(
                ArgumentMatchers.any(),
                ArgumentMatchers.any(),

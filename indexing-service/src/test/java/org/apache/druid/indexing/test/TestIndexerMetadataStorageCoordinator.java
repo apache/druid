@@ -30,9 +30,11 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -81,6 +83,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
   {
     return false;
+  }
+
+  @Override
+  public Set<String> retrieveAllDatasourceNames()
+  {
+    return Set.of();
   }
 
   @Override
@@ -339,6 +347,58 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   )
   {
     return Map.of();
+  }
+
+  @Override
+  public List<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @org.jetbrains.annotations.Nullable Interval interval,
+      @org.jetbrains.annotations.Nullable Integer limit,
+      @org.jetbrains.annotations.Nullable String lastSegmentId,
+      @org.jetbrains.annotations.Nullable SortOrder sortOrder
+  )
+  {
+    return List.of();
+  }
+
+  @Override
+  public List<Interval> getUnusedSegmentIntervals(
+      String dataSource,
+      DateTime minStartTime,
+      DateTime maxEndTime,
+      int limit,
+      DateTime maxUsedStatusLastUpdatedTime
+  )
+  {
+    return List.of();
+  }
+
+  @Override
+  public int markAllNonOvershadowedSegmentsAsUsed(String dataSource)
+  {
+    return 0;
+  }
+
+  @Override
+  public int markNonOvershadowedSegmentsAsUsed(
+      String dataSource,
+      Interval interval,
+      @org.jetbrains.annotations.Nullable List<String> versions
+  )
+  {
+    return 0;
+  }
+
+  @Override
+  public int markNonOvershadowedSegmentsAsUsed(String dataSource, Set<SegmentId> segmentIds)
+  {
+    return 0;
+  }
+
+  @Override
+  public boolean markSegmentAsUsed(SegmentId segmentId)
+  {
+    return false;
   }
 
   @Override

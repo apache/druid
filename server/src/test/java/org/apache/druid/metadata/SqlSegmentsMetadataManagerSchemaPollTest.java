@@ -53,30 +53,13 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
   @Before
   public void setUp() throws Exception
   {
-    connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.seconds(3), null);
-
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    setUp(derbyConnectorRule);
+    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
         connector
     );
-
-    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
-        jsonMapper,
-        Suppliers.ofInstance(config),
-        derbyConnectorRule.metadataTablesConfigSupplier(),
-        connector,
-        segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance()
-    );
-    sqlSegmentsMetadataManager.start();
-    storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
-
-    connector.createSegmentSchemasTable();
-    connector.createSegmentTable();
 
     publishSegment(segment1);
     publishSegment(segment2);
@@ -85,10 +68,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
   @After
   public void teardown()
   {
-    if (sqlSegmentsMetadataManager.isPollingDatabasePeriodically()) {
-      sqlSegmentsMetadataManager.stopPollingDatabasePeriodically();
-    }
-    sqlSegmentsMetadataManager.stop();
+    teardownManager();
   }
 
   @Test(timeout = 60_000)
@@ -160,10 +140,6 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     Assert.assertEquals(schemaMetadata2, segmentSchemaCache.getSchemaForSegment(segment2.getId()).get());
 
     dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
-    Assert.assertEquals(
-        ImmutableSet.of("wikipedia"),
-        sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
-    );
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()

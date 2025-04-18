@@ -2543,8 +2543,8 @@ public class IndexTaskTest extends IngestionTestBase
   {
     return Sets.newHashSet(
         getSegmentsMetadataManager()
-            .iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true)
-            .get()
+            .getDataSourceSnapshot()
+            .getAllUsedNonOvershadowedSegments(DATASOURCE, Intervals.ETERNITY)
     );
   }
 

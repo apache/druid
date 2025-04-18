@@ -4068,7 +4068,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
   private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    insertUsedSegments(segments, upgradedFromSegmentIdMap, derbyConnector, table, mapper);
+    insertUsedSegments(segments, upgradedFromSegmentIdMap, derbyConnectorRule, mapper);
   }
 }

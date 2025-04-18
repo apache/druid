@@ -59,7 +59,6 @@ public class DruidOverlord
 
   private final DruidLeaderSelector overlordLeaderSelector;
   private final DruidLeaderSelector.Listener leadershipListener;
-  private final SegmentMetadataCache segmentMetadataCache;
 
   private final ReentrantLock giant = new ReentrantLock(true);
 
@@ -99,7 +98,6 @@ public class DruidOverlord
   )
   {
     this.overlordLeaderSelector = overlordLeaderSelector;
-    this.segmentMetadataCache = segmentMetadataCache;
 
     final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
                            selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
@@ -227,7 +225,6 @@ public class DruidOverlord
     giant.lock();
 
     try {
-      segmentMetadataCache.start();
       overlordLeaderSelector.registerListener(leadershipListener);
     }
     finally {
@@ -247,7 +244,6 @@ public class DruidOverlord
     try {
       gracefulStopLeaderLifecycle();
       overlordLeaderSelector.unregisterListener();
-      segmentMetadataCache.stop();
     }
     finally {
       giant.unlock();

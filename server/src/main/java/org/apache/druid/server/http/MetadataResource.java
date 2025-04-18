@@ -114,9 +114,9 @@ public class MetadataResource
     Collection<ImmutableDruidDataSource> druidDataSources = null;
     final TreeSet<String> dataSourceNamesPreAuth;
     if (includeUnused) {
-      dataSourceNamesPreAuth = new TreeSet<>(segmentsMetadataManager.retrieveAllDataSourceNames());
+      dataSourceNamesPreAuth = new TreeSet<>(metadataStorageCoordinator.retrieveAllDatasourceNames());
     } else {
-      druidDataSources = segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
+      druidDataSources = segmentsMetadataManager.getDataSourceSnapshot().getDataSourcesWithAllUsedSegments();
       dataSourceNamesPreAuth = druidDataSources
           .stream()
           .map(ImmutableDruidDataSource::getName)
@@ -171,7 +171,7 @@ public class MetadataResource
       }
 
       Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
-          segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
+          segmentsMetadataManager.getDataSourceSnapshot().getDataSourcesWithAllUsedSegments();
       if (dataSources != null && !dataSources.isEmpty()) {
         dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
             .stream()
@@ -206,7 +206,7 @@ public class MetadataResource
       String includeRealtimeSegments
   )
   {
-    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
+    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getDataSourceSnapshot();
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments();
     if (dataSources != null && !dataSources.isEmpty()) {
@@ -295,7 +295,7 @@ public class MetadataResource
   public Response getDataSourceWithUsedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
     ImmutableDruidDataSource dataSource =
-        segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
+        segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -313,7 +313,7 @@ public class MetadataResource
   )
   {
     ImmutableDruidDataSource dataSource =
-        segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
+        segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -380,7 +380,7 @@ public class MetadataResource
       final SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
 
       final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
-      final Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+      final Iterable<DataSegmentPlus> unusedSegments = metadataStorageCoordinator.iterateAllUnusedSegmentsForDatasource(
           dataSource,
           theInterval,
           limit,
@@ -413,7 +413,7 @@ public class MetadataResource
       @QueryParam("includeUnused") @Nullable Boolean includeUnused
   )
   {
-    ImmutableDruidDataSource dataSource = segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
+    ImmutableDruidDataSource dataSource = segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -495,5 +495,10 @@ public class MetadataResource
                      .build();
     }
     return Response.status(Response.Status.OK).entity(broadcastSegments).build();
+  }
+
+  private ImmutableDruidDataSource getImmutableDatasource(String dataSource)
+  {
+    return segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSource);
   }
 }

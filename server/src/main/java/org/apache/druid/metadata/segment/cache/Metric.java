@@ -105,6 +105,11 @@ public class Metric
    */
   public static final String RETRIEVE_PENDING_SEGMENTS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchPending/time";
 
+  /**
+   * Time taken to update the datasource snapshot in the cache.
+   */
+  public static final String UPDATE_SNAPSHOT_DURATION_MILLIS = METRIC_NAME_PREFIX + "updateSnapshot/time";
+
 
   // CACHE UPDATE METRICS
 
