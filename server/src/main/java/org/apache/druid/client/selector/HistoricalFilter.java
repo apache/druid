@@ -25,7 +25,6 @@ import org.apache.druid.client.CoordinatorDynamicConfigView;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.query.CloneQueryMode;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -34,6 +33,7 @@ import java.util.stream.Collectors;
 public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<QueryableDruidServer>>, Int2ObjectRBTreeMap<Set<QueryableDruidServer>>>
 {
   public static final HistoricalFilter IDENTITY_FILTER = new HistoricalFilter(ImmutableSet::of);
+  private final Supplier<Set<String>> serversToIgnoreSupplier;
 
   public HistoricalFilter(Supplier<Set<String>> serversToIgnoreSupplier)
   {
@@ -43,31 +43,31 @@ public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<Querya
   public HistoricalFilter(CoordinatorDynamicConfigView configView, CloneQueryMode cloneQueryMode)
   {
     this.serversToIgnoreSupplier = () -> {
-      final Set<String> serversToIgnore = new HashSet<>();
-
       switch (cloneQueryMode) {
-        case ONLY:
+        case CLONE_PREFERRED:
           // Remove clone sources, so that targets are queried.
-          serversToIgnore.addAll(configView.getSourceCloneServers());
-          break;
+          return configView.getSourceCloneServers();
         case EXCLUDE:
           // Remove clone sources, so that targets are queried.
-          serversToIgnore.addAll(configView.getTargetCloneServers());
-          break;
+          return configView.getTargetCloneServers();
         case INCLUDE:
           // Don't remove either
-          break;
+          return ImmutableSet.of();
+        default:
+          throw new IllegalStateException("Unexpected value: " + cloneQueryMode);
       }
-      return serversToIgnore;
     };
   }
-
-  private final Supplier<Set<String>> serversToIgnoreSupplier;
 
   @Override
   public Int2ObjectRBTreeMap<Set<QueryableDruidServer>> apply(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers)
   {
-    final Set<String> serversToIgnore = serversToIgnoreSupplier.get();
+    Set<String> serversToIgnore = serversToIgnoreSupplier.get();
+
+    if (serversToIgnore.isEmpty()) {
+      return historicalServers;
+    }
+
     final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredHistoricals = new Int2ObjectRBTreeMap<>();
     for (int priority : historicalServers.keySet()) {
       Set<QueryableDruidServer> servers = historicalServers.get(priority);

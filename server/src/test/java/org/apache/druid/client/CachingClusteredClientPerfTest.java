@@ -67,6 +67,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -140,7 +141,7 @@ public class CachingClusteredClientPerfTest
         ForkJoinPool.commonPool(),
         queryScheduler,
         new NoopServiceEmitter(),
-        null
+        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
     );
 
     Query<SegmentDescriptor> fakeQuery = makeFakeQuery(interval);

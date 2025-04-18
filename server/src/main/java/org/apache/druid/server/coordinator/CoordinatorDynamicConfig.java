@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -189,6 +190,30 @@ public class CoordinatorDynamicConfig
     }
 
     return validDebugDimensions;
+  }
+
+  public CoordinatorDynamicConfig snapshot()
+  {
+    return new CoordinatorDynamicConfig(
+        markSegmentAsUnusedDelayMillis,
+        maxSegmentsToMove,
+        replicantLifetime,
+        replicationThrottleLimit,
+        balancerComputeThreads,
+        ImmutableSet.copyOf(specificDataSourcesToKillUnusedSegmentsIn),
+        killTaskSlotRatio,
+        maxKillTaskSlots,
+        ImmutableSet.copyOf(dataSourcesToNotKillStalePendingSegmentsIn),
+        maxSegmentsInNodeLoadingQueue,
+        ImmutableSet.copyOf(decommissioningNodes),
+        pauseCoordination,
+        replicateAfterLoadTimeout,
+        useRoundRobinSegmentAssignment,
+        smartSegmentLoading,
+        ImmutableMap.copyOf(debugDimensions),
+        ImmutableSet.copyOf(turboLoadingNodes),
+        ImmutableMap.copyOf(cloneServers)
+    );
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)

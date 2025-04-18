@@ -178,7 +178,7 @@ public class CoordinatorResource
   @Path("/cloneStatus")
   @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCloneStatus(@QueryParam("targetServer") String targetServer)
+  public Response getCloneStatus(@QueryParam("targetServer") @Nullable String targetServer)
   {
     if (targetServer != null) {
       CloneStatusMetrics statusForServer = cloneStatusManager.getStatusForServer(targetServer);

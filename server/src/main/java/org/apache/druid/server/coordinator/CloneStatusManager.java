@@ -84,7 +84,7 @@ public class CloneStatusManager
       newStatusMap.put(targetServerName, newStatus);
     }
 
-    cloneStatusSnapshot.set(newStatusMap);
+    cloneStatusSnapshot.set(ImmutableMap.copyOf(newStatusMap));
   }
 }
 

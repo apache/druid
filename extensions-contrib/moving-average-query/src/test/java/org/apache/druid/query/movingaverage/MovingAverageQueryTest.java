@@ -34,6 +34,7 @@ import com.google.inject.util.Providers;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.TestCoordinatorDynamicConfigView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -94,6 +95,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
@@ -366,7 +368,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new NoopServiceEmitter(),
-        null
+        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

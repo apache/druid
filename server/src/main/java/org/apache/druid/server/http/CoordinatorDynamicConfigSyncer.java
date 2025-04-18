@@ -144,8 +144,8 @@ public class CoordinatorDynamicConfigSyncer
     final CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
     if (!currentDynamicConfig.equals(lastKnownConfig.get())) {
       // Config has changed, clear the inSync list.
-      lastKnownConfig.set(currentDynamicConfig);
       inSyncBrokers.clear();
+      lastKnownConfig.set(currentDynamicConfig);
     }
   }
 

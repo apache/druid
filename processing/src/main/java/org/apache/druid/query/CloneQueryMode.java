@@ -21,7 +21,7 @@ package org.apache.druid.query;
 
 public enum CloneQueryMode
 {
-  ONLY,
+  CLONE_PREFERRED,
   INCLUDE,
   EXCLUDE
 }

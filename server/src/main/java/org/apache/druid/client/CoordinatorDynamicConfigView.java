@@ -19,20 +19,29 @@
 
 package org.apache.druid.client;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
-import java.util.HashSet;
+import javax.validation.constraints.NotNull;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class CoordinatorDynamicConfigView
 {
   private static final Logger log = new Logger(CoordinatorDynamicConfigView.class);
   private final CoordinatorClient coordinatorClient;
+
+  @GuardedBy("this")
+  private CoordinatorDynamicConfig config;
+  @GuardedBy("this")
+  private Set<String> sourceCloneServers;
+  @GuardedBy("this")
+  private Set<String> targetCloneServers;
 
   @Inject
   public CoordinatorDynamicConfigView(CoordinatorClient coordinatorClient)
@@ -40,38 +49,44 @@ public class CoordinatorDynamicConfigView
     this.coordinatorClient = coordinatorClient;
   }
 
-  private final AtomicReference<CoordinatorDynamicConfig> config = new AtomicReference<>();
-
-  public CoordinatorDynamicConfig getConfig()
+  public synchronized CoordinatorDynamicConfig getDynamicConfiguration()
   {
-    return config.get();
+    return config;
   }
 
-  public Set<String> getTargetCloneServers()
+  public synchronized void setDynamicConfiguration(@NotNull CoordinatorDynamicConfig updatedConfig)
   {
-    CoordinatorDynamicConfig coordinatorDynamicConfig = config.get();
-    return coordinatorDynamicConfig.getCloneServers().keySet();
+    config = updatedConfig.snapshot();
+    Map<String, String> cloneServers = config.getCloneServers();
+    sourceCloneServers = ImmutableSet.copyOf(cloneServers.keySet());
+    targetCloneServers = ImmutableSet.copyOf(cloneServers.values());
   }
 
-  public Set<String> getSourceCloneServers()
+  public synchronized Set<String> getSourceCloneServers()
   {
-    CoordinatorDynamicConfig coordinatorDynamicConfig = config.get();
-    return new HashSet<>(coordinatorDynamicConfig.getCloneServers().values());
+    return sourceCloneServers;
   }
 
-  public void updateCloneServers(CoordinatorDynamicConfig updatedConfig)
+  public synchronized Set<String> getTargetCloneServers()
   {
-    config.set(updatedConfig);
+    return targetCloneServers;
   }
 
   @LifecycleStart
-  public void start() throws Exception
+  public void start()
   {
-    log.info("Fetching coordinator dynamic configuration.");
+    try {
+      log.info("Fetching coordinator dynamic configuration.");
 
-    CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
-    updateCloneServers(coordinatorDynamicConfig);
+      CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
+      setDynamicConfiguration(coordinatorDynamicConfig);
 
-    log.info("Successfully initialized dynamic config: [%s]", coordinatorDynamicConfig);
+      log.info("Successfully initialized dynamic config: [%s]", coordinatorDynamicConfig);
+    }
+    catch (Exception e) {
+      // If the fetch fails, the broker should not serve queries. Throw the exception and try again on restart.
+      log.error(e, "Failed to initialize coordinator dynamic config");
+      throw new RuntimeException(e);
+    }
   }
 }

@@ -32,11 +32,13 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -95,7 +97,7 @@ public class BrokerQueryResource extends QueryResource
       InputStream in,
       @QueryParam("pretty") String pretty,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
-      @QueryParam("cloneQueryMode") CloneQueryMode cloneQueryMode,
+      @QueryParam("cloneQueryMode") @Nullable CloneQueryMode cloneQueryMode,
       @Context final HttpServletRequest req
   ) throws IOException
   {
@@ -103,7 +105,7 @@ public class BrokerQueryResource extends QueryResource
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
       ExecutionVertex ev = ExecutionVertex.of(query);
-      HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode == null ? CloneQueryMode.EXCLUDE : cloneQueryMode);
+      HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode == null ? QueryContexts.DEFAULT_CLONE_QUERY_MODE : cloneQueryMode);
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,

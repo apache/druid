@@ -48,18 +48,18 @@ public class DruidInternalDynamicConfigResource
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   @Path("/coordinatorDynamicConfig")
-  public Response getDatasource()
+  public Response getDynamicConfig()
   {
-    return Response.ok(coordinatorDynamicConfigView.getConfig()).build();
+    return Response.ok(coordinatorDynamicConfigView.getDynamicConfiguration()).build();
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
   @Path("/coordinatorDynamicConfig")
-  public Response setDatasource(final CoordinatorDynamicConfig dynamicConfig)
+  public Response setDynamicConfig(final CoordinatorDynamicConfig dynamicConfig)
   {
-    coordinatorDynamicConfigView.updateCloneServers(dynamicConfig);
+    coordinatorDynamicConfigView.setDynamicConfiguration(dynamicConfig);
     return Response.ok("OK").build();
   }
 }
