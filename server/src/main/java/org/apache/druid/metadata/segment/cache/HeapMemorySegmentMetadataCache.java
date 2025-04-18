@@ -38,8 +38,6 @@ import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -161,7 +159,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
 
   @Override
-  @LifecycleStart
   public void start()
   {
     if (!isEnabled()) {
@@ -198,7 +195,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  @LifecycleStop
   public void stop()
   {
     synchronized (cacheStateLock) {

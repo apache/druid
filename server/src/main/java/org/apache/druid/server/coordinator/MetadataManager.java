@@ -81,6 +81,16 @@ public class MetadataManager
     segmentsMetadataManager.stopAsyncUsedFlagLastUpdatedUpdate();
   }
 
+  public void startCache()
+  {
+    segmentMetadataCache.start();
+  }
+
+  public void stopCache()
+  {
+    segmentMetadataCache.stop();
+  }
+
   public boolean isStarted()
   {
     return segmentsMetadataManager.isPollingDatabasePeriodically();

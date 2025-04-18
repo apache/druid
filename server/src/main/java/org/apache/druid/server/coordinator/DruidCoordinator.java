@@ -364,6 +364,7 @@ public class DruidCoordinator
       }
       started = true;
 
+      metadataManager.startCache();
       coordLeaderSelector.registerListener(
           new DruidLeaderSelector.Listener()
           {
@@ -392,6 +393,7 @@ public class DruidCoordinator
       }
 
       coordLeaderSelector.unregisterListener();
+      metadataManager.stopCache();
       started = false;
       stopAllDutyGroups();
     }

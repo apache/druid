@@ -99,11 +99,11 @@ public class SQLMetadataStorageDruidModule implements Module
             .to(SQLMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
-    // SegmentMetadataCache is bound for all services but is used only by the Overlord
-    // Similar to some other classes bound here, such as IndexerSQLMetadataStorageCoordinator
+    // SegmentMetadataCache is bound for all services but is used only by the Overlord and Coordinator
+    // similar to some other classes bound here, such as IndexerSQLMetadataStorageCoordinator
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
-          .in(ManageLifecycle.class);
+          .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SegmentMetadataTransactionFactory.class))
             .addBinding(type)
