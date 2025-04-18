@@ -26,17 +26,53 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
-## Announcements
+## 33.0.0 
 
-#### Front-coded dictionaries
+### Upgrade notes
 
-Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+#### `useMaxMemoryEstimates`
 
-Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
+`useMaxMemoryEstimates` is now set to false for MSQ task engine tasks. Additionally, the property has been deprecated and will be removed in a future release. Setting this to false allows for better on-heap memory estimation.
 
-For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
+[#17792](https://github.com/apache/druid/pull/17792)
 
-If you're already using this feature, you don't need to take any action. 
+#### Automatic kill tasks interval
+
+Automatic kill tasks are now limited to 30 days or fewer worth of segments per task.
+
+The previous behavior (no limit on interval per kill task) can be restored by setting `druid.coordinator.kill.maxInterval = P0D`.
+
+[#17680](https://github.com/apache/druid/pull/17680)
+
+#### Kubernetes deployments
+
+By default, the Docker image now uses the canonical hostname if you're running Druid in Kubernetes. Otherwise, it uses the IP address otherwise [#17697](https://github.com/apache/druid/pull/17697) 
+
+#### Updated configs
+
+Various configs were deprecated in a previous release and have now been removed. The following table lists the removed configs and their replacements:
+
+| Removed config | Replacement config|
+|-|-|
+|`druid.processing.merge.task.initialYieldNumRows `|`druid.processing.merge.initialYieldNumRows`|
+|`druid.processing.merge.task.targetRunTimeMillis`|`druid.processing.merge.targetRunTimeMillis`|
+|`druid.processing.merge.task.smallBatchNumRows`|`druid.processing.merge.smallBatchNumRows`|
+|`druid.processing.merge.pool.awaitShutdownMillis`|
+|`druid.processing.merge.awaitShutdownMillis`|
+|`druid.processing.merge.pool.parallelism`|`druid.processing.merge.parallelism`|
+|`druid.processing.merge.pool.defaultMaxQueryParallelism`|`druid.processing.merge.defaultMaxQueryParallelism`|
+
+[#17776](https://github.com/apache/druid/pull/17776)
+
+#### Segment metadata cache configs
+
+If you need to downgrade to a version where Druid doesn't support the segment metadata cache, you must set the `druid.manager.segments.useCache` config to false or remove it prior to the upgrade.
+
+This feature is introduced in Druid 33.0.
+
+[#17653](https://github.com/apache/druid/pull/17653)
+
+
 
 ## 32.0.0
 
