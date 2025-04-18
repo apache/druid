@@ -385,17 +385,6 @@ public abstract class AbstractTask implements Task
     return context;
   }
 
-  /**
-   * Whether maximum memory usage should be considered in estimation for indexing tasks.
-   */
-  protected boolean isUseMaxMemoryEstimates()
-  {
-    return getContextValue(
-        Tasks.USE_MAX_MEMORY_ESTIMATES,
-        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
-    );
-  }
-
   protected ServiceMetricEvent.Builder getMetricBuilder()
   {
     return metricBuilder;

@@ -111,7 +111,6 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
         new NoopRowIngestionMeters(),
         new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
-        true,
         CentralizedDatasourceSchemaConfig.create()
     );
   }

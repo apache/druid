@@ -391,10 +391,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         useLineageBasedSegmentAllocation
     );
 
-    final boolean useMaxMemoryEstimates = getContextValue(
-        Tasks.USE_MAX_MEMORY_ESTIMATES,
-        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
-    );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
@@ -403,8 +399,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         dataSchema,
         tuningConfig,
         rowIngestionMeters,
-        parseExceptionHandler,
-        useMaxMemoryEstimates
+        parseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (

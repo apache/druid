@@ -74,8 +74,6 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final ColumnSelectorFactory virtualSelectorFactory;
   private final Map<String, ColumnSelectorFactory> aggSelectors;
-  private final boolean useMaxMemoryEstimates;
-  private final long maxBytesPerRowForAggregators;
   private final long minTimestamp;
   private final AtomicInteger rowCounter = new AtomicInteger(0);
   private final AtomicInteger numEntries = new AtomicInteger(0);
@@ -84,15 +82,11 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
       AggregateProjectionSpec projectionSpec,
       Function<String, IncrementalIndex.DimensionDesc> getBaseTableDimensionDesc,
       Function<String, AggregatorFactory> getBaseTableAggregatorFactory,
-      long minTimestamp,
-      boolean useMaxMemoryEstimates,
-      long maxBytesPerRowForAggregators
+      long minTimestamp
   )
   {
     this.projectionSchema = projectionSpec.toMetadataSchema();
     this.minTimestamp = minTimestamp;
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.maxBytesPerRowForAggregators = maxBytesPerRowForAggregators;
 
     // initialize dimensions, facts holder
     this.dimensions = new ArrayList<>();
@@ -105,7 +99,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     this.dimensionsMap = new HashMap<>();
     this.columnFormats = new LinkedHashMap<>();
 
-    initializeAndValidateDimensions(projectionSpec, getBaseTableDimensionDesc, useMaxMemoryEstimates);
+    initializeAndValidateDimensions(projectionSpec, getBaseTableDimensionDesc);
     final IncrementalIndex.IncrementalIndexRowComparator rowComparator = new IncrementalIndex.IncrementalIndexRowComparator(
         projectionSchema.getTimeColumnPosition() < 0 ? dimensions.size() : projectionSchema.getTimeColumnPosition(),
         dimensions
@@ -173,10 +167,9 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
           aggs,
           inputRowHolder,
           parseExceptionMessages,
-          useMaxMemoryEstimates,
           false
       );
-      totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggForProjectionSizeDelta);
+      totalSizeInBytes.addAndGet(aggForProjectionSizeDelta);
     } else {
       aggs = new Aggregator[aggregatorFactories.length];
       long aggSizeForProjectionRow = factorizeAggs(aggregatorFactories, aggs);
@@ -185,15 +178,13 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
           aggs,
           inputRowHolder,
           parseExceptionMessages,
-          useMaxMemoryEstimates,
           false
       );
-      final long estimatedSizeOfAggregators =
-          useMaxMemoryEstimates ? maxBytesPerRowForAggregators : aggSizeForProjectionRow;
+      final long estimatedSizeOfAggregators = aggSizeForProjectionRow;
       final long projectionRowSize = key.estimateBytesInMemory()
                                      + estimatedSizeOfAggregators
                                      + OnheapIncrementalIndex.ROUGH_OVERHEAD_PER_MAP_ENTRY;
-      totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : projectionRowSize);
+      totalSizeInBytes.addAndGet(projectionRowSize);
       numEntries.incrementAndGet();
     }
     final int rowIndex = rowCounter.getAndIncrement();
@@ -374,8 +365,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
 
   private void initializeAndValidateDimensions(
       AggregateProjectionSpec projectionSpec,
-      Function<String, IncrementalIndex.DimensionDesc> getBaseTableDimensionDesc,
-      boolean useMaxMemoryEstimates
+      Function<String, IncrementalIndex.DimensionDesc> getBaseTableDimensionDesc
   )
   {
     int i = 0;
@@ -393,8 +383,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         final IncrementalIndex.DimensionDesc childOnly = new IncrementalIndex.DimensionDesc(
             i++,
             dimension.getName(),
-            dimension.getDimensionHandler(),
-            useMaxMemoryEstimates
+            dimension.getDimensionHandler()
         );
 
         dimensions.add(childOnly);
@@ -514,14 +503,10 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     for (int i = 0; i < aggregatorFactories.length; i++) {
       final AggregatorFactory agg = aggregatorFactories[i];
       // Creates aggregators to aggregate from input into output fields
-      if (useMaxMemoryEstimates) {
-        aggs[i] = agg.factorize(aggSelectors.get(agg.getName()));
-      } else {
-        AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(aggSelectors.get(agg.getName()));
-        aggs[i] = aggregatorAndSize.getAggregator();
-        totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
-        totalInitialSizeBytes += aggReferenceSize;
-      }
+      AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(aggSelectors.get(agg.getName()));
+      aggs[i] = aggregatorAndSize.getAggregator();
+      totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
+      totalInitialSizeBytes += aggReferenceSize;
     }
     return totalInitialSizeBytes;
   }

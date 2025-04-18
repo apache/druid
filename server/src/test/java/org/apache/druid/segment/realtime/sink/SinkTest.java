@@ -93,8 +93,7 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         TuningConfig.DEFAULT_APPENDABLE_INDEX,
         MAX_ROWS_IN_MEMORY,
-        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory(),
-        true
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
     );
 
     sink.add(
@@ -276,8 +275,7 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         TuningConfig.DEFAULT_APPENDABLE_INDEX,
         MAX_ROWS_IN_MEMORY,
-        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory(),
-        true
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
     );
 
     sink.add(new MapBasedInputRow(

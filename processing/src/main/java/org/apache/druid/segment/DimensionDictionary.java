@@ -143,10 +143,6 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
    */
   public long sizeInBytes()
   {
-    if (!computeOnHeapSize()) {
-      throw new IllegalStateException("On-heap size computation is disabled");
-    }
-
     return sizeInBytes.get();
   }
 
@@ -169,11 +165,8 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
       }
     }
 
-    long extraSize = 0;
-    if (computeOnHeapSize()) {
-      // Add size of new dim value and 2 references (valueToId and idToValue)
-      extraSize = estimateSizeOfValue(originalValue) + 2L * Long.BYTES;
-    }
+    // Add size of new dim value and 2 references (valueToId and idToValue)
+    final long extraSize = estimateSizeOfValue(originalValue) + 2L * Long.BYTES;
 
     stamp = lock.writeLock();
     try {
@@ -271,15 +264,6 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
 
   /**
    * Estimates the size of the dimension value in bytes.
-   * <p>
-   * This method is called when adding a new dimension value to the lookup only
-   * if {@link #computeOnHeapSize()} returns true.
    */
   public abstract long estimateSizeOfValue(T value);
-
-  /**
-   * Whether on-heap size of this dictionary should be computed.
-   */
-  public abstract boolean computeOnHeapSize();
-
 }

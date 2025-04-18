@@ -33,7 +33,6 @@ import org.apache.druid.indexing.common.task.InputSourceProcessor;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.input.WindowedSegmentId;
@@ -186,10 +185,6 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions()
     );
-    final boolean useMaxMemoryEstimates = getContextValue(
-        Tasks.USE_MAX_MEMORY_ESTIMATES,
-        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
-    );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
@@ -199,8 +194,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         tuningConfig,
         new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager()),
         buildSegmentsMeters,
-        parseExceptionHandler,
-        useMaxMemoryEstimates
+        parseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {

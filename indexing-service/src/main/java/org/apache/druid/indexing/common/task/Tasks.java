@@ -53,17 +53,6 @@ public class Tasks
   public static final String USE_CONCURRENT_LOCKS = "useConcurrentLocks";
 
   /**
-   * Context flag denoting if maximum possible values should be used to estimate
-   * on-heap memory usage while indexing. Refer to OnHeapIncrementalIndex for
-   * more details.
-   * <p>
-   * @deprecated This flag will be removed in future Druid releases, and the new
-   * method of memory estimation will be used in all cases.
-   */
-  @Deprecated
-  public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
-
-  /**
    * Context flag to denote if segments published to metadata by a task should
    * have the {@code lastCompactionState} field set.
    */

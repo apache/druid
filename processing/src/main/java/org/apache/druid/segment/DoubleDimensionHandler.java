@@ -71,7 +71,7 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   }
 
   @Override
-  public DimensionIndexer<Double, Double, Double> makeIndexer(boolean useMaxMemoryEstimates)
+  public DimensionIndexer<Double, Double, Double> makeIndexer()
   {
     return new DoubleDimensionIndexer(dimensionName);
   }

@@ -38,7 +38,6 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     final StringDimensionIndexer indexer = new StringDimensionIndexer(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         true,
-        false,
         false
     );
 
@@ -87,87 +86,18 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testProcessRowValsToEncodedKeyComponent_usingMaxEstimates()
-  {
-    final StringDimensionIndexer indexer = new StringDimensionIndexer(
-        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
-        true,
-        false,
-        true
-    );
-
-    long totalEstimatedSize = 0L;
-
-    // Verify size for a non-empty dimension value
-    totalEstimatedSize += verifyEncodedValues(
-        indexer,
-        "abc",
-        new int[]{0},
-        54L
-    );
-
-    // Verify size for null dimension value
-    totalEstimatedSize += verifyEncodedValues(
-        indexer,
-        null,
-        new int[]{1},
-        4L
-    );
-
-    // Verify size delta with repeated dimension value
-    totalEstimatedSize += verifyEncodedValues(
-        indexer,
-        "abc",
-        new int[]{0},
-        54L
-    );
-    // Verify size delta with newly added dimension value
-    totalEstimatedSize += verifyEncodedValues(
-        indexer,
-        "def",
-        new int[]{2},
-        54L
-    );
-
-    // Verify size delta for multi-values
-    totalEstimatedSize += verifyEncodedValues(
-        indexer,
-        Arrays.asList("abc", "def", "ghi"),
-        new int[]{0, 2, 3},
-        162L
-    );
-
-    Assert.assertEquals(328L, totalEstimatedSize);
-  }
-
-  @Test
   public void testProcessRowValsToEncodedKeyComponent_comparison()
   {
-    // Create indexers with useMaxMemoryEstimates = true/false
     final StringDimensionIndexer indexerForAvgEstimates = new StringDimensionIndexer(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         true,
-        false,
         false
-    );
-    StringDimensionIndexer indexerForMaxEstimates = new StringDimensionIndexer(
-        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
-        true,
-        false,
-        true
     );
 
     // Verify sizes with newly added dimension values
-    long totalSizeWithMaxEstimates = 0L;
     long totalSizeWithAvgEstimates = 0L;
     for (int i = 0; i < 10; ++i) {
       final String dimValue = "value-" + i;
-      totalSizeWithMaxEstimates += verifyEncodedValues(
-          indexerForMaxEstimates,
-          dimValue,
-          new int[]{i},
-          62L
-      );
       totalSizeWithAvgEstimates += verifyEncodedValues(
           indexerForAvgEstimates,
           dimValue,
@@ -177,20 +107,12 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     }
 
     // If all dimension values are unique (or cardinality is high),
-    // estimates with useMaxMemoryEstimates = false tend to be higher
-    Assert.assertEquals(620L, totalSizeWithMaxEstimates);
     Assert.assertEquals(940L, totalSizeWithAvgEstimates);
 
     // Verify sizes with repeated dimension values
     for (int i = 0; i < 100; ++i) {
       final int index = i % 10;
       final String dimValue = "value-" + index;
-      totalSizeWithMaxEstimates += verifyEncodedValues(
-          indexerForMaxEstimates,
-          dimValue,
-          new int[]{index},
-          62L
-      );
       totalSizeWithAvgEstimates += verifyEncodedValues(
           indexerForAvgEstimates,
           dimValue,
@@ -199,9 +121,6 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
       );
     }
 
-    // If dimension values are frequently repeated (cardinality is low),
-    // estimates with useMaxMemoryEstimates = false tend to be much lower
-    Assert.assertEquals(6820L, totalSizeWithMaxEstimates);
     Assert.assertEquals(2940L, totalSizeWithAvgEstimates);
   }
 
@@ -211,7 +130,6 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
     final StringDimensionIndexer indexer = new StringDimensionIndexer(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         true,
-        false,
         false
     );
     final byte[] byteVal = new byte[]{0x01, 0x02, 0x03, 0x04};

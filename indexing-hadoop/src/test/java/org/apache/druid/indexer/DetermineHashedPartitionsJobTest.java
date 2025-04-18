@@ -218,7 +218,6 @@ public class DetermineHashedPartitionsJobTest
             false,
             false,
             false,
-            false,
             null,
             false,
             false,
@@ -247,7 +246,7 @@ public class DetermineHashedPartitionsJobTest
     Map<Long, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
     Assert.assertEquals(
         expectedNumTimeBuckets,
-        shardSpecs.entrySet().size()
+        shardSpecs.size()
     );
     int i = 0;
     for (Map.Entry<Long, List<HadoopyShardSpec>> entry : shardSpecs.entrySet()) {

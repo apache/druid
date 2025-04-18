@@ -298,15 +298,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
       int nullHandlingOverhead = 1;
       Assert.assertEquals(
-          182 + nullHandlingOverhead,
+          190 + nullHandlingOverhead,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          182 + nullHandlingOverhead,
+          190 + nullHandlingOverhead,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
       );
       appenderator.close();
@@ -347,12 +346,12 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 190
       int nullHandlingOverhead = 1;
-      Assert.assertEquals(182 + nullHandlingOverhead, ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(190 + nullHandlingOverhead, ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
-          364 + 2 * nullHandlingOverhead,
+          380 + 2 * nullHandlingOverhead,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       appenderator.close();
@@ -393,9 +392,9 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 190 + 1 byte when null handling is enabled
       int nullHandlingOverhead = 1;
-      int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      int currentInMemoryIndexSize = 190 + nullHandlingOverhead;
       int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
       Assert.assertEquals(
@@ -408,7 +407,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // We do multiple more adds to the same sink to cause persist.
-      for (int i = 0; i < 53; i++) {
+      for (int i = 0; i < 50; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
       }
       sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
@@ -433,7 +432,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       // Add a single row after persisted
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
-      currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      currentInMemoryIndexSize = 190 + nullHandlingOverhead;
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -444,7 +443,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // We do multiple more adds to the same sink to cause persist.
-      for (int i = 0; i < 31; i++) {
+      for (int i = 0; i < 30; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
       }
       // currHydrant size is 0 since we just persist all indexes to disk.
@@ -591,7 +590,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       int nullHandlingOverhead = 1;
-      int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      int currentInMemoryIndexSize = 190 + nullHandlingOverhead;
       int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
           currentInMemoryIndexSize + sinkSizeOverhead,
@@ -641,9 +640,9 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
 
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 190 + 1 byte when null handling is enabled
       int nullHandlingOverhead = 1;
-      int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      int currentInMemoryIndexSize = 190 + nullHandlingOverhead;
       int sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
       Assert.assertEquals(
@@ -690,7 +689,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       // Add a single row after persisted to sink 0
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bob", 1), committerSupplier);
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
-      currentInMemoryIndexSize = 182 + nullHandlingOverhead;
+      currentInMemoryIndexSize = 190 + nullHandlingOverhead;
       Assert.assertEquals(
           currentInMemoryIndexSize,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -719,9 +718,12 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // We do multiple more adds to the both sink to cause persist.
-      for (int i = 0; i < 34; i++) {
+      for (int i = 0; i < 33; i++) {
         appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar_" + i, 1), committerSupplier);
-        appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar_" + i, 1), committerSupplier);
+        if (i < 32) {
+          // adding the last one puts us over the limit,
+          appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar_" + i, 1), committerSupplier);
+        }
       }
       // currHydrant size is 0 since we just persist all indexes to disk.
       currentInMemoryIndexSize = 0;
@@ -788,14 +790,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       //we still calculate the size even when ignoring it to make persist decision
       int nullHandlingOverhead = 1;
       Assert.assertEquals(
-          182 + nullHandlingOverhead,
+          190 + nullHandlingOverhead,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
       );
       Assert.assertEquals(1, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       int sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
-          (364 + 2 * nullHandlingOverhead) + sinkSizeOverhead,
+          (380 + 2 * nullHandlingOverhead) + sinkSizeOverhead,
           ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory()
       );
       Assert.assertEquals(2, ((StreamAppenderator) appenderator).getRowsInMemory());

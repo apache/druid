@@ -71,7 +71,7 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   }
 
   @Override
-  public DimensionIndexer<Long, Long, Long> makeIndexer(boolean useMaxMemoryEstimates)
+  public DimensionIndexer<Long, Long, Long> makeIndexer()
   {
     return new LongDimensionIndexer(dimensionName);
   }

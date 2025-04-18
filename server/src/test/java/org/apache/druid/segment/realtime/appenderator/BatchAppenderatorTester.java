@@ -239,7 +239,6 @@ public class BatchAppenderatorTester implements AutoCloseable
         indexMerger,
         rowIngestionMeters,
         new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        true,
         CentralizedDatasourceSchemaConfig.create()
     );
   }

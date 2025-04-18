@@ -37,7 +37,6 @@ public abstract class AppendableIndexBuilder
   // DruidInputSource since that is the only case where we can have existing metrics.
   // This is currently only use by auto compaction and should not be use for anything else.
   protected boolean preserveExistingMetrics = false;
-  protected boolean useMaxMemoryEstimates = false;
 
   protected final Logger log = new Logger(this.getClass());
 
@@ -100,12 +99,6 @@ public abstract class AppendableIndexBuilder
   public AppendableIndexBuilder setPreserveExistingMetrics(final boolean preserveExistingMetrics)
   {
     this.preserveExistingMetrics = preserveExistingMetrics;
-    return this;
-  }
-
-  public AppendableIndexBuilder setUseMaxMemoryEstimates(final boolean useMaxMemoryEstimates)
-  {
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     return this;
   }
 

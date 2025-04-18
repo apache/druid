@@ -71,7 +71,6 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -94,7 +93,6 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         cachePopulatorStats,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
     return realtimeAppenderator;
@@ -112,7 +110,6 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -127,7 +124,6 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
   }
