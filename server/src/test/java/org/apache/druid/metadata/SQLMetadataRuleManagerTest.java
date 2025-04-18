@@ -327,7 +327,7 @@ public class SQLMetadataRuleManagerTest
   }
 
   @Test
-  public void testRemoveRulesOlderThanWithActiveDatasourceShouldNotDelete() throws Exception
+  public void testRemoveRulesOlderThanWithActiveDatasourceShouldNotDelete()
   {
     List<Rule> rules = ImmutableList.of(
         new IntervalLoadRule(

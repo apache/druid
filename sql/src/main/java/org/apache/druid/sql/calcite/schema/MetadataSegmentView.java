@@ -52,13 +52,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class polls the Coordinator in background to keep the latest segments.
- * Provides {@link #getSegments()} for others to get the segments.
- *
- * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
- * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In
- * fact, this class polls the data from {@link SegmentsMetadataManager} object in the memory of the
- * currently leading Coordinator via HTTP queries.
+ * Builds a view of used segment metadata currently present on the Coordinator
+ * in the {@link SegmentsMetadataManager} object, by polling the REST API
+ * {@code /druid/coordinator/v1/metadata/segments}.
  */
 @ManageLifecycle
 public class MetadataSegmentView
