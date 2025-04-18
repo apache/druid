@@ -50,7 +50,7 @@ public class CoordinatorOverlordServiceConfig
   }
 
   /**
-   * @return If Coordinator and Overlord are running as a single process.
+   * @return true if Coordinator and Overlord are running as a single process.
    */
   public boolean isEnabled()
   {

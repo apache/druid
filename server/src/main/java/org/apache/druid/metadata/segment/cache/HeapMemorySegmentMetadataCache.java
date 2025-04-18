@@ -136,7 +136,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       datasourceToSegmentCache = new ConcurrentHashMap<>();
 
   private final AtomicReference<DateTime> syncFinishTime = new AtomicReference<>();
-  private final AtomicReference<DataSourcesSnapshot> datasourcesSnapshot = new AtomicReference<>();
+  private final AtomicReference<DataSourcesSnapshot> datasourcesSnapshot = new AtomicReference<>(null);
 
   @Inject
   public HeapMemorySegmentMetadataCache(
@@ -354,10 +354,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
 
     synchronized (cacheStateLock) {
-      final Supplier<Boolean> leaderSyncIsPending =
-          () -> currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING
-                || currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED;
-
       switch (currentCacheState) {
         case STOPPED:
           throw InternalServerError.exception("Segment metadata cache has not been started yet.");
@@ -366,7 +362,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         case LEADER_FIRST_SYNC_PENDING:
         case LEADER_FIRST_SYNC_STARTED:
           if (shouldWait) {
-            waitForCacheToFinishSyncWhile(leaderSyncIsPending, READY_TIMEOUT_MILLIS);
+            waitForCacheToFinishSyncWhile(this::isLeaderSyncPending, READY_TIMEOUT_MILLIS);
             verifyCacheIsUsableAndAwaitSyncIf(true);
           }
         case LEADER_READY:
@@ -375,10 +371,17 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
   }
 
+  private boolean isLeaderSyncPending()
+  {
+    synchronized (cacheStateLock) {
+      return currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING
+             || currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED;
+    }
+  }
+
   /**
-   * Waits for cache to become ready if we are leader and current state is
-   * {@link CacheState#LEADER_FIRST_SYNC_PENDING} or
-   * {@link CacheState#LEADER_FIRST_SYNC_STARTED}.
+   * Waits for cache to finish sync as long as the wait condition is true, or
+   * until the timeout elapses.
    */
   private void waitForCacheToFinishSyncWhile(Supplier<Boolean> waitCondition, long timeoutMillis)
   {
@@ -408,8 +411,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       log.info("%s. Cache is now in state[%s].", message, currentCacheState);
 
       isCacheReady.set(currentCacheState == CacheState.LEADER_READY);
+      notifyThreadsWaitingOnCacheSync();
+    }
+  }
 
-      // Notify threads waiting for cache to change state
+  private void notifyThreadsWaitingOnCacheSync()
+  {
+    synchronized (cacheStateLock) {
       cacheStateLock.notifyAll();
     }
   }
@@ -438,6 +446,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                           previousSyncDurationMillis
                       )
                   );
+                } else {
+                  notifyThreadsWaitingOnCacheSync();
                 }
               }
 
