@@ -4297,7 +4297,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     final List<Task> tasks;
     if (taskQueue.isPresent()) {
-      tasks = taskQueue.get().getActiveTasksForDatasource(dataSource);
+      return taskQueue.get().getActiveTasksForDatasource(dataSource);
     } else {
       tasks = taskStorage.getActiveTasksByDatasource(dataSource);
     }
