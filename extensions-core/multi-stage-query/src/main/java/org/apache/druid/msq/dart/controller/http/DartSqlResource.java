@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
+import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -50,7 +51,6 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -202,13 +202,14 @@ public class DartSqlResource extends SqlResource
    */
   @POST
   @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
   @Override
   public Response doPost(
-      final SqlQuery sqlQuery,
-      @Context final HttpServletRequest req
+      @Context final HttpServletRequest req,
+      @Context final HttpContext httpContext
   )
   {
+    SqlQuery sqlQuery = parseQuery(httpContext);
+
     final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
 
     // Default context keys from dartQueryConfig.

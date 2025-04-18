@@ -22,6 +22,7 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
@@ -47,7 +48,6 @@ import org.apache.druid.sql.SqlStatementFactory;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -59,6 +59,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,11 +106,36 @@ public class SqlResource
 
   @POST
   @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
   @Nullable
   public Response doPost(
+      @Context final HttpServletRequest req,
+      @Context final HttpContext httpContext
+  )
+  {
+    return doPost(parseQuery(httpContext), req);
+  }
+
+  protected SqlQuery parseQuery(HttpContext httpContext)
+  {
+    MediaType contentType = httpContext.getRequest().getMediaType();
+    if (MediaType.APPLICATION_JSON_TYPE.isCompatible(contentType)) {
+      return httpContext.getRequest().getEntity(SqlQuery.class);
+    } else {
+      // Treats the whole HTTP body as a SQL
+      String sql = httpContext.getRequest().getEntity(String.class);
+      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
+        sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
+      }
+      return new SqlQuery(sql, null, false, false, false, null, null);
+    }
+  }
+
+  /**
+   * This method is defined as public so that subclasses like Dart or test can access it
+   */
+  public Response doPost(
       final SqlQuery sqlQuery,
-      @Context final HttpServletRequest req
+      final HttpServletRequest req
   )
   {
     final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);

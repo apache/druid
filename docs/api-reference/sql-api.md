@@ -38,7 +38,8 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 ### Submit a query
 
-Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
+Submits a SQL-based query in the JSON or text format request body. 
+Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
 Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query).
 
@@ -46,7 +47,9 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 
 `POST` `/druid/v2/sql`
 
-#### Request body
+#### JSON Format Request body
+
+To send queries in JSON format, the 'Content-Type' in the HTTP request MUST be `application/json`.
 
 The request body takes the following properties:
 
@@ -98,6 +101,19 @@ The request body takes the following properties:
             ]
     }
     ```
+
+##### Text Format Request body
+
+Druid also allows you to submit SQL queries in text format which is simpler than above JSON format. 
+To do this, just leave the `Content-Type` rquest header blank or set it to anything other than `application/json`.
+The whole request body is treated as a single SQL query string.
+
+In this request format, the `resultFormat` of response is always `object` with the HTTP response header Content-Type: application/json.
+If you want more control over the query context or response format, use the above JSON format request body instead.
+
+```commandline
+echo 'SELECT 1' | curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" --data @- 
+```
 
 #### Responses
 
