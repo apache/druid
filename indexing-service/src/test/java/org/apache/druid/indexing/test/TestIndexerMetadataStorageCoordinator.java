@@ -349,10 +349,10 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public List<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
       String datasource,
-      @org.jetbrains.annotations.Nullable Interval interval,
-      @org.jetbrains.annotations.Nullable Integer limit,
-      @org.jetbrains.annotations.Nullable String lastSegmentId,
-      @org.jetbrains.annotations.Nullable SortOrder sortOrder
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable String lastSegmentId,
+      @Nullable SortOrder sortOrder
   )
   {
     return List.of();
