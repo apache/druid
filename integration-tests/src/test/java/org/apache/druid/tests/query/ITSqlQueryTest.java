@@ -116,7 +116,7 @@ public class ITSqlQueryTest
         (endpoint) -> {
           try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             HttpPost request = new HttpPost(endpoint);
-            request.setHeader("Content-Type", "text/plain");
+            request.addHeader("Content-Type", "text/plain");
             request.setEntity(new StringEntity("select 1"));
 
             try (CloseableHttpResponse response = client.execute(request)) {
@@ -139,7 +139,7 @@ public class ITSqlQueryTest
         (endpoint) -> {
           try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             HttpPost request = new HttpPost(endpoint);
-            request.setHeader("Content-Type", "application/x-www-form-urlencoded");
+            request.addHeader("Content-Type", "application/x-www-form-urlencoded");
             request.setEntity(new StringEntity(URLEncoder.encode("select 1", StandardCharsets.UTF_8)));
 
             try (CloseableHttpResponse response = client.execute(request)) {
@@ -162,7 +162,7 @@ public class ITSqlQueryTest
         (endpoint) -> {
           try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             HttpPost request = new HttpPost(endpoint);
-            request.setHeader("Content-Type", "application/json");
+            request.addHeader("Content-Type", "application/json");
             request.setEntity(new StringEntity(StringUtils.format("{\"query\":\"select 1\"}")));
 
             try (CloseableHttpResponse response = client.execute(request)) {
@@ -185,7 +185,7 @@ public class ITSqlQueryTest
         (endpoint) -> {
           try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             HttpPost request = new HttpPost(endpoint);
-            request.setHeader("Content-Type", "text/plain");
+            request.addHeader("Content-Type", "text/plain");
 
             try (CloseableHttpResponse response = client.execute(request)) {
               Assert.assertEquals(400, response.getStatusLine().getStatusCode());
@@ -193,6 +193,33 @@ public class ITSqlQueryTest
               HttpEntity entity = response.getEntity();
               String responseBody = entity != null ? EntityUtils.toString(entity).trim() : null;
               Assert.assertTrue(responseBody.contains("invalidInput"));
+            }
+          }
+        }
+    );
+  }
+
+  /**
+   * When multiple Content-Type headers are set, the first one(in this case it's the text format) should be used.
+   */
+  @Test
+  public void testMultipleContentType()
+  {
+    executeWithRetry(
+        "text/plain",
+        (endpoint) -> {
+          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+            HttpPost request = new HttpPost(endpoint);
+            request.addHeader("Content-Type", "text/plain");
+            request.addHeader("Content-Type", "application/json");
+            request.setEntity(new StringEntity(StringUtils.format("SELECT 1")));
+
+            try (CloseableHttpResponse response = client.execute(request)) {
+              Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+
+              HttpEntity entity = response.getEntity();
+              String responseBody = entity != null ? EntityUtils.toString(entity).trim() : null;
+              Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
             }
           }
         }
