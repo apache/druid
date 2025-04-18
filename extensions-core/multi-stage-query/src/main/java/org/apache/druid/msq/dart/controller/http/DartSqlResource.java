@@ -208,7 +208,7 @@ public class DartSqlResource extends SqlResource
       @Context final HttpContext httpContext
   )
   {
-    SqlQuery sqlQuery = parseQuery(httpContext);
+    SqlQuery sqlQuery = SqlQuery.from(httpContext);
 
     final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
 

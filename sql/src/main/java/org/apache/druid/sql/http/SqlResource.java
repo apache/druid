@@ -59,8 +59,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,22 +110,7 @@ public class SqlResource
       @Context final HttpContext httpContext
   )
   {
-    return doPost(parseQuery(httpContext), req);
-  }
-
-  protected SqlQuery parseQuery(HttpContext httpContext)
-  {
-    MediaType contentType = httpContext.getRequest().getMediaType();
-    if (MediaType.APPLICATION_JSON_TYPE.isCompatible(contentType)) {
-      return httpContext.getRequest().getEntity(SqlQuery.class);
-    } else {
-      // Treats the whole HTTP body as a SQL
-      String sql = httpContext.getRequest().getEntity(String.class);
-      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
-        sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
-      }
-      return new SqlQuery(sql, null, false, false, false, null, null);
-    }
+    return doPost(SqlQuery.from(httpContext), req);
   }
 
   /**

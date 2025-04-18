@@ -25,12 +25,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.sun.jersey.api.core.HttpContext;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.http.ClientSqlQuery;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -199,5 +205,23 @@ public class SqlQuery
   public SqlQuery withQueryContext(Map<String, Object> newContext)
   {
     return new SqlQuery(query, resultFormat, header, typesHeader, sqlTypesHeader, newContext, parameters);
+  }
+
+  public static SqlQuery from(HttpContext httpContext)
+  {
+    MediaType contentType = httpContext.getRequest().getMediaType();
+    if (MediaType.APPLICATION_JSON_TYPE.isCompatible(contentType)) {
+      return httpContext.getRequest().getEntity(SqlQuery.class);
+    } else {
+      // Treats the whole HTTP body as a SQL
+      String sql = httpContext.getRequest().getEntity(String.class);
+      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
+        sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
+      }
+      if (sql == null || sql.trim().isEmpty()) {
+        throw new IAE("SQL query is empty");
+      }
+      return new SqlQuery(sql, null, false, false, false, null, null);
+    }
   }
 }
