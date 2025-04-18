@@ -97,7 +97,7 @@ The following example scheduled batch supervisor spec submits a REPLACE query ev
 
 ### Improved S3 upload 
 
-Druid can now use AWS S3 Transfer Manager for S3 uploads, which can significantly reduce segment upload time. To use this feature, add the following configs to your `common.runtime.properties`: 
+Druid can now use AWS S3 Transfer Manager for S3 uploads, which can significantly reduce segment upload time. This feature is on by default and controlled with the following configs in `common.runtime.properties`: 
 
 ```
     druid.storage.transfer.useTransferManager=true
@@ -113,10 +113,15 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
+#### MERGE INTO
+
+The MERGE INTO keyword is now highlighted in the web console and the query gets treated as an insert query. 
+
+[#17679](https://github.com/apache/druid/pull/17679)
+
 #### Other web console improvements
 
 - Added the ability to multi-select in table filters and added suggestions to the **Status** field for tasks and supervisors as well as service type [#17765](https://github.com/apache/druid/pull/17765)
-- The MERGE INTO keyword is now properly highlighted and the query gets treated as an insert query [#17679](https://github.com/apache/druid/pull/17679)
 - The Explore view now supports timezones [#17650](https://github.com/apache/druid/pull/17650)
 - Data exported from the web console is now normalized to how Druid exports data. Additionally, you can now export results as Markdown tables [#17845](https://github.com/apache/druid/pull/17845)
 
@@ -311,9 +316,9 @@ The previous behavior (no limit on interval per kill task) can be restored by se
 
 [#17680](https://github.com/apache/druid/pull/17680)
 
-#### Docker-based Kubernetes deployments
+#### Kubernetes deployments
 
-Docker-based deployments on Kubernetes no longer uses the canonical hostname by default. They use IP by default now. This reverts a change introduced in 31.0.0  [#17690](https://github.com/apache/druid/pull/17690)
+By default, the Docker image now uses the canonical hostname if you're running Druid in Kubernetes. Otherwise, it uses the IP address otherwise [#17697](https://github.com/apache/druid/pull/17697) 
 
 #### Updated configs
 
