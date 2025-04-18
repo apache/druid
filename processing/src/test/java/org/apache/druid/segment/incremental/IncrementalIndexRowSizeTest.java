@@ -53,7 +53,6 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
             .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
             .setMaxRowCount(10_000)
             .setMaxBytesInMemory(1_000)
-            .setUseMaxMemoryEstimates(true)
             .build())
     );
   }
