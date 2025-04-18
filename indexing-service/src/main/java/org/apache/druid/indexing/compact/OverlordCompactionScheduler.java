@@ -389,7 +389,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private DataSourcesSnapshot getDatasourceSnapshot()
   {
-    return segmentManager.getDataSourceSnapshot();
+    return segmentManager.getRecentDataSourcesSnapshot();
   }
 
   private void scheduleOnExecutor(Runnable runnable, long delaySeconds)

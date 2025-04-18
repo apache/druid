@@ -638,7 +638,7 @@ public class DruidCoordinatorTest
     DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Collections.singleton(dataSegment)
     );
-    EasyMock.expect(segmentsMetadataManager.getDataSourceSnapshot())
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
             .andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
@@ -814,7 +814,7 @@ public class DruidCoordinatorTest
   {
     DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(Collections.emptyList());
     EasyMock
-        .expect(segmentsMetadataManager.getDataSourceSnapshot())
+        .expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
         .andReturn(dataSourcesSnapshot)
         .anyTimes();
     EasyMock.replay(segmentsMetadataManager);
@@ -830,7 +830,7 @@ public class DruidCoordinatorTest
     DataSourcesSnapshot dataSourcesSnapshot =
         DataSourcesSnapshot.fromUsedSegments(dataSource.getSegments());
     EasyMock
-        .expect(segmentsMetadataManager.getDataSourceSnapshot())
+        .expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
         .andReturn(dataSourcesSnapshot)
         .anyTimes();
     EasyMock.replay(segmentsMetadataManager);

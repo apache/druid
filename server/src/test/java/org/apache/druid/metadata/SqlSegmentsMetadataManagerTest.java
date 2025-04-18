@@ -111,7 +111,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     Assert.assertTrue(
         sqlSegmentsMetadataManager
-            .getDataSourceSnapshot()
+            .getRecentDataSourcesSnapshot()
             .getDataSourcesWithAllUsedSegments()
             .isEmpty()
     );
@@ -121,14 +121,14 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
   public void testPollPeriodically()
   {
     publishWikiSegments();
-    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertNull(dataSourcesSnapshot);
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     // This call make sure that the first poll is completed
     sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
-    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableList.of(TestDataSource.WIKI),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
@@ -150,7 +150,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
   public void testPollOnDemand()
   {
     publishWikiSegments();
-    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertNull(dataSourcesSnapshot);
     // This should return false and not wait/poll anything as we did not schedule periodic poll
     Assert.assertFalse(sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay());
@@ -159,7 +159,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     sqlSegmentsMetadataManager.forceOrWaitOngoingDatabasePoll();
     Assert.assertFalse(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.OnDemandDatabasePoll);
-    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableList.of(TestDataSource.WIKI),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
@@ -181,14 +181,14 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
   public void testPollPeriodicallyAndOnDemandInterleave() throws Exception
   {
     publishWikiSegments();
-    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertNull(dataSourcesSnapshot);
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     // This call make sure that the first poll is completed
     sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
-    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableList.of(TestDataSource.WIKI),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
@@ -203,7 +203,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.OnDemandDatabasePoll);
     // New datasource should now be in the snapshot since we just force on demand poll.
-    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableList.of(TestDataSource.KOALA, TestDataSource.WIKI),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
@@ -216,12 +216,12 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     publishSegment(createNewSegment1(newDataSource3));
 
     // This time wait for periodic poll (not doing on demand poll so we have to wait a bit...)
-    while (sqlSegmentsMetadataManager.getDataSourcesSnapshot().getDataSource(newDataSource3) == null) {
+    while (sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot().getDataSource(newDataSource3) == null) {
       Thread.sleep(1000);
     }
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
-    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableSet.of(TestDataSource.KOALA, "wikipedia3", TestDataSource.WIKI),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
@@ -238,7 +238,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     DataSegment koalaSegment = pollThenStopThenPublishKoalaSegment();
     Assert.assertEquals(
         Set.of(koalaSegment),
-        Set.copyOf(sqlSegmentsMetadataManager.getDataSourceSnapshot().getDataSource(TestDataSource.KOALA).getSegments())
+        Set.copyOf(sqlSegmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(TestDataSource.KOALA).getSegments())
     );
   }
 
@@ -249,7 +249,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     DataSegment koalaSegment = pollThenStopThenPublishKoalaSegment();
     Assert.assertEquals(
         Set.of(koalaSegment),
-        Set.copyOf(sqlSegmentsMetadataManager.getDataSourceSnapshot().getDataSource(TestDataSource.KOALA).getSegments())
+        Set.copyOf(sqlSegmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(TestDataSource.KOALA).getSegments())
     );
   }
 
@@ -262,7 +262,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
         ImmutableSet.of(wikiSegment1, wikiSegment2, koalaSegment),
         ImmutableSet.copyOf(
             sqlSegmentsMetadataManager
-                .getDataSourceSnapshot()
+                .getRecentDataSourcesSnapshot()
                 .getDataSourcesWithAllUsedSegments()
                 .stream()
                 .flatMap((ImmutableDruidDataSource dataSource) -> dataSource.getSegments().stream())
@@ -312,7 +312,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
 
-    DataSourcesSnapshot snapshot = sqlSegmentsMetadataManager.getDataSourceSnapshot();
+    DataSourcesSnapshot snapshot = sqlSegmentsMetadataManager.getRecentDataSourcesSnapshot();
     Assert.assertEquals(
         TestDataSource.WIKI,
         Iterables.getOnlyElement(snapshot.getDataSourcesWithAllUsedSegments()).getName()
@@ -397,7 +397,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     sqlSegmentsMetadataManager.start();
 
     Set<DataSegment> segments = sqlSegmentsMetadataManager
-        .getDataSourceSnapshot()
+        .getRecentDataSourcesSnapshot()
         .getAllUsedNonOvershadowedSegments(TestDataSource.WIKI, theInterval);
     Assert.assertEquals(Set.of(wikiSegment1), segments);
 
@@ -410,13 +410,13 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
 
     // New segment is not returned since we call without force poll
     segments = sqlSegmentsMetadataManager
-        .getDataSourceSnapshot()
+        .getRecentDataSourcesSnapshot()
         .getAllUsedNonOvershadowedSegments(TestDataSource.WIKI, theInterval);
     Assert.assertEquals(Set.of(wikiSegment1), segments);
 
     // New segment is returned since we call with force poll
     segments = sqlSegmentsMetadataManager
-        .forceUpdateAndGetSnapshot()
+        .forceUpdateDataSourcesSnapshot()
         .getAllUsedNonOvershadowedSegments(TestDataSource.WIKI, theInterval);
     Assert.assertEquals(Set.of(wikiSegment1, wikiSegment3), segments);
   }
@@ -483,7 +483,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
   private Set<DataSegment> retrieveAllUsedSegments()
   {
     return Sets.newHashSet(
-        sqlSegmentsMetadataManager.getDataSourceSnapshot().iterateAllUsedSegmentsInSnapshot()
+        sqlSegmentsMetadataManager.getRecentDataSourcesSnapshot().iterateAllUsedSegmentsInSnapshot()
     );
   }  
 }

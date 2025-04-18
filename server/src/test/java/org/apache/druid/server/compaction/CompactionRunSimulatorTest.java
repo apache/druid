@@ -76,7 +76,7 @@ public class CompactionRunSimulatorTest
         DruidCompactionConfig.empty().withDatasourceConfig(
             InlineSchemaDataSourceCompactionConfig.builder().forDataSource("wiki").build()
         ),
-        segmentsMetadataManager.getDataSourceSnapshot(),
+        segmentsMetadataManager.getRecentDataSourcesSnapshot(),
         CompactionEngine.NATIVE
     );
 

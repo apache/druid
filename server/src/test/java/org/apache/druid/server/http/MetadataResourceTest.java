@@ -104,7 +104,7 @@ public class MetadataResourceTest
 
     DataSourcesSnapshot dataSourcesSnapshot = Mockito.mock(DataSourcesSnapshot.class);
     Mockito.doReturn(dataSourcesSnapshot)
-           .when(segmentsMetadataManager).getDataSourceSnapshot();
+           .when(segmentsMetadataManager).getRecentDataSourcesSnapshot();
     Mockito.doReturn(ImmutableList.of(druidDataSource1))
            .when(dataSourcesSnapshot).getDataSourcesWithAllUsedSegments();
     Mockito.doReturn(druidDataSource1)

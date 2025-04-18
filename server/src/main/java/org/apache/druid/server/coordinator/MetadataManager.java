@@ -129,7 +129,7 @@ public class MetadataManager
    */
   public Iterable<DataSegment> iterateAllUsedSegments()
   {
-    return segments().getDataSourceSnapshot().iterateAllUsedSegmentsInSnapshot();
+    return segments().getRecentDataSourcesSnapshot().iterateAllUsedSegmentsInSnapshot();
   }
 
 }

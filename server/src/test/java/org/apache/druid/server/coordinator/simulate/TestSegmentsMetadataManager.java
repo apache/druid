@@ -168,7 +168,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public DataSourcesSnapshot getDataSourceSnapshot()
+  public DataSourcesSnapshot getRecentDataSourcesSnapshot()
   {
     if (snapshot == null) {
       snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values());
@@ -177,7 +177,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public DataSourcesSnapshot forceUpdateAndGetSnapshot()
+  public DataSourcesSnapshot forceUpdateDataSourcesSnapshot()
   {
     snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values());
     return snapshot;

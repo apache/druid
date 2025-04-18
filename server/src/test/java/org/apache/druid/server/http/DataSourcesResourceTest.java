@@ -1443,7 +1443,7 @@ public class DataSourcesResourceTest
   {
     // Test when datasource fully loaded
     EasyMock.expect(
-        segmentsMetadataManager.forceUpdateAndGetSnapshot()
+        segmentsMetadataManager.forceUpdateDataSourcesSnapshot()
     ).andReturn(DataSourcesSnapshot.fromUsedSegments(List.of())).once();
     EasyMock.replay(segmentsMetadataManager);
 
@@ -1500,7 +1500,7 @@ public class DataSourcesResourceTest
     );
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.forceUpdateAndGetSnapshot())
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(completedLoadInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
@@ -1515,7 +1515,7 @@ public class DataSourcesResourceTest
     EasyMock.reset(segmentsMetadataManager, inventoryView);
 
     // Test when datasource half loaded
-    EasyMock.expect(segmentsMetadataManager.forceUpdateAndGetSnapshot())
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(halfLoadedInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
@@ -1578,7 +1578,7 @@ public class DataSourcesResourceTest
     );
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.forceUpdateAndGetSnapshot())
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(completedLoadInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
@@ -1593,7 +1593,7 @@ public class DataSourcesResourceTest
     EasyMock.reset(segmentsMetadataManager, inventoryView);
 
     // Test when datasource half loaded
-    EasyMock.expect(segmentsMetadataManager.forceUpdateAndGetSnapshot())
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     EasyMock.expect(inventoryView.getLoadInfoForAllSegments()).andReturn(halfLoadedInfoMap).once();
     EasyMock.replay(segmentsMetadataManager, inventoryView);
@@ -1645,7 +1645,7 @@ public class DataSourcesResourceTest
     underReplicationCountsPerDataSourcePerTier.put("tier2", tier2);
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.forceUpdateAndGetSnapshot())
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
     EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(EasyMock.anyObject(), EasyMock.eq(false)))
@@ -1704,7 +1704,7 @@ public class DataSourcesResourceTest
     underReplicationCountsPerDataSourcePerTier.put("tier2", tier2);
 
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.forceUpdateAndGetSnapshot())
+    EasyMock.expect(segmentsMetadataManager.forceUpdateDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
     EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(EasyMock.anyObject(), EasyMock.eq(true)))

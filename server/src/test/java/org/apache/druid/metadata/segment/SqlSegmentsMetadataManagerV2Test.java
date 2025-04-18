@@ -179,7 +179,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
 
   private void verifyDatasourceSnapshot()
   {
-    final DataSourcesSnapshot snapshot = manager.getDataSourceSnapshot();
+    final DataSourcesSnapshot snapshot = manager.getRecentDataSourcesSnapshot();
     Assert.assertEquals(
         Set.copyOf(WIKI_SEGMENTS_1X5D),
         Sets.newHashSet(snapshot.iterateAllUsedSegmentsInSnapshot())

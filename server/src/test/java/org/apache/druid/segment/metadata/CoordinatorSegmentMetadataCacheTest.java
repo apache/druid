@@ -132,7 +132,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   {
     super.setUp();
     segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
@@ -591,7 +591,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
     SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
@@ -646,7 +646,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
@@ -698,7 +698,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
@@ -1853,7 +1853,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot()).thenReturn(
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot()).thenReturn(
         DataSourcesSnapshot.fromUsedSegments(List.of(segment1, segment2, coldSegment, singleColdSegment))
     );
 
@@ -2074,7 +2074,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot()).thenReturn(
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot()).thenReturn(
         DataSourcesSnapshot.fromUsedSegments(List.of(coldSegmentAlpha, hotSegmentGamma, coldSegmentGamma))
     );
 
@@ -2123,7 +2123,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Assert.assertEquals(new HashSet<>(Arrays.asList("alpha", "gamma")), schema.getDataSourceInformationMap().keySet());
 
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(coldSegmentBeta, hotSegmentGamma)));
 
     schema.coldDatasourceSchemaExec();
@@ -2370,7 +2370,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             segmentMap
         );
 
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(segments.get(0), segments.get(1))));
 
     Set<SegmentId> segmentsToRefresh = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());

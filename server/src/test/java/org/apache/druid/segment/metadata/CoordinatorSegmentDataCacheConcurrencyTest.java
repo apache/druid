@@ -199,7 +199,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     );
 
     segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
-    Mockito.when(segmentsMetadataManager.getDataSourceSnapshot())
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));

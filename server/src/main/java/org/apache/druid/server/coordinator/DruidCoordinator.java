@@ -278,7 +278,7 @@ public class DruidCoordinator
   public Map<String, Double> getDatasourceToLoadStatus()
   {
     final Map<String, Double> loadStatus = new HashMap<>();
-    final DataSourcesSnapshot snapshot = metadataManager.segments().getDataSourceSnapshot();
+    final DataSourcesSnapshot snapshot = metadataManager.segments().getRecentDataSourcesSnapshot();
 
     for (ImmutableDruidDataSource dataSource : snapshot.getDataSourcesWithAllUsedSegments()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
@@ -340,7 +340,7 @@ public class DruidCoordinator
   {
     return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
         metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
-        metadataManager.segments().getDataSourceSnapshot(),
+        metadataManager.segments().getRecentDataSourcesSnapshot(),
         CompactionEngine.NATIVE
     );
   }
@@ -715,12 +715,12 @@ public class DruidCoordinator
             // use a future snapshotTime to ensure that compaction always runs
             dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
                 metadataManager.segments()
-                               .getDataSourceSnapshot()
+                               .getRecentDataSourcesSnapshot()
                                .iterateAllUsedSegmentsInSnapshot(),
                 DateTimes.nowUtc().plusMinutes(60)
             );
           } else {
-            dataSourcesSnapshot = metadataManager.segments().getDataSourceSnapshot();
+            dataSourcesSnapshot = metadataManager.segments().getRecentDataSourcesSnapshot();
           }
 
           final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams

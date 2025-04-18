@@ -90,7 +90,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
     return Set.copyOf(
-        segmentsMetadataManager.getDataSourceSnapshot().getDataSource(dataSource).getSegments()
+        segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(dataSource).getSegments()
     );
   }
 

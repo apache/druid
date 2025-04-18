@@ -609,21 +609,25 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public DataSourcesSnapshot getDataSourceSnapshot()
+  public DataSourcesSnapshot getRecentDataSourcesSnapshot()
   {
     useLatestIfWithinDelayOrPerformNewDatabasePoll();
     return dataSourcesSnapshot;
   }
 
   @Override
-  public DataSourcesSnapshot forceUpdateAndGetSnapshot()
+  public DataSourcesSnapshot forceUpdateDataSourcesSnapshot()
   {
     forceOrWaitOngoingDatabasePoll();
     return dataSourcesSnapshot;
   }
 
+  /**
+   * Returns the last snapshot built by the manager. This method always returns
+   * immediately, even if the last snapshot is older than the poll period.
+   */
   @VisibleForTesting
-  DataSourcesSnapshot getDataSourcesSnapshot()
+  DataSourcesSnapshot getLatestDataSourcesSnapshot()
   {
     return dataSourcesSnapshot;
   }

@@ -56,21 +56,21 @@ public interface SegmentsMetadataManager
   boolean isPollingDatabasePeriodically();
 
   /**
-   * Returns the latest snapshot containing all used segments currently cached on the
-   * manager. If the latest snapshot is older than the poll period, this method
-   * blocks until the snapshot is refreshed.
+   * Returns the latest snapshot containing all used segments currently cached
+   * on the manager. This method returns immediately if the poll period has not
+   * elapsed since the latest snapshot was built. Otherwise, it blocks until
+   * the snapshot has been refreshed.
    */
-  DataSourcesSnapshot getDataSourceSnapshot();
+  DataSourcesSnapshot getRecentDataSourcesSnapshot();
 
   /**
    * Forces the manager to poll the metadata store and update its snapshot.
    * If a poll is already in progress, a new poll is not started. This method
-   * until the poll finishes.
+   * blocks until the poll finishes and the snapshot has been refreshed.
    *
-   * @return The snapshot built after finishing the poll of the metadata store
-   * triggered by this method.
+   * @return The updated snapshot.
    */
-  DataSourcesSnapshot forceUpdateAndGetSnapshot();
+  DataSourcesSnapshot forceUpdateDataSourcesSnapshot();
 
   /**
    * Populates used_status_last_updated column in the segments table iteratively until there are no segments with a NULL

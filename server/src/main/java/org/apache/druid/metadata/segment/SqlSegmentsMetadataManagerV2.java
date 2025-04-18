@@ -139,23 +139,23 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   }
 
   @Override
-  public DataSourcesSnapshot getDataSourceSnapshot()
+  public DataSourcesSnapshot getRecentDataSourcesSnapshot()
   {
     if (useCacheToBuildTimeline()) {
       return segmentMetadataCache.getDatasourcesSnapshot();
     } else {
-      return delegate.getDataSourceSnapshot();
+      return delegate.getRecentDataSourcesSnapshot();
     }
   }
 
   @Override
-  public DataSourcesSnapshot forceUpdateAndGetSnapshot()
+  public DataSourcesSnapshot forceUpdateDataSourcesSnapshot()
   {
     if (useCacheToBuildTimeline()) {
       // TODO: we cannot force the cache to refresh, we can just wait
       return segmentMetadataCache.getDatasourcesSnapshot();
     } else {
-      return delegate.forceUpdateAndGetSnapshot();
+      return delegate.forceUpdateDataSourcesSnapshot();
     }
   }
 

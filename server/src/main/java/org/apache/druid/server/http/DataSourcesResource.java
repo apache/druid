@@ -449,9 +449,14 @@ public class DataSourcesResource
 
     final DataSourcesSnapshot snapshot;
     if (forceMetadataRefresh) {
-      snapshot = segmentsMetadataManager.forceUpdateAndGetSnapshot();
+      snapshot = segmentsMetadataManager.forceUpdateDataSourcesSnapshot();
     } else {
-      snapshot = segmentsMetadataManager.getDataSourceSnapshot();
+      snapshot = segmentsMetadataManager.getRecentDataSourcesSnapshot();
+    }
+
+    final ImmutableDruidDataSource immutableDruidDataSource = snapshot.getDataSource(dataSourceName);
+    if (immutableDruidDataSource == null) {
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
     final Set<DataSegment> segments = snapshot.getAllUsedNonOvershadowedSegments(dataSourceName, theInterval);

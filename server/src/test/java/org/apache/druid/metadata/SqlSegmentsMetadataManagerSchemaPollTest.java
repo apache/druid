@@ -121,7 +121,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     );
 
     sqlSegmentsMetadataManager.start();
-    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertNull(dataSourcesSnapshot);
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
@@ -139,7 +139,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     Assert.assertEquals(schemaMetadata1, segmentSchemaCache.getSchemaForSegment(segment1.getId()).get());
     Assert.assertEquals(schemaMetadata2, segmentSchemaCache.getSchemaForSegment(segment2.getId()).get());
 
-    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
