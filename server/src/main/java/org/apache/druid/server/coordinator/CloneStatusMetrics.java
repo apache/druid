@@ -118,6 +118,9 @@ public class CloneStatusMetrics
            '}';
   }
 
+  /**
+   * Enum determining the status of the cloning process.
+   */
   public enum Status
   {
     SOURCE_SERVER_MISSING,

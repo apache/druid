@@ -19,6 +19,9 @@
 
 package org.apache.druid.query;
 
+/**
+ * Enum used in the query context to determine if clone queries should be used by native queries.
+ */
 public enum CloneQueryMode
 {
   CLONE_PREFERRED,

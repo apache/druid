@@ -25,12 +25,18 @@ import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.DruidInternalDynamicConfigResource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import javax.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Broker view of the coordinator dynamic configuration, and its derived values such as target and source clone servers.
+ * This class is registered as a managed lifecycle to fetch the coordinator dynamic configuration on startup. Further
+ * updates are handled through {@link DruidInternalDynamicConfigResource}.
+ */
 public class CoordinatorDynamicConfigView
 {
   private static final Logger log = new Logger(CoordinatorDynamicConfigView.class);
@@ -54,6 +60,10 @@ public class CoordinatorDynamicConfigView
     return config;
   }
 
+  /**
+   * Update the config view with a new coordinator dynamic config snapshot. Also updates the source and target clone
+   * servers based on the new dynamic configuration.
+   */
   public synchronized void setDynamicConfiguration(@NotNull CoordinatorDynamicConfig updatedConfig)
   {
     config = updatedConfig.snapshot();
