@@ -121,13 +121,13 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
   }
 
-  public List<DruidServerMetadata> getCandidates(final int numCandidates)
+  public List<DruidServerMetadata> getCandidates(final int numCandidates, HistoricalFilter filter)
   {
     List<DruidServerMetadata> candidates;
     synchronized (this) {
       if (numCandidates > 0) {
         candidates = new ArrayList<>(numCandidates);
-        strategy.pick(historicalServers, segment.get(), numCandidates)
+        strategy.pick(filter.apply(historicalServers), segment.get(), numCandidates)
             .stream()
             .map(server -> server.getServer().getMetadata())
             .forEach(candidates::add);
@@ -140,21 +140,22 @@ public class ServerSelector implements Overshadowable<ServerSelector>
         }
         return candidates;
       } else {
-        return getAllServers();
+        return getAllServers(filter);
       }
     }
   }
 
-  public List<DruidServerMetadata> getAllServers()
+  public List<DruidServerMetadata> getAllServers(HistoricalFilter filter)
   {
     final List<DruidServerMetadata> servers = new ArrayList<>();
 
     synchronized (this) {
-      historicalServers.values()
-                       .stream()
-                       .flatMap(Collection::stream)
-                       .map(server -> server.getServer().getMetadata())
-                       .forEach(servers::add);
+      filter.apply(historicalServers)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(server -> server.getServer().getMetadata())
+            .forEach(servers::add);
 
       realtimeServers.values()
                      .stream()
@@ -167,11 +168,11 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   }
 
   @Nullable
-  public <T> QueryableDruidServer pick(@Nullable Query<T> query)
+  public <T> QueryableDruidServer pick(@Nullable Query<T> query, HistoricalFilter filter)
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {
-        return strategy.pick(query, historicalServers, segment.get());
+        return strategy.pick(query, filter.apply(historicalServers), segment.get());
       }
       return strategy.pick(query, realtimeServers, segment.get());
     }

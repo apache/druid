@@ -329,7 +329,8 @@ public class CachingClusteredClientFunctionalityTest
         },
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
     );
   }
 

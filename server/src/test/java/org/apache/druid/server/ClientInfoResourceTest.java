@@ -407,6 +407,7 @@ public class ClientInfoResourceTest
         timelineServerView,
         segmentMetadataQueryConfig,
         new AuthConfig(),
+        null,
         null
     )
     {

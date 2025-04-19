@@ -49,15 +49,18 @@ public class CoordinatorDynamicConfigsResource
 {
   private final CoordinatorConfigManager manager;
   private final AuditManager auditManager;
+  private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
 
   @Inject
   public CoordinatorDynamicConfigsResource(
       CoordinatorConfigManager manager,
-      AuditManager auditManager
+      AuditManager auditManager,
+      CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer
   )
   {
     this.manager = manager;
     this.auditManager = auditManager;
+    this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
   }
 
   @GET
@@ -84,6 +87,7 @@ public class CoordinatorDynamicConfigsResource
       );
 
       if (setResult.isOk()) {
+        coordinatorDynamicConfigSyncer.broadcastConfigToBrokers();
         return Response.ok().build();
       } else {
         return Response.status(Response.Status.BAD_REQUEST)

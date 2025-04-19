@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -162,7 +163,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
-    final QueryableDruidServer server = serverSelector.pick(null);
+    final QueryableDruidServer server = serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER);
 
     if (server == null) {
       return UNKNOWN;
@@ -279,7 +280,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     int numRealtimeServers = 0;
     int numOtherServers = 0;
 
-    for (final DruidServerMetadata server : serverSelector.getAllServers()) {
+    for (final DruidServerMetadata server : serverSelector.getAllServers(HistoricalFilter.IDENTITY_FILTER)) {
       if (SegmentSource.REALTIME.getUsedServerTypes().contains(server.getType())) {
         numRealtimeServers++;
       } else {

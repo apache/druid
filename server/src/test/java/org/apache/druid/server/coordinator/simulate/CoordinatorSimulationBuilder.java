@@ -43,6 +43,7 @@ import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -63,6 +64,7 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -220,7 +222,9 @@ public class CoordinatorSimulationBuilder
         env.leaderSelector,
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        env.configSyncer,
+        env.cloneStatusManager
     );
 
     return new SimulationImpl(coordinator, env);
@@ -420,6 +424,8 @@ public class CoordinatorSimulationBuilder
     private final MetadataManager metadataManager;
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
+    private final CoordinatorDynamicConfigSyncer configSyncer;
+    private final CloneStatusManager cloneStatusManager;
 
     private final boolean loadImmediately;
     private final boolean autoSyncInventory;
@@ -483,6 +489,12 @@ public class CoordinatorSimulationBuilder
           null,
           null
       );
+
+      this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);
+      this.cloneStatusManager = EasyMock.niceMock(CloneStatusManager.class);
+
+      mocks.add(configSyncer);
+      mocks.add(cloneStatusManager);
     }
 
     private void setUp() throws Exception

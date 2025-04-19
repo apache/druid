@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.LocatedSegmentDescriptor;
 import org.apache.druid.query.SegmentDescriptor;
@@ -42,17 +43,19 @@ public class ServerViewUtil
       TimelineServerView serverView,
       String datasource,
       List<Interval> intervals,
-      int numCandidates
+      int numCandidates,
+      HistoricalFilter historicalFilter
   )
   {
-    return getTargetLocations(serverView, new TableDataSource(datasource), intervals, numCandidates);
+    return getTargetLocations(serverView, new TableDataSource(datasource), intervals, numCandidates, historicalFilter);
   }
 
   public static List<LocatedSegmentDescriptor> getTargetLocations(
       TimelineServerView serverView,
       TableDataSource datasource,
       List<Interval> intervals,
-      int numCandidates
+      int numCandidates,
+      HistoricalFilter historicalFilter
   )
   {
     final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(datasource);
@@ -68,7 +71,7 @@ public class ServerViewUtil
               holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
           );
           long size = selector.getSegment().getSize();
-          List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates);
+          List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates, historicalFilter);
           located.add(new LocatedSegmentDescriptor(descriptor, size, candidates));
         }
       }

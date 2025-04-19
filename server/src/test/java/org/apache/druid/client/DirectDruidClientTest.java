@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -243,7 +244,7 @@ public class DirectDruidClientTest
 
     Assert.assertEquals(2, client2.getNumOpenConnections());
 
-    Assert.assertEquals(serverSelector.pick(null), queryableDruidServer2);
+    Assert.assertEquals(serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER), queryableDruidServer2);
 
     EasyMock.verify(httpClient);
   }

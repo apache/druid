@@ -26,6 +26,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -86,6 +87,12 @@ public class NoopCoordinatorClient implements CoordinatorClient
 
   @Override
   public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig()
   {
     throw new UnsupportedOperationException();
   }

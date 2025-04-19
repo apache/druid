@@ -96,6 +96,7 @@ import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
@@ -112,6 +113,7 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorCompactionResource;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
 import org.apache.druid.server.http.CoordinatorResource;
@@ -224,6 +226,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
+            binder.bind(CoordinatorDynamicConfigSyncer.class).in(LazySingleton.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {
@@ -246,6 +249,7 @@ public class CliCoordinator extends ServerRunnable
                   .in(ManageLifecycle.class);
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
+            binder.bind(CloneStatusManager.class).in(LazySingleton.class);
 
             binder.bind(CoordinatorConfigManager.class);
             binder.bind(MetadataManager.class);

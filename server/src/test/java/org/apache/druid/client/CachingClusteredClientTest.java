@@ -144,7 +144,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -2710,7 +2709,8 @@ public class CachingClusteredClientTest
             NoQueryLaningStrategy.INSTANCE,
             new ServerConfig()
         ),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
     );
   }
 

@@ -1335,3 +1335,125 @@ Host: http://BROKER_IP:BROKER_PORT
 #### Sample response
 
 A successful response to this endpoint results in an empty response body.
+
+### Get Historical Cloning Status
+
+Retrieves the current status of Historical cloning.
+
+#### URL
+
+`GET` `/druid/coordinator/v1/cloneStatus`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="56" label="200 SUCCESS">
+
+
+<br/>
+
+*Successfully retrieved cloning status*
+
+</TabItem>
+</Tabs>
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="58" label="cURL">
+
+
+```shell
+curl "http://COORDINATOR_IP:COORDINATOR_PORT/druid/coordinator/v1/cloneStatus"
+```
+
+</TabItem>
+<TabItem value="59" label="HTTP">
+
+
+```http
+GET /druid/coordinator/v1/cloneStatus HTTP/1.1
+Host: http://COORDINATOR_IP:COORDINATOR_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+```json
+{
+    "localhost:8083": {
+        "sourceServer": "localhost:8089",
+        "status": "LOADING",
+        "segmentLoadsRemaining": 0,
+        "segmenetsDropsRemaining": 0,
+        "bytesRemaining": 0
+    }
+}
+```
+
+</details>
+
+### Get Broker dynamic configuration view
+
+Retrieves the list of Brokers which have an up-to-date view of Coordinator dynamic configuration. 
+
+#### URL
+
+`GET` `/druid/coordinator/v1/brokerConfigurationStatus`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="56" label="200 SUCCESS">
+
+
+<br/>
+
+*Successfully retrieved Broker Configuration view*
+
+</TabItem>
+</Tabs>
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="58" label="cURL">
+
+
+```shell
+curl "http://COORDINATOR_IP:COORDINATOR_PORT/druid/coordinator/v1/brokerConfigurationStatus"
+```
+
+</TabItem>
+<TabItem value="59" label="HTTP">
+
+
+```http
+GET /druid/coordinator/v1/brokerConfigurationStatus HTTP/1.1
+Host: http://COORDINATOR_IP:COORDINATOR_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+```json
+[
+    "localhost:8082"
+]
+```
+
+</details>

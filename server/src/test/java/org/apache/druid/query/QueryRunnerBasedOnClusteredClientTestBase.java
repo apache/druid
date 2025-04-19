@@ -27,6 +27,7 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.SimpleServerView;
+import org.apache.druid.client.TestCoordinatorDynamicConfigView;
 import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.client.TestHttpClient.SimpleServerManager;
 import org.apache.druid.client.cache.CacheConfig;
@@ -61,6 +62,7 @@ import org.junit.Before;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
@@ -132,7 +134,8 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         QueryStackTests.getParallelMergeConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
     );
     servers = new ArrayList<>();
   }
