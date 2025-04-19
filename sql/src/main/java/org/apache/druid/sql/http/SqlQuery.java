@@ -22,15 +22,24 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.sun.jersey.api.core.HttpContext;
+import com.sun.jersey.server.impl.model.HttpHelper;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.http.ClientSqlQuery;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.MediaType;
+import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -199,5 +208,45 @@ public class SqlQuery
   public SqlQuery withQueryContext(Map<String, Object> newContext)
   {
     return new SqlQuery(query, resultFormat, header, typesHeader, sqlTypesHeader, newContext, parameters);
+  }
+
+  /**
+   * For BROKERs to use.
+   *
+   * Brokers use com.sun.jersey upon Jetty for RESTful API, however jersey internally has sepcial handling for x-www-form-urlencoded,
+   * it's not able to get the data from the stream of HttpServletRequest for such content type.
+   * So we use HttpContext to get the request entity/string instead of using HttpServletRequest.
+   */
+  public static SqlQuery from(HttpContext httpContext)
+  {
+    MediaType contentType = httpContext.getRequest().getMediaType();
+    if (MediaType.APPLICATION_JSON_TYPE.isCompatible(contentType)) {
+      return httpContext.getRequest().getEntity(SqlQuery.class);
+    } else {
+      // Treats the whole HTTP body as a SQL
+      String sql = httpContext.getRequest().getEntity(String.class);
+      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
+        sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
+      }
+      return new SqlQuery(sql, null, false, false, false, null, null);
+    }
+  }
+
+  /**
+   * For Router to use
+   */
+  public static SqlQuery from(HttpServletRequest request, ObjectMapper objectMapper) throws IOException
+  {
+    MediaType contentType = HttpHelper.getContentType(request.getHeader("Content-Type"));
+    if (MediaType.APPLICATION_JSON_TYPE.isCompatible(contentType)) {
+      return objectMapper.readValue(request.getInputStream(), SqlQuery.class);
+    } else {
+      // Treats the whole HTTP body as a SQL
+      String sql = new String(IOUtils.toByteArray(request.getInputStream()), StandardCharsets.UTF_8);
+      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
+        sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
+      }
+      return new SqlQuery(sql, null, false, false, false, null, null);
+    }
   }
 }
