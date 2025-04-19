@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.core.HttpContext;
 import com.sun.jersey.server.impl.model.HttpHelper;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.http.ClientSqlQuery;
