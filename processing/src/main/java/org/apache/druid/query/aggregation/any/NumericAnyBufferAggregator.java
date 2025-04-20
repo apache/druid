@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import java.nio.ByteBuffer;
 
@@ -59,7 +59,7 @@ public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableC
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, NullHandling.IS_NULL_BYTE);
+    buf.put(position, TypeStrategies.IS_NULL_BYTE);
     initValue(buf, position);
   }
 
@@ -69,16 +69,16 @@ public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableC
     if ((buf.get(position) & BYTE_FLAG_FOUND_MASK) != BYTE_FLAG_FOUND_MASK) {
       if (!valueSelector.isNull()) {
         putValue(buf, position);
-        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
+        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE));
       } else {
-        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
+        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NULL_BYTE));
       }
     }
   }
 
   boolean isValueNull(ByteBuffer buf, int position)
   {
-    return (buf.get(position) & BYTE_FLAG_NULL_MASK) == NullHandling.IS_NULL_BYTE;
+    return (buf.get(position) & BYTE_FLAG_NULL_MASK) == TypeStrategies.IS_NULL_BYTE;
   }
 
   @Override

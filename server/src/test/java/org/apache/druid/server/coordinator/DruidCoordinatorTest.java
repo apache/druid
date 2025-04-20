@@ -175,7 +175,7 @@ public class DruidCoordinatorTest
   {
     return new MetadataManager(
         null,
-        new CoordinatorConfigManager(configManager, null, null),
+        new CoordinatorConfigManager(configManager, null, null, null),
         segmentsMetadataManager,
         null,
         metadataRuleManager,
@@ -821,7 +821,7 @@ public class DruidCoordinatorTest
         .anyTimes();
     EasyMock.replay(segmentsMetadataManager);
     CompactionSimulateResult result = coordinator.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(0.2, null, null, null)
+        new ClusterCompactionConfig(0.2, null, null, null, null)
     );
     Assert.assertEquals(Collections.emptyMap(), result.getCompactionStates());
   }

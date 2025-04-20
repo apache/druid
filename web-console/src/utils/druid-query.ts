@@ -364,6 +364,16 @@ export async function getApiArray<T = any>(url: string, cancelToken?: CancelToke
   return result;
 }
 
+export async function getApiArrayFromKey<T = any>(
+  url: string,
+  key: string,
+  cancelToken?: CancelToken,
+): Promise<T[]> {
+  const result = (await Api.instance.get(url, { cancelToken })).data?.[key];
+  if (!Array.isArray(result)) throw new Error('unexpected result');
+  return result;
+}
+
 export interface QueryExplanation {
   query: any;
   signature: { name: string; type: string }[];

@@ -26,6 +26,8 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -33,6 +35,7 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class BrokerClientImpl implements BrokerClient
@@ -44,6 +47,19 @@ public class BrokerClientImpl implements BrokerClient
   {
     this.client = client;
     this.jsonMapper = jsonMapper;
+  }
+
+  @Override
+  public ListenableFuture<String> submitSqlQuery(final ClientSqlQuery sqlQuery)
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/v2/sql/")
+                    .jsonContent(jsonMapper, sqlQuery),
+            new StringFullResponseHandler(StandardCharsets.UTF_8)
+        ),
+        FullResponseHolder::getContent
+    );
   }
 
   @Override

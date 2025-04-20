@@ -1010,7 +1010,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       0,
                       MAX_INITIALIZATION_RETRIES,
                       null,
-                      null
+                      StringUtils.format("Failed to initialize supervisor[%s]", supervisorId)
                   );
                 }
                 catch (Exception e2) {
@@ -3222,7 +3222,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     final boolean stopTasksEarly;
     if (earlyStopTime != null && !earlyStopTime.isAfterNow()) {
-      log.info("Early stop requested, signalling tasks to complete.");
+      log.info("Early stop requested for supervisor[%s], signalling tasks to complete.", supervisorId);
       earlyStopTime = null;
       stopTasksEarly = true;
     } else {
@@ -4093,6 +4093,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // healthy go ahead and try anyway to try if possible to provide insight into how much time is left to fix the
     // issue for cluster operators since this feeds the lag metrics
     if (stateManager.isIdle() || stateManager.isSteadyState() || !stateManager.isHealthy()) {
+      final Stopwatch runTime = Stopwatch.createStarted();
       try {
         updateCurrentOffsets();
         updatePartitionLagFromStream();
@@ -4100,6 +4101,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       catch (Exception e) {
         log.warn(e, "Exception while getting current/latest sequences");
+      }
+      finally {
+        emitUpdateOffsetsTime(runTime.millisElapsed());
       }
     }
   }
@@ -4503,6 +4507,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       log.warn(e, "Unable to emit notices process time");
+    }
+  }
+
+  private void emitUpdateOffsetsTime(long timeInMillis)
+  {
+    try {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+                            .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                            .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
+                            .setMetric(StringUtils.format("ingest/%s/fetchOffsets/time", spec.getType()), timeInMillis)
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to emit updateOffsets time");
     }
   }
 

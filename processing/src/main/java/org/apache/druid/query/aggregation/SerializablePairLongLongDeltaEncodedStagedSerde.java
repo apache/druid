@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -53,7 +53,7 @@ public class SerializablePairLongLongDeltaEncodedStagedSerde extends AbstractSer
     lhs += minValue;
 
     Long rhs = null;
-    if (readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE) {
+    if (readOnlyBuffer.get() == TypeStrategies.IS_NOT_NULL_BYTE) {
       rhs = readOnlyBuffer.getLong();
     }
 

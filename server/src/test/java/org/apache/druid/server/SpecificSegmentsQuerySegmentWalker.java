@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import com.google.inject.Injector;
+import org.apache.curator.shaded.com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -34,6 +36,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.InlineSegmentWrangler;
@@ -51,6 +54,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
@@ -76,8 +80,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 {
   private final QuerySegmentWalker walker;
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
-  private final List<Closeable> closeables = new ArrayList<>();
-  private final List<DataSegment> segments = new ArrayList<>();
+  private final List<CompleteSegment> segments = new ArrayList<>();
   private static final LookupExtractorFactoryContainerProvider LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER =
       new LookupExtractorFactoryContainerProvider()
       {
@@ -185,6 +188,14 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final Segment segment)
   {
+    return add(new CompleteSegment(descriptor, segment));
+  }
+
+  public SpecificSegmentsQuerySegmentWalker add(CompleteSegment completeSegment)
+  {
+    DataSegment descriptor = completeSegment.getDataSegment();
+    Segment segment = completeSegment.getSegment();
+
     final ReferenceCountingSegment referenceCountingSegment =
         ReferenceCountingSegment.wrapSegment(
             segment,
@@ -199,8 +210,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         descriptor.getVersion(),
         descriptor.getShardSpec().createChunk(referenceCountingSegment)
     );
-    segments.add(descriptor);
-    closeables.add(referenceCountingSegment);
+    segments.add(completeSegment);
     return this;
   }
 
@@ -216,7 +226,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   public List<DataSegment> getSegments()
   {
-    return segments;
+    return Lists.transform(segments, CompleteSegment::getDataSegment);
   }
 
   @Override
@@ -234,7 +244,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   @Override
   public void close() throws IOException
   {
-    for (Closeable closeable : closeables) {
+    for (Closeable closeable : segments) {
       Closeables.close(closeable, true);
     }
   }
@@ -252,5 +262,24 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
             .build(),
         indexNumericDims
     );
+  }
+
+  public CompleteSegment getSegment(SegmentId segmentId)
+  {
+    List<CompleteSegment> matches = new ArrayList<>(1);
+    for (CompleteSegment s : segments) {
+      SegmentId id = s.getDataSegment().getId();
+      if (id.equals(segmentId)) {
+        matches.add(s);
+      }
+    }
+    if (matches.size() != 1) {
+      throw DruidException.defensive(
+          "SegmentId [%s] has unexpected number of matches! [%s]",
+          segmentId,
+          matches
+      );
+    }
+    return matches.get(0);
   }
 }

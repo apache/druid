@@ -30,8 +30,7 @@ import java.util.Objects;
  * Base implementation of {@link CompactionCandidateSearchPolicy} that can have
  * a {@code priorityDatasource}.
  */
-public abstract class BaseCandidateSearchPolicy
-    implements CompactionCandidateSearchPolicy, Comparator<CompactionCandidate>
+public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSearchPolicy
 {
   private final String priorityDatasource;
   private final Comparator<CompactionCandidate> comparator;
@@ -59,7 +58,7 @@ public abstract class BaseCandidateSearchPolicy
   }
 
   @Override
-  public final int compare(CompactionCandidate o1, CompactionCandidate o2)
+  public final int compareCandidates(CompactionCandidate o1, CompactionCandidate o2)
   {
     return comparator.compare(o1, o2);
   }

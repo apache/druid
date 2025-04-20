@@ -690,11 +690,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return numEntries;
   }
 
-  AggregatorFactory[] getMetrics()
-  {
-    return metrics;
-  }
-
   public AtomicLong getBytesInMemory()
   {
     return bytesInMemory;

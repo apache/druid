@@ -172,6 +172,7 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
                 null,
                 null
             ),
+            "Get row count of datasource",
             ImmutableList.of(ImmutableMap.of("EXPR$0", 0))
         )
     );
@@ -197,6 +198,7 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
                 null,
                 null
             ),
+            "Get column info of datasource",
             ImmutableList.of(
                 ImmutableMap.of(
                     "COLUMN_NAME",

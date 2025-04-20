@@ -70,7 +70,7 @@ public interface SegmentsMetadataManager
    *                                               any of the given segment IDs
    *                                               do not exist in the metadata store.
    */
-  int markAsUsedNonOvershadowedSegments(String dataSource, Set<String> segmentIds);
+  int markAsUsedNonOvershadowedSegments(String dataSource, Set<SegmentId> segmentIds);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the

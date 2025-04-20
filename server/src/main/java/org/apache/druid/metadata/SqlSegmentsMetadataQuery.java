@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -383,7 +384,7 @@ public class SqlSegmentsMetadataQuery
    */
   public List<DataSegmentPlus> retrieveSegmentsById(
       String datasource,
-      Set<String> segmentIds
+      Set<SegmentId> segmentIds
   )
   {
     try (CloseableIterator<DataSegmentPlus> iterator
@@ -406,11 +407,12 @@ public class SqlSegmentsMetadataQuery
    */
   public CloseableIterator<DataSegmentPlus> retrieveSegmentsByIdIterator(
       final String datasource,
-      final Set<String> segmentIds,
+      final Set<SegmentId> segmentIds,
       final boolean includeSchemaInfo
   )
   {
-    final List<List<String>> partitionedSegmentIds = Lists.partition(List.copyOf(segmentIds), 100);
+    final List<String> ids = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toList());
+    final List<List<String>> partitionedSegmentIds = Lists.partition(ids, 100);
 
     // CloseableIterator to query segments in batches
     return new CloseableIterator<>()
@@ -467,7 +469,7 @@ public class SqlSegmentsMetadataQuery
    */
   public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
       String datasource,
-      Set<String> segmentIds
+      Set<SegmentId> segmentIds
   )
   {
     try (CloseableIterator<DataSegmentPlus> iterator
@@ -509,10 +511,11 @@ public class SqlSegmentsMetadataQuery
               (index, r, ctx) -> {
                 String schemaFingerprint = (String) r.getObject(3);
                 Long numRows = (Long) r.getObject(4);
+                String usedStatusLastUpdatedDate = r.getString(6);
                 return new DataSegmentPlus(
                     JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                     null,
-                    DateTimes.of(r.getString(6)),
+                    Strings.isNullOrEmpty(usedStatusLastUpdatedDate) ? null : DateTimes.of(usedStatusLastUpdatedDate),
                     r.getBoolean(2),
                     schemaFingerprint,
                     numRows,
@@ -524,7 +527,7 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated"
+              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated, created_date"
               + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
@@ -536,15 +539,18 @@ public class SqlSegmentsMetadataQuery
           .bind("dataSource", datasource)
           .setFetchSize(connector.getStreamingFetchSize())
           .map(
-              (index, r, ctx) -> new DataSegmentPlus(
-                  JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-                  null,
-                  DateTimes.of(r.getString(4)),
-                  r.getBoolean(2),
-                  null,
-                  null,
-                  r.getString(3)
-              )
+              (index, r, ctx) -> {
+                String usedStatusLastUpdatedDate = r.getString(4);
+                return new DataSegmentPlus(
+                    JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                    DateTimes.of(r.getString(5)),
+                    Strings.isNullOrEmpty(usedStatusLastUpdatedDate) ? null : DateTimes.of(usedStatusLastUpdatedDate),
+                    r.getBoolean(2),
+                    null,
+                    null,
+                    r.getString(3)
+                );
+              }
           )
           .iterator();
     }
@@ -561,7 +567,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @return the number of segments actually modified.
    */
-  public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
+  public int markSegments(final Collection<SegmentId> segmentIds, final boolean used, DateTime updateTime)
   {
     final String dataSource;
 
@@ -583,7 +589,7 @@ public class SqlSegmentsMetadataQuery
         );
 
     for (SegmentId segmentId : segmentIds) {
-      batch.add(used, DateTimes.nowUtc().toString(), dataSource, segmentId.toString());
+      batch.add(used, updateTime.toString(), dataSource, segmentId.toString());
     }
 
     final int[] segmentChanges = batch.execute();
@@ -705,52 +711,42 @@ public class SqlSegmentsMetadataQuery
               DataSegment::getId
           )
       );
-      return markSegments(segments, false);
+      return markSegments(segments, false, updateTime);
     }
   }
 
   /**
    * Retrieve the used segment for a given id if it exists in the metadata store and null otherwise
    */
-  public DataSegment retrieveUsedSegmentForId(String id)
+  @Nullable
+  public DataSegment retrieveUsedSegmentForId(SegmentId segmentId)
   {
     final String query = "SELECT payload FROM %s WHERE used = true AND id = :id";
 
-    final Query<Map<String, Object>> sql = handle
+    final List<DataSegment> segments = handle
         .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
-        .bind("id", id);
+        .bind("id", segmentId.toString())
+        .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+        .list();
 
-    final ResultIterator<DataSegment> resultIterator =
-        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-           .iterator();
-
-    if (resultIterator.hasNext()) {
-      return resultIterator.next();
-    }
-
-    return null;
+    return segments.isEmpty() ? null : segments.get(0);
   }
 
   /**
    * Retrieve the segment for a given id if it exists in the metadata store and null otherwise
    */
-  public DataSegment retrieveSegmentForId(String id)
+  @Nullable
+  public DataSegment retrieveSegmentForId(SegmentId segmentId)
   {
     final String query = "SELECT payload FROM %s WHERE id = :id";
 
-    final Query<Map<String, Object>> sql = handle
+    final List<DataSegment> segments = handle
         .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
-        .bind("id", id);
+        .bind("id", segmentId.toString())
+        .map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+        .list();
 
-    final ResultIterator<DataSegment> resultIterator =
-        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-           .iterator();
-
-    if (resultIterator.hasNext()) {
-      return resultIterator.next();
-    }
-
-    return null;
+    return segments.isEmpty() ? null : segments.get(0);
   }
 
   public List<SegmentIdWithShardSpec> retrievePendingSegmentIds(
@@ -1143,7 +1139,7 @@ public class SqlSegmentsMetadataQuery
         true
     );
 
-    final ResultIterator<DataSegmentPlus> resultIterator = getDataSegmentPlusResultIterator(sql);
+    final ResultIterator<DataSegmentPlus> resultIterator = getDataSegmentPlusResultIterator(sql, used);
 
     return filterDataSegmentPlusIteratorByInterval(resultIterator, intervals, matchMode);
   }
@@ -1165,9 +1161,9 @@ public class SqlSegmentsMetadataQuery
     final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
     final StringBuilder sb = new StringBuilder();
     if (includeExtraInfo) {
-      sb.append("SELECT payload, created_date, used_status_last_updated FROM %s WHERE used = :used AND dataSource = :dataSource");
+      sb.append("SELECT id, payload, created_date, used_status_last_updated FROM %s WHERE used = :used AND dataSource = :dataSource");
     } else {
-      sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
+      sb.append("SELECT id, payload FROM %s WHERE used = :used AND dataSource = :dataSource");
     }
 
     if (compareAsString) {
@@ -1234,22 +1230,34 @@ public class SqlSegmentsMetadataQuery
 
   private ResultIterator<DataSegment> getDataSegmentResultIterator(Query<Map<String, Object>> sql)
   {
-    return sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-        .iterator();
+    return sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(2), DataSegment.class))
+              .iterator();
   }
 
-  private ResultIterator<DataSegmentPlus> getDataSegmentPlusResultIterator(Query<Map<String, Object>> sql)
+  private ResultIterator<DataSegmentPlus> getDataSegmentPlusResultIterator(
+      Query<Map<String, Object>> sql,
+      boolean used
+  )
   {
-    return sql.map((index, r, ctx) -> new DataSegmentPlus(
-            JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-            DateTimes.of(r.getString(2)),
+    return sql.map((index, r, ctx) -> {
+      final String segmentId = r.getString(1);
+      try {
+        String usedStatusLastUpdatedDate = r.getString(4);
+        return new DataSegmentPlus(
+            JacksonUtils.readValue(jsonMapper, r.getBytes(2), DataSegment.class),
             DateTimes.of(r.getString(3)),
-            null,
+            Strings.isNullOrEmpty(usedStatusLastUpdatedDate) ? null : DateTimes.of(usedStatusLastUpdatedDate),
+            used,
             null,
             null,
             null
-        ))
-        .iterator();
+        );
+      }
+      catch (Throwable t) {
+        log.error(t, "Could not read segment with ID[%s]", segmentId);
+        return null;
+      }
+    }).iterator();
   }
 
   private UnmodifiableIterator<DataSegment> filterDataSegmentIteratorByInterval(
@@ -1288,7 +1296,9 @@ public class SqlSegmentsMetadataQuery
     return Iterators.filter(
         resultIterator,
         dataSegment -> {
-          if (intervals.isEmpty()) {
+          if (dataSegment == null) {
+            return false;
+          } else if (intervals.isEmpty()) {
             return true;
           } else {
             // Must re-check that the interval matches, even if comparing as string, because the *segment interval*

@@ -41,6 +41,7 @@ import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -96,7 +97,8 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         new TestDruidLeaderSelector(),
-        new NoopSegmentMetadataCache()
+        NoopSegmentMetadataCache.instance(),
+        NoopServiceEmitter.instance()
     );
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         transactionFactory,
@@ -108,7 +110,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     )
     {
       @Override
-      protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
+      protected SegmentPublishResult updateDataSourceMetadataWithHandle(
           SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,

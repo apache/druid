@@ -45,7 +45,7 @@ import { ContinuousChartRender, OTHER_VALUE } from './continuous-chart-render';
 
 const TIME_NAME = 't';
 const MEASURE_NAME = 'm';
-const STACK_NAME = 's';
+const FACET_NAME = 'f';
 const MIN_SLICE_WIDTH = 8;
 
 function getRangeInExpression(
@@ -92,12 +92,12 @@ function getRangeInExpression(
 }
 
 interface TimeChartParameterValues {
+  markType: ContinuousChartMarkType;
   granularity: string;
-  splitColumn?: ExpressionMeta;
-  numberToStack: number;
+  facetColumn?: ExpressionMeta;
+  maxFacets: number;
   showOthers: boolean;
   measure: ExpressionMeta;
-  markType: ContinuousChartMarkType;
   curveType: ContinuousChartCurveType;
 }
 
@@ -106,6 +106,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
   title: 'Time chart',
   icon: IconNames.TIMELINE_LINE_CHART,
   parameters: {
+    markType: {
+      type: 'option',
+      options: ['line', 'area', 'bar'],
+      defaultValue: 'line',
+      optionLabels: capitalizeFirst,
+    },
     granularity: {
       type: 'option',
       options: ({ querySource, where }) => {
@@ -132,24 +138,25 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       important: true,
       optionLabels: g => (g === 'auto' ? 'Auto' : new Duration(g).getDescription(true)),
     },
-    splitColumn: {
+    facetColumn: {
       type: 'expression',
-      label: 'Stack by',
+      label: 'Facet by',
       transferGroup: 'show',
       important: true,
+      legacyName: 'splitColumn',
     },
-    numberToStack: {
+    maxFacets: {
       type: 'number',
-      label: 'Max stacks',
       defaultValue: 7,
-      min: 2,
+      min: 1,
       required: true,
-      visible: ({ parameterValues }) => Boolean(parameterValues.splitColumn),
+      visible: ({ parameterValues }) => Boolean(parameterValues.facetColumn),
+      legacyName: 'numberToStack',
     },
     showOthers: {
       type: 'boolean',
       defaultValue: true,
-      visible: ({ parameterValues }) => Boolean(parameterValues.splitColumn),
+      visible: ({ parameterValues }) => Boolean(parameterValues.facetColumn),
     },
     measure: {
       type: 'measure',
@@ -158,12 +165,6 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       important: true,
       defaultValue: ({ querySource }) => querySource?.getFirstAggregateMeasure(),
       required: true,
-    },
-    markType: {
-      type: 'option',
-      options: ['area', 'bar', 'line'],
-      defaultValue: 'area',
-      optionLabels: capitalizeFirst,
     },
     curveType: {
       type: 'option',
@@ -174,7 +175,16 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     },
   },
   component: function TimeChartModule(props) {
-    const { querySource, timezone, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const {
+      querySource,
+      timezone,
+      where,
+      setWhere,
+      moduleWhere,
+      parameterValues,
+      stage,
+      runSqlQuery,
+    } = props;
 
     const timeColumnName = querySource.columns.find(column => column.sqlType === 'TIMESTAMP')?.name;
     const timeGranularity =
@@ -186,17 +196,18 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           )
         : parameterValues.granularity;
 
-    const { splitColumn, numberToStack, showOthers, measure, markType } = parameterValues;
+    const { facetColumn, maxFacets, showOthers, measure, markType } = parameterValues;
 
     const dataQuery = useMemo(() => {
       return {
         querySource,
         timezone,
         where,
+        moduleWhere,
         timeGranularity,
         measure,
-        splitExpression: splitColumn?.expression,
-        numberToStack,
+        facetExpression: facetColumn?.expression,
+        maxFacets,
         showOthers,
         oneExtra: markType !== 'bar',
       };
@@ -204,10 +215,11 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       querySource,
       timezone,
       where,
+      moduleWhere,
       timeGranularity,
       measure,
-      splitColumn,
-      numberToStack,
+      facetColumn,
+      maxFacets,
       showOthers,
       markType,
     ]);
@@ -219,10 +231,11 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           querySource,
           timezone,
           where,
+          moduleWhere,
           timeGranularity,
           measure,
-          splitExpression,
-          numberToStack,
+          facetExpression,
+          maxFacets,
           showOthers,
           oneExtra,
         },
@@ -232,17 +245,20 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           throw new Error(`Must have a column of type TIMESTAMP for the time chart to work`);
         }
 
+        const effectiveWhere = where.and(moduleWhere);
         const granularity = new Duration(timeGranularity);
 
-        const vs = splitExpression
+        const detectedFacets: string[] | undefined = facetExpression
           ? (
               await runSqlQuery(
                 {
                   query: querySource
-                    .getInitQuery(where)
-                    .addSelect(splitExpression.cast('VARCHAR').as('v'), { addToGroupBy: 'end' })
+                    .getInitQuery(effectiveWhere)
+                    .addSelect(facetExpression.cast('VARCHAR').as(FACET_NAME), {
+                      addToGroupBy: 'end',
+                    })
                     .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
-                    .changeLimitValue(numberToStack),
+                    .changeLimitValue(maxFacets + (showOthers ? 1 : 0)), // If we want to show others add 1 to check if we need to query for them
                   timezone,
                 },
                 cancelToken,
@@ -252,44 +268,54 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
 
         cancelToken.throwIfRequested();
 
-        if (vs?.length === 0) {
-          // If vs is empty then there is no data at all and no need to do a larger query
+        if (detectedFacets?.length === 0) {
+          // If detectedFacets is empty then there is no data at all and no need to do a larger query
           return {
-            effectiveVs: [],
+            effectiveFacets: [],
             sourceData: [],
             measure,
             granularity,
           };
         }
 
-        const effectiveVs = vs && showOthers ? vs.concat(OTHER_VALUE) : vs;
+        const facetsToQuery =
+          showOthers && detectedFacets && maxFacets < detectedFacets.length
+            ? detectedFacets.slice(0, maxFacets)
+            : undefined;
+        const effectiveFacets = facetsToQuery ? facetsToQuery.concat(OTHER_VALUE) : detectedFacets;
 
         const result = await runSqlQuery(
           {
             query: querySource
-              .getInitQuery(overqueryWhere(where, timeColumnName, granularity, oneExtra))
-              .applyIf(splitExpression && vs && !showOthers, q =>
-                q.addWhere(splitExpression!.cast('VARCHAR').in(vs!)),
+              .getInitQuery(overqueryWhere(effectiveWhere, timeColumnName, granularity, oneExtra))
+              .applyIf(facetExpression && detectedFacets && !facetsToQuery, q =>
+                q.addWhere(facetExpression!.cast('VARCHAR').in(detectedFacets!)),
               )
               .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
                 addToGroupBy: 'end',
                 addToOrderBy: 'end',
                 direction: 'DESC',
               })
-              .applyIf(splitExpression, q => {
-                if (!splitExpression || !vs) return q; // Should never get here, doing this to make peace between eslint and TS
+              .applyIf(facetExpression, q => {
+                if (!facetExpression) return q; // Should never get here, doing this to make peace between eslint and TS
                 return q.addSelect(
-                  (showOthers
-                    ? SqlCase.ifThenElse(splitExpression.in(vs), splitExpression, L(OTHER_VALUE))
-                    : splitExpression
+                  (facetsToQuery
+                    ? SqlCase.ifThenElse(
+                        facetExpression.in(facetsToQuery),
+                        facetExpression,
+                        L(OTHER_VALUE),
+                      )
+                    : facetExpression
                   )
                     .cast('VARCHAR')
-                    .as(STACK_NAME),
+                    .as(FACET_NAME),
                   { addToGroupBy: 'end' },
                 );
               })
               .addSelect(measure.expression.as(MEASURE_NAME))
-              .changeLimitValue(10000 * (effectiveVs ? Math.min(effectiveVs.length, 10) : 1)),
+              .changeLimitValue(
+                10000 * (effectiveFacets ? Math.min(effectiveFacets.length, 10) : 1),
+              ),
             timezone,
           },
           cancelToken,
@@ -300,12 +326,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
             start: b[TIME_NAME].valueOf(),
             end: granularity.shift(b[TIME_NAME], Timezone.UTC, 1).valueOf(),
             measure: b[MEASURE_NAME],
-            stack: b[STACK_NAME],
+            facet: b[FACET_NAME],
           }),
         );
 
         return {
-          effectiveVs,
+          effectiveFacets,
           sourceData: dataset,
           measure,
           granularity,
@@ -326,7 +352,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         {sourceData && (
           <ContinuousChartRender
             data={sourceData.sourceData}
-            stacks={sourceData.effectiveVs}
+            facets={sourceData.effectiveFacets}
             granularity={sourceData.granularity}
             markType={parameterValues.markType}
             curveType={parameterValues.curveType}

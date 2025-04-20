@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>33.0.0-SNAPSHOT</version>
+    <version>34.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -64,10 +64,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-smile</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.skife.config</groupId>
-      <artifactId>config-magic</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>

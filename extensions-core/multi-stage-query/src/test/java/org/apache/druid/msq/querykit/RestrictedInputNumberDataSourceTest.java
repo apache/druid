@@ -22,7 +22,6 @@ package org.apache.druid.msq.querykit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -78,7 +77,7 @@ public class RestrictedInputNumberDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(restrictedFooDataSource.isConcrete());
+    Assert.assertTrue(restrictedFooDataSource.isProcessable());
   }
 
   @Test
@@ -93,13 +92,6 @@ public class RestrictedInputNumberDataSourceTest
     RestrictedInputNumberDataSource newRestrictedDataSource = (RestrictedInputNumberDataSource) restrictedFooDataSource.withChildren(
         ImmutableList.of());
     Assert.assertTrue(newRestrictedDataSource.getChildren().isEmpty());
-  }
-
-  @Test
-  public void test_withUpdatedDataSource()
-  {
-    DataSource newRestrictedDataSource = restrictedFooDataSource.withUpdatedDataSource(restrictedBarDataSource);
-    Assert.assertEquals(newRestrictedDataSource, restrictedBarDataSource);
   }
 
   @Test

@@ -33,7 +33,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
@@ -80,23 +80,21 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final DataSource dataSourceFromQuery = query.getDataSource();
-    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
+    ExecutionVertex ev = ExecutionVertex.of(query);
 
-    if (!analysis.isConcreteBased() || !dataSourceFromQuery.isGlobal()) {
-      throw new IAE("Cannot query dataSource locally: %s", dataSourceFromQuery);
+    if (!ev.canRunQueryUsingLocalWalker()) {
+      throw new IAE("Cannot query dataSource locally: %s", ev.getBaseDataSource());
     }
 
     // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
     // matter, but at least some or all will be in a future PR
     final Iterable<ReferenceCountingSegment> segments =
-        FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(analysis.getBaseDataSource(), intervals))
+        FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(ev.getBaseDataSource(), intervals))
                           .transform(ReferenceCountingSegment::wrapRootGenerationSegment);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
-        .createSegmentMapFunction(query);
+    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction();
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

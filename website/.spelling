@@ -18,6 +18,8 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+BrowserOnly
+docusaurus
 1M
 100MiB
 32-bit
@@ -397,6 +399,7 @@ kerberos
 keystore
 keytool
 keytab
+kubeconfig
 kubernetes
 kubexit
 k8s
@@ -426,6 +429,7 @@ microbatches
 misconfiguration
 misconfigured
 mostAvailableSize
+multipart
 multitenancy
 multitenant
 MVDs
@@ -2412,6 +2416,7 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram

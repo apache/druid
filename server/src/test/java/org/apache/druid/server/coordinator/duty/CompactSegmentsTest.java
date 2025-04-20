@@ -28,6 +28,13 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.druid.catalog.MapMetadataCatalog;
+import org.apache.druid.catalog.MetadataCatalog;
+import org.apache.druid.catalog.NullMetadataCatalog;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
+import org.apache.druid.catalog.model.TableId;
+import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
@@ -38,7 +45,9 @@ import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -59,21 +68,29 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.CatalogDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
@@ -129,7 +146,7 @@ public class CompactSegmentsTest
   private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
   private static final int MAXIMUM_CAPACITY_WITH_AUTO_SCALE = 10;
 
-  @Parameterized.Parameters(name = "scenario: {0}, engine: {2}")
+  @Parameterized.Parameters(name = "partitionsSpec:{0}, engine:{2}")
   public static Collection<Object[]> constructorFeeder()
   {
     final MutableInt nextRangePartitionBoundary = new MutableInt(0);
@@ -173,11 +190,12 @@ public class CompactSegmentsTest
   private final PartitionsSpec partitionsSpec;
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
   private final CompactionEngine engine;
+  private CompactionCandidateSearchPolicy policy;
 
   private final List<DataSegment> allSegments = new ArrayList<>();
   private DataSourcesSnapshot dataSources;
   private CompactionStatusTracker statusTracker;
-  Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
+  private final Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
 
   public CompactSegmentsTest(
       PartitionsSpec partitionsSpec,
@@ -210,6 +228,7 @@ public class CompactSegmentsTest
     }
     dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments);
     statusTracker = new CompactionStatusTracker(JSON_MAPPER);
+    policy = new NewestSegmentFirstPolicy(null);
   }
 
   private DataSegment createSegment(String dataSource, int startDay, boolean beforeNoon, int partition)
@@ -253,6 +272,8 @@ public class CompactSegmentsTest
             .addValue(DruidCoordinatorConfig.class, COORDINATOR_CONFIG)
             .addValue(OverlordClient.class, overlordClient)
             .addValue(CompactionStatusTracker.class, statusTracker)
+            .addValue(MetadataCatalog.class, NullMetadataCatalog.INSTANCE)
+            .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
@@ -340,6 +361,13 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testRun_withFixedIntervalOrderPolicy()
+  {
+    policy = new FixedIntervalOrderPolicy(List.of());
+    testRun();
+  }
+
+  @Test
   public void testMakeStats()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
@@ -361,7 +389,7 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -383,7 +411,7 @@ public class CompactSegmentsTest
     for (int i = 1; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -422,12 +450,42 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class), JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)));
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class), JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)));
+          beforeNoon = beforeNoon.withLastCompactionState(
+              new CompactionState(
+                  partitionsSpec,
+                  null,
+                  null,
+                  null,
+                  JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
+                  JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                  null
+              )
+          );
+          afterNoon = afterNoon.withLastCompactionState(
+              new CompactionState(
+                  partitionsSpec,
+                  null,
+                  null,
+                  null,
+                  JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
+                  JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                  null
+              )
+          );
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class), JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class)));
+          afterNoon = afterNoon.withLastCompactionState(
+              new CompactionState(
+                  partitionsSpec,
+                  null,
+                  null,
+                  null,
+                  JSON_MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
+                  JSON_MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                  null
+              )
+          );
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -454,7 +512,7 @@ public class CompactSegmentsTest
 
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           dataSourceName,
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
           120 + 40 * (compactionRunCount + 1),
@@ -479,7 +537,7 @@ public class CompactSegmentsTest
     );
     verifySnapshot(
         compactSegments,
-        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         dataSourceName,
         0,
         TOTAL_BYTE_PER_DATASOURCE,
@@ -517,7 +575,7 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -541,7 +599,7 @@ public class CompactSegmentsTest
     for (int i = 1; i < 3; i++) {
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           DATA_SOURCE_PREFIX + i,
           0,
           TOTAL_BYTE_PER_DATASOURCE,
@@ -608,7 +666,7 @@ public class CompactSegmentsTest
 
       verifySnapshot(
           compactSegments,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           dataSourceName,
           // Minus 120 bytes accounting for the three skipped segments' original size
           TOTAL_BYTE_PER_DATASOURCE - 120 - 40 * (compactionRunCount + 1),
@@ -631,7 +689,7 @@ public class CompactSegmentsTest
     );
     verifySnapshot(
         compactSegments,
-        AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         dataSourceName,
         0,
         // Minus 120 bytes accounting for the three skipped segments' original size
@@ -672,7 +730,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
-        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
@@ -692,7 +750,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
-        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+        doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 10 available
@@ -716,41 +774,14 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
 
@@ -774,41 +805,15 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            new UserCompactionTaskIOConfig(true),
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withIoConfig(new UserCompactionTaskIOConfig(true))
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -824,41 +829,14 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -874,41 +852,17 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withEngine(engine)
+                                              .withGranularitySpec(
+                                      new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+                                  )
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
 
@@ -935,41 +889,19 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withDimensionsSpec(
+                                            new UserCompactionTaskDimensionsConfig(
+                                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
+                                            )
+                                        )
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -988,45 +920,128 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
     Assert.assertNull(taskPayload.getDimensionsSpec());
+  }
+
+  @Test
+  public void testCompactWithProjections()
+  {
+    final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
+    final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    final List<AggregateProjectionSpec> projections = ImmutableList.of(
+        new AggregateProjectionSpec(
+            dataSource + "_projection",
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(
+                    Granularities.HOUR,
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                )
+            ),
+            ImmutableList.of(
+                new StringDimensionSchema("bar")
+            ),
+            new AggregatorFactory[]{
+                new CountAggregatorFactory("cnt")
+            }
+        )
+    );
+
+    compactionConfigs.add(
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withDimensionsSpec(
+                                            new UserCompactionTaskDimensionsConfig(
+                                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))
+                                            )
+                                        )
+                                              .withProjections(projections)
+                                              .withEngine(engine)
+                                              .build()
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
+    Assert.assertEquals(
+        projections,
+        taskPayload.getProjections()
+    );
+  }
+
+  @Test
+  public void testCompactWithCatalogProjections()
+  {
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
+    final ObjectMapper mapper = new DefaultObjectMapper((DefaultObjectMapper) JSON_MAPPER);
+    final MapMetadataCatalog metadataCatalog = new MapMetadataCatalog(mapper);
+
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(MetadataCatalog.class, metadataCatalog)
+            .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
+
+    final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
+    final AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        dataSource + "_projection",
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(
+                Granularities.HOUR,
+                Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+            )
+        ),
+        ImmutableList.of(
+            new StringDimensionSchema("bar")
+        ),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("cnt")
+        }
+    );
+    metadataCatalog.addSpec(
+        TableId.datasource(dataSource),
+        TableBuilder.datasource(dataSource, "P1D")
+                    .property(
+                        DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                        ImmutableList.of(new DatasourceProjectionMetadata(projectionSpec))
+                    )
+                    .buildSpec()
+    );
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    compactionConfigs.add(
+        new CatalogDataSourceCompactionConfig(
+            dataSource,
+            engine,
+            new Period("PT0H"),
+            0,
+            null,
+            500L,
+            metadataCatalog
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
+    Assert.assertEquals(
+        ImmutableList.of(projectionSpec),
+        taskPayload.getProjections()
+    );
   }
 
   @Test
@@ -1038,41 +1053,17 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true),
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withGranularitySpec(
+                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true)
+                                        )
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1125,6 +1116,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1151,41 +1143,17 @@ public class CompactSegmentsTest
     final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withGranularitySpec(
+                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+                                        )
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     // Verify that conflict task was canceled
@@ -1214,7 +1182,7 @@ public class CompactSegmentsTest
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
 
     final String dataSource = DATA_SOURCE_PREFIX + 0;
-    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(dataSource)
         .withSkipOffsetFromLatest(Period.seconds(0))
@@ -1317,41 +1285,19 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withTransformSpec(
+                                            new CompactionTransformSpec(
+                                                new SelectorDimFilter("dim1", "foo", null)
+                                            )
+                                        )
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1368,41 +1314,14 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1420,41 +1339,15 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            aggregatorFactories,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withMetricsSpec(aggregatorFactories)
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1501,41 +1394,14 @@ public class CompactSegmentsTest
     final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSourceName,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSourceName)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1588,41 +1454,17 @@ public class CompactSegmentsTest
     final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSourceName,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSourceName)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withGranularitySpec(
+                                            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+                                        )
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1646,41 +1488,15 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withMetricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1699,41 +1515,14 @@ public class CompactSegmentsTest
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
-        new DataSourceCompactionConfig(
-            dataSource,
-            0,
-            500L,
-            null,
-            new Period("PT0H"), // smaller than segment interval
-            new UserCompactionTaskQueryTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                partitionsSpec,
-                null,
-                null,
-                null,
-                null,
-                null,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            engine,
-            null
-        )
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(dataSource)
+                                              .withTaskPriority(0)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period("PT0H")) // smaller than segment interval
+                                              .withTuningConfig(getTuningConfig(3))
+                                              .withEngine(engine)
+                                              .build()
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
@@ -1745,7 +1534,7 @@ public class CompactSegmentsTest
 
   private void verifySnapshot(
       CompactSegments compactSegments,
-      AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
+      AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
       String dataSourceName,
       long expectedByteCountAwaitingCompaction,
       long expectedByteCountCompressed,
@@ -1792,7 +1581,7 @@ public class CompactSegmentsTest
         if (i != dataSourceIndex) {
           verifySnapshot(
               compactSegments,
-              AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+              AutoCompactionSnapshot.ScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
               40L * (compactionRunCount + 1),
@@ -1807,7 +1596,7 @@ public class CompactSegmentsTest
         } else {
           verifySnapshot(
               compactSegments,
-              AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+              AutoCompactionSnapshot.ScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
               TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
               40L * (compactionRunCount + 1),
@@ -1826,7 +1615,7 @@ public class CompactSegmentsTest
         // This verify that dataSource that ran out of slot has correct statistics
         verifySnapshot(
             compactSegments,
-            AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+            AutoCompactionSnapshot.ScheduleStatus.RUNNING,
             DATA_SOURCE_PREFIX + i,
             TOTAL_BYTE_PER_DATASOURCE - 40L * compactionRunCount,
             40L * compactionRunCount,
@@ -1866,16 +1655,6 @@ public class CompactSegmentsTest
       @Nullable Integer numCompactionTaskSlots
   )
   {
-    return doCompactSegments(compactSegments, compactionConfigs, numCompactionTaskSlots, false);
-  }
-
-  private CoordinatorRunStats doCompactSegments(
-      CompactSegments compactSegments,
-      List<DataSourceCompactionConfig> compactionConfigs,
-      @Nullable Integer numCompactionTaskSlots,
-      boolean useAutoScaleSlots
-  )
-  {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDataSourcesSnapshot(dataSources)
@@ -1884,7 +1663,8 @@ public class CompactSegmentsTest
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                useAutoScaleSlots,
+                policy,
+                null,
                 null
             )
         )
@@ -1900,6 +1680,23 @@ public class CompactSegmentsTest
       Supplier<String> expectedVersionSupplier
   )
   {
+    if (policy instanceof FixedIntervalOrderPolicy) {
+      // Priority expected intervals
+      final List<FixedIntervalOrderPolicy.Candidate> eligibleCandidates = new ArrayList<>();
+      datasourceToSegments.keySet().forEach(
+          ds -> eligibleCandidates.add(
+              new FixedIntervalOrderPolicy.Candidate(ds, expectedInterval)
+          )
+      );
+      // Make all other intervals eligible too
+      datasourceToSegments.keySet().forEach(
+          ds -> eligibleCandidates.add(
+              new FixedIntervalOrderPolicy.Candidate(ds, Intervals.ETERNITY)
+          )
+      );
+      policy = new FixedIntervalOrderPolicy(eligibleCandidates);
+    }
+
     for (int i = 0; i < 3; i++) {
       final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
@@ -2019,41 +1816,19 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       compactionConfigs.add(
-          new DataSourceCompactionConfig(
-              dataSource,
-              0,
-              50L,
-              null,
-              new Period("PT1H"), // smaller than segment interval
-              new UserCompactionTaskQueryTuningConfig(
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  partitionsSpec,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  maxNumConcurrentSubTasksForNative,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null
-              ),
-              null,
-              null,
-              null,
-              null,
-              null,
-              engine,
-              maxNumTasksForMSQ == null ? null : ImmutableMap.of(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasksForMSQ)
-          )
+          InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(dataSource)
+                                                .withTaskPriority(0)
+                                                .withInputSegmentSizeBytes(50L)
+                                                .withSkipOffsetFromLatest(new Period("PT1H")) // smaller than segment interval
+                                                .withTuningConfig(getTuningConfig(maxNumConcurrentSubTasksForNative))
+                                                .withEngine(engine)
+                                                .withTaskContext(
+                                              maxNumTasksForMSQ == null
+                                              ? null
+                                              : ImmutableMap.of(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasksForMSQ)
+                                          )
+                                                .build()
       );
     }
     return compactionConfigs;
@@ -2193,7 +1968,8 @@ public class CompactSegmentsTest
                     ),
                     IndexSpec.class
                 ),
-                jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class)
+                jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                null
             ),
             1,
             segmentSize
@@ -2206,6 +1982,31 @@ public class CompactSegmentsTest
         );
       }
     }
+  }
+
+  private UserCompactionTaskQueryTuningConfig getTuningConfig(@Nullable Integer maxNumConcurrentSubTasks)
+  {
+    return new UserCompactionTaskQueryTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        partitionsSpec,
+        null,
+        null,
+        null,
+        null,
+        null,
+        maxNumConcurrentSubTasks,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 
   public static class StaticUtilsTest

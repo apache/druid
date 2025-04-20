@@ -119,6 +119,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -319,7 +321,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         new IdleConfig(true, 1000L),
-        1
+        1,
+        false
     );
 
     final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
@@ -2093,7 +2096,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
-    addSomeEvents(1);
+    addSomeEvents(30);
 
     Task task = createKafkaIndexTask(
         "id1",
@@ -2324,6 +2327,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, payload.getPublishingTasks().size());
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
+    Assert.assertEquals(
+        singlePartitionMap(topic, 0, 10000, 1, 5000, 2, 0),
+        payload.getMinimumLagMillis()
+    );
 
     TaskReportData activeReport = payload.getActiveTasks().get(0);
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
@@ -5115,16 +5122,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
+      Instant time = Instant.now();
       for (int i = 0; i < NUM_PARTITIONS; i++) {
         for (int j = 0; j < numEventsPerPartition; j++) {
           kafkaProducer.send(
               new ProducerRecord<>(
                   topic,
                   i,
+                  time.toEpochMilli(),
                   null,
                   StringUtils.toUtf8(StringUtils.format("event-%d", j))
               )
           ).get();
+          time = time.plus(5, ChronoUnit.SECONDS);
         }
       }
       kafkaProducer.commitTransaction();
@@ -5286,7 +5296,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         idleConfig,
-        null
+        null,
+        true
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5400,7 +5411,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        false
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5517,7 +5529,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        false
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(

@@ -22,13 +22,14 @@ package org.apache.druid.io;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.function.Function;
 
 /**
  * An {@link OutputStream} that limits how many bytes can be written. Throws {@link IOException} if the limit
- * is exceeded.
+ * is exceeded. *Not* thread-safe.
  */
 public class LimitedOutputStream extends OutputStream
 {
@@ -86,6 +87,14 @@ public class LimitedOutputStream extends OutputStream
   public void close() throws IOException
   {
     out.close();
+  }
+
+  public byte[] toByteArray()
+  {
+    if (!(out instanceof ByteArrayOutputStream)) {
+      throw new UnsupportedOperationException(out.getClass().getName() + "does not implement toByteArray()");
+    }
+    return ((ByteArrayOutputStream) out).toByteArray();
   }
 
   private void plus(final int n) throws IOException

@@ -69,7 +69,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   @Test
   public void testFindWorkerForTask()
   {
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
@@ -97,7 +97,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   @Test
   public void testFindWorkerForTaskWhenSameCurrCapacityUsed()
   {
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
@@ -126,7 +126,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   public void testOneDisableWorkerDifferentUsedCapacity()
   {
     String disabledVersion = "";
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
@@ -155,7 +155,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   public void testOneDisableWorkerSameUsedCapacity()
   {
     String disabledVersion = "";
-    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null, null);
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
@@ -190,7 +190,8 @@ public class EqualDistributionWorkerSelectStrategyTest
                 "bar", ImmutableSet.of("nonexistent-worker")
             ),
             false
-        )
+        ),
+        null
     );
 
     ImmutableWorkerInfo workerFoo = strategy.findWorkerForTask(
@@ -226,7 +227,8 @@ public class EqualDistributionWorkerSelectStrategyTest
                 "bar", ImmutableSet.of("nonexistent-worker")
             ),
             true
-        )
+        ),
+        null
     );
 
     ImmutableWorkerInfo workerFoo = strategy.findWorkerForTask(

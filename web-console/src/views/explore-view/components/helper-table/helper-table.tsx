@@ -37,11 +37,12 @@ import {
   checkedCircleIcon,
   filterMap,
   formatNumber,
+  toggle,
   without,
   xor,
 } from '../../../../utils';
 import type { ExpressionMeta, QuerySource } from '../../models';
-import { addOrUpdatePattern, toggle } from '../../utils';
+import { addOrUpdatePattern } from '../../utils';
 import { ColumnValue } from '../column-value/column-value';
 
 import './helper-table.scss';

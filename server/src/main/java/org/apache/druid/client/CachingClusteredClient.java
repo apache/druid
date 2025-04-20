@@ -72,7 +72,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -263,7 +263,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
-    private final DataSourceAnalysis dataSourceAnalysis;
+    private final ExecutionVertex ev;
     private final List<Interval> intervals;
     private final CacheKeyManager<T> cacheKeyManager;
 
@@ -274,7 +274,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.query = queryPlus.getQuery();
       this.toolChest = conglomerate.getToolChest(query);
       this.strategy = toolChest.getCacheStrategy(query, objectMapper);
-      this.dataSourceAnalysis = query.getDataSourceAnalysis();
+      this.ev = ExecutionVertex.of(query);
 
       this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
       this.populateCache = CacheUtil.isPopulateSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
@@ -284,7 +284,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = queryContext.getUncoveredIntervalsLimit();
       // For nested queries, we need to look at the intervals of the inner most query.
-      this.intervals = dataSourceAnalysis
+      this.intervals = ev
           .getEffectiveQuerySegmentSpec()
           .getIntervals();
       this.cacheKeyManager = new CacheKeyManager<>(
@@ -331,7 +331,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     )
     {
       final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
-          dataSourceAnalysis.getBaseTableDataSource()
+          ev.getBaseTableDataSource()
       );
       if (!maybeTimeline.isPresent()) {
         return new ClusterQueryResult<>(Sequences.empty(), 0);
@@ -446,7 +446,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (trySecondaryPartititionPruning) {
         dimensionRangeCache = new HashMap<>();
         filterFieldsForPruning =
-            DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), dataSourceAnalysis);
+            DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), ev::isBaseColumn);
       } else {
         dimensionRangeCache = null;
         filterFieldsForPruning = null;

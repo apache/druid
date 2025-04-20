@@ -442,7 +442,7 @@ public class Lifecycle
           }
         }
         if (doStart) {
-          log.debug("Invoking start method[%s] on object[%s].", method, o);
+          log.info("Starting lifecycle [%s#%s]", o.getClass().getSimpleName(), method.getName());
           method.invoke(o);
         }
       }
@@ -460,7 +460,7 @@ public class Lifecycle
           }
         }
         if (doStop) {
-          log.debug("Invoking stop method[%s] on object[%s].", method, o);
+          log.debug("Stopping lifecyle [%s#%s].", o.getClass().getSimpleName(), method.getName());
           try {
             method.invoke(o);
           }

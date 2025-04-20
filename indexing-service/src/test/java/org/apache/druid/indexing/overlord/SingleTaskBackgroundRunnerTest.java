@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.scan.ScanResultValue;
@@ -111,6 +112,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
+        DruidProcessingConfig::new,
         null,
         NoopJoinableFactory.INSTANCE,
         null,

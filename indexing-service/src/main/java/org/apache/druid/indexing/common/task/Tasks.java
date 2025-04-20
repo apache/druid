@@ -57,9 +57,10 @@ public class Tasks
    * on-heap memory usage while indexing. Refer to OnHeapIncrementalIndex for
    * more details.
    * <p>
-   * The value of this flag is true by default which corresponds to the old method
-   * of estimation.
+   * @deprecated This flag will be removed in future Druid releases, and the new
+   * method of memory estimation will be used in all cases.
    */
+  @Deprecated
   public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
 
   /**

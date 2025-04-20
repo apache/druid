@@ -21,6 +21,12 @@
   display: flex;
   flex-direction: column;
 
+  .info-popover {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+
   .preview-values-wrapper {
     flex: 1;
     position: relative;

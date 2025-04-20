@@ -22,7 +22,6 @@ import {
   ButtonGroup,
   Callout,
   FormGroup,
-  Icon,
   Intent,
   Menu,
   MenuDivider,
@@ -48,7 +47,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import {
   ClearableInput,
-  ENABLE_DISABLE_OPTIONS_TEXT,
+  ENABLED_DISABLED_OPTIONS_TEXT,
   LearnMore,
   Loader,
   MenuBoolean,
@@ -83,6 +82,7 @@ import {
   dataTypeToIcon,
   deepSet,
   DruidError,
+  EXPERIMENTAL_ICON,
   filterMap,
   oneOf,
   queryDruidSql,
@@ -106,8 +106,6 @@ import { PreviewTable } from './preview-table/preview-table';
 import { RollupAnalysisPane } from './rollup-analysis-pane/rollup-analysis-pane';
 
 import './schema-step.scss';
-
-const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
 
 const queryRunner = new QueryRunner();
 
@@ -694,7 +692,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     text="Force segment sort by time"
                     value={forceSegmentSortByTime}
                     onValueChange={v => changeForceSegmentSortByTime(Boolean(v))}
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
                   />
                 </Menu>

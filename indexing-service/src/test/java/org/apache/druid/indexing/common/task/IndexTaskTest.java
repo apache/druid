@@ -2532,6 +2532,7 @@ public class IndexTaskTest extends IngestionTestBase
   private <T> T invokeApi(Function<HttpServletRequest, Response> api)
   {
     final HttpServletRequest request = EasyMock.mock(HttpServletRequest.class);
+    EasyMock.expect(request.getMethod()).andReturn("GET").anyTimes();
     EasyMock.expect(request.getAttribute(EasyMock.anyString()))
             .andReturn("allow-all");
     EasyMock.replay(request);

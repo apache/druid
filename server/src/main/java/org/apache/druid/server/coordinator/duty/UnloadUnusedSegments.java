@@ -62,7 +62,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
-    final List<ServerHolder> allServers = params.getDruidCluster().getAllServers();
+    final List<ServerHolder> allServers = params.getDruidCluster().getAllManagedServers();
     int numCancelledLoads = allServers.stream().mapToInt(
         server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, params)
     ).sum();
@@ -73,7 +73,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     ).sum();
 
     if (numCancelledLoads > 0 || numQueuedDrops > 0) {
-      log.info("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
+      log.debug("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
     }
 
     return params;

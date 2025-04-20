@@ -315,9 +315,13 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   private SqlSegmentMetadataTransactionFactory createTransactionFactory()
   {
+    final SegmentMetadataCache.UsageMode cacheMode
+        = useSegmentMetadataCache
+          ? SegmentMetadataCache.UsageMode.ALWAYS
+          : SegmentMetadataCache.UsageMode.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), useSegmentMetadataCache)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
@@ -332,7 +336,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         leaderSelector,
-        segmentMetadataCache
+        segmentMetadataCache,
+        NoopServiceEmitter.instance()
     );
   }
 

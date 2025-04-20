@@ -52,6 +52,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -154,6 +155,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           exec.submit(() -> runTask(task)),
           peonLifecycleFactory.build(
               task,
+              new K8sTaskId(config.getK8sTaskPodNamePrefix(), task),
               this::emitTaskStateMetrics
           )
       )).getResult();
@@ -168,6 +170,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           exec.submit(() -> joinTask(task)),
           peonLifecycleFactory.build(
               task,
+              new K8sTaskId(config.getK8sTaskPodNamePrefix(), task),
               this::emitTaskStateMetrics
           )
       ));
@@ -398,7 +401,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @LifecycleStop
   public void stop()
   {
-    log.debug("Stopping KubernetesTaskRunner");
+    log.info("Stopping KubernetesTaskRunner");
     // Stop managing the running k8s jobs
     exec.shutdownNow();
     cleanupExecutor.shutdownNow();

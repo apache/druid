@@ -35,12 +35,10 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -60,14 +58,14 @@ public class IncrementalPublishingRabbitStreamIndexTaskRunner
   IncrementalPublishingRabbitStreamIndexTaskRunner(
       RabbitStreamIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
-      AuthorizerMapper authorizerMapper,
-      LockGranularity lockGranularityToUse)
+      LockGranularity lockGranularityToUse
+  )
   {
     super(
         task,
         parser,
-        authorizerMapper,
-        lockGranularityToUse);
+        lockGranularityToUse
+    );
     this.task = task;
   }
 

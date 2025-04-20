@@ -188,6 +188,7 @@ public class WorkerTaskMonitorTest
                 notifierFactory,
                 null,
                 null,
+                null,
                 NoopJoinableFactory.INSTANCE,
                 null,
                 new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper),

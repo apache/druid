@@ -29,6 +29,8 @@ import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseExceptio
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A handler for {@link ParseException}s thrown during ingestion. Based on the given configuration, this handler can
@@ -98,9 +100,18 @@ public class ParseExceptionHandler
   }
 
   @Nullable
-  public CircularBuffer<ParseExceptionReport> getSavedParseExceptionReports()
+  public List<ParseExceptionReport> getSavedParseExceptionReports()
   {
-    return savedParseExceptionReports;
+    if (savedParseExceptionReports == null) {
+      return null;
+    }
+
+    final List<ParseExceptionReport> reports = new ArrayList<>();
+    for (int i = 0; i < savedParseExceptionReports.size(); i++) {
+      reports.add(savedParseExceptionReports.getLatest(i));
+    }
+
+    return reports;
   }
 
   @VisibleForTesting

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -110,22 +111,22 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   // READ METHODS
 
   @Override
-  public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
+  public Set<String> findExistingSegmentIds(Set<SegmentId> segmentIds)
   {
     final Set<String> existingSegmentIds = new HashSet<>();
     final String sql = "SELECT id FROM %s WHERE id in (%s)";
 
-    List<List<DataSegment>> partitions = Lists.partition(
-        new ArrayList<>(segments),
+    List<List<SegmentId>> partitions = Lists.partition(
+        new ArrayList<>(segmentIds),
         MAX_SEGMENTS_PER_BATCH
     );
-    for (List<DataSegment> segmentList : partitions) {
-      String segmentIds = segmentList.stream().map(
-          segment -> "'" + StringUtils.escapeSql(segment.getId().toString()) + "'"
+    for (List<SegmentId> segmentIdList : partitions) {
+      String segmentIdsCsv = segmentIdList.stream().map(
+          id -> "'" + StringUtils.escapeSql(id.toString()) + "'"
       ).collect(Collectors.joining(","));
 
       existingSegmentIds.addAll(
-          handle.createQuery(StringUtils.format(sql, dbTables.getSegmentsTable(), segmentIds))
+          handle.createQuery(StringUtils.format(sql, dbTables.getSegmentsTable(), segmentIdsCsv))
                 .mapTo(String.class)
                 .list()
       );
@@ -161,13 +162,9 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
+  public List<DataSegmentPlus> findUsedSegments(Set<SegmentId> segmentIds)
   {
-    final Set<String> serializedIds = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toSet());
-    return query.retrieveSegmentsById(dataSource, serializedIds)
-                .stream()
-                .map(DataSegmentPlus::getDataSegment)
-                .collect(Collectors.toList());
+    return query.retrieveSegmentsById(dataSource, segmentIds);
   }
 
   @Override
@@ -185,23 +182,23 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public DataSegment findSegment(SegmentId segmentId)
   {
-    return query.retrieveSegmentForId(segmentId.toString());
+    return query.retrieveSegmentForId(segmentId);
   }
 
   @Override
   public DataSegment findUsedSegment(SegmentId segmentId)
   {
-    return query.retrieveUsedSegmentForId(segmentId.toString());
+    return query.retrieveUsedSegmentForId(segmentId);
   }
 
   @Override
-  public List<DataSegmentPlus> findSegments(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegments(Set<SegmentId> segmentIds)
   {
     return query.retrieveSegmentsById(dataSource, segmentIds);
   }
 
   @Override
-  public List<DataSegmentPlus> findSegmentsWithSchema(Set<String> segmentIds)
+  public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
     return query.retrieveSegmentsWithSchemaById(dataSource, segmentIds);
   }
@@ -267,9 +264,27 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime)
+  public boolean markSegmentAsUnused(SegmentId segmentId, DateTime updateTime)
   {
-    return query.markSegmentsUnused(dataSource, interval, updateTime);
+    return query.markSegments(Set.of(segmentId), false, updateTime) > 0;
+  }
+
+  @Override
+  public int markSegmentsAsUnused(Set<SegmentId> segmentIds, DateTime updateTime)
+  {
+    return query.markSegments(segmentIds, false, updateTime);
+  }
+
+  @Override
+  public int markAllSegmentsAsUnused(DateTime updateTime)
+  {
+    return query.markSegmentsUnused(dataSource, Intervals.ETERNITY, null, updateTime);
+  }
+
+  @Override
+  public int markSegmentsWithinIntervalAsUnused(Interval interval, @Nullable List<String> versions, DateTime updateTime)
+  {
+    return query.markSegmentsUnused(dataSource, interval, versions, updateTime);
   }
 
   @Override

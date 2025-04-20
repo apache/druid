@@ -644,8 +644,8 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         className={classNames('load-rule', loadRuleToBaseType(loadRule))}
         data-tooltip={title}
         style={{
-          left: xWidth.x,
-          width: xWidth.width,
+          left: clamp(xWidth.x, 0, innerStage.width),
+          width: clamp(xWidth.width, 0, innerStage.width),
         }}
       >
         {title}

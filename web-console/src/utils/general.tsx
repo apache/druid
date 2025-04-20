@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Classes, Intent } from '@blueprintjs/core';
+import { Classes, Icon, Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
@@ -458,6 +458,23 @@ export function findMap<T, Q>(
   return filterMap(xs, f)[0];
 }
 
+export function minBy<T>(xs: T[], f: (item: T, index: number) => number): T | undefined {
+  if (!xs.length) return undefined;
+
+  let minItem = xs[0];
+  let minValue = f(xs[0], 0);
+
+  for (let i = 1; i < xs.length; i++) {
+    const currentValue = f(xs[i], i);
+    if (currentValue < minValue) {
+      minValue = currentValue;
+      minItem = xs[i];
+    }
+  }
+
+  return minItem;
+}
+
 export function changeByIndex<T>(
   xs: readonly T[],
   i: number,
@@ -686,3 +703,12 @@ export function offsetToRowColumn(str: string, offset: number): RowColumn | unde
 export function xor(a: unknown, b: unknown): boolean {
   return Boolean(a ? !b : b);
 }
+
+export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean): T[] {
+  const e = eq || ((a, b) => a === b);
+  return xs.find(_ => e(_, x)) ? xs.filter(d => !e(d, x)) : xs.concat([x]);
+}
+
+export const EXPERIMENTAL_ICON = (
+  <Icon icon={IconNames.LAB_TEST} intent={Intent.WARNING} data-tooltip="Experimental" />
+);

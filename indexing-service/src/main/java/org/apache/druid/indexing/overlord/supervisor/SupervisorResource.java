@@ -119,7 +119,11 @@ public class SupervisorResource
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response specPost(final SupervisorSpec spec, @Context final HttpServletRequest req)
+  public Response specPost(
+      final SupervisorSpec spec,
+      @QueryParam("skipRestartIfUnmodified") Boolean skipRestartIfUnmodified,
+      @Context final HttpServletRequest req
+  )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
@@ -150,6 +154,9 @@ public class SupervisorResource
 
           if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
+          }
+          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
+            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);

@@ -19,8 +19,16 @@
 
 package org.apache.druid.metadata.segment.cache;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.error.InvalidInput;
+
 /**
- * Cache for metadata of pending segments and committed segments.
+ * Cache for metadata of pending segments and committed segments maintained by
+ * the Overlord to improve performance of segment allocation and other task actions.
+ * <p>
+ * Not to be confused with {@link org.apache.druid.segment.metadata.AbstractSegmentMetadataCache}
+ * which is used by Brokers to cache row signature, number of rows, etc. to aid
+ * with Druid query performance.
  */
 public interface SegmentMetadataCache
 {
@@ -50,8 +58,84 @@ public interface SegmentMetadataCache
   boolean isEnabled();
 
   /**
-   * Returns the cache for the given datasource.
+   * @return true if the cache is enabled and synced with the metadata store.
+   * Reads can be done from the cache only if it is synced but writes can happen
+   * even before the sync has finished.
    */
-  DatasourceSegmentCache getDatasource(String dataSource);
+  boolean isSyncedForRead();
 
+  /**
+   * Performs a thread-safe read action on the cache for the given datasource.
+   * Read actions can be concurrent with other reads but are mutually exclusive
+   * from other write actions on the same datasource.
+   */
+  <T> T readCacheForDataSource(String dataSource, Action<T> readAction);
+
+  /**
+   * Performs a thread-safe write action on the cache for the given datasource.
+   * Write actions are mutually exclusive from other writes or reads on the same
+   * datasource.
+   */
+  <T> T writeCacheForDataSource(String dataSource, Action<T> writeAction);
+
+  /**
+   * Represents a thread-safe read or write action performed on the cache within
+   * required locks.
+   */
+  @FunctionalInterface
+  interface Action<T>
+  {
+    T perform(DatasourceSegmentCache dataSourceCache) throws Exception;
+  }
+
+  /**
+   * Cache usage modes.
+   */
+  enum UsageMode
+  {
+    /**
+     * Always read from the cache. Service start-up may be blocked until cache
+     * has synced with the metadata store at least once. Transactions may block
+     * until cache has synced with the metadata store at least once after
+     * becoming leader.
+     */
+    ALWAYS("always"),
+
+    /**
+     * Cache is disabled.
+     */
+    NEVER("never"),
+
+    /**
+     * Read from the cache only if it is already synced with the metadata store.
+     * Does not block service start-up or transactions. Writes may still go to
+     * cache to reduce sync times.
+     */
+    IF_SYNCED("ifSynced");
+
+    private final String name;
+
+    UsageMode(String name)
+    {
+      this.name = name;
+    }
+
+    @JsonCreator
+    public static UsageMode fromString(String value)
+    {
+      for (UsageMode mode : values()) {
+        if (mode.toString().equals(value)) {
+          return mode;
+        }
+      }
+
+      throw InvalidInput.exception("No such cache usage mode[%s]", value);
+    }
+
+    @Override
+    public String toString()
+    {
+      return name;
+    }
+  }
 }

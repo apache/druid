@@ -41,12 +41,24 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   private final PartitionIdType partitionId;
   private final SequenceOffsetType sequenceNumber;
   private final List<RecordType> data;
+  private final Long timestamp;
 
   public OrderedPartitionableRecord(
       String stream,
       PartitionIdType partitionId,
       SequenceOffsetType sequenceNumber,
       List<RecordType> data
+  )
+  {
+    this(stream, partitionId, sequenceNumber, data, null);
+  }
+
+  public OrderedPartitionableRecord(
+      String stream,
+      PartitionIdType partitionId,
+      SequenceOffsetType sequenceNumber,
+      List<RecordType> data,
+      Long timestamp
   )
   {
     Preconditions.checkNotNull(stream, "stream");
@@ -56,11 +68,21 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     this.partitionId = partitionId;
     this.sequenceNumber = sequenceNumber;
     this.data = data == null ? ImmutableList.of() : data;
+    this.timestamp = timestamp;
   }
 
   public String getStream()
   {
     return stream;
+  }
+
+  /**
+   *
+   * @return Timestamp in millis when the record was published to the stream, -1 if not known
+   */
+  public long getTimestamp()
+  {
+    return timestamp;
   }
 
   public PartitionIdType getPartitionId()

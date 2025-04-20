@@ -94,7 +94,7 @@ public class FileRequestLoggerTest
     String logString = dateTime + "\t" + HOST + "\t" + "logString";
 
     File oldLogFile = new File(logDir, "2000-01-01.log");
-    com.google.common.io.Files.write("testOldLogContent", oldLogFile, StandardCharsets.UTF_8);
+    com.google.common.io.Files.asCharSink(oldLogFile, StandardCharsets.UTF_8).write("testOldLogContent");
     oldLogFile.setLastModified(new Date(0).getTime());
     FileRequestLogger fileRequestLogger = new FileRequestLogger(
         objectMapper,

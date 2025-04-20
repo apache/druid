@@ -86,7 +86,8 @@ public class InputSourceBasedTestDataset implements TestDataSet
         .withTimestampSpec(getDataSchema().getTimestampSpec())
         .withMetrics(getDataSchema().getAggregators())
         .withDimensionsSpec(getDataSchema().getDimensionsSpec())
-        .withRollup(false)
+        .withRollup(getDataSchema().getGranularitySpec().isRollup())
+        .withQueryGranularity(getDataSchema().getGranularitySpec().getQueryGranularity())
         .build();
   }
 

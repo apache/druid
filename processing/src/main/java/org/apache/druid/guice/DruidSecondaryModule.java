@@ -31,7 +31,6 @@ import com.google.inject.Provides;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
-import org.skife.config.ConfigurationObjectFactory;
 
 import javax.validation.Validator;
 import java.util.Properties;
@@ -40,7 +39,6 @@ import java.util.Properties;
 public class DruidSecondaryModule implements Module
 {
   private final Properties properties;
-  private final ConfigurationObjectFactory factory;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper jsonMapperOnlyNonNullValueSerialization;
   private final ObjectMapper smileMapper;
@@ -49,7 +47,6 @@ public class DruidSecondaryModule implements Module
   @Inject
   public DruidSecondaryModule(
       Properties properties,
-      ConfigurationObjectFactory factory,
       @Json ObjectMapper jsonMapper,
       @JsonNonNull ObjectMapper jsonMapperOnlyNonNullValueSerialization,
       @Smile ObjectMapper smileMapper,
@@ -57,7 +54,6 @@ public class DruidSecondaryModule implements Module
   )
   {
     this.properties = properties;
-    this.factory = factory;
     this.jsonMapper = jsonMapper;
     this.jsonMapperOnlyNonNullValueSerialization = jsonMapperOnlyNonNullValueSerialization;
     this.smileMapper = smileMapper;
@@ -69,7 +65,6 @@ public class DruidSecondaryModule implements Module
   {
     binder.install(new DruidGuiceExtensions());
     binder.bind(Properties.class).toInstance(properties);
-    binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
     binder.bind(ObjectMapper.class).to(Key.get(ObjectMapper.class, Json.class));
     binder.bind(Validator.class).toInstance(validator);
     binder.bind(JsonConfigurator.class);

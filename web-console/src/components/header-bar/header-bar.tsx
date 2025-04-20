@@ -44,6 +44,7 @@ import {
 import { Capabilities } from '../../helpers';
 import { getLink } from '../../links';
 import {
+  EXPERIMENTAL_ICON,
   localStorageGetJson,
   LocalStorageKeys,
   localStorageRemove,
@@ -153,7 +154,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       <MenuItem
         icon={IconNames.MAP}
         text="Explore"
-        label="(experimental)"
+        labelElement={EXPERIMENTAL_ICON}
         href="#explore"
         disabled={!capabilities.hasSql()}
         selected={active === 'explore'}

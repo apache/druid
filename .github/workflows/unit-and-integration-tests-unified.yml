@@ -79,7 +79,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '11', '17', '21' ]
+        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
+        jdk: [ '11', '17', '21.0.4' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -191,29 +192,25 @@ jobs:
         run: echo "::set-output name=isApproved::true"
 
   unit-tests-unapproved:
-    name: "unit tests - PR unapproved - (jdk17)"
+    name: "unit tests - PR unapproved"
     uses: ./.github/workflows/ci.yml
     needs: [check-approval]
     if: ${{ needs.check-approval.outputs.approved != 'true' }}
-    with:
-      jdk: 17
 
   unit-tests-approved:
-    name: "unit tests - PR approved - (jdk17)"
+    name: "unit tests - PR approved"
     uses: ./.github/workflows/ci.yml
     needs: [check-approval]
     if: ${{ needs.check-approval.outputs.approved == 'true' }}
-    with:
-      jdk: 17
 
   standard-its:
     needs: [build, unit-tests-unapproved, check-approval]
-    if: ${{ always() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
+    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: [build, unit-tests-unapproved, check-approval]
-    if: ${{ always() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
+    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
     uses: ./.github/workflows/revised-its.yml
     with:
       BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
@@ -224,6 +221,6 @@ jobs:
   actions-timeline:
     needs: [build, unit-tests-approved, unit-tests-unapproved, revised-its, standard-its]
     runs-on: ubuntu-latest
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     steps:
       - uses: Kesin11/actions-timeline@427ee2cf860166e404d0d69b4f2b24012bb7af4f

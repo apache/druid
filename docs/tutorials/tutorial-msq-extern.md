@@ -46,7 +46,8 @@ To generate a query from external data, do the following:
    - Customize how Druid handles the data by selecting the **Input format** and its related options, such as adding **JSON parser features** for JSON files.
 5. When you're ready, click **Done**. You're returned to the **Query** view where you can see the starter query that will insert the data from the external source into a table named `wikipedia`.
 
-   <details><summary>Show the query</summary>
+   <details>
+   <summary>Show the query</summary>
 
    ```sql
    REPLACE INTO "wikipedia" OVERWRITE ALL
@@ -122,7 +123,8 @@ ORDER BY COUNT(*) DESC
 
 With the EXTERN function, you could run the same query on the external data directly without ingesting it first:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 SELECT

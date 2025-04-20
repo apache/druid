@@ -349,27 +349,12 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       synchronized (lock) {
         Iterable<DataSegmentChangeRequest> segments = Iterables.transform(
             segmentLookup.keySet(),
-            new Function<>()
-            {
-              @Nullable
-              @Override
-              public SegmentChangeRequestLoad apply(DataSegment input)
-              {
-                return new SegmentChangeRequestLoad(input);
-              }
-            }
+            SegmentChangeRequestLoad::new
         );
 
         Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
             taskSinkSchema.values(),
-            new Function<>()
-            {
-              @Override
-              public SegmentSchemasChangeRequest apply(SegmentSchemas input)
-              {
-                return new SegmentSchemasChangeRequest(input);
-              }
-            }
+            SegmentSchemasChangeRequest::new
         );
         Iterable<DataSegmentChangeRequest> changeRequestIterables = Iterables.concat(segments, sinkSchema);
         SettableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = SettableFuture.create();

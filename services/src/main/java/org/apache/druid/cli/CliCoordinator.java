@@ -306,7 +306,8 @@ public class CliCoordinator extends ServerRunnable
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
               @EscalatedGlobal HttpClient httpClient,
-              Lifecycle lifecycle
+              Lifecycle lifecycle,
+              CoordinatorConfigManager coordinatorConfigManager
           )
           {
             final ExecutorService callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
@@ -316,7 +317,8 @@ public class CliCoordinator extends ServerRunnable
                 factory.create(1, "Master-PeonExec--%d"),
                 callBackExec,
                 config.getHttpLoadQueuePeonConfig(),
-                httpClient
+                httpClient,
+                coordinatorConfigManager::getCurrentDynamicConfig
             );
           }
         }

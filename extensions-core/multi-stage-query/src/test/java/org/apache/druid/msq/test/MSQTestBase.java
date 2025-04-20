@@ -43,7 +43,6 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
@@ -75,7 +74,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
@@ -134,6 +132,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
@@ -247,7 +246,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /**
- * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
+ * Base test runner for running MSQ unit tests. It sets up multi-stage query execution environment
  * and populates data for the datasources. The runner does not go via the HTTP layer for communication between the
  * various MSQ processes.
  * <p>
@@ -437,7 +436,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     segmentManager = new MSQTestSegmentManager(segmentCacheManager);
 
-    BrokerClient brokerClient = mock(BrokerClient.class);
     List<Module> modules = ImmutableList.of(
         binder -> {
           DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
@@ -537,7 +535,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new LookylooModule(),
         new SegmentWranglerModule(),
         new HllSketchModule(),
-        binder -> binder.bind(BrokerClient.class).toInstance(brokerClient),
         binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1))
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
@@ -550,8 +547,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper.registerModules(new MSQIndexingModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
     objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
-
-    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
     testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper, injector));
     indexingServiceClient = new MSQTestOverlordServiceClient(
@@ -1169,6 +1164,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private List<Interval> expectedDestinationIntervals = null;
 
+    private List<AggregateProjectionMetadata> expectedProjections = null;
+
     private IngestTester()
     {
       // nothing to do
@@ -1207,6 +1204,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public IngestTester addExpectedAggregatorFactory(AggregatorFactory aggregatorFactory)
     {
       expectedAggregatorFactories.add(aggregatorFactory);
+      return this;
+    }
+
+    public IngestTester setExpectedProjections(List<AggregateProjectionMetadata> expectedProjections)
+    {
+      this.expectedProjections = expectedProjections;
       return this;
     }
 
@@ -1315,6 +1318,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
               expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
               queryableIndex.getMetadata().getAggregators()
           );
+
+          if (expectedProjections != null) {
+            Assert.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+          }
 
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
             // transforming rows for sketch assertions

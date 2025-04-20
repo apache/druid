@@ -207,6 +207,26 @@ public class HdfsTaskLogs implements TaskLogs
       }
     }
   }
+
+  @Override
+  public void pushTaskPayload(String taskId, File taskPayloadFile) throws IOException
+  {
+    final Path path = getTaskPayloadFileFromId(taskId);
+    log.info("Pushing payload for task[%s] to location[%s]", taskId, path);
+    pushTaskFile(path, taskPayloadFile);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskId) throws IOException
+  {
+    final Path path = getTaskPayloadFileFromId(taskId);
+    return streamTaskFile(path, 0);
+  }
+
+  private Path getTaskPayloadFileFromId(String taskId)
+  {
+    return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_') + ".payload.json"));
+  }
 }
 
 

@@ -120,7 +120,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

@@ -67,7 +67,6 @@ import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -90,8 +89,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
@@ -257,7 +255,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
-      final AuthorizerMapper authorizerMapper,
       final LockGranularity lockGranularityToUse
   )
   {
@@ -268,7 +265,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.inputRowSchema = InputRowSchemas.fromDataSchema(task.getDataSchema());
     this.inputFormat = ioConfig.getInputFormat();
     this.parser = parser;
-    this.authorizerMapper = authorizerMapper;
     this.stream = ioConfig.getStartSequenceNumbers().getStream();
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
@@ -1177,9 +1173,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<ParseExceptionReport> buildSegmentsParseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptionReports()
-    );
+    List<ParseExceptionReport> buildSegmentsParseExceptionMessages =
+        parseExceptionHandler.getSavedParseExceptionReports();
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
@@ -1452,12 +1447,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   /**
    * Authorizes action to be performed on this task's datasource
-   *
-   * @return authorization result
    */
-  private AuthorizationResult authorizationCheck(final HttpServletRequest req, Action action)
+  private void authorizationCheck(final HttpServletRequest request)
   {
-    return IndexTaskUtils.datasourceAuthorizationCheck(req, action, task.getDataSource(), authorizerMapper);
+    if (authorizerMapper == null) {
+      throw DruidException.defensive("Cannot authorize request since AuthorizerMapper is not initialized yet.");
+    }
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(request, task.getDataSource(), authorizerMapper);
   }
 
   public Appenderator getAppenderator()
@@ -1537,7 +1533,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/stop")
   public Response stop(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizationCheck(req);
     stopGracefully();
     return Response.status(Response.Status.OK).build();
   }
@@ -1547,7 +1543,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Status getStatusHTTP(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    authorizationCheck(req);
     return status;
   }
 
@@ -1562,7 +1558,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    authorizationCheck(req);
     return getCurrentOffsets();
   }
 
@@ -1576,7 +1572,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getEndOffsetsHTTP(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    authorizationCheck(req);
     return getEndOffsets();
   }
 
@@ -1596,7 +1592,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizationCheck(req);
     return setEndOffsets(sequences, finish);
   }
 
@@ -1610,7 +1606,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizationCheck(req);
     try {
       ((StreamAppenderator) appenderator).registerUpgradedPendingSegment(upgradedPendingSegment);
       return Response.ok().build();
@@ -1653,7 +1649,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   public Map<String, Object> doGetLiveReports()
   {
-    Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
     Map<String, Object> payload = new HashMap<>();
     Map<String, Object> events = getTaskCompletionUnparseableEvents();
@@ -1666,8 +1661,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     ingestionStatsAndErrors.put("payload", payload);
     ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
 
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return returnMap;
+    return Map.of("ingestionStatsAndErrors", ingestionStatsAndErrors);
   }
 
   @GET
@@ -1677,7 +1671,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    authorizationCheck(req);
     return Response.ok(doGetRowStats()).build();
   }
 
@@ -1688,7 +1682,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    authorizationCheck(req);
     return Response.ok(doGetLiveReports()).build();
   }
 
@@ -1700,11 +1694,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
-    List<ParseExceptionReport> events = IndexTaskUtils.getReportListFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptionReports()
-    );
-    return Response.ok(events).build();
+    authorizationCheck(req);
+    return Response.ok(parseExceptionHandler.getSavedParseExceptionReports()).build();
   }
 
   @VisibleForTesting
@@ -1854,7 +1845,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    authorizationCheck(req);
     return getCheckpoints();
   }
 
@@ -1881,7 +1872,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizationCheck(req);
     return pause();
   }
 
@@ -1940,7 +1931,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/resume")
   public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizationCheck(req);
     resume();
     return Response.status(Response.Status.OK).build();
   }
@@ -1973,7 +1964,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public DateTime getStartTime(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizationCheck(req);
     return startTime;
   }
 
