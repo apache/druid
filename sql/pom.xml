@@ -190,6 +190,10 @@
       <artifactId>value-annotations</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
+    </dependency>
 
     <!-- Tests -->
     <dependency>

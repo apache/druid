@@ -195,7 +195,8 @@ public class ITSqlQueryTest
               Assert.assertEquals(400, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              String responseBody = entity != null ? EntityUtils.toString(entity).trim() : null;
+              Assert.assertNotNull(entity);
+              String responseBody = EntityUtils.toString(entity).trim();
               Assert.assertTrue(responseBody.contains("invalidInput"));
             }
           }
@@ -222,7 +223,8 @@ public class ITSqlQueryTest
               Assert.assertEquals(200, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              String responseBody = entity != null ? EntityUtils.toString(entity).trim() : null;
+              Assert.assertNotNull(entity);
+              String responseBody = EntityUtils.toString(entity).trim();
               Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
             }
           }
