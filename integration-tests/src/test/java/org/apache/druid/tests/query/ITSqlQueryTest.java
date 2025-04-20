@@ -20,6 +20,7 @@
 package org.apache.druid.tests.query;
 
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -32,7 +33,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
-import org.junit.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -83,7 +83,7 @@ public class ITSqlQueryTest
         break;
       }
     }
-    Assert.fail(contentType + " failed after 5 tries, last exception: " + lastException);
+    throw new ISE(contentType + " failed after 5 tries, last exception: " + lastException);
   }
 
   @Test
@@ -97,12 +97,12 @@ public class ITSqlQueryTest
             request.setEntity(new StringEntity("select 1"));
 
             try (CloseableHttpResponse response = client.execute(request)) {
-              Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+              assertEquals(200, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              Assert.assertNotNull(entity);
+              assertNotNull(entity);
               String responseBody = EntityUtils.toString(entity).trim();
-              Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
+              assertEquals("[{\"EXPR$0\":1}]", responseBody);
             }
           }
         }
@@ -121,12 +121,12 @@ public class ITSqlQueryTest
             request.setEntity(new StringEntity("select 1"));
 
             try (CloseableHttpResponse response = client.execute(request)) {
-              Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+              assertEquals(200, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              Assert.assertNotNull(entity);
+              assertNotNull(entity);
               String responseBody = EntityUtils.toString(entity).trim();
-              Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
+              assertEquals("[{\"EXPR$0\":1}]", responseBody);
             }
           }
         }
@@ -145,12 +145,12 @@ public class ITSqlQueryTest
             request.setEntity(new StringEntity(URLEncoder.encode("select 1", StandardCharsets.UTF_8)));
 
             try (CloseableHttpResponse response = client.execute(request)) {
-              Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+              assertEquals(200, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              Assert.assertNotNull(entity);
+              assertNotNull(entity);
               String responseBody = EntityUtils.toString(entity).trim();
-              Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
+              assertEquals("[{\"EXPR$0\":1}]", responseBody);
             }
           }
         }
@@ -169,12 +169,12 @@ public class ITSqlQueryTest
             request.setEntity(new StringEntity(StringUtils.format("{\"query\":\"select 1\"}")));
 
             try (CloseableHttpResponse response = client.execute(request)) {
-              Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+              assertEquals(200, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              Assert.assertNotNull(entity);
+              assertNotNull(entity);
               String responseBody = EntityUtils.toString(entity).trim();
-              Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
+              assertEquals("[{\"EXPR$0\":1}]", responseBody);
             }
           }
         }
@@ -192,12 +192,12 @@ public class ITSqlQueryTest
             request.addHeader("Content-Type", "text/plain");
 
             try (CloseableHttpResponse response = client.execute(request)) {
-              Assert.assertEquals(400, response.getStatusLine().getStatusCode());
+              assertEquals(400, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              Assert.assertNotNull(entity);
+              assertNotNull(entity);
               String responseBody = EntityUtils.toString(entity).trim();
-              Assert.assertTrue(responseBody.contains("invalidInput"));
+              assertTrue(responseBody.contains("invalidInput"));
             }
           }
         }
@@ -220,15 +220,43 @@ public class ITSqlQueryTest
             request.setEntity(new StringEntity(StringUtils.format("SELECT 1")));
 
             try (CloseableHttpResponse response = client.execute(request)) {
-              Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+              assertEquals(200, response.getStatusLine().getStatusCode());
 
               HttpEntity entity = response.getEntity();
-              Assert.assertNotNull(entity);
+              assertNotNull(entity);
               String responseBody = EntityUtils.toString(entity).trim();
-              Assert.assertEquals("[{\"EXPR$0\":1}]", responseBody);
+              assertEquals("[{\"EXPR$0\":1}]", responseBody);
             }
           }
         }
     );
+  }
+
+  private void assertEquals(String expected, String actual)
+  {
+    if (!expected.equals(actual)) {
+      throw new ISE("Expected [%s] but got [%s]", expected, actual);
+    }
+  }
+
+  private void assertEquals(int expected, int actual)
+  {
+    if (expected != actual) {
+      throw new ISE("Expected [%d] but got [%d]", expected, actual);
+    }
+  }
+
+  private void assertNotNull(Object object)
+  {
+    if (object == null) {
+      throw new ISE("Expected not null");
+    }
+  }
+
+  private void assertTrue(boolean condition)
+  {
+    if (!condition) {
+      throw new ISE("Expected true");
+    }
   }
 }
