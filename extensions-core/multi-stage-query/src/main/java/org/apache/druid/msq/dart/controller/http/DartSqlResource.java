@@ -208,8 +208,15 @@ public class DartSqlResource extends SqlResource
       @Context final HttpContext httpContext
   )
   {
-    SqlQuery sqlQuery = SqlQuery.from(httpContext);
+    return this.doPost(SqlQuery.from(httpContext), req);
+  }
 
+  @Override
+  public Response doPost(
+      final SqlQuery sqlQuery,
+      final HttpServletRequest req
+  )
+  {
     final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
 
     // Default context keys from dartQueryConfig.
