@@ -347,8 +347,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               `LIMIT ${pageSize * 1000}`,
             ]);
 
-            // This is needed because there might be an IN filter with a lot of intervals, the number of which exceeds the default inFunctionThreshold
-            sqlQueryContext.inFunctionThreshold = 1000;
+            // This is needed because there might be an IN filter with {pageSize} intervals, the number of which exceeds the default inFunctionThreshold, set it to something greater than the {pageSize}
+            sqlQueryContext.inFunctionThreshold = pageSize + 1;
           } else {
             queryParts = compact([
               base,
