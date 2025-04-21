@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-version: "2.2"
+# version: "2.2"
 
 volumes:
   metadata_data: {}
@@ -51,7 +51,7 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: apache/druid:34.0.0
+    image: apache/druid:33.0.0-rc3
     container_name: coordinator
     volumes:
       - druid_shared:/opt/shared
@@ -67,7 +67,7 @@ services:
       - environment
 
   broker:
-    image: apache/druid:34.0.0
+    image: apache/druid:33.0.0-rc3
     container_name: broker
     volumes:
       - broker_var:/opt/druid/var
@@ -83,12 +83,12 @@ services:
       - environment
 
   historical:
-    image: apache/druid:34.0.0
+    image: apache/druid:33.0.0-rc3
     container_name: historical
     volumes:
       - druid_shared:/opt/shared
       - historical_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
       - coordinator
@@ -100,12 +100,12 @@ services:
       - environment
 
   middlemanager:
-    image: apache/druid:34.0.0
+    image: apache/druid:33.0.0-rc3
     container_name: middlemanager
     volumes:
       - druid_shared:/opt/shared
       - middle_var:/opt/druid/var
-    depends_on: 
+    depends_on:
       - zookeeper
       - postgres
       - coordinator
@@ -118,7 +118,7 @@ services:
       - environment
 
   router:
-    image: apache/druid:34.0.0
+    image: apache/druid:33.0.0-rc3
     container_name: router
     volumes:
       - router_var:/opt/druid/var
@@ -132,3 +132,4 @@ services:
       - router
     env_file:
       - environment
+
