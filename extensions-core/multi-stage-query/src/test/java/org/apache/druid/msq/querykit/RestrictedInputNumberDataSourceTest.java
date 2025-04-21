@@ -22,6 +22,8 @@ package org.apache.druid.msq.querykit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
@@ -146,5 +148,22 @@ public class RestrictedInputNumberDataSourceTest
   public void testStringRep()
   {
     Assert.assertNotEquals(restrictedFooDataSource.toString(), restrictedBarDataSource.toString());
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                          .registerModules(new MSQIndexingModule().getJacksonModules());
+
+    final RestrictedInputNumberDataSource dataSource = new RestrictedInputNumberDataSource(
+        0,
+        RowFilterPolicy.from(TrueDimFilter.instance())
+    );
+
+    Assert.assertEquals(
+        dataSource,
+        mapper.readValue(mapper.writeValueAsString(dataSource), DataSource.class)
+    );
   }
 }
