@@ -21,6 +21,8 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -29,25 +31,21 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.rpc.FixedServiceLocator;
-import org.apache.druid.rpc.RequestBuilder;
-import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -64,8 +62,9 @@ public class CoordinatorDynamicConfigSyncer
 
   private final AtomicReference<CoordinatorDynamicConfig> lastKnownConfig = new AtomicReference<>();
   private final ServiceClientFactory clientFactory;
-  private final ExecutorService exec;
   private final Set<String> inSyncBrokers;
+  private final ScheduledExecutorService exec;
+  private @Nullable Future<?> syncFuture = null;
 
   @Inject
   public CoordinatorDynamicConfigSyncer(
@@ -79,18 +78,21 @@ public class CoordinatorDynamicConfigSyncer
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
     this.druidNodeDiscovery = druidNodeDiscoveryProvider;
-    this.exec = Execs.singleThreaded("DynamicConfigSyncer-%d");
+    this.exec = Execs.scheduledSingleThreaded("CoordinatorDynamicConfigSyncer-%d");
     this.inSyncBrokers = ConcurrentHashMap.newKeySet();
+  }
+
+  public void triggerBroadcastConfigToBrokers()
+  {
+    exec.submit(this::broadcastConfigToBrokers);
   }
 
   public void broadcastConfigToBrokers()
   {
     invalidateInSyncBrokersIfNeeded();
-    exec.submit(() -> {
-      for (ServiceLocation broker : getKnownBrokers()) {
-        pushConfigToBroker(broker);
-      }
-    });
+    for (ServiceLocation broker : getKnownBrokers()) {
+      pushConfigToBroker(broker);
+    }
   }
 
   public synchronized Set<String> getInSyncBrokers()
@@ -98,30 +100,41 @@ public class CoordinatorDynamicConfigSyncer
     return Set.copyOf(inSyncBrokers);
   }
 
+  public void onLeaderStart()
+  {
+    log.info("Starting coordinator config syncing to brokers on leader node.");
+    syncFuture = exec.scheduleAtFixedRate(
+        this::broadcastConfigToBrokers,
+        1L,
+        1L,
+        TimeUnit.MINUTES
+    );
+  }
+
+  public void onLeaderStop()
+  {
+    log.info("Not leader, stopping coordinator config syncing to brokers.");
+    if (syncFuture != null) {
+      syncFuture.cancel(true);
+    }
+  }
+
   private void pushConfigToBroker(ServiceLocation brokerLocation)
   {
-    final ServiceClient brokerClient = clientFactory.makeClient(
-        NodeRole.BROKER.getJsonName(),
-        new FixedServiceLocator(brokerLocation),
-        StandardRetryPolicy.builder().maxAttempts(6).build()
+    final BrokerClient brokerClient = new BrokerClientImpl(
+        clientFactory.makeClient(
+            NodeRole.BROKER.getJsonName(),
+            new FixedServiceLocator(brokerLocation),
+            StandardRetryPolicy.builder().maxAttempts(6).build()
+        ),
+        jsonMapper
     );
 
     try {
       CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
-      final RequestBuilder requestBuilder =
-          new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
-              .jsonContent(jsonMapper, currentDynamicConfig);
-
-      final BytesFullResponseHolder responseHolder = brokerClient.request(requestBuilder, new BytesFullResponseHandler());
-      final HttpResponseStatus status = responseHolder.getStatus();
-      if (status.equals(HttpResponseStatus.OK)) {
+      boolean success = brokerClient.updateDynamicConfig(currentDynamicConfig).get();
+      if (success) {
         markBrokerAsSynced(currentDynamicConfig, brokerLocation);
-      } else {
-        log.error(
-            "Received status [%s] while posting dynamic configs to broker[%s]",
-            status.getCode(),
-            brokerLocation
-        );
       }
     }
     catch (Exception e) {

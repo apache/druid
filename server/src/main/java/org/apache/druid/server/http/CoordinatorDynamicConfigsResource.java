@@ -95,7 +95,7 @@ public class CoordinatorDynamicConfigsResource
       );
 
       if (setResult.isOk()) {
-        coordinatorDynamicConfigSyncer.broadcastConfigToBrokers();
+        coordinatorDynamicConfigSyncer.triggerBroadcastConfigToBrokers();
         return Response.ok().build();
       } else {
         return Response.status(Response.Status.BAD_REQUEST)

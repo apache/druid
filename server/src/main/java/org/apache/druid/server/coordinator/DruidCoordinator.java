@@ -83,7 +83,6 @@ import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused
 import org.apache.druid.server.coordinator.duty.MetadataAction;
 import org.apache.druid.server.coordinator.duty.PrepareBalancerAndLoadQueues;
 import org.apache.druid.server.coordinator.duty.RunRules;
-import org.apache.druid.server.coordinator.duty.SendDynamicConfigToBrokers;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
@@ -451,6 +450,7 @@ public class DruidCoordinator
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStart();
       }
+      coordinatorDynamicConfigSyncer.onLeaderStart();
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
       dutiesRunnables.add(
@@ -532,6 +532,7 @@ public class DruidCoordinator
       }
       compactionStatusTracker.stop();
       taskMaster.onLeaderStop();
+      coordinatorDynamicConfigSyncer.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataManager.onLeaderStop();
@@ -568,7 +569,6 @@ public class DruidCoordinator
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
         new CloneHistoricals(loadQueueManager, cloneStatusManager),
-        new SendDynamicConfigToBrokers(coordinatorDynamicConfigSyncer),
         new CollectLoadQueueStats()
     );
   }

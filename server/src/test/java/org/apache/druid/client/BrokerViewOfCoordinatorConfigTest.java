@@ -28,7 +28,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Map;
-import java.util.Set;
 
 public class BrokerViewOfCoordinatorConfigTest
 {
@@ -55,18 +54,5 @@ public class BrokerViewOfCoordinatorConfigTest
     target.start();
     Mockito.verify(coordinatorClient, Mockito.times(1)).getCoordinatorDynamicConfig();
     Assert.assertEquals(config, target.getDynamicConfiguration());
-  }
-
-  @Test
-  public void testCreatesServerLists()
-  {
-    config = CoordinatorDynamicConfig.builder()
-                                     .withCloneServers(Map.of("host1", "host2", "host4", "host5"))
-                                     .build();
-
-    target.setDynamicConfig(config);
-
-    Assert.assertEquals(Set.of("host1", "host4"), target.getClones());
-    Assert.assertEquals(Set.of("host2", "host5"), target.getServersBeingCloned());
   }
 }

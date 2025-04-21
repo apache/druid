@@ -76,16 +76,6 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     this.serversBeingCloned = ImmutableSet.copyOf(cloneServers.values());
   }
 
-  public synchronized Set<String> getClones()
-  {
-    return cloneServers;
-  }
-
-  public synchronized Set<String> getServersBeingCloned()
-  {
-    return serversBeingCloned;
-  }
-
   @LifecycleStart
   public void start()
   {
@@ -129,15 +119,15 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     return filteredHistoricals;
   }
 
-  private Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
+  private synchronized Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
   {
     switch (cloneQueryMode) {
       case CLONES_PREFERRED:
         // Remove servers being cloned targets, so that clones are queried.
-        return getServersBeingCloned();
+        return serversBeingCloned;
       case EXCLUDE:
         // Remove clones, so that targets are queried.
-        return getClones();
+        return cloneServers;
       case INCLUDE:
         // Don't remove either
         return ImmutableSet.of();

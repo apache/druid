@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import java.util.List;
 
@@ -53,4 +54,9 @@ public interface BrokerClient
    * @param sqlQuery the SQL query for which the {@code EXPLAIN PLAN FOR} information is to be fetched
    */
   ListenableFuture<List<ExplainPlan>> fetchExplainPlan(ClientSqlQuery sqlQuery);
+
+  /**
+   * Updates the broker with the given {@link CoordinatorDynamicConfig}.
+   */
+  ListenableFuture<Boolean> updateDynamicConfig(CoordinatorDynamicConfig config);
 }

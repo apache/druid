@@ -27,7 +27,7 @@ import java.util.Set;
 
 public interface HistoricalFilter
 {
-  public static final HistoricalFilter IDENTITY_FILTER = (historicalServers, mode) -> historicalServers;
+  HistoricalFilter IDENTITY_FILTER = (historicalServers, mode) -> historicalServers;
 
   Int2ObjectRBTreeMap<Set<QueryableDruidServer>> getQueryableServers(
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers,
