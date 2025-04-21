@@ -26,7 +26,6 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
@@ -111,14 +110,14 @@ public class BrokerQueryResource extends QueryResource
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
       ExecutionVertex ev = ExecutionVertex.of(query);
-      HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode);
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,
               ev.getBaseTableDataSource(),
               ev.getEffectiveQuerySegmentSpec().getIntervals(),
               numCandidates,
-              historicalFilter
+              configView,
+              cloneQueryMode
           )
       );
     }

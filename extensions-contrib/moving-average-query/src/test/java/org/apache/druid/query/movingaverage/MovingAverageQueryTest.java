@@ -31,8 +31,8 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
+import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
@@ -318,7 +318,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         return 0L;
       }
     };
-
+    BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    brokerViewOfCoordinatorConfig.start();
     CachingClusteredClient baseClient = new CachingClusteredClient(
         conglomerate,
         new TimelineServerView()
@@ -359,7 +360,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
 
           }
         },
-        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
+        brokerViewOfCoordinatorConfig,
         MapCache.create(100000),
         jsonMapper,
         new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1),

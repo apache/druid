@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
@@ -129,7 +130,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     ServerSelector selector = (actualPartitionHolder.iterator().next()).getObject();
     Assert.assertFalse(selector.isEmpty());
     Assert.assertEquals(segment, selector.getSegment());
-    Assert.assertEquals(druidServer, selector.pick(null, HistoricalFilter.IDENTITY_FILTER).getServer());
+    Assert.assertEquals(druidServer, selector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE).getServer());
     Assert.assertNotNull(timeline.findChunk(intervals, "v1", partition));
 
     unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
@@ -388,9 +389,9 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Verify that the ServerSelector always picks Tier 1
     for (int i = 0; i < 5; ++i) {
-      Assert.assertEquals(server21, selector.pick(null, HistoricalFilter.IDENTITY_FILTER).getServer());
+      Assert.assertEquals(server21, selector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE).getServer());
     }
-    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER));
+    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
   }
 
   @Test
@@ -448,9 +449,9 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Verify that the ServerSelector always picks the Historical server
     for (int i = 0; i < 5; ++i) {
-      Assert.assertEquals(historicalServer, selector.pick(null, HistoricalFilter.IDENTITY_FILTER).getServer());
+      Assert.assertEquals(historicalServer, selector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE).getServer());
     }
-    Assert.assertEquals(Collections.singletonList(historicalServer.getMetadata()), selector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER));
+    Assert.assertEquals(Collections.singletonList(historicalServer.getMetadata()), selector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
   }
 
   @Test
@@ -510,9 +511,9 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Verify that the ServerSelector always picks Tier 1
     for (int i = 0; i < 5; ++i) {
-      Assert.assertEquals(server21, selector.pick(null, HistoricalFilter.IDENTITY_FILTER).getServer());
+      Assert.assertEquals(server21, selector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE).getServer());
     }
-    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER));
+    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
   }
 
   @Test(expected = ISE.class)
@@ -592,7 +593,7 @@ public class BrokerServerViewTest extends CuratorTestBase
       ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
                                                                                                     .next()).getObject();
       Assert.assertFalse(selector.isEmpty());
-      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick(null, HistoricalFilter.IDENTITY_FILTER).getServer());
+      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE).getServer());
       Assert.assertEquals(expectedPair.rhs.rhs.rhs, selector.getSegment());
     }
   }

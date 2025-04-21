@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.LocatedSegmentDescriptor;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
@@ -44,10 +45,11 @@ public class ServerViewUtil
       String datasource,
       List<Interval> intervals,
       int numCandidates,
-      HistoricalFilter historicalFilter
+      HistoricalFilter historicalFilter,
+      CloneQueryMode cloneQueryMode
   )
   {
-    return getTargetLocations(serverView, new TableDataSource(datasource), intervals, numCandidates, historicalFilter);
+    return getTargetLocations(serverView, new TableDataSource(datasource), intervals, numCandidates, historicalFilter, cloneQueryMode);
   }
 
   public static List<LocatedSegmentDescriptor> getTargetLocations(
@@ -55,7 +57,8 @@ public class ServerViewUtil
       TableDataSource datasource,
       List<Interval> intervals,
       int numCandidates,
-      HistoricalFilter historicalFilter
+      HistoricalFilter historicalFilter,
+      CloneQueryMode cloneQueryMode
   )
   {
     final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(datasource);
@@ -71,7 +74,7 @@ public class ServerViewUtil
               holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
           );
           long size = selector.getSegment().getSize();
-          List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates, historicalFilter);
+          List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates, historicalFilter, cloneQueryMode);
           located.add(new LocatedSegmentDescriptor(descriptor, size, candidates));
         }
       }

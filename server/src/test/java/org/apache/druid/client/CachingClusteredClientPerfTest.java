@@ -129,10 +129,12 @@ public class CachingClusteredClientPerfTest
 
     Mockito.doReturn(Optional.of(timeline)).when(serverView).getTimeline(any());
     Mockito.doReturn(new MockQueryRunner()).when(serverView).getQueryRunner(any());
+    BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    brokerViewOfCoordinatorConfig.start();
     CachingClusteredClient cachingClusteredClient = new CachingClusteredClient(
         new MockQueryRunnerFactoryConglomerate(),
         serverView,
-        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
+        brokerViewOfCoordinatorConfig,
         MapCache.create(1024),
         TestHelper.makeJsonMapper(),
         Mockito.mock(CachePopulator.class),

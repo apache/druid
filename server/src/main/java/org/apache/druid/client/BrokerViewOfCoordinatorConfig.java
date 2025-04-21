@@ -22,22 +22,26 @@ package org.apache.druid.client;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.server.DruidInternalDynamicConfigResource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import javax.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Broker view of the coordinator dynamic configuration, and its derived values such as target and source clone servers.
  * This class is registered as a managed lifecycle to fetch the coordinator dynamic configuration on startup. Further
  * updates are handled through {@link DruidInternalDynamicConfigResource}.
  */
-public class BrokerViewOfCoordinatorConfig
+public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
 {
   private static final Logger log = new Logger(BrokerViewOfCoordinatorConfig.class);
   private final CoordinatorClient coordinatorClient;
@@ -97,6 +101,48 @@ public class BrokerViewOfCoordinatorConfig
       // If the fetch fails, the broker should not serve queries. Throw the exception and try again on restart.
       log.error(e, "Failed to initialize coordinator dynamic config");
       throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Int2ObjectRBTreeMap<Set<QueryableDruidServer>> getQueryableServers(
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers,
+      CloneQueryMode mode
+  )
+  {
+    final Set<String> serversToIgnore = getCurrentServersToIgnore(mode);
+
+    if (serversToIgnore.isEmpty()) {
+      return historicalServers;
+    }
+
+    final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredHistoricals = new Int2ObjectRBTreeMap<>();
+    for (int priority : historicalServers.keySet()) {
+      Set<QueryableDruidServer> servers = historicalServers.get(priority);
+      filteredHistoricals.put(priority,
+                              servers.stream()
+                                     .filter(server -> !serversToIgnore.contains(server.getServer().getHost()))
+                                     .collect(Collectors.toSet())
+      );
+    }
+
+    return filteredHistoricals;
+  }
+
+  private Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
+  {
+    switch (cloneQueryMode) {
+      case CLONES_PREFERRED:
+        // Remove servers being cloned targets, so that clones are queried.
+        return getServersBeingCloned();
+      case EXCLUDE:
+        // Remove clones, so that targets are queried.
+        return getClones();
+      case INCLUDE:
+        // Don't remove either
+        return ImmutableSet.of();
+      default:
+        throw new IllegalStateException("Unexpected value: " + cloneQueryMode);
     }
   }
 }

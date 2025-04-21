@@ -24,6 +24,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -50,7 +51,7 @@ public class ConnectionCountServerSelectorStrategyTest
     ServerSelector serverSelector = initSelector(s1, s2, s3);
 
     for (int i = 0; i < 100; ++i) {
-      Assert.assertEquals(s2, serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER));
+      Assert.assertEquals(s2, serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
     }
   }
 
@@ -63,7 +64,7 @@ public class ConnectionCountServerSelectorStrategyTest
 
     Set<String> pickedServers = new HashSet<>();
     for (int i = 0; i < 100; ++i) {
-      pickedServers.add(serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER).getServer().getName());
+      pickedServers.add(serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE).getServer().getName());
     }
     Assert.assertTrue(
         "Multiple servers should be selected when the number of connections is equal.",

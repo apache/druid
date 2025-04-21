@@ -19,65 +19,18 @@
 
 package org.apache.druid.client.selector;
 
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
-import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.query.CloneQueryMode;
 
 import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
-public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<QueryableDruidServer>>, Int2ObjectRBTreeMap<Set<QueryableDruidServer>>>
+public interface HistoricalFilter
 {
-  public static final HistoricalFilter IDENTITY_FILTER = new HistoricalFilter(ImmutableSet::of);
-  private final Supplier<Set<String>> serversToFilter;
+  public static final HistoricalFilter IDENTITY_FILTER = (historicalServers, mode) -> historicalServers;
 
-  public HistoricalFilter(Supplier<Set<String>> serversToFilter)
-  {
-    this.serversToFilter = serversToFilter;
-  }
-
-  public HistoricalFilter(BrokerViewOfCoordinatorConfig configView, CloneQueryMode cloneQueryMode)
-  {
-    this.serversToFilter = () -> {
-      switch (cloneQueryMode) {
-        case CLONES_PREFERRED:
-          // Remove servers being cloned targets, so that clones are queried.
-          return configView.getServersBeingCloned();
-        case EXCLUDE:
-          // Remove clones, so that targets are queried.
-          return configView.getClones();
-        case INCLUDE:
-          // Don't remove either
-          return ImmutableSet.of();
-        default:
-          throw new IllegalStateException("Unexpected value: " + cloneQueryMode);
-      }
-    };
-  }
-
-  @Override
-  public Int2ObjectRBTreeMap<Set<QueryableDruidServer>> apply(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers)
-  {
-    Set<String> serversToIgnore = serversToFilter.get();
-
-    if (serversToIgnore.isEmpty()) {
-      return historicalServers;
-    }
-
-    final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> filteredHistoricals = new Int2ObjectRBTreeMap<>();
-    for (int priority : historicalServers.keySet()) {
-      Set<QueryableDruidServer> servers = historicalServers.get(priority);
-      filteredHistoricals.put(priority,
-                              servers.stream()
-                                     .filter(server -> !serversToIgnore.contains(server.getServer().getHost()))
-                                     .collect(Collectors.toSet())
-      );
-    }
-
-    return filteredHistoricals;
-  }
+  Int2ObjectRBTreeMap<Set<QueryableDruidServer>> getQueryableServers(
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers,
+      CloneQueryMode mode
+  );
 }

@@ -30,7 +30,6 @@ import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -323,8 +322,7 @@ public class ClientInfoResource
       intervalList.add(Intervals.of(interval.trim()));
     }
     List<Interval> condensed = JodaUtils.condenseIntervals(intervalList);
-    HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode == null ? CloneQueryMode.EXCLUDE : cloneQueryMode);
-    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates, historicalFilter);
+    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates, configView, cloneQueryMode);
   }
 
   protected DateTime getCurrentTime()

@@ -39,6 +39,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
@@ -244,7 +245,7 @@ public class DirectDruidClientTest
 
     Assert.assertEquals(2, client2.getNumOpenConnections());
 
-    Assert.assertEquals(serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER), queryableDruidServer2);
+    Assert.assertEquals(serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE), queryableDruidServer2);
 
     EasyMock.verify(httpClient);
   }

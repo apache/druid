@@ -123,10 +123,12 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
     segmentGenerator = new SegmentGenerator();
     httpClient = new TestHttpClient(objectMapper);
     simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
+    BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    brokerViewOfCoordinatorConfig.start();
     cachingClusteredClient = new CachingClusteredClient(
         conglomerate,
         simpleServerView,
-        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
+        brokerViewOfCoordinatorConfig,
         MapCache.create(0),
         objectMapper,
         new ForegroundCachePopulator(objectMapper, new CachePopulatorStats(), 0),

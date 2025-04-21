@@ -58,6 +58,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -347,17 +348,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
-      final HistoricalFilter historicalFilter = new HistoricalFilter(
-          brokerViewOfCoordinatorConfig,
-          query.context().getCloneQueryMode()
-      );
+      final CloneQueryMode cloneQueryMode = query.context().getCloneQueryMode();
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       @Nullable
       final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
       if (prevEtag != null) {
         @Nullable
-        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, historicalFilter, queryCacheKey);
+        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, brokerViewOfCoordinatorConfig, cloneQueryMode, queryCacheKey);
         if (null != currentEtag) {
           responseContext.putEntityTag(currentEtag);
         }
@@ -374,7 +372,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       queryPlus = queryPlus.withQueryMetrics(toolChest);
       queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentServers.size()).emit(emitter);
 
-      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers, historicalFilter);
+      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(
+          segmentServers,
+          brokerViewOfCoordinatorConfig,
+          cloneQueryMode
+      );
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
@@ -604,13 +606,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(
         Set<SegmentServerSelector> segments,
-        HistoricalFilter historicalFilter
+        HistoricalFilter historicalFilter,
+        CloneQueryMode cloneQueryMode
     )
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
         final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
-                                                                       .pick(query, historicalFilter);
+                                                                       .pick(query, historicalFilter, cloneQueryMode);
 
         if (queryableDruidServer == null) {
           log.makeAlert(
@@ -823,13 +826,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
     String computeResultLevelCachingEtag(
         final Set<SegmentServerSelector> segments,
         final HistoricalFilter historicalFilter,
+        final CloneQueryMode cloneQueryMode,
         @Nullable byte[] queryCacheKey
     )
     {
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        QueryableDruidServer queryableServer = p.getServer().pick(query, historicalFilter);
+        QueryableDruidServer queryableServer = p.getServer().pick(query, historicalFilter, cloneQueryMode);
         if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;

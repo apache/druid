@@ -24,6 +24,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -240,10 +241,10 @@ public class TierSelectorStrategyTest
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER));
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), HistoricalFilter.IDENTITY_FILTER));
-    Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1, HistoricalFilter.IDENTITY_FILTER));
-    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER));
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
+    Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
+    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
   }
   
   @Test

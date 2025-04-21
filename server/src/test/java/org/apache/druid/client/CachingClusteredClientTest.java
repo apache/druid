@@ -2605,6 +2605,8 @@ public class CachingClusteredClientTest
       final int mergeLimit
   )
   {
+    BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    brokerViewOfCoordinatorConfig.start();
     return new CachingClusteredClient(
         conglomerateRule.getConglomerate(),
         new TimelineServerView()
@@ -2644,7 +2646,7 @@ public class CachingClusteredClientTest
 
           }
         },
-        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
+        brokerViewOfCoordinatorConfig,
         cache,
         JSON_MAPPER,
         cachePopulator,

@@ -25,6 +25,7 @@ import com.google.common.primitives.Bytes;
 import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -87,7 +88,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(0),
         makeRealtimeServerSelector(1)
     );
-    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, QUERY_CACHE_KEY);
+    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, QUERY_CACHE_KEY);
     Assert.assertNull(actual);
   }
 
@@ -100,14 +101,14 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, QUERY_CACHE_KEY);
+    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, QUERY_CACHE_KEY);
     Assert.assertNotNull(actual1);
 
     selectors = ImmutableSet.of(
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual2 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, QUERY_CACHE_KEY);
+    String actual2 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, QUERY_CACHE_KEY);
     Assert.assertNotNull(actual2);
     Assert.assertEquals("cache key should not change for same server selectors", actual1, actual2);
 
@@ -115,7 +116,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(2),
         makeHistoricalServerSelector(1)
     );
-    String actual3 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, QUERY_CACHE_KEY);
+    String actual3 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, QUERY_CACHE_KEY);
     Assert.assertNotNull(actual3);
     Assert.assertNotEquals(actual1, actual3);
   }
@@ -129,10 +130,10 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, new byte[]{1, 2});
+    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, new byte[]{1, 2});
     Assert.assertNotNull(actual1);
 
-    String actual2 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, new byte[]{3, 4});
+    String actual2 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, new byte[]{3, 4});
     Assert.assertNotNull(actual2);
     Assert.assertNotEquals(actual1, actual2);
   }
@@ -147,14 +148,14 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, FULL_QUERY_CACHE_KEY);
+    String actual1 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, FULL_QUERY_CACHE_KEY);
     Assert.assertNotNull(actual1);
 
     selectors = ImmutableSet.of(
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual2 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, null);
+    String actual2 = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, null);
     Assert.assertNotNull(actual2);
     Assert.assertEquals(actual1, actual2);
   }
@@ -170,7 +171,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, null);
+    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, null);
     Assert.assertNull(actual);
   }
 
@@ -188,7 +189,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, null);
+    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, null);
     Assert.assertNotNull(actual);
   }
 
@@ -207,7 +208,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         makeHistoricalServerSelector(1),
         makeHistoricalServerSelector(1)
     );
-    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, null);
+    String actual = keyManager.computeResultLevelCachingEtag(selectors, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE, null);
     Assert.assertNotNull(actual);
   }
 
@@ -304,7 +305,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         0
     );
     expect(server.isSegmentReplicationTarget()).andReturn(isHistorical).anyTimes();
-    expect(serverSelector.pick(query, HistoricalFilter.IDENTITY_FILTER)).andReturn(queryableDruidServer).anyTimes();
+    expect(serverSelector.pick(query, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE)).andReturn(queryableDruidServer).anyTimes();
     expect(queryableDruidServer.getServer()).andReturn(server).anyTimes();
     expect(serverSelector.getSegment()).andReturn(segment).anyTimes();
     replay(serverSelector, queryableDruidServer, server);

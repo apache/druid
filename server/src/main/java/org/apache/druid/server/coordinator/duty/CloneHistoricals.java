@@ -24,6 +24,7 @@ import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
@@ -34,6 +35,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -121,8 +123,53 @@ public class CloneHistoricals implements CoordinatorDuty
       }
     }
 
-    cloneStatusManager.updateStatus(hostToHistorical, cloneServers);
+    Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(hostToHistorical, cloneServers);
+    cloneStatusManager.updateStatus(newStatusMap);
 
     return params;
+  }
+
+  public Map<String, ServerCloneStatus> createCurrentStatusMap(
+      Map<String, ServerHolder> historicalMap,
+      Map<String, String> cloneServers
+  )
+  {
+    final Map<String, ServerCloneStatus> newStatusMap = new HashMap<>();
+
+    for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
+      final String targetServerName = entry.getKey();
+      final ServerHolder targetServer = historicalMap.get(entry.getKey());
+      final String sourceServerName = entry.getValue();
+
+      long segmentLoad = 0L;
+      long bytesLeft = 0L;
+      long segmentDrop = 0L;
+
+      ServerCloneStatus newStatus;
+      if (targetServer == null) {
+        newStatus = ServerCloneStatus.unknown(sourceServerName);
+      } else {
+
+        ServerCloneStatus.State state;
+        if (!historicalMap.containsKey(sourceServerName)) {
+          state = ServerCloneStatus.State.SOURCE_SERVER_MISSING;
+        } else {
+          state = ServerCloneStatus.State.LOADING;
+        }
+
+        for (Map.Entry<DataSegment, SegmentAction> queuedSegment : targetServer.getQueuedSegments().entrySet()) {
+          if (queuedSegment.getValue().isLoad()) {
+            segmentLoad += 1;
+            bytesLeft += queuedSegment.getKey().getSize();
+          } else {
+            segmentDrop += 1;
+          }
+        }
+        newStatus = new ServerCloneStatus(sourceServerName, state, segmentLoad, segmentDrop, bytesLeft);
+      }
+      newStatusMap.put(targetServerName, newStatus);
+    }
+
+    return newStatusMap;
   }
 }

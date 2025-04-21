@@ -20,11 +20,8 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.server.coordinator.loading.SegmentAction;
-import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -48,44 +45,8 @@ public class CloneStatusManager
     return cloneStatusSnapshot.get().get(targetServer);
   }
 
-  public void updateStatus(Map<String, ServerHolder> historicalMap, Map<String, String> cloneServers)
+  public void updateStatus(Map<String, ServerCloneStatus> newStatusMap)
   {
-    final Map<String, ServerCloneStatus> newStatusMap = new HashMap<>();
-
-    for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
-      final String targetServerName = entry.getKey();
-      final ServerHolder targetServer = historicalMap.get(entry.getKey());
-      final String sourceServerName = entry.getValue();
-
-      long segmentLoad = 0L;
-      long bytesLeft = 0L;
-      long segmentDrop = 0L;
-
-      ServerCloneStatus newStatus;
-      if (targetServer == null) {
-        newStatus = ServerCloneStatus.unknown(sourceServerName);
-      } else {
-
-        ServerCloneStatus.State state;
-        if (!historicalMap.containsKey(sourceServerName)) {
-          state = ServerCloneStatus.State.SOURCE_SERVER_MISSING;
-        } else {
-          state = ServerCloneStatus.State.LOADING;
-        }
-
-        for (Map.Entry<DataSegment, SegmentAction> queuedSegment : targetServer.getQueuedSegments().entrySet()) {
-          if (queuedSegment.getValue().isLoad()) {
-            segmentLoad += 1;
-            bytesLeft += queuedSegment.getKey().getSize();
-          } else {
-            segmentDrop += 1;
-          }
-        }
-        newStatus = new ServerCloneStatus(sourceServerName, state, segmentLoad, segmentDrop, bytesLeft);
-      }
-      newStatusMap.put(targetServerName, newStatus);
-    }
-
     cloneStatusSnapshot.set(ImmutableMap.copyOf(newStatusMap));
   }
 }

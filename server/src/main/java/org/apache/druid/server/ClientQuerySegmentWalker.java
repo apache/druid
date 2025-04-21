@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -607,6 +608,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * @param parentQueryResourceId Parent Query's Query Resource ID
    * @return DataSource populated with the subqueries
    */
+  @VisibleForTesting
   public static DataSource generateSubqueryIds(
       DataSource rootDataSource,
       @Nullable final String parentQueryId,
