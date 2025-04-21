@@ -37,13 +37,13 @@ public class TestCoordinatorDynamicConfigView extends CoordinatorDynamicConfigVi
   }
 
   @Override
-  public Set<String> getTargetCloneServers()
+  public synchronized Set<String> getServersBeingCloned()
   {
     return targetServers;
   }
 
   @Override
-  public Set<String> getSourceCloneServers()
+  public synchronized Set<String> getClones()
   {
     return sourceServers;
   }

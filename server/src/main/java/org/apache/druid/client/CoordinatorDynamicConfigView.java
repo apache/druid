@@ -45,9 +45,9 @@ public class CoordinatorDynamicConfigView
   @GuardedBy("this")
   private CoordinatorDynamicConfig config;
   @GuardedBy("this")
-  private Set<String> sourceCloneServers;
+  private Set<String> cloneServers;
   @GuardedBy("this")
-  private Set<String> targetCloneServers;
+  private Set<String> serversBeingCloned;
 
   @Inject
   public CoordinatorDynamicConfigView(CoordinatorClient coordinatorClient)
@@ -67,19 +67,19 @@ public class CoordinatorDynamicConfigView
   public synchronized void setDynamicConfiguration(@NotNull CoordinatorDynamicConfig updatedConfig)
   {
     config = updatedConfig.snapshot();
-    Map<String, String> cloneServers = config.getCloneServers();
-    sourceCloneServers = ImmutableSet.copyOf(cloneServers.keySet());
-    targetCloneServers = ImmutableSet.copyOf(cloneServers.values());
+    final Map<String, String> cloneServers = config.getCloneServers();
+    this.cloneServers = ImmutableSet.copyOf(cloneServers.keySet());
+    this.serversBeingCloned = ImmutableSet.copyOf(cloneServers.values());
   }
 
-  public synchronized Set<String> getSourceCloneServers()
+  public synchronized Set<String> getClones()
   {
-    return sourceCloneServers;
+    return cloneServers;
   }
 
-  public synchronized Set<String> getTargetCloneServers()
+  public synchronized Set<String> getServersBeingCloned()
   {
-    return targetCloneServers;
+    return serversBeingCloned;
   }
 
   @LifecycleStart

@@ -200,19 +200,19 @@ public class CoordinatorDynamicConfig
         replicantLifetime,
         replicationThrottleLimit,
         balancerComputeThreads,
-        ImmutableSet.copyOf(specificDataSourcesToKillUnusedSegmentsIn),
+        specificDataSourcesToKillUnusedSegmentsIn != null ? ImmutableSet.copyOf(specificDataSourcesToKillUnusedSegmentsIn) : null,
         killTaskSlotRatio,
         maxKillTaskSlots,
-        ImmutableSet.copyOf(dataSourcesToNotKillStalePendingSegmentsIn),
+        dataSourcesToNotKillStalePendingSegmentsIn != null ? ImmutableSet.copyOf(dataSourcesToNotKillStalePendingSegmentsIn) : null,
         maxSegmentsInNodeLoadingQueue,
-        ImmutableSet.copyOf(decommissioningNodes),
+        decommissioningNodes != null ? ImmutableSet.copyOf(decommissioningNodes) : null,
         pauseCoordination,
         replicateAfterLoadTimeout,
         useRoundRobinSegmentAssignment,
         smartSegmentLoading,
-        ImmutableMap.copyOf(debugDimensions),
-        ImmutableSet.copyOf(turboLoadingNodes),
-        ImmutableMap.copyOf(cloneServers)
+        debugDimensions != null ? ImmutableMap.copyOf(debugDimensions) : null,
+        turboLoadingNodes != null ? ImmutableSet.copyOf(turboLoadingNodes) : null,
+        cloneServers != null ? ImmutableMap.copyOf(cloneServers) : null
     );
   }
 

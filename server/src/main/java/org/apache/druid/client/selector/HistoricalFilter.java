@@ -33,23 +33,23 @@ import java.util.stream.Collectors;
 public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<QueryableDruidServer>>, Int2ObjectRBTreeMap<Set<QueryableDruidServer>>>
 {
   public static final HistoricalFilter IDENTITY_FILTER = new HistoricalFilter(ImmutableSet::of);
-  private final Supplier<Set<String>> serversToIgnoreSupplier;
+  private final Supplier<Set<String>> serversToFilter;
 
-  public HistoricalFilter(Supplier<Set<String>> serversToIgnoreSupplier)
+  public HistoricalFilter(Supplier<Set<String>> serversToFilter)
   {
-    this.serversToIgnoreSupplier = serversToIgnoreSupplier;
+    this.serversToFilter = serversToFilter;
   }
 
   public HistoricalFilter(CoordinatorDynamicConfigView configView, CloneQueryMode cloneQueryMode)
   {
-    this.serversToIgnoreSupplier = () -> {
+    this.serversToFilter = () -> {
       switch (cloneQueryMode) {
         case CLONE_PREFERRED:
-          // Remove clone sources, so that targets are queried.
-          return configView.getSourceCloneServers();
+          // Remove servers being cloned targets, so that clones are queried.
+          return configView.getServersBeingCloned();
         case EXCLUDE:
-          // Remove clone sources, so that targets are queried.
-          return configView.getTargetCloneServers();
+          // Remove clones, so that targets are queried.
+          return configView.getClones();
         case INCLUDE:
           // Don't remove either
           return ImmutableSet.of();
@@ -62,7 +62,7 @@ public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<Querya
   @Override
   public Int2ObjectRBTreeMap<Set<QueryableDruidServer>> apply(Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers)
   {
-    Set<String> serversToIgnore = serversToIgnoreSupplier.get();
+    Set<String> serversToIgnore = serversToFilter.get();
 
     if (serversToIgnore.isEmpty()) {
       return historicalServers;
