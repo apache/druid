@@ -21,7 +21,7 @@ package org.apache.druid.client.selector;
 
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
-import org.apache.druid.client.CoordinatorDynamicConfigView;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.query.CloneQueryMode;
 
@@ -40,7 +40,7 @@ public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<Querya
     this.serversToFilter = serversToFilter;
   }
 
-  public HistoricalFilter(CoordinatorDynamicConfigView configView, CloneQueryMode cloneQueryMode)
+  public HistoricalFilter(BrokerViewOfCoordinatorConfig configView, CloneQueryMode cloneQueryMode)
   {
     this.serversToFilter = () -> {
       switch (cloneQueryMode) {

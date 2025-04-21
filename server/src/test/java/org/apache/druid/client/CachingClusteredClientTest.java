@@ -115,6 +115,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -2643,6 +2644,7 @@ public class CachingClusteredClientTest
 
           }
         },
+        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
         cache,
         JSON_MAPPER,
         cachePopulator,
@@ -2709,8 +2711,7 @@ public class CachingClusteredClientTest
             NoQueryLaningStrategy.INSTANCE,
             new ServerConfig()
         ),
-        new NoopServiceEmitter(),
-        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
+        new NoopServiceEmitter()
     );
   }
 

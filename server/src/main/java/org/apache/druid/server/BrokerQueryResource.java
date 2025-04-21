@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.client.CoordinatorDynamicConfigView;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.HistoricalFilter;
@@ -58,7 +58,7 @@ import java.io.InputStream;
 public class BrokerQueryResource extends QueryResource
 {
   private final TimelineServerView brokerServerView;
-  private final CoordinatorDynamicConfigView configView;
+  private final BrokerViewOfCoordinatorConfig configView;
 
   @Inject
   public BrokerQueryResource(
@@ -71,7 +71,7 @@ public class BrokerQueryResource extends QueryResource
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode,
       TimelineServerView brokerServerView,
-      CoordinatorDynamicConfigView configView
+      BrokerViewOfCoordinatorConfig configView
   )
   {
     super(
@@ -97,15 +97,21 @@ public class BrokerQueryResource extends QueryResource
       InputStream in,
       @QueryParam("pretty") String pretty,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
-      @QueryParam("cloneQueryMode") @Nullable CloneQueryMode cloneQueryMode,
+      @QueryParam("cloneQueryMode") @Nullable String cloneQueryModeString,
       @Context final HttpServletRequest req
   ) throws IOException
   {
     final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(req, pretty != null);
+    final CloneQueryMode cloneQueryMode = QueryContexts.getAsEnum(
+        QueryContexts.CLONE_QUERY_MODE,
+        cloneQueryModeString,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
+    );
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
       ExecutionVertex ev = ExecutionVertex.of(query);
-      HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode == null ? QueryContexts.DEFAULT_CLONE_QUERY_MODE : cloneQueryMode);
+      HistoricalFilter historicalFilter = new HistoricalFilter(configView, cloneQueryMode);
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,

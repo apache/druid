@@ -28,10 +28,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.CachingClusteredClient;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.QueryableDruidServer;
-import org.apache.druid.client.TestCoordinatorDynamicConfigView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -106,6 +106,7 @@ import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -136,7 +137,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
@@ -308,6 +308,7 @@ public class CachingClusteredClientBenchmark
     cachingClusteredClient = new CachingClusteredClient(
         conglomerate,
         serverView,
+        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
         MapCache.create(0),
         JSON_MAPPER,
         new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), 0),
@@ -322,8 +323,7 @@ public class CachingClusteredClientBenchmark
         },
         forkJoinPool,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter(),
-        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
+        new NoopServiceEmitter()
     );
   }
 

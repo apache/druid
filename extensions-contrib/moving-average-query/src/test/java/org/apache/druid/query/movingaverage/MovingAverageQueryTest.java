@@ -32,9 +32,9 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.CachingClusteredClient;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.TestCoordinatorDynamicConfigView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -72,6 +72,7 @@ import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SubqueryGuardrailHelper;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
@@ -95,7 +96,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
@@ -359,6 +359,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
 
           }
         },
+        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
         MapCache.create(100000),
         jsonMapper,
         new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1),
@@ -367,8 +368,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new BrokerParallelMergeConfig(),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter(),
-        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
+        new NoopServiceEmitter()
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(

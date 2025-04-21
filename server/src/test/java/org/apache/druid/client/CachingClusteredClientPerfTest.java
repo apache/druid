@@ -53,6 +53,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerManagerTest;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -67,7 +68,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -132,6 +132,7 @@ public class CachingClusteredClientPerfTest
     CachingClusteredClient cachingClusteredClient = new CachingClusteredClient(
         new MockQueryRunnerFactoryConglomerate(),
         serverView,
+        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
         MapCache.create(1024),
         TestHelper.makeJsonMapper(),
         Mockito.mock(CachePopulator.class),
@@ -140,8 +141,7 @@ public class CachingClusteredClientPerfTest
         Mockito.mock(BrokerParallelMergeConfig.class),
         ForkJoinPool.commonPool(),
         queryScheduler,
-        new NoopServiceEmitter(),
-        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
+        new NoopServiceEmitter()
     );
 
     Query<SegmentDescriptor> fakeQuery = makeFakeQuery(interval);

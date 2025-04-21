@@ -23,32 +23,34 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class CloneStatusManager
 {
-  private final AtomicReference<Map<String, CloneStatusMetrics>> cloneStatusSnapshot;
+  private final AtomicReference<Map<String, ServerCloneStatus>> cloneStatusSnapshot;
 
   public CloneStatusManager()
   {
-    this.cloneStatusSnapshot = new AtomicReference<>(ImmutableMap.of());
+    this.cloneStatusSnapshot = new AtomicReference<>(Map.of());
   }
 
-  public Map<String, CloneStatusMetrics> getStatusForAllServers()
+  public Map<String, ServerCloneStatus> getStatusForAllServers()
   {
     return cloneStatusSnapshot.get();
   }
 
-  public CloneStatusMetrics getStatusForServer(String targetServer)
+  @Nullable
+  public ServerCloneStatus getStatusForServer(String targetServer)
   {
     return cloneStatusSnapshot.get().get(targetServer);
   }
 
-  public void updateStats(Map<String, ServerHolder> historicalMap, Map<String, String> cloneServers)
+  public void updateStatus(Map<String, ServerHolder> historicalMap, Map<String, String> cloneServers)
   {
-    final Map<String, CloneStatusMetrics> newStatusMap = new HashMap<>();
+    final Map<String, ServerCloneStatus> newStatusMap = new HashMap<>();
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetServerName = entry.getKey();
@@ -59,16 +61,16 @@ public class CloneStatusManager
       long bytesLeft = 0L;
       long segmentDrop = 0L;
 
-      CloneStatusMetrics newStatus;
+      ServerCloneStatus newStatus;
       if (targetServer == null) {
-        newStatus = CloneStatusMetrics.unknown(sourceServerName);
+        newStatus = ServerCloneStatus.unknown(sourceServerName);
       } else {
 
-        CloneStatusMetrics.Status status;
+        ServerCloneStatus.State state;
         if (!historicalMap.containsKey(sourceServerName)) {
-          status = CloneStatusMetrics.Status.SOURCE_SERVER_MISSING;
+          state = ServerCloneStatus.State.SOURCE_SERVER_MISSING;
         } else {
-          status = CloneStatusMetrics.Status.LOADING;
+          state = ServerCloneStatus.State.LOADING;
         }
 
         for (Map.Entry<DataSegment, SegmentAction> queuedSegment : targetServer.getQueuedSegments().entrySet()) {
@@ -79,7 +81,7 @@ public class CloneStatusManager
             segmentDrop += 1;
           }
         }
-        newStatus = new CloneStatusMetrics(sourceServerName, status, segmentLoad, segmentDrop, bytesLeft);
+        newStatus = new ServerCloneStatus(sourceServerName, state, segmentLoad, segmentDrop, bytesLeft);
       }
       newStatusMap.put(targetServerName, newStatus);
     }

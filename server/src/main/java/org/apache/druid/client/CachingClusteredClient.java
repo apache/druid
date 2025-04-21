@@ -127,12 +127,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
-  private final CoordinatorDynamicConfigView coordinatorDynamicConfigView;
+  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   @Inject
   public CachingClusteredClient(
       QueryRunnerFactoryConglomerate conglomerate,
       TimelineServerView serverView,
+      BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig,
       Cache cache,
       @Smile ObjectMapper objectMapper,
       CachePopulator cachePopulator,
@@ -141,8 +142,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BrokerParallelMergeConfig parallelMergeConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
-      ServiceEmitter emitter,
-      CoordinatorDynamicConfigView coordinatorDynamicConfigView
+      ServiceEmitter emitter
   )
   {
     this.conglomerate = conglomerate;
@@ -156,7 +156,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.emitter = emitter;
-    this.coordinatorDynamicConfigView = coordinatorDynamicConfigView;
+    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -295,8 +295,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           query,
           strategy,
           useCache,
-          populateCache,
-          coordinatorDynamicConfigView
+          populateCache
       );
     }
 
@@ -349,7 +348,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       final HistoricalFilter historicalFilter = new HistoricalFilter(
-          coordinatorDynamicConfigView,
+          brokerViewOfCoordinatorConfig,
           query.context().getCloneQueryMode()
       );
       @Nullable
@@ -790,20 +789,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
     private final boolean isSegmentLevelCachingEnable;
-    private final CoordinatorDynamicConfigView coordinatorDynamicConfigView;
 
     CacheKeyManager(
         final Query<T> query,
         final CacheStrategy<T, Object, Query<T>> strategy,
         final boolean useCache,
-        final boolean populateCache,
-        final CoordinatorDynamicConfigView coordinatorDynamicConfigView
+        final boolean populateCache
     )
     {
 
       this.query = query;
       this.strategy = strategy;
-      this.coordinatorDynamicConfigView = coordinatorDynamicConfigView;
       this.isSegmentLevelCachingEnable = ((populateCache || useCache)
                                           && !query.context().isBySegment());   // explicit bySegment queries are never cached
 

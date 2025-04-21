@@ -30,9 +30,9 @@ import org.mockito.Mockito;
 import java.util.Map;
 import java.util.Set;
 
-public class CoordinatorDynamicConfigViewTest
+public class BrokerViewOfCoordinatorConfigTest
 {
-  private CoordinatorDynamicConfigView target;
+  private BrokerViewOfCoordinatorConfig target;
 
   private CoordinatorClient coordinatorClient;
   private CoordinatorDynamicConfig config;
@@ -46,7 +46,7 @@ public class CoordinatorDynamicConfigViewTest
                                      .build();
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
     Mockito.when(coordinatorClient.getCoordinatorDynamicConfig()).thenReturn(Futures.immediateFuture(config));
-    target = new CoordinatorDynamicConfigView(coordinatorClient);
+    target = new BrokerViewOfCoordinatorConfig(coordinatorClient);
   }
 
   @Test
@@ -64,7 +64,7 @@ public class CoordinatorDynamicConfigViewTest
                                      .withCloneServers(Map.of("host1", "host2", "host4", "host5"))
                                      .build();
 
-    target.setDynamicConfiguration(config);
+    target.setDynamicConfig(config);
 
     Assert.assertEquals(Set.of("host1", "host4"), target.getClones());
     Assert.assertEquals(Set.of("host2", "host5"), target.getServersBeingCloned());

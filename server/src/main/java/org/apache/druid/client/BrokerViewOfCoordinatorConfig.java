@@ -37,9 +37,9 @@ import java.util.Set;
  * This class is registered as a managed lifecycle to fetch the coordinator dynamic configuration on startup. Further
  * updates are handled through {@link DruidInternalDynamicConfigResource}.
  */
-public class CoordinatorDynamicConfigView
+public class BrokerViewOfCoordinatorConfig
 {
-  private static final Logger log = new Logger(CoordinatorDynamicConfigView.class);
+  private static final Logger log = new Logger(BrokerViewOfCoordinatorConfig.class);
   private final CoordinatorClient coordinatorClient;
 
   @GuardedBy("this")
@@ -50,7 +50,7 @@ public class CoordinatorDynamicConfigView
   private Set<String> serversBeingCloned;
 
   @Inject
-  public CoordinatorDynamicConfigView(CoordinatorClient coordinatorClient)
+  public BrokerViewOfCoordinatorConfig(CoordinatorClient coordinatorClient)
   {
     this.coordinatorClient = coordinatorClient;
   }
@@ -64,9 +64,9 @@ public class CoordinatorDynamicConfigView
    * Update the config view with a new coordinator dynamic config snapshot. Also updates the source and target clone
    * servers based on the new dynamic configuration.
    */
-  public synchronized void setDynamicConfiguration(@NotNull CoordinatorDynamicConfig updatedConfig)
+  public synchronized void setDynamicConfig(@NotNull CoordinatorDynamicConfig updatedConfig)
   {
-    config = updatedConfig.snapshot();
+    config = updatedConfig;
     final Map<String, String> cloneServers = config.getCloneServers();
     this.cloneServers = ImmutableSet.copyOf(cloneServers.keySet());
     this.serversBeingCloned = ImmutableSet.copyOf(cloneServers.values());
@@ -89,7 +89,7 @@ public class CoordinatorDynamicConfigView
       log.info("Fetching coordinator dynamic configuration.");
 
       CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
-      setDynamicConfiguration(coordinatorDynamicConfig);
+      setDynamicConfig(coordinatorDynamicConfig);
 
       log.info("Successfully initialized dynamic config: [%s]", coordinatorDynamicConfig);
     }

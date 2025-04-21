@@ -21,7 +21,7 @@ package org.apache.druid.server;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.client.CoordinatorDynamicConfigView;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 
@@ -33,33 +33,33 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-@Path("/druid-internal/v1/dynamicConfiguration")
+@Path("/druid-internal/v1/config")
 public class DruidInternalDynamicConfigResource
 {
-  private final CoordinatorDynamicConfigView coordinatorDynamicConfigView;
+  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   @Inject
-  public DruidInternalDynamicConfigResource(CoordinatorDynamicConfigView coordinatorDynamicConfigView)
+  public DruidInternalDynamicConfigResource(BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig)
   {
-    this.coordinatorDynamicConfigView = coordinatorDynamicConfigView;
+    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
-  @Path("/coordinatorDynamicConfig")
+  @Path("/coordinator")
   public Response getDynamicConfig()
   {
-    return Response.ok(coordinatorDynamicConfigView.getDynamicConfiguration()).build();
+    return Response.ok(brokerViewOfCoordinatorConfig.getDynamicConfiguration()).build();
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
-  @Path("/coordinatorDynamicConfig")
+  @Path("/coordinator")
   public Response setDynamicConfig(final CoordinatorDynamicConfig dynamicConfig)
   {
-    coordinatorDynamicConfigView.setDynamicConfiguration(dynamicConfig);
+    brokerViewOfCoordinatorConfig.setDynamicConfig(dynamicConfig);
     return Response.ok("OK").build();
   }
 }

@@ -592,23 +592,6 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
-  public void testSnapshot()
-  {
-    CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder()
-                                                              .withMarkSegmentAsUnusedDelayMillis(1)
-                                                              .withMaxSegmentsToMove(1)
-                                                              .withReplicantLifetime(2)
-                                                              .withReplicationThrottleLimit(4)
-                                                              .withSmartSegmentLoading(true)
-                                                              .withDecommissioningNodes(Set.of("host1", "host2"))
-                                                              .withCloneServers(Map.of("host1", "host2"))
-                                                              .build();
-
-    CoordinatorDynamicConfig snapshot = config.snapshot();
-    Assert.assertEquals(config, snapshot);
-  }
-
-  @Test
   public void testEqualsAndHashCode()
   {
     CoordinatorDynamicConfig config1 = CoordinatorDynamicConfig.builder().build();

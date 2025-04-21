@@ -201,8 +201,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         query,
         strategy,
         false,
-        false,
-        null
+        false
     );
     Set<SegmentServerSelector> selectors = ImmutableSet.of(
         makeHistoricalServerSelector(1),
@@ -261,8 +260,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         query,
         strategy,
         false,
-        false,
-        null
+        false
     ).computeSegmentLevelQueryCacheKey());
   }
 
@@ -272,8 +270,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
         query,
         strategy,
         true,
-        true,
-        null
+        true
     );
   }
 

@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.SimpleServerView;
-import org.apache.druid.client.TestCoordinatorDynamicConfigView;
 import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.client.TestHttpClient.SimpleServerManager;
 import org.apache.druid.client.cache.CacheConfig;
@@ -51,6 +51,7 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -62,7 +63,6 @@ import org.junit.Before;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
@@ -126,6 +126,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
     cachingClusteredClient = new CachingClusteredClient(
         conglomerate,
         simpleServerView,
+        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
         MapCache.create(0),
         objectMapper,
         new ForegroundCachePopulator(objectMapper, new CachePopulatorStats(), 0),
@@ -134,8 +135,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         QueryStackTests.getParallelMergeConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter(),
-        new TestCoordinatorDynamicConfigView(Set.of(), Set.of())
+        new NoopServiceEmitter()
     );
     servers = new ArrayList<>();
   }

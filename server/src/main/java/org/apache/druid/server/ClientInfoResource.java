@@ -25,7 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.client.CoordinatorDynamicConfigView;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerViewUtil;
@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.LocatedSegmentDescriptor;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -52,6 +53,7 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -89,16 +91,16 @@ public class ClientInfoResource
   private SegmentMetadataQueryConfig segmentMetadataQueryConfig;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final CoordinatorDynamicConfigView configView;
+  private final BrokerViewOfCoordinatorConfig configView;
 
   @Inject
   public ClientInfoResource(
       FilteredServerInventoryView serverInventoryView,
       TimelineServerView timelineServerView,
+      BrokerViewOfCoordinatorConfig configView,
       SegmentMetadataQueryConfig segmentMetadataQueryConfig,
       AuthConfig authConfig,
-      AuthorizerMapper authorizerMapper,
-      CoordinatorDynamicConfigView configView
+      AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -306,10 +308,16 @@ public class ClientInfoResource
       @PathParam("dataSourceName") String datasource,
       @QueryParam("intervals") String intervals,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
-      @QueryParam("cloneQueryMode") CloneQueryMode cloneQueryMode,
+      @QueryParam("cloneQueryMode") @Nullable String cloneQueryModeString,
       @Context final HttpServletRequest req
   )
   {
+    final CloneQueryMode cloneQueryMode = QueryContexts.getAsEnum(
+        QueryContexts.CLONE_QUERY_MODE,
+        cloneQueryModeString,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
+    );
     List<Interval> intervalList = new ArrayList<>();
     for (String interval : intervals.split(",")) {
       intervalList.add(Intervals.of(interval.trim()));

@@ -121,7 +121,7 @@ public class CloneHistoricals implements CoordinatorDuty
       }
     }
 
-    cloneStatusManager.updateStats(hostToHistorical, cloneServers);
+    cloneStatusManager.updateStatus(hostToHistorical, cloneServers);
 
     return params;
   }

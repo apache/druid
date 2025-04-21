@@ -63,7 +63,6 @@ import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
-import org.apache.druid.server.coordinator.duty.BrokerDynamicConfigSync;
 import org.apache.druid.server.coordinator.duty.CloneHistoricals;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
@@ -84,6 +83,7 @@ import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused
 import org.apache.druid.server.coordinator.duty.MetadataAction;
 import org.apache.druid.server.coordinator.duty.PrepareBalancerAndLoadQueues;
 import org.apache.druid.server.coordinator.duty.RunRules;
+import org.apache.druid.server.coordinator.duty.SendDynamicConfigToBrokers;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
@@ -568,7 +568,7 @@ public class DruidCoordinator
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
         new CloneHistoricals(loadQueueManager, cloneStatusManager),
-        new BrokerDynamicConfigSync(coordinatorDynamicConfigSyncer),
+        new SendDynamicConfigToBrokers(coordinatorDynamicConfigSyncer),
         new CollectLoadQueueStats()
     );
   }

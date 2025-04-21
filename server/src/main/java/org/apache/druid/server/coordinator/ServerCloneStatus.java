@@ -24,63 +24,63 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
-public class CloneStatusMetrics
+public class ServerCloneStatus
 {
   private final String sourceServer;
-  private final Status status;
+  private final State state;
   private final long segmentLoadsRemaining;
-  private final long segmenetsDropsRemaining;
+  private final long segmentDropsRemaining;
   private final long bytesRemaining;
 
   @JsonCreator
-  public CloneStatusMetrics(
+  public ServerCloneStatus(
       @JsonProperty("sourceServer") String sourceServer,
-      @JsonProperty("status") Status status,
+      @JsonProperty("state") State state,
       @JsonProperty("segmentLoadsRemaining") long segmentLoadsRemaining,
-      @JsonProperty("segmentDropsRemaining") long segmenetsDropsRemaining,
+      @JsonProperty("segmentDropsRemaining") long segmentDropsRemaining,
       @JsonProperty("bytesRemaining") long bytesRemaining
   )
   {
     this.sourceServer = sourceServer;
-    this.status = status;
+    this.state = state;
     this.segmentLoadsRemaining = segmentLoadsRemaining;
-    this.segmenetsDropsRemaining = segmenetsDropsRemaining;
+    this.segmentDropsRemaining = segmentDropsRemaining;
     this.bytesRemaining = bytesRemaining;
   }
 
-  @JsonProperty("sourceServer")
+  @JsonProperty
   public String getSourceServer()
   {
     return sourceServer;
   }
 
-  @JsonProperty("segmentLoadsRemaining")
+  @JsonProperty
   public long getSegmentLoadsRemaining()
   {
     return segmentLoadsRemaining;
   }
 
-  @JsonProperty("segmentDropsRemaining")
-  public long getSegmenetsDropsRemaining()
+  @JsonProperty
+  public long getSegmentDropsRemaining()
   {
-    return segmenetsDropsRemaining;
+    return segmentDropsRemaining;
   }
 
-  @JsonProperty("bytesRemaining")
+  @JsonProperty
   public long getBytesRemaining()
   {
     return bytesRemaining;
   }
 
-  @JsonProperty("status")
-  public Status getStatus()
+  @JsonProperty
+  public State getState()
   {
-    return status;
+    return state;
   }
 
-  public static CloneStatusMetrics unknown(String sourceServer)
+  public static ServerCloneStatus unknown(String sourceServer)
   {
-    return new CloneStatusMetrics(sourceServer, Status.TARGET_SERVER_MISSING, 0, 0, 0);
+    return new ServerCloneStatus(sourceServer, State.TARGET_SERVER_MISSING, 0, 0, 0);
   }
 
   @Override
@@ -92,18 +92,18 @@ public class CloneStatusMetrics
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CloneStatusMetrics that = (CloneStatusMetrics) o;
+    ServerCloneStatus that = (ServerCloneStatus) o;
     return segmentLoadsRemaining == that.segmentLoadsRemaining
-           && segmenetsDropsRemaining == that.segmenetsDropsRemaining
+           && segmentDropsRemaining == that.segmentDropsRemaining
            && bytesRemaining == that.bytesRemaining
            && Objects.equals(sourceServer, that.sourceServer)
-           && status == that.status;
+           && state == that.state;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sourceServer, status, segmentLoadsRemaining, segmenetsDropsRemaining, bytesRemaining);
+    return Objects.hash(sourceServer, state, segmentLoadsRemaining, segmentDropsRemaining, bytesRemaining);
   }
 
   @Override
@@ -111,9 +111,9 @@ public class CloneStatusMetrics
   {
     return "CloneStatusMetrics{" +
            "sourceServer='" + sourceServer + '\'' +
-           ", status=" + status +
+           ", state=" + state +
            ", segmentLoadsRemaining=" + segmentLoadsRemaining +
-           ", segmenetsDropsRemaining=" + segmenetsDropsRemaining +
+           ", segmentDropsRemaining=" + segmentDropsRemaining +
            ", bytesRemaining=" + bytesRemaining +
            '}';
   }
@@ -121,7 +121,7 @@ public class CloneStatusMetrics
   /**
    * Enum determining the status of the cloning process.
    */
-  public enum Status
+  public enum State
   {
     SOURCE_SERVER_MISSING,
     TARGET_SERVER_MISSING,

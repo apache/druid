@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.DateTime;
 
@@ -199,21 +198,6 @@ public class DiscoveryDruidNode
       return (T) o;
     }
     return null;
-  }
-
-  public ServiceLocation toServiceLocation()
-  {
-    final DruidNode druidNode = getDruidNode();
-    if (druidNode == null) {
-      return null;
-    }
-
-    return new ServiceLocation(
-        druidNode.getHost(),
-        druidNode.getPlaintextPort(),
-        druidNode.getTlsPort(),
-        ""
-    );
   }
 
   public DruidServer toDruidServer()

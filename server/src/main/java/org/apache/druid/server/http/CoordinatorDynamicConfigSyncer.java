@@ -37,11 +37,13 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -84,9 +86,11 @@ public class CoordinatorDynamicConfigSyncer
   public void broadcastConfigToBrokers()
   {
     invalidateInSyncBrokersIfNeeded();
-    for (ServiceLocation broker : getKnownBrokers()) {
-      exec.submit(() -> pushConfigToBroker(broker));
-    }
+    exec.submit(() -> {
+      for (ServiceLocation broker : getKnownBrokers()) {
+        pushConfigToBroker(broker);
+      }
+    });
   }
 
   public synchronized Set<String> getInSyncBrokers()
@@ -105,13 +109,13 @@ public class CoordinatorDynamicConfigSyncer
     try {
       CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
       final RequestBuilder requestBuilder =
-          new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/dynamicConfiguration/coordinatorDynamicConfig")
+          new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
               .jsonContent(jsonMapper, currentDynamicConfig);
 
       final BytesFullResponseHolder responseHolder = brokerClient.request(requestBuilder, new BytesFullResponseHandler());
       final HttpResponseStatus status = responseHolder.getStatus();
       if (status.equals(HttpResponseStatus.OK)) {
-        addToInSyncBrokers(currentDynamicConfig, brokerLocation);
+        markBrokerAsSynced(currentDynamicConfig, brokerLocation);
       } else {
         log.error(
             "Received status [%s] while posting dynamic configs to broker[%s]",
@@ -135,7 +139,7 @@ public class CoordinatorDynamicConfigSyncer
     return druidNodeDiscovery.getForNodeRole(NodeRole.BROKER)
                              .getAllNodes()
                              .stream()
-                             .map(DiscoveryDruidNode::toServiceLocation)
+                             .map(CoordinatorDynamicConfigSyncer::convertDiscoveryNodeToServiceLocation)
                              .collect(Collectors.toSet());
   }
 
@@ -149,11 +153,27 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
-  private synchronized void addToInSyncBrokers(CoordinatorDynamicConfig config, ServiceLocation broker)
+  private synchronized void markBrokerAsSynced(CoordinatorDynamicConfig config, ServiceLocation broker)
   {
     final URL url = broker.toURL("");
     if (config.equals(lastKnownConfig.get())) {
       inSyncBrokers.add(StringUtils.format("%s:%s", url.getHost(), url.getPort()));
     }
+  }
+
+  @Nullable
+  private static ServiceLocation convertDiscoveryNodeToServiceLocation(DiscoveryDruidNode discoveryDruidNode)
+  {
+    final DruidNode druidNode = discoveryDruidNode.getDruidNode();
+    if (druidNode == null) {
+      return null;
+    }
+
+    return new ServiceLocation(
+        druidNode.getHost(),
+        druidNode.getPlaintextPort(),
+        druidNode.getTlsPort(),
+        ""
+    );
   }
 }

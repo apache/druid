@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.server.coordinator.CloneStatusManager;
-import org.apache.druid.server.coordinator.CloneStatusMetrics;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.timeline.DataSegment;
@@ -45,15 +43,11 @@ import java.util.Map;
 public class CoordinatorResource
 {
   private final DruidCoordinator coordinator;
-  private final CloneStatusManager cloneStatusManager;
-  private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
 
   @Inject
-  public CoordinatorResource(DruidCoordinator coordinator, CloneStatusManager cloneStatusManager, CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer)
+  public CoordinatorResource(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
-    this.cloneStatusManager = cloneStatusManager;
-    this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
   }
 
   @GET
@@ -163,29 +157,5 @@ public class CoordinatorResource
   public Response getStatusOfDuties()
   {
     return Response.ok(new CoordinatorDutyStatus(coordinator.getStatusOfDuties())).build();
-  }
-
-  @GET
-  @Path("/brokerConfigurationStatus")
-  @ResourceFilters(StateResourceFilter.class)
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getBrokerStatus()
-  {
-    return Response.ok(coordinatorDynamicConfigSyncer.getInSyncBrokers()).build();
-  }
-
-  @GET
-  @Path("/cloneStatus")
-  @ResourceFilters(StateResourceFilter.class)
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getCloneStatus(@QueryParam("targetServer") @Nullable String targetServer)
-  {
-    if (targetServer != null) {
-      CloneStatusMetrics statusForServer = cloneStatusManager.getStatusForServer(targetServer);
-      return Response.ok(ImmutableMap.of(targetServer, statusForServer)).build();
-
-    } else {
-      return Response.ok(cloneStatusManager.getStatusForAllServers()).build();
-    }
   }
 }

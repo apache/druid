@@ -19,16 +19,21 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -50,17 +55,20 @@ public class CoordinatorDynamicConfigsResource
   private final CoordinatorConfigManager manager;
   private final AuditManager auditManager;
   private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
+  private final CloneStatusManager cloneStatusManager;
 
   @Inject
   public CoordinatorDynamicConfigsResource(
       CoordinatorConfigManager manager,
       AuditManager auditManager,
-      CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer
+      CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer,
+      CloneStatusManager cloneStatusManager
   )
   {
     this.manager = manager;
     this.auditManager = auditManager;
     this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
+    this.cloneStatusManager = cloneStatusManager;
   }
 
   @GET
@@ -136,4 +144,26 @@ public class CoordinatorDynamicConfigsResource
     ).build();
   }
 
+  @GET
+  @Path("/syncedBrokers")
+  @ResourceFilters(StateResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getBrokerStatus()
+  {
+    return Response.ok(coordinatorDynamicConfigSyncer.getInSyncBrokers()).build();
+  }
+
+  @GET
+  @Path("/cloneStatus")
+  @ResourceFilters(StateResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getCloneStatus(@QueryParam("targetServer") @Nullable String targetServer)
+  {
+    if (targetServer != null) {
+      ServerCloneStatus statusForServer = cloneStatusManager.getStatusForServer(targetServer);
+      return Response.ok(ImmutableMap.of(targetServer, statusForServer)).build();
+    } else {
+      return Response.ok(cloneStatusManager.getStatusForAllServers()).build();
+    }
+  }
 }

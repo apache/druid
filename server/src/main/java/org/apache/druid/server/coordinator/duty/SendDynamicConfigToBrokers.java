@@ -17,34 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.server.coordinator.duty;
 
-import java.util.Set;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 
-public class TestCoordinatorDynamicConfigView extends CoordinatorDynamicConfigView
+/**
+ * Duty to periodically broadcast the coordinator dynamic configuration to all brokers.
+ */
+public class SendDynamicConfigToBrokers implements CoordinatorDuty
 {
-  private final Set<String> targetServers;
-  private final Set<String> sourceServers;
+  private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
 
-  public TestCoordinatorDynamicConfigView(
-      Set<String> targetServers,
-      Set<String> sourceServers
-  )
+  public SendDynamicConfigToBrokers(CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer)
   {
-    super(null);
-    this.targetServers = targetServers;
-    this.sourceServers = sourceServers;
+    this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
   }
 
   @Override
-  public synchronized Set<String> getServersBeingCloned()
+  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    return targetServers;
-  }
-
-  @Override
-  public synchronized Set<String> getClones()
-  {
-    return sourceServers;
+    coordinatorDynamicConfigSyncer.broadcastConfigToBrokers();
+    return params;
   }
 }

@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -190,30 +189,6 @@ public class CoordinatorDynamicConfig
     }
 
     return validDebugDimensions;
-  }
-
-  public CoordinatorDynamicConfig snapshot()
-  {
-    return new CoordinatorDynamicConfig(
-        markSegmentAsUnusedDelayMillis,
-        maxSegmentsToMove,
-        replicantLifetime,
-        replicationThrottleLimit,
-        balancerComputeThreads,
-        specificDataSourcesToKillUnusedSegmentsIn != null ? ImmutableSet.copyOf(specificDataSourcesToKillUnusedSegmentsIn) : null,
-        killTaskSlotRatio,
-        maxKillTaskSlots,
-        dataSourcesToNotKillStalePendingSegmentsIn != null ? ImmutableSet.copyOf(dataSourcesToNotKillStalePendingSegmentsIn) : null,
-        maxSegmentsInNodeLoadingQueue,
-        decommissioningNodes != null ? ImmutableSet.copyOf(decommissioningNodes) : null,
-        pauseCoordination,
-        replicateAfterLoadTimeout,
-        useRoundRobinSegmentAssignment,
-        smartSegmentLoading,
-        debugDimensions != null ? ImmutableMap.copyOf(debugDimensions) : null,
-        turboLoadingNodes != null ? ImmutableSet.copyOf(turboLoadingNodes) : null,
-        cloneServers != null ? ImmutableMap.copyOf(cloneServers) : null
-    );
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)

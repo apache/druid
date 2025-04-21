@@ -24,22 +24,22 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CloneStatusMetricsTest
+public class ServerCloneStatusTest
 {
   @Test
   public void testSerde() throws Exception
   {
-    CloneStatusMetrics metrics = new CloneStatusMetrics("host2", CloneStatusMetrics.Status.LOADING, 3012, 10, 100);
+    ServerCloneStatus metrics = new ServerCloneStatus("host2", ServerCloneStatus.State.LOADING, 3012, 10, 100);
     byte[] bytes = DefaultObjectMapper.INSTANCE.writeValueAsBytes(metrics);
-    CloneStatusMetrics deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, CloneStatusMetrics.class);
+    ServerCloneStatus deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, ServerCloneStatus.class);
     Assert.assertEquals(deserialized, metrics);
   }
 
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(CloneStatusMetrics.class)
-                  .withNonnullFields("sourceServer", "status")
+    EqualsVerifier.forClass(ServerCloneStatus.class)
+                  .withNonnullFields("sourceServer", "state")
                   .usingGetClass()
                   .verify();
   }
