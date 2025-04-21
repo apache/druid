@@ -19,12 +19,50 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.error.InvalidInput;
+
 /**
  * Enum used in the query context to determine if clone queries should be used by native queries.
  */
 public enum CloneQueryMode
 {
-  CLONE_PREFERRED,
-  INCLUDE,
-  EXCLUDE
+  /**
+   * For each ongoing cloning, do not query the source server that is being cloned. Other servers which are not
+   * participating in any cloning will still be queried.
+   */
+  CLONES_PREFERRED("clonesPreferred"),
+  /**
+   * Consider both clones and their source servers for querying.
+   */
+  INCLUDE("includeClones"),
+  /**
+   * Do not query clone servers.
+   */
+  EXCLUDE("excludeClones");
+
+  private final String name;
+
+  CloneQueryMode(String name)
+  {
+    this.name = name;
+  }
+
+  @JsonCreator
+  public static CloneQueryMode fromString(String value)
+  {
+    for (CloneQueryMode mode : values()) {
+      if (mode.toString().equals(value)) {
+        return mode;
+      }
+    }
+
+    throw InvalidInput.exception("No such clone query mode[%s]", value);
+  }
+
+  @Override
+  public String toString()
+  {
+    return name;
+  }
 }

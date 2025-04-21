@@ -123,8 +123,18 @@ public class ServerCloneStatus
    */
   public enum State
   {
+    /**
+     * The source server is missing from the current cluster view. The clone is continuing to load segments based on the
+     * last seen state of the source cluster.
+     */
     SOURCE_SERVER_MISSING,
+    /**
+     * The target server is missing from the current cluster view.
+     */
     TARGET_SERVER_MISSING,
+    /**
+     * Segments are loaded or being loaded. The counts give a better view of the progress.
+     */
     LOADING
   }
 }

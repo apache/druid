@@ -44,7 +44,7 @@ public class HistoricalFilter implements Function<Int2ObjectRBTreeMap<Set<Querya
   {
     this.serversToFilter = () -> {
       switch (cloneQueryMode) {
-        case CLONE_PREFERRED:
+        case CLONES_PREFERRED:
           // Remove servers being cloned targets, so that clones are queried.
           return configView.getServersBeingCloned();
         case EXCLUDE:
