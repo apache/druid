@@ -52,7 +52,9 @@ public class CoordinatorDynamicConfigsResourceTest
   @Test
   public void testGetBrokerStatus()
   {
-    EasyMock.expect(coordinatorDynamicConfigSyncer.getInSyncBrokers()).andReturn(Set.of("brok1")).once();
+    EasyMock.expect(coordinatorDynamicConfigSyncer.getInSyncBrokers())
+            .andReturn(Set.of(new BrokerSyncStatus("host1", 8080, 1000)))
+            .once();
     EasyMock.replay(coordinatorDynamicConfigSyncer);
     EasyMock.replay(cloneStatusManager);
 

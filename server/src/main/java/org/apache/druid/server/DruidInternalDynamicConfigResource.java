@@ -60,6 +60,6 @@ public class DruidInternalDynamicConfigResource
   public Response setDynamicConfig(final CoordinatorDynamicConfig dynamicConfig)
   {
     brokerViewOfCoordinatorConfig.setDynamicConfig(dynamicConfig);
-    return Response.ok("OK").build();
+    return Response.ok().build();
   }
 }

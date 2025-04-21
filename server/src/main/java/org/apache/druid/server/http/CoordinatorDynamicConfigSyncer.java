@@ -28,7 +28,6 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.FixedServiceLocator;
@@ -40,7 +39,6 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import javax.annotation.Nullable;
-import java.net.URL;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -62,7 +60,7 @@ public class CoordinatorDynamicConfigSyncer
 
   private final AtomicReference<CoordinatorDynamicConfig> lastKnownConfig = new AtomicReference<>();
   private final ServiceClientFactory clientFactory;
-  private final Set<String> inSyncBrokers;
+  private final Set<BrokerSyncStatus> inSyncBrokers;
   private final ScheduledExecutorService exec;
   private @Nullable Future<?> syncFuture = null;
 
@@ -95,7 +93,7 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
-  public synchronized Set<String> getInSyncBrokers()
+  public synchronized Set<BrokerSyncStatus> getInSyncBrokers()
   {
     return Set.copyOf(inSyncBrokers);
   }
@@ -105,9 +103,9 @@ public class CoordinatorDynamicConfigSyncer
     log.info("Starting coordinator config syncing to brokers on leader node.");
     syncFuture = exec.scheduleAtFixedRate(
         this::broadcastConfigToBrokers,
-        1L,
-        1L,
-        TimeUnit.MINUTES
+        30L,
+        60L,
+        TimeUnit.SECONDS
     );
   }
 
@@ -168,9 +166,8 @@ public class CoordinatorDynamicConfigSyncer
 
   private synchronized void markBrokerAsSynced(CoordinatorDynamicConfig config, ServiceLocation broker)
   {
-    final URL url = broker.toURL("");
     if (config.equals(lastKnownConfig.get())) {
-      inSyncBrokers.add(StringUtils.format("%s:%s", url.getHost(), url.getPort()));
+      inSyncBrokers.add(new BrokerSyncStatus(broker, System.currentTimeMillis()));
     }
   }
 
