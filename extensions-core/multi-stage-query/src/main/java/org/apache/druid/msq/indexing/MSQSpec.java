@@ -64,7 +64,7 @@ public class MSQSpec
       @JsonProperty("destination") MSQDestination destination,
       @JsonProperty("assignmentStrategy") WorkerAssignmentStrategy assignmentStrategy,
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig,
-      @JsonProperty("compactionMetricSpec") List<AggregatorFactory> compactionMetricSpec1,
+      @JsonProperty("compactionMetricSpec") List<AggregatorFactory> compactionMetricSpec,
       @JsonProperty("queryContext") QueryContext queryContext,
       @JsonProperty("queryDef") QueryDefinition queryDef
   )
@@ -73,7 +73,7 @@ public class MSQSpec
     this.destination = Preconditions.checkNotNull(destination, "destination");
     this.assignmentStrategy = Preconditions.checkNotNull(assignmentStrategy, "assignmentStrategy");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.compactionMetricSpec = compactionMetricSpec1;
+    this.compactionMetricSpec = compactionMetricSpec;
     this.queryContext = queryContext == null ? QueryContext.empty() : queryContext;
     this.queryDef = queryDef;
   }

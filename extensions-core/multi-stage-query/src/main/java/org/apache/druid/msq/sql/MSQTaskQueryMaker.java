@@ -147,7 +147,6 @@ public class MSQTaskQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
 
-    // FIXME rename?
     final LegacyMSQSpec querySpec = makeLegacyMSQSpec(
         targetDataSource,
         druidQuery,
