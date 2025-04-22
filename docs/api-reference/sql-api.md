@@ -106,17 +106,18 @@ The request body takes the following properties:
 ##### Text Format Request body
 
 Druid also allows you to submit SQL queries in text format which is simpler than above JSON format. 
-To do this, just leave the `Content-Type` request header blank or set it to anything other than `application/json`. 
+To do this, just set the `Content-Type` request header to `text/plain` or `application/x-www-form-urlencoded`, and pass SQL via the HTTP Body. 
+
 If there are multiple `Content-Type` headers, the **first** one is used.
 
-In this format, the whole request body is treated as a single SQL query string.
-
 For response, the `resultFormat` is always `object` with the HTTP response header `Content-Type: application/json`.
-
 If you want more control over the query context or response format, use the above JSON format request body instead.
 
+For example:
+
 ```commandline
-echo 'SELECT 1' | curl -X POST "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" --data @- 
+echo 'SELECT 1' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @-
+echo 'SELECT 1' | curl -H 'Content-Type: text/plain' http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @- 
 ```
 
 #### Responses

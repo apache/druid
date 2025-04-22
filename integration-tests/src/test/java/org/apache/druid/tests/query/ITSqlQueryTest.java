@@ -27,6 +27,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -87,22 +88,18 @@ public class ITSqlQueryTest
   }
 
   @Test
-  public void testEmptyContentType()
+  public void testUnsupportedMediaType()
   {
     executeWithRetry(
         "<EMPTY>",
         (endpoint) -> {
           try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             HttpPost request = new HttpPost(endpoint);
+            request.addHeader("Content-Type", "application/xml");
             request.setEntity(new StringEntity("select 1"));
 
             try (CloseableHttpResponse response = client.execute(request)) {
-              assertEquals(200, response.getStatusLine().getStatusCode());
-
-              HttpEntity entity = response.getEntity();
-              assertNotNull(entity);
-              String responseBody = EntityUtils.toString(entity).trim();
-              assertEquals("[{\"EXPR$0\":1}]", responseBody);
+              assertEquals(HttpStatus.SC_UNSUPPORTED_MEDIA_TYPE, response.getStatusLine().getStatusCode());
             }
           }
         }

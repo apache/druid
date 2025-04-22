@@ -47,6 +47,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.HttpException;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -114,11 +115,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
   {
+    handleException(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, objectMapper, exception);
+  }
+
+  private void handleException(HttpServletResponse response, int statusCode, ObjectMapper objectMapper, Exception exception)
+      throws IOException
+  {
     QueryInterruptedException exceptionToReport = QueryInterruptedException.wrapIfNeeded(exception);
     LOG.warn(exceptionToReport, "Unexpected exception occurs");
     if (!response.isCommitted()) {
       response.resetBuffer();
-      response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+      response.setStatus(statusCode);
       objectMapper.writeValue(
           response.getOutputStream(),
           serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
@@ -285,6 +292,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
       catch (IOException e) {
         handleQueryParseException(request, response, objectMapper, e, false);
+        return;
+      }
+      catch(HttpException e) {
+        handleException(response, e.getStatusCode().getStatusCode(), objectMapper, e);
         return;
       }
       catch (Exception e) {

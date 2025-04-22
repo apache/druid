@@ -32,10 +32,13 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.HttpException;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -210,42 +213,92 @@ public class SqlQuery
   }
 
   /**
+   * Extract SQL query object or SQL text from an HTTP Request
+   */
+  @FunctionalInterface
+  interface ISqlQueryExtractor<T>
+  {
+    T extract() throws IOException;
+  }
+
+  /**
    * For BROKERs to use.
-   *
-   * Brokers use com.sun.jersey upon Jetty for RESTful API, however jersey internally has sepcial handling for x-www-form-urlencoded,
+   * <p>
+   * Brokers use com.sun.jersey upon Jetty for RESTful API, however jersey internally has special handling for x-www-form-urlencoded,
    * it's not able to get the data from the stream of HttpServletRequest for such content type.
    * So we use HttpContext to get the request entity/string instead of using HttpServletRequest.
+   *
+   * @throws HttpException if the content type is not supported
+   * @throws BadRequestException if the SQL query is malformed or fail to read from the request
    */
   public static SqlQuery from(HttpContext httpContext)
   {
-    MediaType contentType = httpContext.getRequest().getMediaType();
-    if (MediaType.APPLICATION_JSON_TYPE.equals(contentType)) {
-      return httpContext.getRequest().getEntity(SqlQuery.class);
-    } else {
-      // Treats the whole HTTP body as a SQL
-      String sql = httpContext.getRequest().getEntity(String.class);
-      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.equals(contentType)) {
-        sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
-      }
-      return new SqlQuery(sql, null, false, false, false, null, null);
+    MediaType mediaType = httpContext.getRequest().getMediaType();
+    if (mediaType == null) {
+      throw new HttpException(
+          Response.Status.UNSUPPORTED_MEDIA_TYPE,
+          "Unsupported Content-Type: null"
+      );
+    }
+
+    try {
+      return from(
+          mediaType.getType() + "/" + mediaType.getSubtype(),
+          () -> httpContext.getRequest().getEntity(SqlQuery.class),
+          () -> httpContext.getRequest().getEntity(String.class)
+      );
+    }
+    catch (IOException e) {
+      throw new BadRequestException("Unable to parse SQL query: " + e.getMessage());
     }
   }
 
   /**
    * For Router to use
+   * @throws HttpException if the content type is not supported
+   * @throws IOException if the SQL query is malformed or fail to read from the request
    */
   public static SqlQuery from(HttpServletRequest request, ObjectMapper objectMapper) throws IOException
   {
     String contentType = request.getContentType();
+    return from(
+        contentType,
+        () -> objectMapper.readValue(request.getInputStream(), SqlQuery.class),
+        () -> new String(IOUtils.toByteArray(request.getInputStream()), StandardCharsets.UTF_8)
+    );
+  }
+
+  private static SqlQuery from(
+      String contentType,
+      ISqlQueryExtractor<SqlQuery> jsonQueryExtractor,
+      ISqlQueryExtractor<String> rawQueryExtractor
+  ) throws IOException
+  {
     if (MediaType.APPLICATION_JSON.equals(contentType)) {
-      return objectMapper.readValue(request.getInputStream(), SqlQuery.class);
-    } else {
-      // Treats the whole HTTP body as a SQL
-      String sql = new String(IOUtils.toByteArray(request.getInputStream()), StandardCharsets.UTF_8);
-      if (MediaType.APPLICATION_FORM_URLENCODED.equals(contentType)) {
-        sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
-      }
+
+      return jsonQueryExtractor.extract();
+
+    } else if (MediaType.TEXT_PLAIN.equals(contentType)) {
+
+      String sql = rawQueryExtractor.extract();
       return new SqlQuery(sql, null, false, false, false, null, null);
+
+    } else if (MediaType.APPLICATION_FORM_URLENCODED.equals(contentType)) {
+
+      String sql = rawQueryExtractor.extract();
+      if (sql == null) {
+        throw new HttpException(Response.Status.BAD_REQUEST, "No SQL given");
+      }
+
+      sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
+
+      return new SqlQuery(sql, null, false, false, false, null, null);
+
+    } else {
+      throw new HttpException(
+          Response.Status.UNSUPPORTED_MEDIA_TYPE,
+          "Unsupported Content-Type: " + contentType
+      );
     }
   }
 }
