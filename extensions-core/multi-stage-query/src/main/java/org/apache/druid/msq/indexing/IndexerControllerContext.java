@@ -284,7 +284,7 @@ public class IndexerControllerContext implements ControllerContext
         .destination(querySpec.getDestination())
         .maxConcurrentStages(maxConcurrentStages)
         .maxRetainedPartitionSketchBytes(memoryParameters.getPartitionStatisticsMaxRetainedBytes())
-        .workerContextMap(makeWorkerContextMap(querySpec.getContext(), querySpec.getDestination(), isDurableStorageEnabled, maxConcurrentStages))
+        .workerContextMap(makeWorkerContextMap(querySpec, isDurableStorageEnabled, maxConcurrentStages))
         .build();
   }
 
@@ -293,11 +293,11 @@ public class IndexerControllerContext implements ControllerContext
    * i.e., the map that will become {@link WorkOrder#getWorkerContext()}.
    */
   public static Map<String, Object> makeWorkerContextMap(
-      final QueryContext queryContext,
-      final MSQDestination destination,
+      final MSQSpec querySpec,
       final boolean durableStorageEnabled,
       final int maxConcurrentStages)
   {
+    final QueryContext queryContext = querySpec.getContext();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
@@ -312,6 +312,7 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
 
+    MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {
       builder.put(
           MultiStageQueryContext.CTX_SELECT_DESTINATION,
@@ -339,8 +340,7 @@ public class IndexerControllerContext implements ControllerContext
     // WorkOrder#getContext or Task#getContext.
     taskContextOverridesBuilder.putAll(
         makeWorkerContextMap(
-            querySpec.getContext(),
-            querySpec.getDestination(),
+            querySpec,
             queryKernelConfig.isDurableStorage(),
             queryKernelConfig.getMaxConcurrentStages()
         )
