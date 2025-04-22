@@ -21,51 +21,24 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.rpc.ServiceLocation;
 
 import java.util.Objects;
+import java.util.Set;
 
-public class BrokerSyncStatus
+public class ConfigSyncStatus
 {
-  private final String host;
-  private final int port;
-  private final long syncTime;
+  private final Set<BrokerSyncStatus> inSyncBrokers;
 
   @JsonCreator
-  public BrokerSyncStatus(
-      @JsonProperty("host") String host,
-      @JsonProperty("port") int port,
-      @JsonProperty("syncTime") long syncTime
-  )
+  public ConfigSyncStatus(@JsonProperty("inSyncBrokers") Set<BrokerSyncStatus> inSyncBrokers)
   {
-    this.host = host;
-    this.port = port;
-    this.syncTime = syncTime;
-  }
-
-  public BrokerSyncStatus(ServiceLocation broker, long syncTime)
-  {
-    this.host = broker.getHost();
-    this.port = broker.getTlsPort() > 0 ? broker.getTlsPort() : broker.getPlaintextPort();
-    this.syncTime = syncTime;
+    this.inSyncBrokers = inSyncBrokers;
   }
 
   @JsonProperty
-  public String getHost()
+  public Set<BrokerSyncStatus> getInSyncBrokers()
   {
-    return host;
-  }
-
-  @JsonProperty
-  public int getPort()
-  {
-    return port;
-  }
-
-  @JsonProperty
-  public long getSyncTime()
-  {
-    return syncTime;
+    return inSyncBrokers;
   }
 
   @Override
@@ -77,23 +50,21 @@ public class BrokerSyncStatus
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    BrokerSyncStatus that = (BrokerSyncStatus) o;
-    return port == that.port && Objects.equals(host, that.host);
+    ConfigSyncStatus that = (ConfigSyncStatus) o;
+    return Objects.equals(inSyncBrokers, that.inSyncBrokers);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(host, port);
+    return Objects.hashCode(inSyncBrokers);
   }
 
   @Override
   public String toString()
   {
-    return "BrokerSyncStatus{" +
-           "host='" + host + '\'' +
-           ", port=" + port +
-           ", syncTime=" + syncTime +
+    return "ConfigSyncStatus{" +
+           "inSyncBrokers=" + inSyncBrokers +
            '}';
   }
 }

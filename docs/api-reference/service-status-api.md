@@ -713,9 +713,9 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
 {
     "localhost:8083": {
         "sourceServer": "localhost:8089",
-        "status": "LOADING",
+        "state": "LOADING",
         "segmentLoadsRemaining": 0,
-        "segmenetsDropsRemaining": 0,
+        "segmentDropsRemaining": 0,
         "bytesRemaining": 0
     }
 }
@@ -774,9 +774,15 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
   <summary>View the response</summary>
 
 ```json
-[
-    "localhost:8082"
-]
+{
+  "inSyncBrokers": [
+    {
+      "host": "localhost",
+      "port": 8082,
+      "syncTime": 1745298963900
+    }
+  ]
+}
 ```
 
 </details>

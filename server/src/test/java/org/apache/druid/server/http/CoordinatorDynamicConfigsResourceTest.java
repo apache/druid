@@ -20,6 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -31,7 +32,6 @@ import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.Map;
-import java.util.Set;
 
 public class CoordinatorDynamicConfigsResourceTest
 {
@@ -53,7 +53,14 @@ public class CoordinatorDynamicConfigsResourceTest
   public void testGetBrokerStatus()
   {
     EasyMock.expect(coordinatorDynamicConfigSyncer.getInSyncBrokers())
-            .andReturn(Set.of(new BrokerSyncStatus("host1", 8080, 1000)))
+            .andReturn(
+                new ConfigSyncStatus(
+                    ImmutableSet.of(
+                        new BrokerSyncStatus("host1", 8080, 1000
+                        )
+                    )
+                )
+            )
             .once();
     EasyMock.replay(coordinatorDynamicConfigSyncer);
     EasyMock.replay(cloneStatusManager);
@@ -67,7 +74,12 @@ public class CoordinatorDynamicConfigsResourceTest
 
     Assert.assertEquals(200, response.getStatus());
 
-    Assert.assertEquals(Set.of("brok1"), response.getEntity());
+    ConfigSyncStatus expected = new ConfigSyncStatus(
+        ImmutableSet.of(
+            new BrokerSyncStatus("host1", 8080, 1000)
+        )
+    );
+    Assert.assertEquals(expected, response.getEntity());
   }
 
   @Test
