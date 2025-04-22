@@ -105,8 +105,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
             }
             catch (Exception ex) {
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
-              stopAndCreateNewLeaderLatch();
-              startLeaderLatch();
+              notLeader();
             }
           }
 
@@ -125,8 +124,10 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               listener.stopBeingLeader();
               startLeaderLatch();
             }
-            catch (Exception ex) {
-              log.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
+            catch (Throwable ex) {
+              // Shutdown the service since it is now in a non-deterministic state and might never recover
+              log.makeAlert(ex, "listener.stopBeingLeader() failed. Shutting down service.").emit();
+              System.exit(1);
             }
           }
         },
@@ -214,8 +215,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
         createNewLeaderLatchWithListener(),
         e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
     );
-
-    leader = false;
   }
 
   private void startLeaderLatch()
@@ -225,7 +224,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
       Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
       leaderLatch.get().start();
     }
-    catch (Exception e) {
+    catch (Throwable e) {
       // If an exception gets thrown out here, then the node will zombie out 'cause it won't be looking for
       // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
       // Curator likes to have "throws Exception" on methods so it might happen...
