@@ -135,6 +135,7 @@ public class PlannerContext
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
 
+  private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
   private boolean pullUpLookup;
@@ -175,12 +176,6 @@ public class PlannerContext
     this.engine = engine;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
-
-    String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
-    // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
-    if (Strings.isNullOrEmpty(sqlQueryId)) {
-      this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
-    }
     initializeContextFields();
   }
 
@@ -408,7 +403,7 @@ public class PlannerContext
 
   public String getSqlQueryId()
   {
-    return (String) queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
+    return sqlQueryId;
   }
 
   public CopyOnWriteArrayList<String> getNativeQueryIds()
@@ -562,7 +557,6 @@ public class PlannerContext
   public void addAllToQueryContext(Map<String, Object> toAdd)
   {
     this.queryContext.putAll(toAdd);
-    initializeContextFields();
   }
 
   public SqlEngine getEngine()
@@ -693,6 +687,13 @@ public class PlannerContext
       useGranularity = Numbers.parseBoolean(useGranularityParam);
     } else {
       useGranularity = DEFAULT_SQL_USE_GRANULARITY;
+    }
+
+    sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
+    // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
+    if (Strings.isNullOrEmpty(sqlQueryId)) {
+      sqlQueryId = UUID.randomUUID().toString();
+      this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
     }
   }
 }
