@@ -64,12 +64,12 @@ public class QueryDefinition
   private QueryDefinition(
       final Map<StageId, StageDefinition> stageDefinitions,
       final StageId finalStage,
-      QDExtension ext1
+      final QDExtension ext
   )
   {
     this.stageDefinitions = stageDefinitions;
     this.finalStage = finalStage;
-    this.ext = ext1;
+    this.ext = ext;
   }
 
   @JsonCreator
