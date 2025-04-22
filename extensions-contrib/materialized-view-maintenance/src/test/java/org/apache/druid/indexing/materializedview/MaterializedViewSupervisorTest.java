@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import junit.framework.AssertionFailedError;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
@@ -112,6 +113,7 @@ public class MaterializedViewSupervisorTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
+            Set.of(NodeRole.OVERLORD),
             NoopSegmentMetadataCache.instance(),
             NoopServiceEmitter.instance()
         ),

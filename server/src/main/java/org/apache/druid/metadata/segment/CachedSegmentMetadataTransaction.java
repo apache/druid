@@ -103,11 +103,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     if (!isLeaderWithSameTerm()) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
-                          .build(
-                              "Cannot use segment metadata cache since leadership has changed"
-                              + " from term[%s] to host[%s], term[%s].",
-                              startTerm, leaderSelector.getCurrentLeader(), leaderSelector.localTerm()
-                          );
+                          .build("This API is currently not available. Please try again after some time.");
     }
   }
 

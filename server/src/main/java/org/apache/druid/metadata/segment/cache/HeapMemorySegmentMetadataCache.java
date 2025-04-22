@@ -381,9 +381,11 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    */
   private void waitForCacheToFinishSyncWhile(Supplier<Boolean> waitCondition, long timeoutMillis)
   {
+    final Stopwatch totalWaitTime = Stopwatch.createStarted();
+
     synchronized (cacheStateLock) {
       log.info("Waiting for cache to finish sync with metadata store.");
-      while (waitCondition.get()) {
+      while (waitCondition.get() && totalWaitTime.millisElapsed() <= timeoutMillis) {
         try {
           cacheStateLock.wait(timeoutMillis);
         }
