@@ -137,12 +137,12 @@ public class MSQSpec
 
   public static class Builder
   {
-    protected ColumnMappings columnMappings;
-    protected MSQDestination destination = TaskReportMSQDestination.instance();
-    protected WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
-    protected MSQTuningConfig tuningConfig;
-    protected List<AggregatorFactory> compactionMetrics = Collections.emptyList();
-    protected QueryDefinition queryDef;
+    private ColumnMappings columnMappings;
+    private MSQDestination destination = TaskReportMSQDestination.instance();
+    private WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
+    private MSQTuningConfig tuningConfig;
+    private List<AggregatorFactory> compactionMetrics = Collections.emptyList();
+    private QueryDefinition queryDef;
 
     public Builder queryDef(QueryDefinition queryDef)
     {
