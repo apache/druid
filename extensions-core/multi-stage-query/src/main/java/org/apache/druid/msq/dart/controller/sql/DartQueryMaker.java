@@ -39,7 +39,6 @@ import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
-import org.apache.druid.msq.exec.QueryKitBasedMSQPlanner;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
@@ -50,7 +49,6 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.segment.column.ColumnType;
@@ -198,27 +196,7 @@ public class DartQueryMaker implements QueryMaker
         plannerContext,
         null // Only used for DML, which this isn't
     );
-
-    if(true) {
-      return querySpec;
-    }
-
-    ControllerContext context = controllerContext;
-
-    final QueryDefinition queryDef = new QueryKitBasedMSQPlanner(
-        querySpec,
-        resultsContext,
-        querySpec.getQuery(),
-        plannerContext.getJsonMapper(),
-        new DartQueryKitSpecFactory().makeQueryKitSpec(
-            QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),
-            dartQueryId,
-            querySpec.getTuningConfig(),
-            querySpec.getContext(),
-            controllerContext.queryKernelConfig(dartQueryId, querySpec)
-        )
-    ).makeQueryDefinition();
-    return querySpec.withQueryDef(queryDef);
+    return querySpec;
   }
 
   /**
