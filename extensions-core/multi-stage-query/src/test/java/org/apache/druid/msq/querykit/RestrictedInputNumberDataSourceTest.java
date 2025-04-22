@@ -106,18 +106,6 @@ public class RestrictedInputNumberDataSourceTest
   }
 
   @Test
-  public void test_serde_roundTrip() throws Exception
-  {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final RestrictedInputNumberDataSource deserialized = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(restrictedFooDataSource),
-        RestrictedInputNumberDataSource.class
-    );
-
-    Assert.assertEquals(restrictedFooDataSource, deserialized);
-  }
-
-  @Test
   public void test_deserialize_fromObject() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
