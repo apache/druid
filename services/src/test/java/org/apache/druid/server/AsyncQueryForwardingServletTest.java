@@ -590,7 +590,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
+    EasyMock.expect(requestMock.getContentType()).andReturn("application/json").anyTimes();
     requestMock.setAttribute("org.apache.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
     EasyMock.expect(requestMock.getRequestURI())

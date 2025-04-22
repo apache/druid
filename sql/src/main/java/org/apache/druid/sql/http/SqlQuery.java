@@ -220,12 +220,12 @@ public class SqlQuery
   public static SqlQuery from(HttpContext httpContext)
   {
     MediaType contentType = httpContext.getRequest().getMediaType();
-    if (MediaType.APPLICATION_JSON_TYPE.isCompatible(contentType)) {
+    if (MediaType.APPLICATION_JSON_TYPE.equals(contentType)) {
       return httpContext.getRequest().getEntity(SqlQuery.class);
     } else {
       // Treats the whole HTTP body as a SQL
       String sql = httpContext.getRequest().getEntity(String.class);
-      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
+      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.equals(contentType)) {
         sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
       }
       return new SqlQuery(sql, null, false, false, false, null, null);
@@ -237,13 +237,13 @@ public class SqlQuery
    */
   public static SqlQuery from(HttpServletRequest request, ObjectMapper objectMapper) throws IOException
   {
-    MediaType contentType = HttpHelper.getContentType(request.getHeader("Content-Type"));
-    if (MediaType.APPLICATION_JSON_TYPE.isCompatible(contentType)) {
+    String contentType = request.getContentType();
+    if (MediaType.APPLICATION_JSON.equals(contentType)) {
       return objectMapper.readValue(request.getInputStream(), SqlQuery.class);
     } else {
       // Treats the whole HTTP body as a SQL
       String sql = new String(IOUtils.toByteArray(request.getInputStream()), StandardCharsets.UTF_8);
-      if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(contentType)) {
+      if (MediaType.APPLICATION_FORM_URLENCODED.equals(contentType)) {
         sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
       }
       return new SqlQuery(sql, null, false, false, false, null, null);
