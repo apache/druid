@@ -275,7 +275,7 @@ public class PlannerContext
 
   public DateTimeZone getTimeZone()
   {
-    return localNow.getZone()
+    return localNow.getZone();
   }
 
   public JoinableFactoryWrapper getJoinableFactoryWrapper()
