@@ -118,8 +118,8 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
                 return;
               }
 
-              // Stop the current latch and create a new one
               leader = false;
+              // give others a chance to become leader.
               stopAndCreateNewLeaderLatch();
               listener.stopBeingLeader();
               startLeaderLatch();
