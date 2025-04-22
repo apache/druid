@@ -187,7 +187,6 @@ public class DartQueryMaker implements QueryMaker
     }
   }
 
-  // FIXME types here are not final
   private LegacyMSQSpec makeMSQSpec(DruidQuery druidQuery, final String dartQueryId, final ControllerContext controllerContext,
       final ResultsContext resultsContext)
   {
