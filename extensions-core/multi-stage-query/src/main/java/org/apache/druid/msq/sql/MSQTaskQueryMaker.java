@@ -148,7 +148,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     );
 
     // FIXME rename?
-    final LegacyMSQSpec querySpec = makeQuerySpec0(
+    final LegacyMSQSpec querySpec = makeLegacyMSQSpec(
         targetDataSource,
         druidQuery,
         druidQuery.getQuery().context(),
@@ -173,7 +173,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
 
-  public static LegacyMSQSpec makeQuerySpec0(
+  public static LegacyMSQSpec makeLegacyMSQSpec(
       @Nullable final IngestDestination targetDataSource,
       final DruidQuery druidQuery,
       final QueryContext queryContext3,
