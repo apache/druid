@@ -79,6 +79,11 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   )
   {
     super(baseSegment);
+    if (baseSegment instanceof SegmentReference) {
+      throw new IllegalArgumentException(
+          "baseSegment cannot be a SegmentReference, it must be a Segment"
+      );
+    }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;
     this.minorVersion = minorVersion;
