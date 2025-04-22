@@ -44,8 +44,7 @@ public class MSQSpec
   private final WorkerAssignmentStrategy assignmentStrategy;
   private final MSQTuningConfig tuningConfig;
   private final List<AggregatorFactory> compactionMetricSpec;
-  private final QueryContext queryContext;
-  private final QueryDefinition queryDef;
+  protected final QueryDefinition queryDef;
 
   public MSQSpec()
   {
@@ -54,7 +53,6 @@ public class MSQSpec
     assignmentStrategy = null;
     tuningConfig = null;
     compactionMetricSpec = Collections.emptyList();
-    queryContext = QueryContext.empty();
     queryDef = null;
   }
 
@@ -65,7 +63,6 @@ public class MSQSpec
       @JsonProperty("assignmentStrategy") WorkerAssignmentStrategy assignmentStrategy,
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig,
       @JsonProperty("compactionMetricSpec") List<AggregatorFactory> compactionMetricSpec,
-      @JsonProperty("queryContext") QueryContext queryContext,
       @JsonProperty("queryDef") QueryDefinition queryDef
   )
   {
@@ -74,15 +71,13 @@ public class MSQSpec
     this.assignmentStrategy = Preconditions.checkNotNull(assignmentStrategy, "assignmentStrategy");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.compactionMetricSpec = compactionMetricSpec;
-    this.queryContext = queryContext == null ? QueryContext.empty() : queryContext;
     this.queryDef = queryDef;
   }
 
-  @JsonProperty("queryContext")
-  @JsonInclude(value = Include.NON_DEFAULT)
   public QueryContext getContext()
   {
-    return queryContext;
+    Preconditions.checkNotNull(queryDef, "QueryDefinition should not be null");
+    return queryDef.getContext();
   }
 
   @JsonProperty("columnMappings")
@@ -142,14 +137,13 @@ public class MSQSpec
            && Objects.equals(assignmentStrategy, that.assignmentStrategy)
            && Objects.equals(tuningConfig, that.tuningConfig)
            && Objects.equals(compactionMetricSpec, that.compactionMetricSpec)
-           && Objects.equals(queryContext, that.queryContext)
            && Objects.equals(queryDef, that.queryDef);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(columnMappings, destination, assignmentStrategy, tuningConfig, compactionMetricSpec, queryContext, queryDef);
+    return Objects.hash(columnMappings, destination, assignmentStrategy, tuningConfig, compactionMetricSpec, queryDef);
   }
 
   public static class Builder
@@ -159,7 +153,6 @@ public class MSQSpec
     protected WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
     protected MSQTuningConfig tuningConfig;
     protected List<AggregatorFactory> compactionMetrics = Collections.emptyList();
-    protected QueryContext queryContext;
     protected QueryDefinition queryDef;
 
     public Builder queryDef(QueryDefinition queryDef)
@@ -198,12 +191,6 @@ public class MSQSpec
       return this;
     }
 
-    public Builder queryContext(QueryContext queryContext)
-    {
-      this.queryContext = queryContext;
-      return this;
-    }
-
     public MSQSpec build()
     {
       if (destination == null) {
@@ -215,7 +202,6 @@ public class MSQSpec
           assignmentStrategy,
           tuningConfig,
           compactionMetrics,
-          queryContext,
           queryDef
       );
     }
