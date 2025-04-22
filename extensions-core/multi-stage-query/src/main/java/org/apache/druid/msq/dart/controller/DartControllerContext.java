@@ -149,7 +149,7 @@ public class DartControllerContext implements ControllerContext
         .destination(TaskReportMSQDestination.instance())
         .maxConcurrentStages(maxConcurrentStages)
         .maxRetainedPartitionSketchBytes(memoryParameters.getPartitionStatisticsMaxRetainedBytes())
-        .workerContextMap(IndexerControllerContext.makeWorkerContextMap(querySpec.getContext(), querySpec.getDestination(), false, maxConcurrentStages))
+        .workerContextMap(IndexerControllerContext.makeWorkerContextMap(querySpec, false, maxConcurrentStages))
         .build();
   }
 
