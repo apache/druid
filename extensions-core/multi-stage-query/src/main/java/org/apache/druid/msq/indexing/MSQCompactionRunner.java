@@ -31,7 +31,6 @@ import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -299,35 +298,6 @@ public class MSQCompactionRunner implements CompactionRunner
       msqControllerTasks.add(controllerTask);
     }
     return msqControllerTasks;
-  }
-
-  public static List<AggregatorFactory> buildMSQCompactionMetrics(MSQSpec msqSpec, DataSchema dataSchema)
-  {
-    if (!(msqSpec instanceof LegacyMSQSpec)) {
-      throw DruidException.defensive("Compaction is only supported for LegacyMSQSpec!");
-    }
-    LegacyMSQSpec legacyMSQSpec = (LegacyMSQSpec) msqSpec;
-    Query<?> query = legacyMSQSpec.getQuery();
-
-    List<AggregatorFactory> metricsSpec = Collections.emptyList();
-
-    if (query instanceof GroupByQuery) {
-      // For group-by queries, the aggregators are transformed to their combining factories in the dataschema, resulting
-      // in a mismatch between schema in compaction spec and the one in compaction state. Sourcing the original
-      // AggregatorFactory definition for aggregators in the dataSchema, therefore, directly from the querySpec.
-      GroupByQuery groupByQuery = (GroupByQuery) query;
-      // Collect all aggregators that are part of the current dataSchema, since a non-rollup query (isRollup() is false)
-      // moves metrics columns to dimensions in the final schema.
-      Set<String> aggregatorsInDataSchema = Arrays.stream(dataSchema.getAggregators())
-                                                  .map(AggregatorFactory::getName)
-                                                  .collect(Collectors.toSet());
-      metricsSpec = groupByQuery.getAggregatorSpecs()
-                                .stream()
-                                .filter(aggregatorFactory -> aggregatorsInDataSchema.contains(aggregatorFactory.getName()))
-                                .collect(Collectors.toList());
-    }
-    return metricsSpec ;
-
   }
 
   private static DataSourceMSQDestination buildMSQDestination(
