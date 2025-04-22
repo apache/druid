@@ -183,7 +183,6 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
-        tuningConfig.isUseMaxMemoryEstimates(),
         tuningConfig.isLeaveIntermediate(),
         tuningConfig.isCleanupOnFailure(),
         tuningConfig.isOverwriteFiles(),

@@ -96,11 +96,9 @@ public interface DimensionHandler
    * Creates a new DimensionIndexer, a per-dimension object responsible for processing ingested rows in-memory, used
    * by the IncrementalIndex. See {@link DimensionIndexer} interface for more information.
    *
-   * @param useMaxMemoryEstimates true if the created DimensionIndexer should use
-   *                              maximum values to estimate on-heap memory
    * @return A new DimensionIndexer object.
    */
-  DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer(boolean useMaxMemoryEstimates);
+  DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer();
 
   /**
    * @deprecated use {@link #makeMerger(String, IndexSpec, SegmentWriteOutMedium, ColumnCapabilities, ProgressIndicator, File, Closer)}
