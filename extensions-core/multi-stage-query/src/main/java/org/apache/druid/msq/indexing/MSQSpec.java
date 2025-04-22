@@ -39,10 +39,10 @@ import java.util.Objects;
 
 public class MSQSpec
 {
-  private final ColumnMappings columnMappings;
-  private final MSQDestination destination;
-  private final WorkerAssignmentStrategy assignmentStrategy;
-  private final MSQTuningConfig tuningConfig;
+  protected final ColumnMappings columnMappings;
+  protected final MSQDestination destination;
+  protected final WorkerAssignmentStrategy assignmentStrategy;
+  protected final MSQTuningConfig tuningConfig;
   protected final QueryDefinition queryDef;
 
   public MSQSpec()
