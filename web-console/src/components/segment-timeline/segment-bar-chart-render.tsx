@@ -40,6 +40,7 @@ import {
   filterMap,
   formatBytes,
   formatNumber,
+  formatNumberAbbreviated,
   formatStartDuration,
   groupBy,
   groupByAsMap,
@@ -345,7 +346,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         return formatNumber(n); // + ' seg/day';
 
       case 'rows':
-        return formatNumber(n); // + ' row/day';
+        return formatNumberAbbreviated(n); // + ' row/day';
 
       case 'size':
         return formatBytes(n);
