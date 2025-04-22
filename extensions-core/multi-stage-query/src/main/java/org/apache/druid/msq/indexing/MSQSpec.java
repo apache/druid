@@ -43,7 +43,6 @@ public class MSQSpec
   private final MSQDestination destination;
   private final WorkerAssignmentStrategy assignmentStrategy;
   private final MSQTuningConfig tuningConfig;
-  private final List<AggregatorFactory> compactionMetricSpec;
   protected final QueryDefinition queryDef;
 
   public MSQSpec()
@@ -52,7 +51,6 @@ public class MSQSpec
     destination = null;
     assignmentStrategy = null;
     tuningConfig = null;
-    compactionMetricSpec = Collections.emptyList();
     queryDef = null;
   }
 
@@ -62,7 +60,6 @@ public class MSQSpec
       @JsonProperty("destination") MSQDestination destination,
       @JsonProperty("assignmentStrategy") WorkerAssignmentStrategy assignmentStrategy,
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig,
-      @JsonProperty("compactionMetricSpec") List<AggregatorFactory> compactionMetricSpec,
       @JsonProperty("queryDef") QueryDefinition queryDef
   )
   {
@@ -70,7 +67,6 @@ public class MSQSpec
     this.destination = Preconditions.checkNotNull(destination, "destination");
     this.assignmentStrategy = Preconditions.checkNotNull(assignmentStrategy, "assignmentStrategy");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.compactionMetricSpec = compactionMetricSpec;
     this.queryDef = queryDef;
   }
 
@@ -104,12 +100,6 @@ public class MSQSpec
     return tuningConfig;
   }
 
-  @JsonProperty("compactionMetricSpec")
-  public List<AggregatorFactory> getCompactionMetricSpec()
-  {
-    return compactionMetricSpec;
-  }
-
   public String getId()
   {
     return getContext().getString(BaseQuery.QUERY_ID);
@@ -136,14 +126,13 @@ public class MSQSpec
            && Objects.equals(destination, that.destination)
            && Objects.equals(assignmentStrategy, that.assignmentStrategy)
            && Objects.equals(tuningConfig, that.tuningConfig)
-           && Objects.equals(compactionMetricSpec, that.compactionMetricSpec)
            && Objects.equals(queryDef, that.queryDef);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(columnMappings, destination, assignmentStrategy, tuningConfig, compactionMetricSpec, queryDef);
+    return Objects.hash(columnMappings, destination, assignmentStrategy, tuningConfig, queryDef);
   }
 
   public static class Builder
@@ -201,7 +190,6 @@ public class MSQSpec
           destination,
           assignmentStrategy,
           tuningConfig,
-          compactionMetrics,
           queryDef
       );
     }

@@ -93,6 +93,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
+import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -1734,7 +1735,7 @@ public class ControllerImpl implements Controller
     CompactionTransformSpec transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
                                             ? null
                                             : CompactionTransformSpec.of(dataSchema.getTransformSpec());
-    List<AggregatorFactory> metricsSpec = querySpec.getCompactionMetricSpec();
+    List<AggregatorFactory> metricsSpec = MSQCompactionRunner.buildMSQCompactionMetrics(querySpec, dataSchema);
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
 

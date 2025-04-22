@@ -31,6 +31,7 @@ import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -280,7 +281,6 @@ public class MSQCompactionRunner implements CompactionRunner
                                .destination(destination)
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
                                .tuningConfig(buildMSQTuningConfig(compactionTask, compactionTaskContext))
-                               .compactionMetrics(buildMSQCompactionMetrics(query, dataSchema))
                                .build();
 
       Map<String, Object> msqControllerTaskContext = createMSQTaskContext(compactionTask, dataSchema);
@@ -301,8 +301,14 @@ public class MSQCompactionRunner implements CompactionRunner
     return msqControllerTasks;
   }
 
-  private List<AggregatorFactory> buildMSQCompactionMetrics(Query<?> query,       DataSchema dataSchema)
+  public static List<AggregatorFactory> buildMSQCompactionMetrics(MSQSpec msqSpec, DataSchema dataSchema)
   {
+    if (!(msqSpec instanceof LegacyMSQSpec)) {
+      throw DruidException.defensive("Compaction is only supported for LegacyMSQSpec!");
+    }
+    LegacyMSQSpec legacyMSQSpec = (LegacyMSQSpec) msqSpec;
+    Query<?> query = legacyMSQSpec.getQuery();
+
     List<AggregatorFactory> metricsSpec = Collections.emptyList();
 
     if (query instanceof GroupByQuery) {
