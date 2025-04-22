@@ -112,16 +112,15 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
           @Override
           public void notLeader()
           {
-            if (!leader) {
-              log.warn("I'm being asked to stop being leader. But I am not the leader. Ignored event.");
-              return;
-            }
-
-            // Stop the current latch and create a new one
-            leader = false;
-            closeAndRecreateLeaderLatchQuietly();
-
             try {
+              if (!leader) {
+                log.warn("I'm being asked to stop being leader. But I am not the leader. Ignored event.");
+                return;
+              }
+
+              // Stop the current latch and create a new one
+              leader = false;
+              closeAndRecreateLeaderLatchQuietly();
               listener.stopBeingLeader();
             }
             catch (Throwable ex) {
