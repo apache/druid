@@ -78,7 +78,6 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
           }
           catch (Throwable ex) {
             LOGGER.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
-            stopListenerLeadershipQuietly();
             closeLeaderLatchQuietly();
             leader = false;
             //Exit and Kubernetes would simply create a new replacement pod.
@@ -86,13 +85,18 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
           }
         },
         () -> {
-          if (!leader) {
-            LOGGER.warn("I'm being asked to stop being leader. But I am not the leader. Ignored event.");
-            return;
-          }
+          try {
+            if (!leader) {
+              LOGGER.warn("I'm being asked to stop being leader. But I am not the leader. Ignored event.");
+              return;
+            }
 
-          leader = false;
-          stopListenerLeadershipQuietly();
+            leader = false;
+            listener.stopBeingLeader();
+          }
+          catch (Throwable ex) {
+            LOGGER.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
+          }
         }
     );
   }
@@ -158,15 +162,5 @@ public class K8sDruidLeaderSelector implements DruidLeaderSelector
         leaderLatch,
         e -> LOGGER.warn("Exception caught while cleaning up leader latch")
     );
-  }
-
-  private void stopListenerLeadershipQuietly()
-  {
-    try {
-      listener.stopBeingLeader();
-    }
-    catch (Throwable ex) {
-      LOGGER.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
-    }
   }
 }
