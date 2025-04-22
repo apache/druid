@@ -60,7 +60,6 @@ public class Appenderators
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -91,7 +90,6 @@ public class Appenderators
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
   }
@@ -107,7 +105,6 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -125,7 +122,6 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
   }
