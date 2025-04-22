@@ -256,7 +256,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   @Override
   public DataSourcesSnapshot getDataSourcesSnapshot()
   {
-    verifyCacheIsUsableAndAwaitSyncIf(cacheMode == UsageMode.ALWAYS || cacheMode == UsageMode.IF_SYNCED);
+    verifyCacheIsUsableAndAwaitSyncIf(isEnabled());
     return datasourcesSnapshot.get();
   }
 
@@ -273,7 +273,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   @Override
   public <T> T readCacheForDataSource(String dataSource, Action<T> readAction)
   {
-    verifyCacheIsUsableAndAwaitSyncIf(cacheMode == UsageMode.ALWAYS || cacheMode == UsageMode.IF_SYNCED);
+    verifyCacheIsUsableAndAwaitSyncIf(isEnabled());
     try (final HeapMemoryDatasourceSegmentCache datasourceCache = getCacheWithReference(dataSource)) {
       return datasourceCache.withReadLock(
           () -> {
