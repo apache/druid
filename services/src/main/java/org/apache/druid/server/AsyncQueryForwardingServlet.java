@@ -294,7 +294,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         handleQueryParseException(request, response, objectMapper, e, false);
         return;
       }
-      catch(HttpException e) {
+      catch (HttpException e) {
         handleException(response, e.getStatusCode().getStatusCode(), objectMapper, e);
         return;
       }
