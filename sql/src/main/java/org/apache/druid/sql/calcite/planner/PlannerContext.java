@@ -438,7 +438,6 @@ public class PlannerContext
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory, List<TypedValue> parameters)
   {
-    final DateTime localNow = getLocalNow();
     class DruidDataContext implements DataContext
     {
       private final Map<String, Object> base_context = ImmutableMap.of(
@@ -557,6 +556,7 @@ public class PlannerContext
   public void addAllToQueryContext(Map<String, Object> toAdd)
   {
     this.queryContext.putAll(toAdd);
+    initializeContextFields();
   }
 
   public SqlEngine getEngine()
