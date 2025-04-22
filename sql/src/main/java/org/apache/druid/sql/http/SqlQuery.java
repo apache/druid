@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.core.HttpContext;
-import com.sun.jersey.server.impl.model.HttpHelper;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
