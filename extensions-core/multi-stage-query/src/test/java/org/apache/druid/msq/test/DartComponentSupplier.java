@@ -39,15 +39,12 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.DartDruidMeta;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
-
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,12 +64,6 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     properties.put(DartModules.DART_ENABLED_PROPERTY, "true");
   }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
-  {
-    walker.add(TestDataSet.NUMBERS, getTempDirProducer().newTempFolder("tmp_numbers"));
-    return super.addSegmentsToWalker(walker);
-  }
   @Override
   public DruidModule getCoreModule()
   {
