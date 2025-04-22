@@ -135,7 +135,6 @@ public class PlannerContext
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
 
-  private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
   private boolean pullUpLookup;
