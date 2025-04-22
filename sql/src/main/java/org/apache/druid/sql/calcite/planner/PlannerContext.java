@@ -132,8 +132,17 @@ public class PlannerContext
   private final SqlEngine engine;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
-  private final DateTime defaultUtcNow;
   private final PlannerHook hook;
+  private final Set<String> lookupsToLoad = new HashSet<>();
+
+  private String sqlQueryId;
+  private boolean stringifyArrays;
+  private boolean useBoundsAndSelectors;
+  private boolean pullUpLookup;
+  private boolean reverseLookup;
+  private boolean useGranularity;
+  private DateTime localNow;
+
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
   // result of authentication, providing identity to authorize set of resources produced by validation
@@ -150,7 +159,6 @@ public class PlannerContext
   // set of attributes for a SQL statement used in the EXPLAIN PLAN output
   private ExplainAttributes explainAttributes;
   private PlannerLookupCache lookupCache;
-  private final Set<String> lookupsToLoad = new HashSet<>();
 
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
@@ -174,7 +182,7 @@ public class PlannerContext
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
     }
-    this.defaultUtcNow = new DateTime(DateTimeZone.UTC);
+    initializeContextFields();
   }
 
   public static PlannerContext create(
@@ -268,23 +276,12 @@ public class PlannerContext
 
   public DateTime getLocalNow()
   {
-    final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
-    final DateTime utcNow;
-    if (tsParam != null) {
-      utcNow = new DateTime(tsParam, DateTimeZone.UTC);
-    } else {
-      utcNow = defaultUtcNow;
-    }
-    return utcNow.withZone(getTimeZone());
+    return localNow;
   }
 
   public DateTimeZone getTimeZone()
   {
-    final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
-    if (tzParam != null) {
-      return DateTimes.inferTzFromString(String.valueOf(tzParam));
-    }
-    return plannerToolbox.plannerConfig().getSqlTimeZone();
+    return localNow.getZone()
   }
 
   public JoinableFactoryWrapper getJoinableFactoryWrapper()
@@ -334,11 +331,7 @@ public class PlannerContext
 
   public boolean isStringifyArrays()
   {
-    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
-    if (stringifyParam != null) {
-      return Numbers.parseBoolean(stringifyParam);
-    }
-    return true;
+    return stringifyArrays;
   }
 
   /**
@@ -350,11 +343,7 @@ public class PlannerContext
    */
   public boolean isUseBoundsAndSelectors()
   {
-    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
-    if (useBoundsAndSelectorsParam != null) {
-      return Numbers.parseBoolean(useBoundsAndSelectorsParam);
-    }
-    return DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
+    return useBoundsAndSelectors;
   }
 
   /**
@@ -362,7 +351,7 @@ public class PlannerContext
    */
   public boolean isUseLegacyInFilter()
   {
-    return isUseBoundsAndSelectors();
+    return useBoundsAndSelectors;
   }
 
   /**
@@ -371,11 +360,7 @@ public class PlannerContext
    */
   public boolean isPullUpLookup()
   {
-    final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
-    if (pullUpLookupParam != null) {
-      return Numbers.parseBoolean(pullUpLookupParam);
-    }
-    return DEFAULT_SQL_PULL_UP_LOOKUP;
+    return pullUpLookup;
   }
 
   /**
@@ -384,11 +369,7 @@ public class PlannerContext
    */
   public boolean isReverseLookup()
   {
-    final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
-    if (reverseLookupParam != null) {
-      return Numbers.parseBoolean(reverseLookupParam);
-    }
-    return DEFAULT_SQL_REVERSE_LOOKUP;
+    return reverseLookup;
   }
 
   /**
@@ -398,12 +379,7 @@ public class PlannerContext
    */
   public boolean isUseGranularity()
   {
-    final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
-    if (useGranularityParam != null) {
-      return Numbers.parseBoolean(useGranularityParam);
-    } else {
-      return DEFAULT_SQL_USE_GRANULARITY;
-    }
+    return useGranularity;
   }
 
   public List<TypedValue> getParameters()
@@ -587,6 +563,7 @@ public class PlannerContext
   public void addAllToQueryContext(Map<String, Object> toAdd)
   {
     this.queryContext.putAll(toAdd);
+    initializeContextFields();
   }
 
   public SqlEngine getEngine()
@@ -661,5 +638,62 @@ public class PlannerContext
   public <T> void dispatchHook(HookKey<T> key, T object)
   {
     plannerToolbox.getHookDispatcher().dispatch(key, object);
+  }
+
+
+
+  private void initializeContextFields()
+  {
+    final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
+    final DateTime utcNow;
+    if (tsParam != null) {
+      utcNow = new DateTime(tsParam, DateTimeZone.UTC);
+    } else {
+      utcNow = new DateTime(DateTimeZone.UTC);
+    }
+
+    final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
+    final DateTimeZone timeZone;
+    if (tzParam != null) {
+      timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
+    } else {
+      timeZone = plannerToolbox.plannerConfig().getSqlTimeZone();
+    }
+    localNow = utcNow.withZone(timeZone);
+
+    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
+    if (stringifyParam != null) {
+      stringifyArrays = Numbers.parseBoolean(stringifyParam);
+    } else {
+      stringifyArrays = true;
+    }
+
+    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
+    if (useBoundsAndSelectorsParam != null) {
+      useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
+    } else {
+      useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
+    }
+
+    final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
+    if (pullUpLookupParam != null) {
+      pullUpLookup = Numbers.parseBoolean(pullUpLookupParam);
+    } else {
+      pullUpLookup = DEFAULT_SQL_PULL_UP_LOOKUP;
+    }
+
+    final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
+    if (reverseLookupParam != null) {
+      reverseLookup = Numbers.parseBoolean(reverseLookupParam);
+    } else {
+      reverseLookup = DEFAULT_SQL_REVERSE_LOOKUP;
+    }
+
+    final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
+    if (useGranularityParam != null) {
+      useGranularity = Numbers.parseBoolean(useGranularityParam);
+    } else {
+      useGranularity = DEFAULT_SQL_USE_GRANULARITY;
+    }
   }
 }
