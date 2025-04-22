@@ -30,11 +30,8 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 public class MSQSpec
@@ -141,7 +138,6 @@ public class MSQSpec
     private MSQDestination destination = TaskReportMSQDestination.instance();
     private WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
     private MSQTuningConfig tuningConfig;
-    private List<AggregatorFactory> compactionMetrics = Collections.emptyList();
     private QueryDefinition queryDef;
 
     public Builder queryDef(QueryDefinition queryDef)
@@ -174,12 +170,6 @@ public class MSQSpec
       return this;
     }
 
-    public Builder compactionMetrics(List<AggregatorFactory> compactionMetrics)
-    {
-      this.compactionMetrics=compactionMetrics;
-      return this;
-    }
-
     public MSQSpec build()
     {
       if (destination == null) {
@@ -194,5 +184,4 @@ public class MSQSpec
       );
     }
   }
-
 }

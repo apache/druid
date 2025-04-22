@@ -295,7 +295,8 @@ public class IndexerControllerContext implements ControllerContext
   public static Map<String, Object> makeWorkerContextMap(
       final MSQSpec querySpec,
       final boolean durableStorageEnabled,
-      final int maxConcurrentStages)
+      final int maxConcurrentStages
+  )
   {
     final QueryContext queryContext = querySpec.getContext();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);

@@ -49,32 +49,4 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
         )
     );
   }
-
-//  public ControllerQueryKernelConfig queryKernelConfig(
-//      final String queryId,
-//      final MSQSpec querySpec
-//  )
-//  {
-//    final ControllerMemoryParameters memoryParameters =
-//        ControllerMemoryParameters.createProductionInstance(
-//            memoryIntrospector,
-//            querySpec.getTuningConfig().getMaxNumWorkers()
-//        );
-//
-//    final ControllerQueryKernelConfig config = makeQueryKernelConfig(querySpec, memoryParameters);
-//
-//    log.debug(
-//        "Query[%s] using %s[%s], %s[%s], %s[%s].",
-//        queryId,
-//        MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
-//        config.isDurableStorage(),
-//        MultiStageQueryContext.CTX_FAULT_TOLERANCE,
-//        config.isFaultTolerant(),
-//        MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES,
-//        config.getMaxConcurrentStages()
-//    );
-//
-//    return config;
-//  }
-
 }

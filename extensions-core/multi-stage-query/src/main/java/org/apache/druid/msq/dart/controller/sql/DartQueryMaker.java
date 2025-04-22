@@ -142,8 +142,14 @@ public class DartQueryMaker implements QueryMaker
         types.stream().map(p -> p.lhs).collect(Collectors.toList()),
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
-
-    final LegacyMSQSpec querySpec = makeMSQSpec(druidQuery, dartQueryId, controllerContext, resultsContext);
+    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
+        null,
+        druidQuery,
+        druidQuery.getQuery().context(),
+        fieldMapping,
+        plannerContext,
+        null // Only used for DML, which this isn't
+    );
 
     final ControllerImpl controller = new ControllerImpl(
         dartQueryId,
@@ -183,20 +189,6 @@ public class DartQueryMaker implements QueryMaker
       controllerRegistry.deregister(controllerHolder);
       throw e;
     }
-  }
-
-  private LegacyMSQSpec makeMSQSpec(DruidQuery druidQuery, final String dartQueryId, final ControllerContext controllerContext,
-      final ResultsContext resultsContext)
-  {
-    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
-        null,
-        druidQuery,
-        druidQuery.getQuery().context(),
-        fieldMapping,
-        plannerContext,
-        null // Only used for DML, which this isn't
-    );
-    return querySpec;
   }
 
   /**

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
@@ -267,15 +266,9 @@ public class MSQCompactionRunner implements CompactionRunner
       DataSourceMSQDestination destination = buildMSQDestination(compactionTask, dataSchema);
 
       boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
-      final ImmutableMap<String, Object> queryContext = ImmutableMap.<String, Object>builder()
-          .putAll(query.getContext())
-          // I don't suspect that this is really necessary - but this is the equiv behaviour
-          .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
-          .build();
 
       LegacyMSQSpec msqSpec = LegacyMSQSpec.builder()
-                               .query(query)
-                               .queryContext(QueryContext.of(queryContext))
+                               .query(query.withOverriddenContext(Collections.singletonMap(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)))
                                .columnMappings(getColumnMappings(dataSchema))
                                .destination(destination)
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
