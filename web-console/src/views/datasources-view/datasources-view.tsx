@@ -671,6 +671,7 @@ GROUP BY 1, 2`;
   }
 
   private readonly refresh = (auto: boolean): void => {
+    if (1 > 0) return; // skip refresh
     if (auto && hasOverlayOpen()) return;
     this.datasourceQueryManager.rerunLastQuery(auto);
 
