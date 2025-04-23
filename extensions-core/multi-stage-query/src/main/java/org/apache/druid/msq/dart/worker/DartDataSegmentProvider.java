@@ -36,6 +36,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
 import java.io.Closeable;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -95,7 +96,10 @@ public class DartDataSegmentProvider implements DataSegmentProvider
         final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
         channelCounters.addFile(inspector != null ? inspector.getNumRows() : 0, 0);
       });
-      return new ReferenceCountingResourceHolder<>(new CompleteSegment(null, segment), closer);
+      return new ReferenceCountingResourceHolder<>(new CompleteSegment(
+          null,
+          Objects.requireNonNull(segment.getBaseSegment())
+      ), closer);
     };
   }
 

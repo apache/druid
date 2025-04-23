@@ -39,6 +39,9 @@ public class CompleteSegment implements Closeable
   public CompleteSegment(@Nullable DataSegment dataSegment, Segment segment)
   {
     this.dataSegment = dataSegment;
+    if (segment instanceof SegmentReference) {
+      throw new IllegalArgumentException("Cannot use a SegmentReference as a CompleteSegment");
+    }
     this.segment = segment;
   }
 
