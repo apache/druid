@@ -173,13 +173,15 @@ public class QueryDefinition
       return false;
     }
     QueryDefinition that = (QueryDefinition) o;
-    return Objects.equals(stageDefinitions, that.stageDefinitions) && Objects.equals(finalStage, that.finalStage);
+    return Objects.equals(stageDefinitions, that.stageDefinitions) &&
+        Objects.equals(finalStage, that.finalStage) &&
+        Objects.equals(context, that.context);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(stageDefinitions, finalStage);
+    return Objects.hash(stageDefinitions, finalStage, context);
   }
 
   @Override

@@ -21,8 +21,8 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -698,7 +698,7 @@ public class QueryContext
 
   public QueryContext override(QueryContext queryContext)
   {
-    if(queryContext == null || queryContext.isEmpty()) {
+    if (queryContext == null || queryContext.isEmpty()) {
       return this;
     }
     return override(queryContext.asMap());
