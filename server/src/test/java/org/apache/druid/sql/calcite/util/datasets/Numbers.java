@@ -32,8 +32,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.assertj.core.util.Arrays;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -100,7 +100,17 @@ public class Numbers extends MapBasedTestDataset
         .put("is_prime", Primes.isPrime(num))
         .put("inverse", 1.0D / num)
         .put("label", string)
-        .put("letters", Arrays.asList(string.toCharArray()))
+        .put("letters", lettersOf(string))
         .build();
+  }
+
+  private List<String> lettersOf(String string)
+  {
+    List<String> ret = new ArrayList<String>();
+    for (char c : string.toCharArray()) {
+      ret.add(String.valueOf(c));
+    }
+    return ret;
+
   }
 }
