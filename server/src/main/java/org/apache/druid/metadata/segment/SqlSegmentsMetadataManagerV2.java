@@ -22,6 +22,7 @@ package org.apache.druid.metadata.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -84,16 +85,21 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
     this.managerConfig = managerConfig.get();
     this.segmentMetadataCache = segmentMetadataCache;
     this.schemaConfig = centralizedDatasourceSchemaConfig;
+
+    // Segment metadata cache currently cannot handle schema updates
+    if (segmentMetadataCache.isEnabled() && schemaConfig.isEnabled()) {
+      throw InvalidInput.exception(
+          "Segment metadata incremental cache and segment schema cache cannot be used together."
+      );
+    }
   }
 
   /**
-   * @return true if segment metadata cache is enabled and segment schema cache
-   * is not enabled. Segment metadata cache currently does not handle segment
-   * schema updates.
+   * @return true if segment metadata cache is enabled.
    */
-  private boolean useCacheToBuildTimeline()
+  private boolean useIncrementalCache()
   {
-    return segmentMetadataCache.isEnabled() && !schemaConfig.isEnabled();
+    return segmentMetadataCache.isEnabled();
   }
 
   @Override
@@ -113,7 +119,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   @Override
   public void startPollingDatabasePeriodically()
   {
-    if (useCacheToBuildTimeline()) {
+    if (useIncrementalCache()) {
       log.info("Using segments in metadata cache to build timeline.");
     } else {
       log.info("Starting poll of segments from metadata store.");
@@ -124,7 +130,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   @Override
   public void stopPollingDatabasePeriodically()
   {
-    if (useCacheToBuildTimeline()) {
+    if (useIncrementalCache()) {
       // Cache does not stop polling until service is stopped
     } else {
       log.info("Stopping poll of segments from metadata store.");
@@ -137,13 +143,13 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   {
     // When cache is being used, this will return true even after
     // stopPollingDatabasePeriodically has been called
-    return useCacheToBuildTimeline() || delegate.isPollingDatabasePeriodically();
+    return useIncrementalCache() || delegate.isPollingDatabasePeriodically();
   }
 
   @Override
   public DataSourcesSnapshot getRecentDataSourcesSnapshot()
   {
-    if (useCacheToBuildTimeline()) {
+    if (useIncrementalCache()) {
       return segmentMetadataCache.getDataSourcesSnapshot();
     } else {
       return delegate.getRecentDataSourcesSnapshot();
@@ -153,7 +159,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   @Override
   public DataSourcesSnapshot forceUpdateDataSourcesSnapshot()
   {
-    if (useCacheToBuildTimeline()) {
+    if (useIncrementalCache()) {
       long timeoutMillis = managerConfig.getPollDuration().toStandardDuration().getMillis() * 2;
       segmentMetadataCache.awaitNextSync(timeoutMillis);
       return segmentMetadataCache.getDataSourcesSnapshot();

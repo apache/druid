@@ -21,6 +21,8 @@ package org.apache.druid.metadata.segment;
 
 import com.google.common.base.Suppliers;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -30,6 +32,7 @@ import org.apache.druid.metadata.SqlSegmentsMetadataManagerTestBase;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.Metric;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -38,6 +41,7 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.timeline.DataSegment;
 import org.assertj.core.util.Sets;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
@@ -79,8 +83,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   }
 
   private void initManager(
-      SegmentMetadataCache.UsageMode cacheMode,
-      boolean useSchemaCache
+      SegmentMetadataCache.UsageMode cacheMode
   )
   {
     segmentMetadataCacheExec = new BlockingExecutorService("test");
@@ -101,7 +104,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
         connector,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        CentralizedDatasourceSchemaConfig.create(useSchemaCache),
+        CentralizedDatasourceSchemaConfig.create(),
         emitter,
         jsonMapper
     );
@@ -117,6 +120,10 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   @After
   public void tearDown()
   {
+    if (manager == null) {
+      return;
+    }
+
     if (manager.isPollingDatabasePeriodically()) {
       manager.stopPollingDatabasePeriodically();
     }
@@ -126,7 +133,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   @Test
   public void test_manager_usesCachedSegments_ifCacheIsEnabled()
   {
-    initManager(SegmentMetadataCache.UsageMode.ALWAYS, false);
+    initManager(SegmentMetadataCache.UsageMode.ALWAYS);
 
     manager.startPollingDatabasePeriodically();
     Assert.assertTrue(manager.isPollingDatabasePeriodically());
@@ -146,7 +153,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   @Test
   public void test_manager_pollsSegments_ifCacheIsDisabled()
   {
-    initManager(SegmentMetadataCache.UsageMode.NEVER, false);
+    initManager(SegmentMetadataCache.UsageMode.NEVER);
 
     manager.startPollingDatabasePeriodically();
     Assert.assertTrue(manager.isPollingDatabasePeriodically());
@@ -161,20 +168,32 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   }
 
   @Test
-  public void test_manager_pollsSegments_ifBothCacheAndSchemaAreEnabled()
+  public void test_manager_throwsException_ifBothCacheAndSchemaAreEnabled()
   {
-    initManager(SegmentMetadataCache.UsageMode.ALWAYS, true);
-
-    manager.startPollingDatabasePeriodically();
-    Assert.assertTrue(manager.isPollingDatabasePeriodically());
-
-    verifyDatasourceSnapshot();
-
-    manager.stopPollingDatabasePeriodically();
-    Assert.assertFalse(manager.isPollingDatabasePeriodically());
-
-    emitter.verifyEmitted("segment/pollWithSchema/time", 1);
-    emitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new SqlSegmentsMetadataManagerV2(
+                new NoopSegmentMetadataCache() {
+                  @Override
+                  public boolean isEnabled()
+                  {
+                    return true;
+                  }
+                },
+                segmentSchemaCache,
+                connector,
+                Suppliers.ofInstance(config),
+                derbyConnectorRule.metadataTablesConfigSupplier(),
+                CentralizedDatasourceSchemaConfig.create(true),
+                emitter,
+                jsonMapper
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Segment metadata incremental cache and segment schema cache cannot be used together."
+        )
+    );
   }
 
   private void verifyDatasourceSnapshot()
