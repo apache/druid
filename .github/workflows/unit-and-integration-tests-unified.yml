@@ -205,12 +205,12 @@ jobs:
 
   standard-its:
     needs: [build, unit-tests-unapproved, check-approval]
-    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
+    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'false' || needs.unit-tests-unapproved.result == 'success') }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: [build, unit-tests-unapproved, check-approval]
-    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
+    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'false' || needs.unit-tests-unapproved.result == 'success') }}
     uses: ./.github/workflows/revised-its.yml
     with:
       BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
