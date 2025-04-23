@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -80,9 +81,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   {
     super(baseSegment);
     if (baseSegment instanceof SegmentReference) {
-      throw new IllegalArgumentException(
-          "baseSegment cannot be a SegmentReference, it must be a Segment"
-      );
+      throw DruidException.defensive("Cannot use a SegmentReference as a CompleteSegment");
     }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;

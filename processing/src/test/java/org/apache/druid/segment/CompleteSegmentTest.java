@@ -20,6 +20,8 @@
 package org.apache.druid.segment;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -45,5 +47,12 @@ public class CompleteSegmentTest
                   .withNonnullFields("segment", "dataSegment")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testThrowWithReferenceCountingSegment() throws IOException
+  {
+    ReferenceCountingSegment segment = mock(ReferenceCountingSegment.class);
+    Assert.assertThrows(DruidException.class, () -> new CompleteSegment(null, segment)); 
   }
 }

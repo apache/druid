@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -40,7 +41,7 @@ public class CompleteSegment implements Closeable
   {
     this.dataSegment = dataSegment;
     if (segment instanceof SegmentReference) {
-      throw new IllegalArgumentException("Cannot use a SegmentReference as a CompleteSegment");
+      throw DruidException.defensive("Cannot use a SegmentReference as a CompleteSegment");
     }
     this.segment = segment;
   }
