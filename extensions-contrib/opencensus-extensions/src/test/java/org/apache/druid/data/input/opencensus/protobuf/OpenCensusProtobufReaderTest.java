@@ -333,11 +333,16 @@ public class OpenCensusProtobufReaderTest
       Assert.assertTrue(rows.hasNext());
       InputRow row = rows.next();
 
-      Assert.assertEquals(4, row.getDimensions().size());
+      long deviatedSeconds = (TS - (TIMESTAMP / 1_000_000)) / 1000;
+      long deviatedMinutes = deviatedSeconds / 60;
+
+      Assert.assertEquals(6, row.getDimensions().size());
       assertDimensionEquals(row, "metric.name", "example_gauge");
       assertDimensionEquals(row, "value", "6");
       assertDimensionEquals(row, "custom.env", "devel");
       assertDimensionEquals(row, "descriptor.foo_key", "foo_value");
+      assertDimensionEquals(row, "deviated_seconds", Long.toString(deviatedSeconds));
+      assertDimensionEquals(row, "deviated_minutes", Long.toString(deviatedMinutes));
       Assert.assertFalse(row.getDimensions().contains("custom.country"));
       Assert.assertFalse(row.getDimensions().contains("descriptor.color"));
     }
