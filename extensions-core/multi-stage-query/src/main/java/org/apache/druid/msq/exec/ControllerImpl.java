@@ -1777,8 +1777,7 @@ public class ControllerImpl implements Controller
                                 .filter(aggregatorFactory -> aggregatorsInDataSchema.contains(aggregatorFactory.getName()))
                                 .collect(Collectors.toList());
     }
-    return metricsSpec ;
-
+    return metricsSpec;
   }
 
   /**

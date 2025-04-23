@@ -57,9 +57,7 @@ public class LegacyMSQSpec extends MSQSpec
       @JsonProperty("assignmentStrategy") WorkerAssignmentStrategy assignmentStrategy,
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig)
   {
-    this(
-        query, columnMappings, destination, assignmentStrategy, tuningConfig, null
-    );
+    this(query, columnMappings, destination, assignmentStrategy, tuningConfig, null);
   }
 
   @JsonCreator
@@ -130,7 +128,7 @@ public class LegacyMSQSpec extends MSQSpec
   @Override
   public boolean equals(Object o)
   {
-    if(!super.equals(o)) {
+    if (!super.equals(o)) {
       return false;
     }
     LegacyMSQSpec that = (LegacyMSQSpec) o;

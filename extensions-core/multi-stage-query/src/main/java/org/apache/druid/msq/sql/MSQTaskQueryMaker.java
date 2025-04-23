@@ -43,8 +43,8 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.exec.ResultsContext;
-import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -83,6 +83,7 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -250,7 +251,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final LegacyMSQSpec querySpec =
         LegacyMSQSpec.builder()
-               .query(druidQuery==null?null:druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
+               .query(druidQuery.getQuery())
                .queryContext(queryContext.override(nativeQueryContextOverrides))
                .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
                .destination(destination)

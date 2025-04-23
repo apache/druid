@@ -25,7 +25,6 @@ import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 

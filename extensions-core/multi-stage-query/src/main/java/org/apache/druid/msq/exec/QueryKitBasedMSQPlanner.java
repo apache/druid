@@ -78,8 +78,7 @@ public class QueryKitBasedMSQPlanner
       ResultsContext resultsContext,
       Query<?> query,
       ObjectMapper jsonMapper,
-      QueryKitSpec queryKitSpec
-    )
+      QueryKitSpec queryKitSpec)
   {
     this.querySpec = querySpec;
     this.jsonMapper = jsonMapper;

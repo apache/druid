@@ -185,8 +185,7 @@ public class DartSqlResourceTest extends MSQTestBase
             return super.queryKernelConfig(queryId, querySpec).toBuilder()
                 .workerIds(ImmutableList.of("some")).build();
           }
-        }
-        ,
+        },
         controllerRegistry = new DartControllerRegistry()
         {
           @Override

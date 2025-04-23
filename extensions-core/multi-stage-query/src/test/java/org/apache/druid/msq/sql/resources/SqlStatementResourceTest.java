@@ -44,8 +44,8 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
@@ -97,6 +97,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
