@@ -157,7 +157,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .sql("SELECT * from numbers")
         .expectedResults(
             ImmutableList.of(
-                new Object[]{946684800000L, 1L, 0L, 1.0D, "one", "o, n, e", 1L},
+                new Object[]{946684800000L, 1L, 0L, 1.0D, "one", "[\"o\",\"n\",\"e\"]", 1L},
                 new Object[]{946684800000L, 2L, 1L, 0.5D, "two", "[\"t\",\"w\",\"o\"]", 1L},
                 new Object[]{946684800000L, 3L, 1L, 0.3333333333333333D, "three", "[\"t\",\"h\",\"r\",\"e\",\"e\"]", 1L},
                 new Object[]{946684800000L, 4L, 0L, 0.25D, "four", "[\"f\",\"o\",\"u\",\"r\"]", 1L},
