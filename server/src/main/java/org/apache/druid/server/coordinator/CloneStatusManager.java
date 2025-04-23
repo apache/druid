@@ -25,6 +25,9 @@ import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Manager to store and update the status of ongoing cloning operations.
+ */
 public class CloneStatusManager
 {
   private final AtomicReference<Map<String, ServerCloneStatus>> cloneStatusSnapshot;
@@ -34,17 +37,26 @@ public class CloneStatusManager
     this.cloneStatusSnapshot = new AtomicReference<>(Map.of());
   }
 
+  /**
+   * Returns the status of cloning as a map of target server to {@link ServerCloneStatus}.
+   */
   public Map<String, ServerCloneStatus> getStatusForAllServers()
   {
     return cloneStatusSnapshot.get();
   }
 
+  /**
+   * Returns the status of cloning as a {@link ServerCloneStatus} for a specific target server.
+   */
   @Nullable
   public ServerCloneStatus getStatusForServer(String targetServer)
   {
     return cloneStatusSnapshot.get().get(targetServer);
   }
 
+  /**
+   * Updates the stored status with the provided parameter.
+   */
   public void updateStatus(Map<String, ServerCloneStatus> newStatusMap)
   {
     cloneStatusSnapshot.set(ImmutableMap.copyOf(newStatusMap));

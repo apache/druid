@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
+/**
+ * Immutable class which represents the current status of a single clone server.
+ */
 public class ServerCloneStatus
 {
   private final String sourceServer;

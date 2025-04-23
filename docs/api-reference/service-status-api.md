@@ -779,7 +779,7 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
     {
       "host": "localhost",
       "port": 8082,
-      "syncTime": 1745298963900
+      "syncTimeInMs": 1745298963900
     }
   ]
 }
