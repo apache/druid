@@ -25,6 +25,7 @@ import {
   formatMegabytes,
   formatMillions,
   formatNumber,
+  formatNumberAbbreviated,
   formatPercent,
   hashJoaat,
   moveElement,
@@ -103,6 +104,18 @@ describe('general', () => {
       expect(formatNumber(0)).toEqual('0');
       expect(formatNumber(5)).toEqual('5');
       expect(formatNumber(5.1)).toEqual('5.1');
+    });
+  });
+
+  describe('formatNumberAbbreviated', () => {
+    it('works', () => {
+      expect(formatNumberAbbreviated(null as any)).toEqual('0');
+      expect(formatNumberAbbreviated(0)).toEqual('0');
+      expect(formatNumberAbbreviated(5)).toEqual('5');
+      expect(formatNumberAbbreviated(5.1)).toEqual('5.1');
+      expect(formatNumberAbbreviated(10000)).toEqual('10K');
+      expect(formatNumberAbbreviated(4000000000)).toEqual('4B');
+      expect(formatNumberAbbreviated(1234567890)).toEqual('1.23B');
     });
   });
 
