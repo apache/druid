@@ -27,7 +27,6 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
@@ -96,45 +95,6 @@ public class RestrictAllTablesPolicyEnforcerTest
         e2.getMessage()
     );
     policyEnforcer.validateOrElseThrow(segment, policy);
-    // Test multiple layers of ReferenceCountingSegment, success:
-    //    Restrict
-    //        Ref
-    //           Ref_base
-    //        policy
-    ReferenceCountingSegment wrapSegment = ReferenceCountingSegment.wrapRootGenerationSegment(segment);
-    policyEnforcer.validateOrElseThrow(wrapSegment, policy);
-    // Test multiple layers of ReferenceCountingSegment, fail:
-    //    Ref
-    //        Ref
-    //            Ref_base
-    Exception e3 = Assert.assertThrows(
-        Exception.class,
-        () -> policyEnforcer.validateOrElseThrow(wrapSegment, null)
-    );
-    Assert.assertEquals(
-        "Failed security validation with segment [table_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_1]",
-        e3.getMessage()
-    );
-    // Test multiple layers of ReferenceCountingSegment, success:
-    //    Ref
-    //        Restrict
-    //            Ref_base
-    //            policy
-    RestrictedSegment restrictedSegment = new RestrictedSegment(segment, policy);
-    ReferenceCountingSegment wrapRestrictedSegment = ReferenceCountingSegment.wrapRootGenerationSegment(
-        restrictedSegment);
-    policyEnforcer.validateOrElseThrow(wrapRestrictedSegment, null);
-    // Test multiple layers of ReferenceCountingSegment, fail:
-    //    Restrict
-    //        Restrict
-    //            Ref_base
-    //            policy
-    //        policy
-    Exception e4 = Assert.assertThrows(
-        Exception.class,
-        () -> policyEnforcer.validateOrElseThrow(wrapRestrictedSegment, policy)
-    );
-    Assert.assertEquals("policy wrapped with another policy is not allowed", e4.getMessage());
   }
 
   @Test

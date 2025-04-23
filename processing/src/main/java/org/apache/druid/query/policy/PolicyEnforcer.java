@@ -21,16 +21,11 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.RestrictedSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 
 /**
@@ -82,27 +77,14 @@ public interface PolicyEnforcer
    */
   default void validateOrElseThrow(ReferenceCountingSegment segment, Policy policy) throws DruidException
   {
-    Segment baseSegment = segment.getBaseSegment();
-    if (baseSegment instanceof ReferenceCountingSegment) {
-      // the policy is carried on the base segment
-      validateOrElseThrow((ReferenceCountingSegment) baseSegment, policy);
-      return;
-    } else if (baseSegment instanceof RestrictedSegment) {
-      // note: the policy must be null, we can't accept a RestrictedSegment wrap with another RestrictedSegment
-      Preconditions.checkArgument(policy == null, "policy wrapped with another policy is not allowed");
-      ((RestrictedSegment) baseSegment).validateOrElseThrow(this);
+    // Validation will always fail on lookups, external, and inline segments, because they will not have policies applied (except for NoopPolicyEnforcer).
+    // This is a temporary solution since we don't have a perfect way to identify segments that are backed by a regular table yet.
+    if (validate(policy)) {
       return;
     }
-    if (baseSegment instanceof QueryableIndexSegment || baseSegment instanceof IncrementalIndexSegment) {
-      if (validate(policy)) {
-        return;
-      }
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.FORBIDDEN)
-                          .build("Failed security validation with segment [%s]", segment.getId());
-    } else {
-      // not a druid table, skip validation
-    }
+    throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                        .ofCategory(DruidException.Category.FORBIDDEN)
+                        .build("Failed security validation with segment [%s]", segment.getId());
   }
 
   /**

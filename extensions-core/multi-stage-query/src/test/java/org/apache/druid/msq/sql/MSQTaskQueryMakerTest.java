@@ -57,10 +57,7 @@ import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
-import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
-import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
@@ -389,75 +386,6 @@ public class MSQTaskQueryMakerTest
         expectedResults,
         payload.getResults().getResults()
     );
-  }
-
-  @Test
-  public void testInlineDataSourcePassedPolicyValidation() throws Exception
-  {
-    // Arrange
-    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
-    RowSignature resultSignature = RowSignature.builder()
-                                               .add("EXPR$0", ColumnType.LONG)
-                                               .build();
-    fieldMapping = buildFieldMapping(resultSignature);
-    InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
-        ImmutableList.of(new Object[]{2L}),
-        resultSignature
-    );
-    Query query = new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                               .dataSource(inlineDataSource)
-                                               .eternityInterval()
-                                               .columns(resultSignature.getColumnNames())
-                                               .columnTypes(resultSignature.getColumnTypes())
-                                               .build();
-    DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
-    // Act
-    msqTaskQueryMaker = getMSQTaskQueryMaker();
-    QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
-    // Assert
-    String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
-    MSQTaskReportPayload payload = (MSQTaskReportPayload) fakeOverlordClient.taskReportAsMap(taskId)
-                                                                            .get()
-                                                                            .get(MSQTaskReport.REPORT_KEY)
-                                                                            .getPayload();
-    Assert.assertTrue(payload.getStatus().getStatus().isSuccess());
-    ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{2L});
-    assertResultsEquals("select 1 + 1", expectedResults, payload.getResults().getResults());
-  }
-
-  @Test
-  public void testLookupDataSourcePassedPolicyValidation() throws Exception
-  {
-    // Arrange
-    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
-    final RowSignature resultSignature = RowSignature.builder().add("v", ColumnType.STRING).build();
-    fieldMapping = buildFieldMapping(resultSignature);
-    Query query = new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                               .eternityInterval()
-                                               .dataSource(new LookupDataSource("lookyloo"))
-                                               .columns(resultSignature.getColumnNames())
-                                               .columnTypes(resultSignature.getColumnTypes())
-                                               .orderBy(ImmutableList.of(OrderBy.ascending("v")))
-                                               .build();
-    DruidQuery druidQueryMock = buildDruidQueryMock(query, resultSignature);
-    // Act
-    msqTaskQueryMaker = getMSQTaskQueryMaker();
-    QueryResponse<Object[]> response = msqTaskQueryMaker.runQuery(druidQueryMock);
-    // Assert
-    String taskId = (String) Iterables.getOnlyElement(response.getResults().toList())[0];
-    MSQTaskReportPayload payload = (MSQTaskReportPayload) fakeOverlordClient.taskReportAsMap(taskId)
-                                                                            .get()
-                                                                            .get(MSQTaskReport.REPORT_KEY)
-                                                                            .getPayload();
-    // Assert
-    Assert.assertTrue(payload.getStatus().getStatus().isSuccess());
-    ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{"mysteryvalue"},
-        new Object[]{"x6"},
-        new Object[]{"xa"},
-        new Object[]{"xabc"}
-    );
-    assertResultsEquals("select v from lookyloo", expectedResults, payload.getResults().getResults());
   }
 
   @Test
