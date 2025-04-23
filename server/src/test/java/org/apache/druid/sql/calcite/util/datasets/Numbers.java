@@ -32,8 +32,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.assertj.core.util.Arrays;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
