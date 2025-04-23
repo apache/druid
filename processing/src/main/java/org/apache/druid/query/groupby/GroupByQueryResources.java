@@ -174,6 +174,28 @@ public class GroupByQueryResources implements Closeable
   }
 
   /**
+   * Returns the number of the currently used merge buffers for {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
+   */
+  public int getNumMergingQueryRunnerMergeBuffersHolders()
+  {
+    if (mergingQueryRunnerMergeBuffersHolders == null) {
+      return 0;
+    }
+    return mergingQueryRunnerMergeBuffersHolders.size();
+  }
+
+  /**
+   * Returns the number of the currently used merge buffers for {@link GroupByQueryQueryToolChest#mergeResults}
+   */
+  public int getNumToolchestMergeBuffersHolders()
+  {
+    if (toolchestMergeBuffersHolders == null) {
+      return 0;
+    }
+    return toolchestMergeBuffersHolders.size();
+  }
+
+  /**
    * Get a merge buffer from the pre-acquired resources.
    *
    * @return a resource holder containing a merge buffer

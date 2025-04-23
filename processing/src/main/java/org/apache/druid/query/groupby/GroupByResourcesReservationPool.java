@@ -141,6 +141,7 @@ public class GroupByResourcesReservationPool
     try {
       // We have reserved a spot in the map. Now begin the blocking call.
       resources = GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
+      perQueryStats.mergeBufferUsedCount(resources.getNumMergingQueryRunnerMergeBuffersHolders() + resources.getNumToolchestMergeBuffersHolders());
     }
     catch (Throwable t) {
       // Unable to allocate the resources, perform cleanup and rethrow the exception
