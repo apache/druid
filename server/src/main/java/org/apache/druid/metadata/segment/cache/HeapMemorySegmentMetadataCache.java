@@ -834,7 +834,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       return new DataSegmentPlus(
           JacksonUtils.readValue(jsonMapper, resultSet.getBytes(2), DataSegment.class),
           DateTimes.of(resultSet.getString(3)),
-          DateTimes.of(resultSet.getString(4)),
+          SqlSegmentsMetadataQuery.nullAndEmptySafeDate(resultSet.getString(4)),
           true,
           null,
           null,
