@@ -158,9 +158,9 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public DimensionIndexer<Integer, int[], String> makeIndexer(boolean useMaxMemoryEstimates)
+  public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, useMaxMemoryEstimates);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes);
   }
 
   @Override

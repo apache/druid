@@ -249,7 +249,6 @@ public class StreamAppenderatorTester implements AutoCloseable
           new CachePopulatorStats(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true,
           centralizedDatasourceSchemaConfig
       );
     } else {
@@ -291,7 +290,6 @@ public class StreamAppenderatorTester implements AutoCloseable
           new CachePopulatorStats(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true,
           centralizedDatasourceSchemaConfig
       );
     }

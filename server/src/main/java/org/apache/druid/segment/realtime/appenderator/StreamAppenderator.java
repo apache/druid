@@ -155,7 +155,6 @@ public class StreamAppenderator implements Appenderator
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
-  private final boolean useMaxMemoryEstimates;
   private final boolean messageGapAggStats;
 
   private final QuerySegmentWalker texasRanger;
@@ -236,7 +235,6 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -257,7 +255,6 @@ public class StreamAppenderator implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
     this.messageGapAggStats = metrics.isMessageGapAggStatsEnabled();
@@ -551,8 +548,7 @@ public class StreamAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig,
-          useMaxMemoryEstimates
+          maxBytesTuningConfig
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
@@ -1157,7 +1153,7 @@ public class StreamAppenderator implements Appenderator
    * Unannounces the given base segment and all its upgraded versions.
    *
    * @param baseSegment base segment
-   * @param sink        sink corresponding to the base segment
+   * @param sink sink corresponding to the base segment
    * @return the set of all segment ids associated with the base segment containing the upgraded ids and itself.
    */
   private Set<SegmentIdWithShardSpec> unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
@@ -1458,7 +1454,6 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
-            useMaxMemoryEstimates,
             hydrants
         );
         rowsSoFar += currSink.getNumRows();

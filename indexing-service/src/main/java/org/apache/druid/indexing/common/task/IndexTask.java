@@ -876,8 +876,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         dataSchema,
         tuningConfig,
         buildSegmentsMeters,
-        buildSegmentsParseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        buildSegmentsParseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {

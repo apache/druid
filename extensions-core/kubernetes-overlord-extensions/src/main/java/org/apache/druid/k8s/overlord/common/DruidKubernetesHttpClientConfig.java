@@ -17,26 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.k8s.overlord.common;
 
-/**
- * DimensionDictionary for String dimension values.
- */
-public class StringDimensionDictionary extends DimensionDictionary<String>
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vertx.core.VertxOptions;
+
+public class DruidKubernetesHttpClientConfig
 {
-  /**
-   * Creates a StringDimensionDictionary.
-   */
-  public StringDimensionDictionary()
+  @JsonProperty
+  private int workerPoolSize = VertxOptions.DEFAULT_WORKER_POOL_SIZE;
+
+  @JsonProperty
+  private int eventLoopPoolSize = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
+
+  @JsonProperty
+  private int internalBlockingPoolSize = VertxOptions.DEFAULT_INTERNAL_BLOCKING_POOL_SIZE;
+
+  public int getWorkerPoolSize()
   {
-    super(String.class);
+    return workerPoolSize;
   }
 
-  @Override
-  public long estimateSizeOfValue(String value)
+  public int getEventLoopPoolSize()
   {
-    // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
-    // Total string size = 28B (string metadata) + 16B (char array metadata) + 2B * num letters
-    return 28 + 16 + (2L * value.length());
+    return eventLoopPoolSize;
+  }
+
+  public int getInternalBlockingPoolSize()
+  {
+    return internalBlockingPoolSize;
   }
 }

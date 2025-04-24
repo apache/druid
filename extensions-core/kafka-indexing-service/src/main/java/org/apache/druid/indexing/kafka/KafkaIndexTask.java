@@ -93,7 +93,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
     return new IncrementalPublishingKafkaIndexTaskRunner(
         this,
         dataSchema.getParser(),
-        authorizerMapper,
         lockGranularityToUse
     );
   }

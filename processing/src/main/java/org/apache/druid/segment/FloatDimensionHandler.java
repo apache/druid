@@ -71,7 +71,7 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   }
 
   @Override
-  public DimensionIndexer<Float, Float, Float> makeIndexer(boolean useMaxMemoryEstimates)
+  public DimensionIndexer<Float, Float, Float> makeIndexer()
   {
     return new FloatDimensionIndexer(dimensionName);
   }

@@ -255,7 +255,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
-      final AuthorizerMapper authorizerMapper,
       final LockGranularity lockGranularityToUse
   )
   {
@@ -266,7 +265,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.inputRowSchema = InputRowSchemas.fromDataSchema(task.getDataSchema());
     this.inputFormat = ioConfig.getInputFormat();
     this.parser = parser;
-    this.authorizerMapper = authorizerMapper;
     this.stream = ioConfig.getStartSequenceNumbers().getStream();
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
@@ -1452,6 +1450,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    */
   private void authorizationCheck(final HttpServletRequest request)
   {
+    if (authorizerMapper == null) {
+      throw DruidException.defensive("Cannot authorize request since AuthorizerMapper is not initialized yet.");
+    }
     AuthorizationUtils.verifyUnrestrictedAccessToDatasource(request, task.getDataSource(), authorizerMapper);
   }
 

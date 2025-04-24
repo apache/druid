@@ -311,7 +311,6 @@ public class IndexGeneratorJob implements Jobby
                                             .setIndexSchema(indexSchema)
                                             .setMaxRowCount(tuningConfig.getMaxRowsInMemory())
                                             .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemoryOrDefault())
-                                            .setUseMaxMemoryEstimates(tuningConfig.isUseMaxMemoryEstimates())
                                             .build();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasFixedDimensions()) {

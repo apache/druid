@@ -43,7 +43,7 @@ export const DatasourcePreviewPane = React.memo(function DatasourcePreviewPane(
       let result: QueryResult;
       try {
         result = await queryRunner.runQuery({
-          query: `SELECT * FROM ${T(datasource)}`,
+          query: `SELECT * FROM ${T(datasource)} ORDER BY __time DESC`,
           extraQueryContext: { sqlOuterLimit: 100 },
           cancelToken,
         });

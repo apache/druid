@@ -37,7 +37,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -102,7 +101,8 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
     Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
 
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null, null, LockGranularity.TIME_CHUNK);
+    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
+                                                                                               LockGranularity.TIME_CHUNK);
 
     Mockito.when(row.getTimestamp()).thenReturn(now);
     Assert.assertTrue(runner.withinMinMaxRecordTime(row));
@@ -154,7 +154,8 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.getDataSchema()).thenReturn(schema);
     Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
     Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
-    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null, null, LockGranularity.TIME_CHUNK);
+    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
+                                                                                               LockGranularity.TIME_CHUNK);
 
     Assert.assertTrue(runner.withinMinMaxRecordTime(row));
 
@@ -170,11 +171,10 @@ public class SeekableStreamIndexTaskRunnerTest
     public TestasbleSeekableStreamIndexTaskRunner(
         SeekableStreamIndexTask task,
         @Nullable InputRowParser parser,
-        AuthorizerMapper authorizerMapper,
         LockGranularity lockGranularityToUse
     )
     {
-      super(task, parser, authorizerMapper, lockGranularityToUse);
+      super(task, parser, lockGranularityToUse);
     }
 
     @Override
