@@ -81,7 +81,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   {
     super(baseSegment);
     if (baseSegment instanceof SegmentReference) {
-      throw DruidException.defensive("Cannot use a SegmentReference as a CompleteSegment");
+      throw DruidException.defensive("Cannot use a SegmentReference as baseSegment for a ReferenceCountingSegment");
     }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;
