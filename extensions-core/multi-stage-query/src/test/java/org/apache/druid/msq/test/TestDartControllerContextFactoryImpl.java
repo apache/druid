@@ -21,6 +21,7 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
@@ -51,6 +52,10 @@ import java.util.concurrent.Executors;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
+  private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(
+      new ThreadFactoryBuilder().setNameFormat("dart-worker-%d").build()
+  );
+
   private Map<String, Worker> workerMap;
   public Controller controller;
 
@@ -94,7 +99,6 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
 
   public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
   {
-    private final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
 
     public DartTestWorkerClient()
     {
@@ -124,8 +128,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         }
         catch (Exception e) {
           throw new RuntimeException(e);
-        }
-        finally {
+        } finally {
           inMemoryWorkers.remove(workerId);
         }
       });
