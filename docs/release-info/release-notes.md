@@ -318,7 +318,9 @@ The previous behavior (no limit on interval per kill task) can be restored by se
 
 #### Kubernetes deployments
 
-By default, the Docker image now uses the canonical hostname if you're running Druid in Kubernetes. Otherwise, it uses the IP address otherwise [#17697](https://github.com/apache/druid/pull/17697) 
+By default, the Docker image now uses the canonical hostname to register services in ZooKeeper for internal communication if you're running Druid in Kubernetes. Otherwise, it uses the IP address. [#17697](https://github.com/apache/druid/pull/17697). 
+
+You can set the environment variable `DRUID_SET_HOST_IP` to `1` to restore old behaviour.
 
 #### Updated configs
 
