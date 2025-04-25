@@ -54,6 +54,8 @@ export const SQL_KEYWORDS = [
   'ROW',
   'ROWS',
   'ONLY',
+  'KEY',
+  'VALUE',
   'VALUES',
   'PARTITIONED BY',
   'CLUSTERED BY',
