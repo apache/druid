@@ -29,6 +29,7 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -69,6 +70,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
@@ -91,6 +93,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         cache,
         cacheConfig,
         cachePopulatorStats,
+        policyEnforcer,
         rowIngestionMeters,
         parseExceptionHandler,
         centralizedDatasourceSchemaConfig

@@ -43,6 +43,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
@@ -104,6 +105,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         EasyMock.createMock(TaskActionClientFactory.class),
         emitter,
+        NoopPolicyEnforcer.instance(),
         new NoopDataSegmentPusher(),
         new NoopDataSegmentKiller(),
         new NoopDataSegmentMover(),

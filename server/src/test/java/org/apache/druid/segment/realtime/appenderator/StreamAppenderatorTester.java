@@ -48,6 +48,8 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -110,7 +112,8 @@ public class StreamAppenderatorTester implements AutoCloseable
       final boolean skipBytesInMemoryOverheadCheck,
       final DataSegmentAnnouncer announcer,
       final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      final ServiceEmitter serviceEmitter
+      final ServiceEmitter serviceEmitter,
+      final PolicyEnforcer policyEnforcer
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -244,6 +247,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           MapCache.create(2048),
           new CacheConfig(),
           new CachePopulatorStats(),
+          policyEnforcer,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
           centralizedDatasourceSchemaConfig
@@ -285,6 +289,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           MapCache.create(2048),
           new CacheConfig(),
           new CachePopulatorStats(),
+          NoopPolicyEnforcer.instance(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
           centralizedDatasourceSchemaConfig
@@ -351,6 +356,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     private boolean skipBytesInMemoryOverheadCheck;
     private int delayInMilli = 0;
     private ServiceEmitter serviceEmitter;
+    private PolicyEnforcer policyEnforcer = NoopPolicyEnforcer.instance();
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -400,6 +406,12 @@ public class StreamAppenderatorTester implements AutoCloseable
       return this;
     }
 
+    public Builder withPolicyEnforcer(PolicyEnforcer policyEnforcer)
+    {
+      this.policyEnforcer = policyEnforcer;
+      return this;
+    }
+
     public StreamAppenderatorTester build()
     {
       return new StreamAppenderatorTester(
@@ -412,7 +424,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           skipBytesInMemoryOverheadCheck,
           new NoopDataSegmentAnnouncer(),
           CentralizedDatasourceSchemaConfig.create(),
-          serviceEmitter
+          serviceEmitter,
+          policyEnforcer
       );
     }
 
@@ -431,7 +444,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           skipBytesInMemoryOverheadCheck,
           dataSegmentAnnouncer,
           config,
-          serviceEmitter
+          serviceEmitter,
+          policyEnforcer
       );
     }
   }

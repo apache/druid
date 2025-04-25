@@ -46,6 +46,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -113,6 +114,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final PolicyEnforcer policyEnforcer;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter serviceEmitter;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
@@ -127,6 +129,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       ObjectMapper objectMapper,
       ServiceEmitter serviceEmitter,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider
@@ -138,6 +141,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
+    this.policyEnforcer = policyEnforcer;
     this.objectMapper = objectMapper;
     this.serviceEmitter = serviceEmitter;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
@@ -166,6 +170,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
@@ -352,7 +357,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           queryProcessingPool,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
-          cachePopulatorStats
+          cachePopulatorStats,
+          policyEnforcer
       );
     }
 

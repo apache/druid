@@ -34,6 +34,7 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexMerger;
@@ -81,6 +82,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
       MapCache.create(10),
       new CacheConfig(),
       new CachePopulatorStats(),
+      NoopPolicyEnforcer.instance(),
       TestHelper.makeJsonMapper(),
       new NoopServiceEmitter(),
       () -> DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of())
