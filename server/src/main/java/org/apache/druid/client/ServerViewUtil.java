@@ -74,7 +74,7 @@ public class ServerViewUtil
               holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
           );
           long size = selector.getSegment().getSize();
-          List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates, historicalFilter, cloneQueryMode);
+          List<DruidServerMetadata> candidates = selector.getCandidates(numCandidates, cloneQueryMode);
           located.add(new LocatedSegmentDescriptor(descriptor, size, candidates));
         }
       }

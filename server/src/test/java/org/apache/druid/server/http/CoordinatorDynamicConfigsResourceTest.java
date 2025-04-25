@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.server.coordinator.CloneStatusManager;
@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
+import java.util.List;
 import java.util.Map;
 
 public class CoordinatorDynamicConfigsResourceTest
@@ -85,9 +86,9 @@ public class CoordinatorDynamicConfigsResourceTest
   @Test
   public void testGetCloneStatus()
   {
-    Map<String, ServerCloneStatus> statusMetrics = ImmutableMap.of(
-        "hist1", new ServerCloneStatus("hist3", ServerCloneStatus.State.LOADING, 2, 0, 1000),
-        "hist2", ServerCloneStatus.unknown("hist4")
+    List<ServerCloneStatus> statusMetrics = ImmutableList.of(
+        new ServerCloneStatus("hist3", ServerCloneStatus.State.LOADING, 2, 0, 1000),
+        ServerCloneStatus.unknown("hist4")
     );
 
     EasyMock.expect(cloneStatusManager.getStatusForAllServers()).andReturn(statusMetrics).once();

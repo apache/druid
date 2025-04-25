@@ -227,7 +227,8 @@ public class TierSelectorStrategyTest
             0,
             0L
         ),
-        tierSelectorStrategy
+        tierSelectorStrategy,
+        HistoricalFilter.IDENTITY_FILTER
     );
 
     List<QueryableDruidServer> servers = new ArrayList<>(Arrays.asList(expectedSelection));
@@ -241,10 +242,10 @@ public class TierSelectorStrategyTest
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
-    Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
-    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, CloneQueryMode.EXCLUDE));
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDE));
+    Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDE));
+    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDE));
   }
   
   @Test

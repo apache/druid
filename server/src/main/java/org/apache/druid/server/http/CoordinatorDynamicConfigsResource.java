@@ -45,6 +45,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -163,7 +165,9 @@ public class CoordinatorDynamicConfigsResource
       ServerCloneStatus statusForServer = cloneStatusManager.getStatusForServer(targetServer);
       return Response.ok(ImmutableMap.of(targetServer, statusForServer)).build();
     } else {
-      return Response.ok(cloneStatusManager.getStatusForAllServers()).build();
+      // TODO: this or make a class?
+      List<ServerCloneStatus> statusForAllServers = cloneStatusManager.getStatusForAllServers();
+      return Response.ok(Map.of("cloneStatus", statusForAllServers)).build();
     }
   }
 }

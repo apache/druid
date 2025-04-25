@@ -51,7 +51,7 @@ public class ConnectionCountServerSelectorStrategyTest
     ServerSelector serverSelector = initSelector(s1, s2, s3);
 
     for (int i = 0; i < 100; ++i) {
-      Assert.assertEquals(s2, serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE));
+      Assert.assertEquals(s2, serverSelector.pick(null, CloneQueryMode.EXCLUDE));
     }
   }
 
@@ -64,7 +64,7 @@ public class ConnectionCountServerSelectorStrategyTest
 
     Set<String> pickedServers = new HashSet<>();
     for (int i = 0; i < 100; ++i) {
-      pickedServers.add(serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE).getServer().getName());
+      pickedServers.add(serverSelector.pick(null, CloneQueryMode.EXCLUDE).getServer().getName());
     }
     Assert.assertTrue(
         "Multiple servers should be selected when the number of connections is equal.",
@@ -104,7 +104,8 @@ public class ConnectionCountServerSelectorStrategyTest
             new NumberedShardSpec(0, 0),
             0,
             0L
-        ), strategy
+        ), strategy,
+        HistoricalFilter.IDENTITY_FILTER
     );
     List<QueryableDruidServer> serverList = new ArrayList<>(Arrays.asList(servers));
     Collections.shuffle(serverList);

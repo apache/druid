@@ -181,6 +181,7 @@ public class CachingClusteredClientBenchmark
   private final QuerySegmentSpec basicSchemaIntervalSpec = new MultipleIntervalSegmentSpec(
       Collections.singletonList(basicSchema.getDataInterval())
   );
+  private final BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
 
   private final int numProcessingThreads = 4;
 
@@ -227,6 +228,7 @@ public class CachingClusteredClientBenchmark
           rowsPerSegment
       );
       queryableIndexes.put(dataSegment, index);
+      filter.start();
     }
 
     final DruidProcessingConfig processingConfig = new DruidProcessingConfig()
@@ -308,7 +310,6 @@ public class CachingClusteredClientBenchmark
     cachingClusteredClient = new CachingClusteredClient(
         conglomerate,
         serverView,
-        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
         MapCache.create(0),
         JSON_MAPPER,
         new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), 0),
@@ -522,7 +523,7 @@ public class CachingClusteredClientBenchmark
     {
       final ServerSelector selector = selectors.computeIfAbsent(
           segment.getId().toString(),
-          k -> new ServerSelector(segment, tierSelectorStrategy)
+          k -> new ServerSelector(segment, tierSelectorStrategy, filter)
       );
       selector.addServerAndUpdateSegment(servers.get(server), segment);
       timelines.computeIfAbsent(segment.getDataSource(), k -> new VersionedIntervalTimeline<>(Ordering.natural()))

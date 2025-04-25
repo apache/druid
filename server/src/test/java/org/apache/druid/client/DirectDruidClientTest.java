@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -50,6 +49,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -105,10 +105,13 @@ public class DirectDruidClientTest
   @Before
   public void setup()
   {
+    final BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    filter.start();
     httpClient = EasyMock.createMock(HttpClient.class);
     serverSelector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy()),
+        filter
     );
     queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
     client = new DirectDruidClient(
@@ -245,7 +248,7 @@ public class DirectDruidClientTest
 
     Assert.assertEquals(2, client2.getNumOpenConnections());
 
-    Assert.assertEquals(serverSelector.pick(null, HistoricalFilter.IDENTITY_FILTER, CloneQueryMode.EXCLUDE), queryableDruidServer2);
+    Assert.assertEquals(serverSelector.pick(null, CloneQueryMode.EXCLUDE), queryableDruidServer2);
 
     EasyMock.verify(httpClient);
   }

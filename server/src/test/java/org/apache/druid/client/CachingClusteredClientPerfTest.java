@@ -87,6 +87,8 @@ public class CachingClusteredClientPerfTest
     final List<SegmentDescriptor> segmentDescriptors = new ArrayList<>(segmentCount);
     final List<DataSegment> dataSegments = new ArrayList<>(segmentCount);
     final VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+    final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    brokerViewOfCoordinatorConfig.start();
     final DruidServer server = new DruidServer(
         "server",
         "localhost:9000",
@@ -106,7 +108,8 @@ public class CachingClusteredClientPerfTest
         Iterators.transform(dataSegments.iterator(), segment -> {
           ServerSelector ss = new ServerSelector(
               segment,
-              new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+              new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+              brokerViewOfCoordinatorConfig
           );
           ss.addServerAndUpdateSegment(new QueryableDruidServer(
               server,
@@ -129,12 +132,9 @@ public class CachingClusteredClientPerfTest
 
     Mockito.doReturn(Optional.of(timeline)).when(serverView).getTimeline(any());
     Mockito.doReturn(new MockQueryRunner()).when(serverView).getQueryRunner(any());
-    BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
-    brokerViewOfCoordinatorConfig.start();
     CachingClusteredClient cachingClusteredClient = new CachingClusteredClient(
         new MockQueryRunnerFactoryConglomerate(),
         serverView,
-        brokerViewOfCoordinatorConfig,
         MapCache.create(1024),
         TestHelper.makeJsonMapper(),
         Mockito.mock(CachePopulator.class),

@@ -30,6 +30,7 @@ import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -213,7 +214,8 @@ public class CachingClusteredClientFunctionalityTest
                     )
                 );
               }
-            }
+            },
+            HistoricalFilter.IDENTITY_FILTER
         )
     ));
   }
@@ -269,7 +271,6 @@ public class CachingClusteredClientFunctionalityTest
 
           }
         },
-        new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient()),
         cache,
         OBJECT_MAPPER,
         cachePopulator,

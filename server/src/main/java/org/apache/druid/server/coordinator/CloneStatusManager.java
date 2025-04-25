@@ -19,9 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,11 +40,11 @@ public class CloneStatusManager
   }
 
   /**
-   * Returns the status of cloning as a map of target server to {@link ServerCloneStatus}.
+   * Returns the status of cloning as a list of {@link ServerCloneStatus}.
    */
-  public Map<String, ServerCloneStatus> getStatusForAllServers()
+  public List<ServerCloneStatus> getStatusForAllServers()
   {
-    return cloneStatusSnapshot.get();
+    return ImmutableList.copyOf(cloneStatusSnapshot.get().values());
   }
 
   /**

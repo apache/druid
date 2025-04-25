@@ -52,15 +52,19 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   private final AtomicReference<DataSegment> segment;
 
+  private final HistoricalFilter filter;
+
   public ServerSelector(
       DataSegment segment,
-      TierSelectorStrategy strategy
+      TierSelectorStrategy strategy,
+      HistoricalFilter filter
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+    this.filter = filter;
   }
 
   public DataSegment getSegment()
@@ -124,7 +128,6 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   public List<DruidServerMetadata> getCandidates(
       final int numCandidates,
-      final HistoricalFilter filter,
       final CloneQueryMode cloneQueryMode
   )
   {
@@ -145,12 +148,12 @@ public class ServerSelector implements Overshadowable<ServerSelector>
         }
         return candidates;
       } else {
-        return getAllServers(filter, cloneQueryMode);
+        return getAllServers(cloneQueryMode);
       }
     }
   }
 
-  public List<DruidServerMetadata> getAllServers(HistoricalFilter filter, CloneQueryMode cloneQueryMode)
+  public List<DruidServerMetadata> getAllServers(CloneQueryMode cloneQueryMode)
   {
     final List<DruidServerMetadata> servers = new ArrayList<>();
 
@@ -173,7 +176,7 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   }
 
   @Nullable
-  public <T> QueryableDruidServer pick(@Nullable Query<T> query, HistoricalFilter filter, CloneQueryMode cloneQueryMode)
+  public <T> QueryableDruidServer pick(@Nullable Query<T> query, CloneQueryMode cloneQueryMode)
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {

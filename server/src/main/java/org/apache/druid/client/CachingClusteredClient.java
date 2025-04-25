@@ -38,7 +38,6 @@ import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
-import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
@@ -128,13 +127,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
-  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   @Inject
   public CachingClusteredClient(
       QueryRunnerFactoryConglomerate conglomerate,
       TimelineServerView serverView,
-      BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig,
       Cache cache,
       @Smile ObjectMapper objectMapper,
       CachePopulator cachePopulator,
@@ -157,7 +154,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.emitter = emitter;
-    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -355,7 +351,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
       if (prevEtag != null) {
         @Nullable
-        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, brokerViewOfCoordinatorConfig, cloneQueryMode, queryCacheKey);
+        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, cloneQueryMode, queryCacheKey);
         if (null != currentEtag) {
           responseContext.putEntityTag(currentEtag);
         }
@@ -374,7 +370,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(
           segmentServers,
-          brokerViewOfCoordinatorConfig,
           cloneQueryMode
       );
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
@@ -606,14 +601,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(
         Set<SegmentServerSelector> segments,
-        HistoricalFilter historicalFilter,
         CloneQueryMode cloneQueryMode
     )
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
         final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
-                                                                       .pick(query, historicalFilter, cloneQueryMode);
+                                                                       .pick(query, cloneQueryMode);
 
         if (queryableDruidServer == null) {
           log.makeAlert(
@@ -825,7 +819,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @Nullable
     String computeResultLevelCachingEtag(
         final Set<SegmentServerSelector> segments,
-        final HistoricalFilter historicalFilter,
         final CloneQueryMode cloneQueryMode,
         @Nullable byte[] queryCacheKey
     )
@@ -833,7 +826,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        QueryableDruidServer queryableServer = p.getServer().pick(query, historicalFilter, cloneQueryMode);
+        QueryableDruidServer queryableServer = p.getServer().pick(query, cloneQueryMode);
         if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;
