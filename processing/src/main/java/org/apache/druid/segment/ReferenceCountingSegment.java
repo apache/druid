@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -34,7 +35,7 @@ import java.util.Optional;
  * {@link Segment} that is also a {@link ReferenceCountingSegment}, allowing query engines that operate directly on
  * segments to track references so that dropping a {@link Segment} can be done safely to ensure there are no in-flight
  * queries.
- *
+ * <p>
  * Extensions can extend this class for populating {@link org.apache.druid.timeline.VersionedIntervalTimeline} with
  * a custom implementation through SegmentLoader.
  */
@@ -181,6 +182,12 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   public Optional<Closeable> acquireReferences()
   {
     return incrementReferenceAndDecrementOnceCloseable();
+  }
+
+  @Override
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  {
+    policyEnforcer.validateOrElseThrow(this, null);
   }
 
   @Override

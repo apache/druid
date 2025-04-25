@@ -279,6 +279,14 @@ export function formatNumber(n: NumberLike): string {
   return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
 }
 
+export function formatNumberAbbreviated(n: NumberLike): string {
+  return (n || 0).toLocaleString('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatRate(n: NumberLike) {
   return numeral(n).format('0,0.0') + '/s';
 }

@@ -44,6 +44,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
@@ -85,6 +86,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.taskExecutorNode,
         bob.taskActionClientFactory,
         bob.emitter,
+        bob.policyEnforcer,
         bob.segmentPusher,
         bob.dataSegmentKiller,
         bob.dataSegmentMover,
@@ -130,6 +132,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private DruidNode taskExecutorNode;
     private TaskActionClientFactory taskActionClientFactory = task -> null;
     private ServiceEmitter emitter;
+    private PolicyEnforcer policyEnforcer;
     private DataSegmentPusher segmentPusher;
     private DataSegmentKiller dataSegmentKiller;
     private DataSegmentMover dataSegmentMover;
@@ -188,6 +191,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setEmitter(ServiceEmitter emitter)
     {
       this.emitter = emitter;
+      return this;
+    }
+
+    public Builder setPolicyEnforcer(PolicyEnforcer policyEnforcer)
+    {
+      this.policyEnforcer = policyEnforcer;
       return this;
     }
 

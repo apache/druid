@@ -35,6 +35,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -96,6 +97,7 @@ public class QueryFrameworkUtils
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         authorizerMapper,
         Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
     );

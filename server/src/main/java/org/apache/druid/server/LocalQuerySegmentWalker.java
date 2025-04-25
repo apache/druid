@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
@@ -59,6 +60,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   private final SegmentWrangler segmentWrangler;
   private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryScheduler scheduler;
+  private final PolicyEnforcer policyEnforcer;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -67,6 +69,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
       SegmentWrangler segmentWrangler,
       JoinableFactoryWrapper joinableFactoryWrapper,
       QueryScheduler scheduler,
+      PolicyEnforcer policyEnforcer,
       ServiceEmitter emitter
   )
   {
@@ -74,6 +77,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     this.segmentWrangler = segmentWrangler;
     this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.scheduler = scheduler;
+    this.policyEnforcer = policyEnforcer;
     this.emitter = emitter;
   }
 
@@ -94,7 +98,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction();
+    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction(policyEnforcer);
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

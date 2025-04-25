@@ -45,6 +45,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -155,7 +156,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction();
+    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance());
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
         toolChest.postMergeQueryDecoration(

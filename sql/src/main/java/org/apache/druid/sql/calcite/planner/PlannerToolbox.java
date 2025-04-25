@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -41,6 +42,7 @@ public class PlannerToolbox
   protected final CalciteRulesManager calciteRuleManager;
   protected final AuthorizerMapper authorizerMapper;
   protected final AuthConfig authConfig;
+  protected final PolicyEnforcer policyEnforcer;
   protected final DruidHookDispatcher hookDispatcher;
 
   public PlannerToolbox(
@@ -55,6 +57,7 @@ public class PlannerToolbox
       final CalciteRulesManager calciteRuleManager,
       final AuthorizerMapper authorizerMapper,
       final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
       final DruidHookDispatcher hookDispatcher
   )
   {
@@ -69,6 +72,7 @@ public class PlannerToolbox
     this.calciteRuleManager = calciteRuleManager;
     this.authorizerMapper = authorizerMapper;
     this.authConfig = authConfig;
+    this.policyEnforcer = policyEnforcer;
     this.hookDispatcher = hookDispatcher;
   }
 
@@ -120,6 +124,11 @@ public class PlannerToolbox
   public AuthConfig getAuthConfig()
   {
     return authConfig;
+  }
+
+  public PolicyEnforcer getPolicyEnforcer()
+  {
+    return policyEnforcer;
   }
 
   public DruidHookDispatcher getHookDispatcher()
