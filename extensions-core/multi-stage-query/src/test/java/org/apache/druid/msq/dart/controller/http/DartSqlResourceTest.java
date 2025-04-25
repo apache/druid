@@ -222,8 +222,8 @@ public class DartSqlResourceTest extends MSQTestBase
     final SqlToolbox toolbox = new SqlToolbox(
         engine,
         plannerFactory,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new DefaultQueryConfig(ImmutableMap.of()),
         lifecycleManager

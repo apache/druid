@@ -87,6 +87,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
@@ -106,6 +107,7 @@ import org.skife.jdbi.v2.ResultIterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -203,7 +205,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     ServerWrapper(final DruidMeta druidMeta) throws Exception
     {
       this.druidMeta = druidMeta;
-      server = new Server(0);
+      server = new Server(new InetSocketAddress("localhost", 0));
       server.setHandler(getAvaticaHandler(druidMeta));
       server.start();
       url = StringUtils.format(
@@ -1045,7 +1047,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   private SqlStatementFactory makeStatementFactory()
   {
-    return CalciteTests.createSqlStatementFactory(
+    return QueryFrameworkUtils.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
         new PlannerFactory(
             makeRootSchema(),

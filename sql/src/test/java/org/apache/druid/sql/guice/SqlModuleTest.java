@@ -194,7 +194,7 @@ public class SqlModuleTest
               binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
               binder.bind(Escalator.class).toInstance(new NoopEscalator());
               binder.bind(ServiceEmitter.class).toInstance(serviceEmitter);
-              binder.bind(RequestLogger.class).toInstance(new NoopRequestLogger());
+              binder.bind(RequestLogger.class).toInstance(NoopRequestLogger.instance());
               binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(null)));
               binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);

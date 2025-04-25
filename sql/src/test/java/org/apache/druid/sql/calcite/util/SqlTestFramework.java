@@ -28,7 +28,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.Cache;
@@ -54,11 +53,9 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -92,7 +89,6 @@ import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.TestClusterQuerySegmentWalker;
 import org.apache.druid.server.TestClusterQuerySegmentWalker.TestSegmentsBroker;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -100,18 +96,12 @@ import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.DirectStatement;
-import org.apache.druid.sql.PreparedStatement;
-import org.apache.druid.sql.SqlLifecycleManager;
-import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
-import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
@@ -862,16 +852,7 @@ public class SqlTestFramework
           new DruidHookDispatcher()
       );
       componentSupplier.finalizePlanner(this);
-      final SqlToolbox toolbox = new SqlToolbox(
-          framework.engine,
-          plannerFactory,
-          new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-          new NoopRequestLogger(),
-          QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-          new DefaultQueryConfig(ImmutableMap.of()),
-          new SqlLifecycleManager()
-      );
-      this.statementFactory = new TestMultiStatementFactory(toolbox, framework.engine, plannerFactory);
+      this.statementFactory = QueryFrameworkUtils.createSqlMultiStatementFactory(framework.engine, plannerFactory);
       componentSupplier.populateViews(viewManager, plannerFactory);
     }
 
@@ -1294,69 +1275,5 @@ public class SqlTestFramework
   public URI getDruidTestURI()
   {
     return builder.config.getDruidTestURI();
-  }
-
-  /**
-   * SqlStatementFactory which overrides direct statement creation to allow calcite tests to test multi-part set
-   * statements e.g. like 'SET vectorize = 'force'; SET useApproxCountDistinct = true; SELECT 1 + 1'
-   */
-  static class TestMultiStatementFactory extends SqlStatementFactory
-  {
-    private final SqlToolbox toolbox;
-    private final SqlEngine engine;
-    private final PlannerFactory plannerFactory;
-
-    public TestMultiStatementFactory(SqlToolbox lifecycleToolbox, SqlEngine engine, PlannerFactory plannerFactory)
-    {
-      super(lifecycleToolbox);
-      this.toolbox = lifecycleToolbox;
-      this.engine = engine;
-      this.plannerFactory = plannerFactory;
-    }
-
-    @Override
-    public DirectStatement directStatement(SqlQueryPlus sqlRequest)
-    {
-      // override direct statement creation to allow calcite tests to test multi-part set statements
-      return new DirectStatement(toolbox, sqlRequest)
-      {
-        @Override
-        protected DruidPlanner createPlanner()
-        {
-          return plannerFactory.createPlanner(
-              engine,
-              queryPlus.sql(),
-              queryContext,
-              hook,
-              true
-          );
-        }
-      };
-    }
-
-    @Override
-    public PreparedStatement preparedStatement(SqlQueryPlus sqlRequest)
-    {
-      return new PreparedStatement(toolbox, sqlRequest)
-      {
-        @Override
-        protected DruidPlanner getPlanner()
-        {
-          return plannerFactory.createPlanner(
-              engine,
-              queryPlus.sql(),
-              queryContext,
-              hook,
-              true
-          );
-        }
-
-        @Override
-        public DirectStatement execute(List<TypedValue> parameters)
-        {
-          return directStatement(queryPlus.withParameters(parameters));
-        }
-      };
-    }
   }
 }

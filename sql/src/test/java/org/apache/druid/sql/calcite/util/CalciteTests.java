@@ -79,14 +79,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -295,29 +292,6 @@ public class CalciteTests
         walker,
         conglomerate,
         CalciteTests.TEST_AUTHORIZER_MAPPER
-    );
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory
-  )
-  {
-    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig(), false);
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory,
-      final AuthConfig authConfig,
-      boolean allowMultiStatementParsingForDirectStatements
-  )
-  {
-    return QueryFrameworkUtils.createSqlStatementFactory(
-        engine,
-        plannerFactory,
-        authConfig,
-        allowMultiStatementParsingForDirectStatements
     );
   }
 
