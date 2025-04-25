@@ -71,7 +71,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     );
   }
 
-  protected ReferenceCountingSegment(
+  private ReferenceCountingSegment(
       Segment baseSegment,
       int startRootPartitionId,
       int endRootPartitionId,
@@ -80,8 +80,11 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   )
   {
     super(baseSegment);
+    // In an ideal world, we would ask the baseSegment to be one of QueryableIndexSegment, IncrementalIndexSegment, LookupSegment, etc.
+    // However we don't have a perfect way to do that, so we just check if it is a SegmentReference.
     if (baseSegment instanceof SegmentReference) {
-      throw DruidException.defensive("Cannot use a SegmentReference as baseSegment for a ReferenceCountingSegment");
+      throw DruidException.defensive("Cannot use a SegmentReference[%s] as baseSegment for a ReferenceCountingSegment",
+          baseSegment.asString());
     }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;
