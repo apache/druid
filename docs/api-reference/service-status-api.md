@@ -711,13 +711,16 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
 
 ```json
 {
-    "localhost:8083": {
-        "sourceServer": "localhost:8089",
-        "state": "LOADING",
-        "segmentLoadsRemaining": 0,
-        "segmentDropsRemaining": 0,
-        "bytesRemaining": 0
+  "cloneStatus": [
+    {
+      "sourceServer": "localhost:8089",
+      "targetServer": "localhost:8083",
+      "state": "IN_PROGRESS",
+      "segmentLoadsRemaining": 0,
+      "segmentDropsRemaining": 0,
+      "bytesToLoad": 0
     }
+  ]
 }
 ```
 
@@ -775,11 +778,11 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
 
 ```json
 {
-  "inSyncBrokers": [
+  "syncedBrokers": [
     {
       "host": "localhost",
       "port": 8082,
-      "syncTimeInMs": 1745298963900
+      "syncTimeInMs": 1745756337472
     }
   ]
 }

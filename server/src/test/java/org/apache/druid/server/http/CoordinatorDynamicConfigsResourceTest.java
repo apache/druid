@@ -102,9 +102,9 @@ public class CoordinatorDynamicConfigsResourceTest
     );
     Response response = resource.getCloneStatus(null);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(statusMetrics, response.getEntity());
+    Assert.assertEquals(new CoordinatorDynamicConfigsResource.CloneStatus(statusMetrics), response.getEntity());
 
-    response = resource.getCloneStatus("hist2"); //TODO: fix
+    response = resource.getCloneStatus("hist2");
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(Map.of("hist2", ServerCloneStatus.unknown("hist4", "hist3")), response.getEntity());
   }

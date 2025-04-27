@@ -20,6 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
@@ -58,11 +59,13 @@ public class CoordinatorDynamicConfigSyncer
   private final ObjectMapper jsonMapper;
   private final DruidNodeDiscoveryProvider druidNodeDiscovery;
 
-  private final AtomicReference<CoordinatorDynamicConfig> lastKnownConfig = new AtomicReference<>();
   private final ServiceClientFactory clientFactory;
-  private final Set<BrokerSyncStatus> inSyncBrokers;
   private final ScheduledExecutorService exec;
   private @Nullable Future<?> syncFuture = null;
+
+  @GuardedBy("this")
+  private final Set<BrokerSyncStatus> inSyncBrokers;
+  private final AtomicReference<CoordinatorDynamicConfig> lastKnownConfig = new AtomicReference<>();
 
   @Inject
   public CoordinatorDynamicConfigSyncer(
@@ -80,12 +83,19 @@ public class CoordinatorDynamicConfigSyncer
     this.inSyncBrokers = ConcurrentHashMap.newKeySet();
   }
 
-  public void triggerBroadcastConfigToBrokers()
+  /**
+   * Queues the configuration sync to the brokers without blocking the calling thread.
+   */
+  public void queueBroadcastConfigToBrokers()
   {
     exec.submit(this::broadcastConfigToBrokers);
   }
 
-  public void broadcastConfigToBrokers()
+  /**
+   * Push the latest coordinator dynamic config, provided by the configManager to all currently known Brokers. Also
+   * invalidates the set of inSyncBrokers if the config has changed.
+   */
+  private void broadcastConfigToBrokers()
   {
     invalidateInSyncBrokersIfNeeded();
     for (ServiceLocation broker : getKnownBrokers()) {
@@ -93,11 +103,17 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
+  /**
+   * Returns the set of Brokers which have been updated with the latest {@link CoordinatorDynamicConfig}.
+   */
   public synchronized Set<BrokerSyncStatus> getInSyncBrokers()
   {
     return Set.copyOf(inSyncBrokers);
   }
 
+  /**
+   * Schedules a periodic sync with brokers when the coordinator becomes the leader.
+   */
   public void onLeaderStart()
   {
     log.info("Starting coordinator config syncing to brokers on leader node.");
@@ -109,6 +125,9 @@ public class CoordinatorDynamicConfigSyncer
     );
   }
 
+  /**
+   * Stops the sync when coordinator stops being the leader.
+   */
   public void onLeaderStop()
   {
     log.info("Not leader, stopping coordinator config syncing to brokers.");
@@ -117,6 +136,10 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
+  /**
+   * Push the latest coordinator dynamic config, provided by the configManager to the Broker at the brokerLocation
+   * param.
+   */
   private void pushConfigToBroker(ServiceLocation brokerLocation)
   {
     final BrokerClient brokerClient = new BrokerClientImpl(
@@ -137,14 +160,13 @@ public class CoordinatorDynamicConfigSyncer
     }
     catch (Exception e) {
       // Catch and ignore the exception, wait for the next sync.
-      log.error(
-          e,
-          "Exception while syncing dynamic configuration to broker[%s]",
-          brokerLocation
-      );
+      log.error(e, "Exception while syncing dynamic configuration to broker[%s]", brokerLocation);
     }
   }
 
+  /**
+   * Returns a list of {@link ServiceLocation} for all brokers currently known to the druidNodeDiscovery.
+   */
   private Set<ServiceLocation> getKnownBrokers()
   {
     return druidNodeDiscovery.getForNodeRole(NodeRole.BROKER)
@@ -154,6 +176,10 @@ public class CoordinatorDynamicConfigSyncer
                              .collect(Collectors.toSet());
   }
 
+  /**
+   * Clears the set of inSyncBrokers and updates the lastKnownConfig if the latest coordinator dynamic config is
+   * different from the config tracked by this class.
+   */
   private synchronized void invalidateInSyncBrokersIfNeeded()
   {
     final CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
@@ -164,6 +190,9 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
+  /**
+   * Adds a broker to the set of inSyncBrokers if the coordinator dynamic config has not changed.
+   */
   private synchronized void markBrokerAsSynced(CoordinatorDynamicConfig config, ServiceLocation broker)
   {
     if (config.equals(lastKnownConfig.get())) {
@@ -171,6 +200,9 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
+  /**
+   * Utility method to convert {@link DiscoveryDruidNode} to a {@link ServiceLocation}
+   */
   @Nullable
   private static ServiceLocation convertDiscoveryNodeToServiceLocation(DiscoveryDruidNode discoveryDruidNode)
   {
@@ -186,6 +218,4 @@ public class CoordinatorDynamicConfigSyncer
         ""
     );
   }
-
-
 }

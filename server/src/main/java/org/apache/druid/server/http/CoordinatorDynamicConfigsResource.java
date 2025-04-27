@@ -48,6 +48,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -99,7 +100,7 @@ public class CoordinatorDynamicConfigsResource
       );
 
       if (setResult.isOk()) {
-        coordinatorDynamicConfigSyncer.triggerBroadcastConfigToBrokers();
+        coordinatorDynamicConfigSyncer.queueBroadcastConfigToBrokers();
         return Response.ok().build();
       } else {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -154,7 +155,7 @@ public class CoordinatorDynamicConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getBrokerStatus()
   {
-    return Response.ok(coordinatorDynamicConfigSyncer.getInSyncBrokers()).build();
+    return Response.ok(new ConfigSyncStatus(coordinatorDynamicConfigSyncer.getInSyncBrokers())).build();
   }
 
   @GET
@@ -190,6 +191,33 @@ public class CoordinatorDynamicConfigsResource
     {
       return syncedBrokers;
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ConfigSyncStatus that = (ConfigSyncStatus) o;
+      return Objects.equals(syncedBrokers, that.syncedBrokers);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hashCode(syncedBrokers);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "ConfigSyncStatus{" +
+             "syncedBrokers=" + syncedBrokers +
+             '}';
+    }
   }
 
   /**
@@ -209,6 +237,33 @@ public class CoordinatorDynamicConfigsResource
     public List<ServerCloneStatus> getCloneStatus()
     {
       return cloneStatus;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      CloneStatus that = (CloneStatus) o;
+      return Objects.equals(cloneStatus, that.cloneStatus);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hashCode(cloneStatus);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "CloneStatus{" +
+             "cloneStatus=" + cloneStatus +
+             '}';
     }
   }
 }
