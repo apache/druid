@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nullable;
@@ -44,7 +43,7 @@ public class CloneStatusManager
    */
   public List<ServerCloneStatus> getStatusForAllServers()
   {
-    return ImmutableList.copyOf(cloneStatusSnapshot.get().values());
+    return List.copyOf(cloneStatusSnapshot.get().values());
   }
 
   /**

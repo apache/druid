@@ -30,31 +30,40 @@ import java.util.Objects;
 public class ServerCloneStatus
 {
   private final String sourceServer;
+  private final String targetServer;
   private final State state;
   private final long segmentLoadsRemaining;
   private final long segmentDropsRemaining;
-  private final long bytesRemaining;
+  private final long bytesToLoad;
 
   @JsonCreator
   public ServerCloneStatus(
       @JsonProperty("sourceServer") String sourceServer,
+      @JsonProperty("targetServer") String targetServer,
       @JsonProperty("state") State state,
       @JsonProperty("segmentLoadsRemaining") long segmentLoadsRemaining,
       @JsonProperty("segmentDropsRemaining") long segmentDropsRemaining,
-      @JsonProperty("bytesRemaining") long bytesRemaining
+      @JsonProperty("bytesToLoad") long bytesToLoad
   )
   {
     this.sourceServer = sourceServer;
+    this.targetServer = targetServer;
     this.state = state;
     this.segmentLoadsRemaining = segmentLoadsRemaining;
     this.segmentDropsRemaining = segmentDropsRemaining;
-    this.bytesRemaining = bytesRemaining;
+    this.bytesToLoad = bytesToLoad;
   }
 
   @JsonProperty
   public String getSourceServer()
   {
     return sourceServer;
+  }
+
+  @JsonProperty
+  public String getTargetServer()
+  {
+    return targetServer;
   }
 
   @JsonProperty
@@ -70,9 +79,9 @@ public class ServerCloneStatus
   }
 
   @JsonProperty
-  public long getBytesRemaining()
+  public long getBytesToLoad()
   {
-    return bytesRemaining;
+    return bytesToLoad;
   }
 
   @JsonProperty
@@ -81,9 +90,9 @@ public class ServerCloneStatus
     return state;
   }
 
-  public static ServerCloneStatus unknown(String sourceServer)
+  public static ServerCloneStatus unknown(String sourceServer, String targetServer)
   {
-    return new ServerCloneStatus(sourceServer, State.TARGET_SERVER_MISSING, 0, 0, 0);
+    return new ServerCloneStatus(sourceServer, targetServer, State.TARGET_SERVER_MISSING, 0, 0, 0);
   }
 
   @Override
@@ -98,26 +107,35 @@ public class ServerCloneStatus
     ServerCloneStatus that = (ServerCloneStatus) o;
     return segmentLoadsRemaining == that.segmentLoadsRemaining
            && segmentDropsRemaining == that.segmentDropsRemaining
-           && bytesRemaining == that.bytesRemaining
+           && bytesToLoad == that.bytesToLoad
            && Objects.equals(sourceServer, that.sourceServer)
+           && Objects.equals(targetServer, that.targetServer)
            && state == that.state;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sourceServer, state, segmentLoadsRemaining, segmentDropsRemaining, bytesRemaining);
+    return Objects.hash(
+        sourceServer,
+        targetServer,
+        state,
+        segmentLoadsRemaining,
+        segmentDropsRemaining,
+        bytesToLoad
+    );
   }
 
   @Override
   public String toString()
   {
-    return "CloneStatusMetrics{" +
+    return "ServerCloneStatus{" +
            "sourceServer='" + sourceServer + '\'' +
+           ", targetServer='" + targetServer + '\'' +
            ", state=" + state +
            ", segmentLoadsRemaining=" + segmentLoadsRemaining +
            ", segmentDropsRemaining=" + segmentDropsRemaining +
-           ", bytesRemaining=" + bytesRemaining +
+           ", bytesToLoad=" + bytesToLoad +
            '}';
   }
 
@@ -138,6 +156,6 @@ public class ServerCloneStatus
     /**
      * Segments are loaded or being loaded. The counts give a better view of the progress.
      */
-    LOADING
+    IN_PROGRESS
   }
 }

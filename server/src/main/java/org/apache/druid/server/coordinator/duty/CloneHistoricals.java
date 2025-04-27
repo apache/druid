@@ -147,14 +147,14 @@ public class CloneHistoricals implements CoordinatorDuty
 
       ServerCloneStatus newStatus;
       if (targetServer == null) {
-        newStatus = ServerCloneStatus.unknown(sourceServerName);
+        newStatus = ServerCloneStatus.unknown(sourceServerName, targetServerName);
       } else {
 
         ServerCloneStatus.State state;
         if (!historicalMap.containsKey(sourceServerName)) {
           state = ServerCloneStatus.State.SOURCE_SERVER_MISSING;
         } else {
-          state = ServerCloneStatus.State.LOADING;
+          state = ServerCloneStatus.State.IN_PROGRESS;
         }
 
         for (Map.Entry<DataSegment, SegmentAction> queuedSegment : targetServer.getQueuedSegments().entrySet()) {
@@ -165,7 +165,7 @@ public class CloneHistoricals implements CoordinatorDuty
             segmentDrop += 1;
           }
         }
-        newStatus = new ServerCloneStatus(sourceServerName, state, segmentLoad, segmentDrop, bytesLeft);
+        newStatus = new ServerCloneStatus(sourceServerName, targetServerName, state, segmentLoad, segmentDrop, bytesLeft);
       }
       newStatusMap.put(targetServerName, newStatus);
     }

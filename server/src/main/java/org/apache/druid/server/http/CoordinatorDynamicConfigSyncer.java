@@ -130,7 +130,7 @@ public class CoordinatorDynamicConfigSyncer
 
     try {
       CoordinatorDynamicConfig currentDynamicConfig = configManager.getCurrentDynamicConfig();
-      boolean success = brokerClient.updateDynamicConfig(currentDynamicConfig).get();
+      boolean success = brokerClient.updateCoordinatorDynamicConfig(currentDynamicConfig).get();
       if (success) {
         markBrokerAsSynced(currentDynamicConfig, brokerLocation);
       }

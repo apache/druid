@@ -87,12 +87,12 @@ public class CoordinatorDynamicConfigsResourceTest
   public void testGetCloneStatus()
   {
     List<ServerCloneStatus> statusMetrics = ImmutableList.of(
-        new ServerCloneStatus("hist3", ServerCloneStatus.State.LOADING, 2, 0, 1000),
-        ServerCloneStatus.unknown("hist4")
+        new ServerCloneStatus("hist3", "hist1", ServerCloneStatus.State.IN_PROGRESS, 2, 0, 1000),
+        ServerCloneStatus.unknown("hist4", "hist3")
     );
 
     EasyMock.expect(cloneStatusManager.getStatusForAllServers()).andReturn(statusMetrics).once();
-    EasyMock.expect(cloneStatusManager.getStatusForServer("hist2")).andReturn(ServerCloneStatus.unknown("hist4")).once();
+    EasyMock.expect(cloneStatusManager.getStatusForServer("hist2")).andReturn(ServerCloneStatus.unknown("hist4", "hist3")).once();
     EasyMock.replay(coordinatorDynamicConfigSyncer);
     EasyMock.replay(cloneStatusManager);
 
@@ -106,8 +106,8 @@ public class CoordinatorDynamicConfigsResourceTest
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(statusMetrics, response.getEntity());
 
-    response = resource.getCloneStatus("hist2");
+    response = resource.getCloneStatus("hist2"); //TODO: fix
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("hist2", ServerCloneStatus.unknown("hist4")), response.getEntity());
+    Assert.assertEquals(Map.of("hist2", ServerCloneStatus.unknown("hist4", "hist3")), response.getEntity());
   }
 }

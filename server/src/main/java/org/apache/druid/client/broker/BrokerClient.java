@@ -58,5 +58,5 @@ public interface BrokerClient
   /**
    * Updates the broker with the given {@link CoordinatorDynamicConfig}.
    */
-  ListenableFuture<Boolean> updateDynamicConfig(CoordinatorDynamicConfig config);
+  ListenableFuture<Boolean> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig config);
 }

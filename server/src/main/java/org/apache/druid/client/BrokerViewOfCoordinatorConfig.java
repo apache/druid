@@ -25,10 +25,11 @@ import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.selector.HistoricalFilter;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.CloneQueryMode;
-import org.apache.druid.server.DruidInternalDynamicConfigResource;
+import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import javax.validation.constraints.NotNull;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
 /**
  * Broker view of the coordinator dynamic configuration, and its derived values such as target and source clone servers.
  * This class is registered as a managed lifecycle to fetch the coordinator dynamic configuration on startup. Further
- * updates are handled through {@link DruidInternalDynamicConfigResource}.
+ * updates are handled through {@link BrokerDynamicConfigResource}.
  */
 public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
 {
@@ -59,7 +60,7 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     this.coordinatorClient = coordinatorClient;
   }
 
-  public synchronized CoordinatorDynamicConfig getDynamicConfiguration()
+  public synchronized CoordinatorDynamicConfig getDynamicConfig()
   {
     return config;
   }
@@ -85,12 +86,12 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
       CoordinatorDynamicConfig coordinatorDynamicConfig = coordinatorClient.getCoordinatorDynamicConfig().get();
       setDynamicConfig(coordinatorDynamicConfig);
 
-      log.info("Successfully initialized dynamic config: [%s]", coordinatorDynamicConfig);
+      log.info("Successfully fetched coordinator dynamic config[%s].", coordinatorDynamicConfig);
     }
     catch (Exception e) {
       // If the fetch fails, the broker should not serve queries. Throw the exception and try again on restart.
       log.error(e, "Failed to initialize coordinator dynamic config");
-      throw new RuntimeException(e);
+      throw new RuntimeException("Failed to initialize coordinator dynamic config", e);
     }
   }
 
@@ -122,17 +123,17 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
   private synchronized Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
   {
     switch (cloneQueryMode) {
-      case CLONES_PREFERRED:
+      case PREFER_CLONES:
         // Remove servers being cloned targets, so that clones are queried.
         return serversBeingCloned;
-      case EXCLUDE:
-        // Remove clones, so that targets are queried.
+      case EXCLUDE_CLONES:
+        // Remove clones, so that only source servers are queried.
         return cloneServers;
-      case INCLUDE:
+      case INCLUDE_CLONES:
         // Don't remove either
         return ImmutableSet.of();
       default:
-        throw new IllegalStateException("Unexpected value: " + cloneQueryMode);
+        throw DruidException.defensive("Unexpected value: " + cloneQueryMode);
     }
   }
 }

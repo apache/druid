@@ -34,12 +34,12 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("/druid-internal/v1/config")
-public class DruidInternalDynamicConfigResource
+public class BrokerDynamicConfigResource
 {
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   @Inject
-  public DruidInternalDynamicConfigResource(BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig)
+  public BrokerDynamicConfigResource(BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig)
   {
     this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
   }
@@ -50,7 +50,7 @@ public class DruidInternalDynamicConfigResource
   @Path("/coordinator")
   public Response getDynamicConfig()
   {
-    return Response.ok(brokerViewOfCoordinatorConfig.getDynamicConfiguration()).build();
+    return Response.ok(brokerViewOfCoordinatorConfig.getDynamicConfig()).build();
   }
 
   @POST

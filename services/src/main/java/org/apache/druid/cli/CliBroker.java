@@ -61,7 +61,7 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.DruidInternalDynamicConfigResource;
+import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SubqueryGuardrailHelper;
@@ -162,7 +162,7 @@ public class CliBroker extends ServerRunnable
           binder.bind(SubqueryCountStatsProvider.class).toInstance(new SubqueryCountStatsProvider());
           Jerseys.addResource(binder, BrokerResource.class);
           Jerseys.addResource(binder, ClientInfoResource.class);
-          Jerseys.addResource(binder, DruidInternalDynamicConfigResource.class);
+          Jerseys.addResource(binder, BrokerDynamicConfigResource.class);
 
           LifecycleModule.register(binder, BrokerQueryResource.class);
 

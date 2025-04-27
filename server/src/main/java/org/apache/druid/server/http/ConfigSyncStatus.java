@@ -27,18 +27,18 @@ import java.util.Set;
 
 public class ConfigSyncStatus
 {
-  private final Set<BrokerSyncStatus> inSyncBrokers;
+  private final Set<BrokerSyncStatus> syncedBrokers;
 
   @JsonCreator
-  public ConfigSyncStatus(@JsonProperty("inSyncBrokers") Set<BrokerSyncStatus> inSyncBrokers)
+  public ConfigSyncStatus(@JsonProperty("syncedBrokers") Set<BrokerSyncStatus> syncedBrokers)
   {
-    this.inSyncBrokers = inSyncBrokers;
+    this.syncedBrokers = syncedBrokers;
   }
 
   @JsonProperty
-  public Set<BrokerSyncStatus> getInSyncBrokers()
+  public Set<BrokerSyncStatus> getSyncedBrokers()
   {
-    return inSyncBrokers;
+    return syncedBrokers;
   }
 
   @Override
@@ -51,20 +51,20 @@ public class ConfigSyncStatus
       return false;
     }
     ConfigSyncStatus that = (ConfigSyncStatus) o;
-    return Objects.equals(inSyncBrokers, that.inSyncBrokers);
+    return Objects.equals(syncedBrokers, that.syncedBrokers);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(inSyncBrokers);
+    return Objects.hashCode(syncedBrokers);
   }
 
   @Override
   public String toString()
   {
     return "ConfigSyncStatus{" +
-           "inSyncBrokers=" + inSyncBrokers +
+           "syncedBrokers=" + syncedBrokers +
            '}';
   }
 }

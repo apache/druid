@@ -31,15 +31,15 @@ public enum CloneQueryMode
    * For each ongoing cloning, do not query the source server that is being cloned. Other servers which are not
    * participating in any cloning will still be queried.
    */
-  CLONES_PREFERRED("clonesPreferred"),
+  PREFER_CLONES("preferClones"),
   /**
    * Consider both clones and their source servers for querying.
    */
-  INCLUDE("includeClones"),
+  INCLUDE_CLONES("includeClones"),
   /**
    * Do not query clone servers.
    */
-  EXCLUDE("excludeClones");
+  EXCLUDE_CLONES("excludeClones");
 
   private final String name;
 

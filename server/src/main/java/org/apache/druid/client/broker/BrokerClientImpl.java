@@ -100,7 +100,7 @@ public class BrokerClientImpl implements BrokerClient
   }
 
   @Override
-  public ListenableFuture<Boolean> updateDynamicConfig(CoordinatorDynamicConfig config)
+  public ListenableFuture<Boolean> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig config)
   {
     final RequestBuilder requestBuilder =
         new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")

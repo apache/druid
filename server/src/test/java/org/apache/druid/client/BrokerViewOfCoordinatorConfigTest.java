@@ -53,6 +53,6 @@ public class BrokerViewOfCoordinatorConfigTest
   {
     target.start();
     Mockito.verify(coordinatorClient, Mockito.times(1)).getCoordinatorDynamicConfig();
-    Assert.assertEquals(config, target.getDynamicConfiguration());
+    Assert.assertEquals(config, target.getDynamicConfig());
   }
 }

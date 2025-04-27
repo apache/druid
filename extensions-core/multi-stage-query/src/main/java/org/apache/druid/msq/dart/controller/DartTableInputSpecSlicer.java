@@ -164,7 +164,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
     // Currently, Dart does not support clone query modes, all servers can be queried.
-    final QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.EXCLUDE);
+    final QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.EXCLUDE_CLONES);
 
     if (server == null) {
       return UNKNOWN;
@@ -282,7 +282,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     int numOtherServers = 0;
 
     // Currently, Dart does not support clone query modes, all servers can be queried.
-    for (final DruidServerMetadata server : serverSelector.getAllServers(CloneQueryMode.INCLUDE)) {
+    for (final DruidServerMetadata server : serverSelector.getAllServers(CloneQueryMode.INCLUDE_CLONES)) {
       if (SegmentSource.REALTIME.getUsedServerTypes().contains(server.getType())) {
         numRealtimeServers++;
       } else {

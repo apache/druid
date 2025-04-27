@@ -165,8 +165,7 @@ public class CoordinatorDynamicConfigsResource
       ServerCloneStatus statusForServer = cloneStatusManager.getStatusForServer(targetServer);
       return Response.ok(ImmutableMap.of(targetServer, statusForServer)).build();
     } else {
-      // TODO: this or make a class?
-      List<ServerCloneStatus> statusForAllServers = cloneStatusManager.getStatusForAllServers();
+      final List<ServerCloneStatus> statusForAllServers = cloneStatusManager.getStatusForAllServers();
       return Response.ok(Map.of("cloneStatus", statusForAllServers)).build();
     }
   }
