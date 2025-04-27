@@ -55,12 +55,10 @@ public class CoordinatorDynamicConfigsResourceTest
   {
     EasyMock.expect(coordinatorDynamicConfigSyncer.getInSyncBrokers())
             .andReturn(
-                new ConfigSyncStatus(
-                    ImmutableSet.of(
-                        new BrokerSyncStatus("host1", 8080, 1000
-                        )
-                    )
-                )
+                  ImmutableSet.of(
+                      new BrokerSyncStatus("host1", 8080, 1000
+                      )
+                  )
             )
             .once();
     EasyMock.replay(coordinatorDynamicConfigSyncer);
@@ -75,7 +73,7 @@ public class CoordinatorDynamicConfigsResourceTest
 
     Assert.assertEquals(200, response.getStatus());
 
-    ConfigSyncStatus expected = new ConfigSyncStatus(
+    CoordinatorDynamicConfigsResource.ConfigSyncStatus expected = new CoordinatorDynamicConfigsResource.ConfigSyncStatus(
         ImmutableSet.of(
             new BrokerSyncStatus("host1", 8080, 1000)
         )

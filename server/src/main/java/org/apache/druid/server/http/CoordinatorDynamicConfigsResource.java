@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
@@ -46,7 +48,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -162,11 +164,51 @@ public class CoordinatorDynamicConfigsResource
   public Response getCloneStatus(@QueryParam("targetServer") @Nullable String targetServer)
   {
     if (targetServer != null) {
-      ServerCloneStatus statusForServer = cloneStatusManager.getStatusForServer(targetServer);
+      final ServerCloneStatus statusForServer = cloneStatusManager.getStatusForServer(targetServer);
       return Response.ok(ImmutableMap.of(targetServer, statusForServer)).build();
     } else {
-      final List<ServerCloneStatus> statusForAllServers = cloneStatusManager.getStatusForAllServers();
-      return Response.ok(Map.of("cloneStatus", statusForAllServers)).build();
+      final CloneStatus statusForAllServers = new CloneStatus(cloneStatusManager.getStatusForAllServers());
+      return Response.ok(statusForAllServers).build();
+    }
+  }
+
+  /**
+   * Contains the current set of Brokers which have been synced with the latest {@link CoordinatorDynamicConfig}.
+   */
+  public static class ConfigSyncStatus
+  {
+    private final Set<BrokerSyncStatus> syncedBrokers;
+
+    @JsonCreator
+    public ConfigSyncStatus(@JsonProperty("syncedBrokers") Set<BrokerSyncStatus> syncedBrokers)
+    {
+      this.syncedBrokers = syncedBrokers;
+    }
+
+    @JsonProperty
+    public Set<BrokerSyncStatus> getSyncedBrokers()
+    {
+      return syncedBrokers;
+    }
+  }
+
+  /**
+   * Contains the current set of Brokers which have been synced with the latest {@link CoordinatorDynamicConfig}.
+   */
+  public static class CloneStatus
+  {
+    private final List<ServerCloneStatus> cloneStatus;
+
+    @JsonCreator
+    public CloneStatus(@JsonProperty("cloneStatus") List<ServerCloneStatus> cloneStatus)
+    {
+      this.cloneStatus = cloneStatus;
+    }
+
+    @JsonProperty
+    public List<ServerCloneStatus> getCloneStatus()
+    {
+      return cloneStatus;
     }
   }
 }

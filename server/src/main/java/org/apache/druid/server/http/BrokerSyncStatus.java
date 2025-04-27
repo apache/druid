@@ -25,6 +25,9 @@ import org.apache.druid.rpc.ServiceLocation;
 
 import java.util.Objects;
 
+/**
+ * Immutable class which represents the status of a dynamic configuration sync with a specific broker.
+ */
 public class BrokerSyncStatus
 {
   private final String host;

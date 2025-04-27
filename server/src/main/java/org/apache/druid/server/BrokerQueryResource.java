@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.annotations.Json;
@@ -57,7 +56,6 @@ import java.io.InputStream;
 public class BrokerQueryResource extends QueryResource
 {
   private final TimelineServerView brokerServerView;
-  private final BrokerViewOfCoordinatorConfig configView;
 
   @Inject
   public BrokerQueryResource(
@@ -69,8 +67,7 @@ public class BrokerQueryResource extends QueryResource
       AuthorizerMapper authorizerMapper,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode,
-      TimelineServerView brokerServerView,
-      BrokerViewOfCoordinatorConfig configView
+      TimelineServerView brokerServerView
   )
   {
     super(
@@ -84,7 +81,6 @@ public class BrokerQueryResource extends QueryResource
         selfNode
     );
     this.brokerServerView = brokerServerView;
-    this.configView = configView;
   }
 
   @POST
@@ -116,7 +112,6 @@ public class BrokerQueryResource extends QueryResource
               ev.getBaseTableDataSource(),
               ev.getEffectiveQuerySegmentSpec().getIntervals(),
               numCandidates,
-              configView,
               cloneQueryMode
           )
       );

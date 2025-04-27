@@ -406,7 +406,6 @@ public class ClientInfoResourceTest
     return new ClientInfoResource(
         serverInventoryView,
         timelineServerView,
-        null,
         segmentMetadataQueryConfig,
         new AuthConfig(),
         null

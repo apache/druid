@@ -50,9 +50,9 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
   @GuardedBy("this")
   private CoordinatorDynamicConfig config;
   @GuardedBy("this")
-  private Set<String> cloneServers;
+  private Set<String> targetCloneServers;
   @GuardedBy("this")
-  private Set<String> serversBeingCloned;
+  private Set<String> sourceCloneServers;
 
   @Inject
   public BrokerViewOfCoordinatorConfig(CoordinatorClient coordinatorClient)
@@ -73,8 +73,8 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
   {
     config = updatedConfig;
     final Map<String, String> cloneServers = config.getCloneServers();
-    this.cloneServers = ImmutableSet.copyOf(cloneServers.keySet());
-    this.serversBeingCloned = ImmutableSet.copyOf(cloneServers.values());
+    this.targetCloneServers = ImmutableSet.copyOf(cloneServers.keySet());
+    this.sourceCloneServers = ImmutableSet.copyOf(cloneServers.values());
   }
 
   @LifecycleStart
@@ -90,7 +90,6 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     }
     catch (Exception e) {
       // If the fetch fails, the broker should not serve queries. Throw the exception and try again on restart.
-      log.error(e, "Failed to initialize coordinator dynamic config");
       throw new RuntimeException("Failed to initialize coordinator dynamic config", e);
     }
   }
@@ -125,15 +124,15 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     switch (cloneQueryMode) {
       case PREFER_CLONES:
         // Remove servers being cloned targets, so that clones are queried.
-        return serversBeingCloned;
+        return sourceCloneServers;
       case EXCLUDE_CLONES:
         // Remove clones, so that only source servers are queried.
-        return cloneServers;
+        return targetCloneServers;
       case INCLUDE_CLONES:
         // Don't remove either
         return ImmutableSet.of();
       default:
-        throw DruidException.defensive("Unexpected value: " + cloneQueryMode);
+        throw DruidException.defensive("Unexpected value: [%s]", cloneQueryMode);
     }
   }
 }

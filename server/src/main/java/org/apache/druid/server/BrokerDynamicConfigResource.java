@@ -33,6 +33,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+/**
+ * Resource for fetching and updating the {@link CoordinatorDynamicConfig} on the Broker.
+ */
 @Path("/druid-internal/v1/config")
 public class BrokerDynamicConfigResource
 {
@@ -44,6 +47,9 @@ public class BrokerDynamicConfigResource
     this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
   }
 
+  /**
+   * Returns the Broker's view of the {@link CoordinatorDynamicConfig}.
+   */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
@@ -53,6 +59,9 @@ public class BrokerDynamicConfigResource
     return Response.ok(brokerViewOfCoordinatorConfig.getDynamicConfig()).build();
   }
 
+  /**
+   * Updates the {@link BrokerViewOfCoordinatorConfig} with the dynamicConfig paramter.
+   */
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)

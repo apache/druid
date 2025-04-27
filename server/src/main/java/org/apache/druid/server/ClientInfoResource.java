@@ -25,7 +25,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerViewUtil;
@@ -90,13 +89,11 @@ public class ClientInfoResource
   private SegmentMetadataQueryConfig segmentMetadataQueryConfig;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final BrokerViewOfCoordinatorConfig configView;
 
   @Inject
   public ClientInfoResource(
       FilteredServerInventoryView serverInventoryView,
       TimelineServerView timelineServerView,
-      BrokerViewOfCoordinatorConfig configView,
       SegmentMetadataQueryConfig segmentMetadataQueryConfig,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
@@ -108,7 +105,6 @@ public class ClientInfoResource
                                       new SegmentMetadataQueryConfig() : segmentMetadataQueryConfig;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.configView = configView;
   }
 
   @GET
@@ -322,7 +318,7 @@ public class ClientInfoResource
       intervalList.add(Intervals.of(interval.trim()));
     }
     List<Interval> condensed = JodaUtils.condenseIntervals(intervalList);
-    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates, configView, cloneQueryMode);
+    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates, cloneQueryMode);
   }
 
   protected DateTime getCurrentTime()

@@ -25,10 +25,19 @@ import org.apache.druid.query.CloneQueryMode;
 
 import java.util.Set;
 
+/**
+ * Interface that denotes some sort of filtering on the historcals, based on {@link CloneQueryMode}.
+ */
 public interface HistoricalFilter
 {
+  /**
+   * Perform no filtering, regardless of the query mode.
+   */
   HistoricalFilter IDENTITY_FILTER = (historicalServers, mode) -> historicalServers;
 
+  /**
+   * Perform a filtering on the historicalServers paramter, based on the cloneQueryMode paramter.
+   */
   Int2ObjectRBTreeMap<Set<QueryableDruidServer>> getQueryableServers(
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers,
       CloneQueryMode mode

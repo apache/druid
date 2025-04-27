@@ -93,9 +93,9 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
-  public synchronized ConfigSyncStatus getInSyncBrokers()
+  public synchronized Set<BrokerSyncStatus> getInSyncBrokers()
   {
-    return new ConfigSyncStatus(Set.copyOf(inSyncBrokers));
+    return Set.copyOf(inSyncBrokers);
   }
 
   public void onLeaderStart()
