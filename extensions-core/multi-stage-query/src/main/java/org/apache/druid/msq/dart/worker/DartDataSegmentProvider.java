@@ -96,9 +96,8 @@ public class DartDataSegmentProvider implements DataSegmentProvider
         final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
         channelCounters.addFile(inspector != null ? inspector.getNumRows() : 0, 0);
       });
-      // Upon segment.acquireReferences() returning, the segment would never be closed until closer.close() is called.
-      // This is protected by the Phaser in ReferenceCountingSegment. So we can safely unwrap the baseSegment and hold it.
-      // This unwrapped baseSegment is eventually passed to BaseLeafFrameProcessor, which calls ReferenceCountingSegment.wrapRootGenerationSegment to wrap it.
+      // It isn't necessary to pass down the SegmentReference to CompleteSegment, because we've already called
+      // segment.acquireReferences() and have attached the releaser to "closer".
       return new ReferenceCountingResourceHolder<>(new CompleteSegment(
           null,
           Objects.requireNonNull(segment.getBaseSegment())
