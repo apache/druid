@@ -164,7 +164,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
     // Currently, Dart does not support clone query modes, all servers can be queried.
-    final QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.EXCLUDE_CLONES);
+    final QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.INCLUDE_CLONES);
 
     if (server == null) {
       return UNKNOWN;

@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
@@ -166,7 +165,10 @@ public class CoordinatorDynamicConfigsResource
   {
     if (targetServer != null) {
       final ServerCloneStatus statusForServer = cloneStatusManager.getStatusForServer(targetServer);
-      return Response.ok(ImmutableMap.of(targetServer, statusForServer)).build();
+      if (statusForServer == null) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+      return Response.ok(statusForServer).build();
     } else {
       final CloneStatus statusForAllServers = new CloneStatus(cloneStatusManager.getStatusForAllServers());
       return Response.ok(statusForAllServers).build();
@@ -174,7 +176,8 @@ public class CoordinatorDynamicConfigsResource
   }
 
   /**
-   * Contains the current set of Brokers which have been synced with the latest {@link CoordinatorDynamicConfig}.
+   * Immutable class which contains the current set of Brokers which have been synced with the latest
+   * {@link CoordinatorDynamicConfig}.
    */
   public static class ConfigSyncStatus
   {
@@ -221,7 +224,8 @@ public class CoordinatorDynamicConfigsResource
   }
 
   /**
-   * Contains the current set of Brokers which have been synced with the latest {@link CoordinatorDynamicConfig}.
+   * Immutable class which the current set of Brokers which have been synced with the latest
+   * {@link CoordinatorDynamicConfig}.
    */
   public static class CloneStatus
   {

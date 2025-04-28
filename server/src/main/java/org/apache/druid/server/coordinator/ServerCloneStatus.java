@@ -90,9 +90,12 @@ public class ServerCloneStatus
     return state;
   }
 
+  /**
+   * Create a {@link ServerCloneStatus} where the current status is unknown as the target server is missing.
+   */
   public static ServerCloneStatus unknown(String sourceServer, String targetServer)
   {
-    return new ServerCloneStatus(sourceServer, targetServer, State.TARGET_SERVER_MISSING, 0, 0, 0);
+    return new ServerCloneStatus(sourceServer, targetServer, State.TARGET_SERVER_MISSING, -1, -1, -1);
   }
 
   @Override

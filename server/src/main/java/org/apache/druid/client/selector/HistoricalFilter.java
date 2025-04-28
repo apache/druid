@@ -36,7 +36,8 @@ public interface HistoricalFilter
   HistoricalFilter IDENTITY_FILTER = (historicalServers, mode) -> historicalServers;
 
   /**
-   * Perform a filtering on the historicalServers paramter, based on the cloneQueryMode paramter.
+   * Returns a {@link Int2ObjectRBTreeMap} after performing a filtering on the {@link QueryableDruidServer}, based
+   * on the cloneQueryMode paramter. The map in the parameter is not modified.
    */
   Int2ObjectRBTreeMap<Set<QueryableDruidServer>> getQueryableServers(
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers,

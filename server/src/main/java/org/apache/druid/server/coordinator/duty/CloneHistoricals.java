@@ -73,21 +73,21 @@ public class CloneHistoricals implements CoordinatorDuty
     }
 
     // Create a map of host to historical.
-    final Map<String, ServerHolder> hostToHistorical = cluster.getHistoricals()
-                                                              .values()
-                                                              .stream()
-                                                              .flatMap(Collection::stream)
-                                                              .collect(Collectors.toMap(
-                                                                  serverHolder -> serverHolder.getServer().getHost(),
-                                                                  serverHolder -> serverHolder
-                                                              ));
+    final Map<String, ServerHolder> hostToHistoricalMap = cluster.getHistoricals()
+                                                                 .values()
+                                                                 .stream()
+                                                                 .flatMap(Collection::stream)
+                                                                 .collect(Collectors.toMap(
+                                                                     serverHolder -> serverHolder.getServer().getHost(),
+                                                                     serverHolder -> serverHolder
+                                                                 ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetHistoricalName = entry.getKey();
-      final ServerHolder targetServer = hostToHistorical.get(targetHistoricalName);
+      final ServerHolder targetServer = hostToHistoricalMap.get(targetHistoricalName);
 
       final String sourceHistoricalName = entry.getValue();
-      final ServerHolder sourceServer = hostToHistorical.get(sourceHistoricalName);
+      final ServerHolder sourceServer = hostToHistoricalMap.get(sourceHistoricalName);
 
       if (sourceServer == null || targetServer == null) {
         log.error(
@@ -123,13 +123,16 @@ public class CloneHistoricals implements CoordinatorDuty
       }
     }
 
-    Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(hostToHistorical, cloneServers);
+    final Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(hostToHistoricalMap, cloneServers);
     cloneStatusManager.updateStatus(newStatusMap);
 
     return params;
   }
 
-  public Map<String, ServerCloneStatus> createCurrentStatusMap(
+  /**
+   * Create a status map of cloning progress based on the cloneServers mapping and its current load queue.
+   */
+  private Map<String, ServerCloneStatus> createCurrentStatusMap(
       Map<String, ServerHolder> historicalMap,
       Map<String, String> cloneServers
   )

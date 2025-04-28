@@ -60,6 +60,9 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     this.coordinatorClient = coordinatorClient;
   }
 
+  /**
+   * Return the latest {@link CoordinatorDynamicConfig}.
+   */
   public synchronized CoordinatorDynamicConfig getDynamicConfig()
   {
     return config;
@@ -119,6 +122,9 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
     return filteredHistoricals;
   }
 
+  /**
+   * Get the list of servers that should not be queried based on the cloneQueryMode parameter.
+   */
   private synchronized Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
   {
     switch (cloneQueryMode) {
@@ -129,8 +135,8 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
         // Remove clones, so that only source servers are queried.
         return targetCloneServers;
       case INCLUDE_CLONES:
-        // Don't remove either
-        return ImmutableSet.of();
+        // Don't remove either.
+        return Set.of();
       default:
         throw DruidException.defensive("Unexpected value: [%s]", cloneQueryMode);
     }
