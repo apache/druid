@@ -148,7 +148,7 @@ public class QueryContextsTest
   public void testDefaultCloneQueryMode()
   {
     Assert.assertEquals(
-        CloneQueryMode.EXCLUDE_CLONES,
+        CloneQueryMode.EXCLUDECLONES,
         QueryContext.empty().getCloneQueryMode()
     );
   }

@@ -156,13 +156,13 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
   private synchronized Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
   {
     switch (cloneQueryMode) {
-      case PREFER_CLONES:
+      case PREFERCLONES:
         // Remove servers being cloned targets, so that clones are queried.
         return sourceCloneServers;
-      case EXCLUDE_CLONES:
+      case EXCLUDECLONES:
         // Remove clones, so that only source servers are queried.
         return targetCloneServers;
-      case INCLUDE_CLONES:
+      case INCLUDECLONES:
         // Don't remove either.
         return Set.of();
       default:

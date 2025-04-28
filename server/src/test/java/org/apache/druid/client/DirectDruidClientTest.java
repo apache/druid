@@ -248,7 +248,7 @@ public class DirectDruidClientTest
 
     Assert.assertEquals(2, client2.getNumOpenConnections());
 
-    Assert.assertEquals(serverSelector.pick(null, CloneQueryMode.EXCLUDE_CLONES), queryableDruidServer2);
+    Assert.assertEquals(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES), queryableDruidServer2);
 
     EasyMock.verify(httpClient);
   }
