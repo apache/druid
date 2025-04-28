@@ -26,6 +26,7 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -44,10 +45,13 @@ import java.util.function.Function;
 public class SimpleSegmentMapFnProcessor implements FrameProcessor<Function<SegmentReference, SegmentReference>>
 {
   private final Query<?> query;
+  private final PolicyEnforcer policyEnforcer;
 
-  public SimpleSegmentMapFnProcessor(final Query<?> query)
+  public SimpleSegmentMapFnProcessor(final Query<?> query,
+                                     final PolicyEnforcer policyEnforcer)
   {
     this.query = query;
+    this.policyEnforcer = policyEnforcer;
   }
 
   @Override
@@ -66,7 +70,7 @@ public class SimpleSegmentMapFnProcessor implements FrameProcessor<Function<Segm
   public ReturnOrAwait<Function<SegmentReference, SegmentReference>> runIncrementally(final IntSet readableInputs)
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
-    return ReturnOrAwait.returnObject(ev.createSegmentMapFunction());
+    return ReturnOrAwait.returnObject(ev.createSegmentMapFunction(policyEnforcer));
   }
 
   @Override

@@ -210,6 +210,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
+        toolbox.getPolicyEnforcer(),
         rowIngestionMeters,
         parseExceptionHandler,
         toolbox.getCentralizedTableSchemaConfig()

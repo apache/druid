@@ -31,6 +31,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentChangeStatus.State;
 import org.apache.druid.server.http.SegmentLoadingMode;
+import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,7 +53,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.druid.server.TestSegmentUtils.makeSegment;
+import static org.apache.druid.segment.TestSegmentUtils.makeSegment;
 
 public class SegmentLoadDropHandlerTest
 {

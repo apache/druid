@@ -39,6 +39,7 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -162,7 +163,8 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
-    final QueryableDruidServer server = serverSelector.pick(null);
+    // Currently, Dart does not support clone query modes, all servers can be queried.
+    final QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.INCLUDECLONES);
 
     if (server == null) {
       return UNKNOWN;
@@ -279,7 +281,8 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     int numRealtimeServers = 0;
     int numOtherServers = 0;
 
-    for (final DruidServerMetadata server : serverSelector.getAllServers()) {
+    // Currently, Dart does not support clone query modes, all servers can be queried.
+    for (final DruidServerMetadata server : serverSelector.getAllServers(CloneQueryMode.INCLUDECLONES)) {
       if (SegmentSource.REALTIME.getUsedServerTypes().contains(server.getType())) {
         numRealtimeServers++;
       } else {

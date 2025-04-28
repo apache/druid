@@ -54,6 +54,7 @@ import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -91,6 +92,7 @@ public class ServerManager implements QuerySegmentWalker
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
   private final ServerConfig serverConfig;
+  private final PolicyEnforcer policyEnforcer;
 
   @Inject
   public ServerManager(
@@ -102,7 +104,8 @@ public class ServerManager implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       SegmentManager segmentManager,
-      ServerConfig serverConfig
+      ServerConfig serverConfig,
+      PolicyEnforcer policyEnforcer
   )
   {
     this.conglomerate = conglomerate;
@@ -116,6 +119,7 @@ public class ServerManager implements QuerySegmentWalker
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
     this.serverConfig = serverConfig;
+    this.policyEnforcer = policyEnforcer;
   }
 
   @Override
@@ -196,7 +200,7 @@ public class ServerManager implements QuerySegmentWalker
     }
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> ev.createSegmentMapFunction()
+        () -> ev.createSegmentMapFunction(policyEnforcer)
     );
 
     // We compute the datasource's cache key here itself so it doesn't need to be re-computed for every segment

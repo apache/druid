@@ -41,6 +41,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -185,6 +186,7 @@ public class SqlModuleTest
             new LifecycleModule(),
             new ServerModule(),
             new JacksonModule(),
+            new PolicyModule(),
             new AuthenticatorMapperModule(),
             binder -> {
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
