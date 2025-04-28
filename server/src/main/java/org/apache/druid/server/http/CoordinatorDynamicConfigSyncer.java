@@ -30,6 +30,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -217,5 +218,11 @@ public class CoordinatorDynamicConfigSyncer
         druidNode.getTlsPort(),
         ""
     );
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    exec.shutdownNow();
   }
 }
