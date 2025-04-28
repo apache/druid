@@ -32,7 +32,6 @@ import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.Map;
 
 public class CoordinatorDynamicConfigsResourceTest
 {
@@ -106,6 +105,6 @@ public class CoordinatorDynamicConfigsResourceTest
 
     response = resource.getCloneStatus("hist2");
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("hist2", ServerCloneStatus.unknown("hist4", "hist3")), response.getEntity());
+    Assert.assertEquals(ServerCloneStatus.unknown("hist4", "hist3"), response.getEntity());
   }
 }
