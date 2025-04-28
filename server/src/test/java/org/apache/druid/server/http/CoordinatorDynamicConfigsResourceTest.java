@@ -72,7 +72,7 @@ public class CoordinatorDynamicConfigsResourceTest
 
     Assert.assertEquals(200, response.getStatus());
 
-    CoordinatorDynamicConfigsResource.ConfigSyncStatus expected = new CoordinatorDynamicConfigsResource.ConfigSyncStatus(
+    ConfigSyncStatus expected = new ConfigSyncStatus(
         ImmutableSet.of(
             new BrokerSyncStatus("host1", 8080, 1000)
         )
@@ -101,7 +101,7 @@ public class CoordinatorDynamicConfigsResourceTest
     );
     Response response = resource.getCloneStatus(null);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new CoordinatorDynamicConfigsResource.CloneStatus(statusMetrics), response.getEntity());
+    Assert.assertEquals(new CloneStatus(statusMetrics), response.getEntity());
 
     response = resource.getCloneStatus("hist2");
     Assert.assertEquals(200, response.getStatus());

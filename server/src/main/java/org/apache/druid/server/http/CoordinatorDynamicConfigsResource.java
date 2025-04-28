@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
@@ -46,9 +44,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 
 /**
  */
@@ -172,102 +167,6 @@ public class CoordinatorDynamicConfigsResource
     } else {
       final CloneStatus statusForAllServers = new CloneStatus(cloneStatusManager.getStatusForAllServers());
       return Response.ok(statusForAllServers).build();
-    }
-  }
-
-  /**
-   * Immutable class which contains the current set of Brokers which have been synced with the latest
-   * {@link CoordinatorDynamicConfig}.
-   */
-  public static class ConfigSyncStatus
-  {
-    private final Set<BrokerSyncStatus> syncedBrokers;
-
-    @JsonCreator
-    public ConfigSyncStatus(@JsonProperty("syncedBrokers") Set<BrokerSyncStatus> syncedBrokers)
-    {
-      this.syncedBrokers = syncedBrokers;
-    }
-
-    @JsonProperty
-    public Set<BrokerSyncStatus> getSyncedBrokers()
-    {
-      return syncedBrokers;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      ConfigSyncStatus that = (ConfigSyncStatus) o;
-      return Objects.equals(syncedBrokers, that.syncedBrokers);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hashCode(syncedBrokers);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "ConfigSyncStatus{" +
-             "syncedBrokers=" + syncedBrokers +
-             '}';
-    }
-  }
-
-  /**
-   * Immutable class which the current set of Brokers which have been synced with the latest
-   * {@link CoordinatorDynamicConfig}.
-   */
-  public static class CloneStatus
-  {
-    private final List<ServerCloneStatus> cloneStatus;
-
-    @JsonCreator
-    public CloneStatus(@JsonProperty("cloneStatus") List<ServerCloneStatus> cloneStatus)
-    {
-      this.cloneStatus = cloneStatus;
-    }
-
-    @JsonProperty
-    public List<ServerCloneStatus> getCloneStatus()
-    {
-      return cloneStatus;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      CloneStatus that = (CloneStatus) o;
-      return Objects.equals(cloneStatus, that.cloneStatus);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hashCode(cloneStatus);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "CloneStatus{" +
-             "cloneStatus=" + cloneStatus +
-             '}';
     }
   }
 }
