@@ -44,6 +44,7 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -421,6 +422,32 @@ public class CoordinatorClientImplTest
     Assert.assertEquals(
         new CompactionStatusResponse(compactionSnapshots),
         coordinatorClient.getCompactionSnapshots("ds1").get()
+    );
+  }
+
+  @Test
+  public void test_getCoordinatorDynamicConfig() throws Exception
+  {
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig
+        .builder()
+        .withMaxSegmentsToMove(105)
+        .withReplicantLifetime(500)
+        .withReplicationThrottleLimit(5)
+        .build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/config"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(config)
+    );
+
+    Assert.assertEquals(
+        config,
+        coordinatorClient.getCoordinatorDynamicConfig().get()
     );
   }
 }
