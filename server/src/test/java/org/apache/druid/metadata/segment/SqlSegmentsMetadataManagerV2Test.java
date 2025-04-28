@@ -21,8 +21,7 @@ package org.apache.druid.metadata.segment;
 
 import com.google.common.base.Suppliers;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -172,7 +171,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
-            DruidException.class,
+            IllegalArgumentException.class,
             () -> new SqlSegmentsMetadataManagerV2(
                 new NoopSegmentMetadataCache() {
                   @Override
@@ -190,8 +189,10 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
                 jsonMapper
             )
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Segment metadata incremental cache and segment schema cache cannot be used together."
+        ExceptionMatcher.of(IllegalArgumentException.class).expectMessageIs(
+            "Segment metadata incremental cache['druid.manager.segments.useIncrementalCache']"
+            + " and segment schema cache['druid.centralizedDatasourceSchema.enabled']"
+            + " must not be enabled together."
         )
     );
   }

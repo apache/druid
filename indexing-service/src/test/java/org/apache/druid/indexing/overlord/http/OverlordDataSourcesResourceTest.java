@@ -90,11 +90,11 @@ public class OverlordDataSourcesResourceTest
   {
     Response response = dataSourcesResource.markSegmentAsUnused(
         TestDataSource.WIKI,
-        "someSegment"
+        "some<script>Segment"
     );
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(
-        "Could not parse Segment ID[someSegment] for DataSource[wiki]",
+        "Could not parse Segment ID[some&lt;script&gt;Segment] for DataSource[wiki]",
         response.getEntity()
     );
   }
@@ -187,6 +187,20 @@ public class OverlordDataSourcesResourceTest
     dataSourcesResource.markSegmentAsUnused(TestDataSource.WIKI, segmentId);
     response = dataSourcesResource.markSegmentAsUsed(TestDataSource.WIKI, segmentId);
     verifyNumSegmentsUpdated(1, response);
+  }
+
+  @Test
+  public void testMarkSegmentAsUsed_withInvalidSegmentId()
+  {
+    Response response = dataSourcesResource.markSegmentAsUsed(
+        TestDataSource.WIKI,
+        "some<script>Segment"
+    );
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        "Could not parse Segment ID[some&lt;script&gt;Segment] for DataSource[wiki]",
+        response.getEntity()
+    );
   }
 
   @Test

@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.utils.IdUtils;
@@ -217,7 +218,8 @@ public class OverlordDataSourcesResource
       return Response.status(Response.Status.BAD_REQUEST).entity(
           StringUtils.format(
               "Could not parse Segment ID[%s] for DataSource[%s]",
-              serializedSegmentId, dataSourceName
+              StringEscapeUtils.escapeHtml4(serializedSegmentId),
+              StringEscapeUtils.escapeHtml4(dataSourceName)
           )
       ).build();
     }
@@ -232,13 +234,17 @@ public class OverlordDataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markSegmentAsUnused(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentIdString
+      @PathParam("segmentId") String serializedSegmentId
   )
   {
-    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
+    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, serializedSegmentId);
     if (segmentId == null) {
       return Response.status(Response.Status.BAD_REQUEST).entity(
-          StringUtils.format("Could not parse Segment ID[%s] for DataSource[%s]", segmentIdString, dataSourceName)
+          StringUtils.format(
+              "Could not parse Segment ID[%s] for DataSource[%s]",
+              StringEscapeUtils.escapeHtml4(serializedSegmentId),
+              StringEscapeUtils.escapeHtml4(dataSourceName)
+          )
       ).build();
     }
 

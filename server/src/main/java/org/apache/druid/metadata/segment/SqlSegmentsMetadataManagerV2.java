@@ -22,7 +22,6 @@ package org.apache.druid.metadata.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -88,8 +87,10 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
 
     // Segment metadata cache currently cannot handle schema updates
     if (segmentMetadataCache.isEnabled() && schemaConfig.isEnabled()) {
-      throw InvalidInput.exception(
-          "Segment metadata incremental cache and segment schema cache cannot be used together."
+      throw new IllegalArgumentException(
+          "Segment metadata incremental cache['druid.manager.segments.useIncrementalCache']"
+          + " and segment schema cache['druid.centralizedDatasourceSchema.enabled']"
+          + " must not be enabled together."
       );
     }
   }
