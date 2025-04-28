@@ -172,7 +172,7 @@ SQL queries now support GROUP BY and ORDER BY for null types.
 
 #### Controller task management
 
-You can now control how many task slots are available for MSQ taskengine controller tasks by using the following configs:
+You can now control how many task slots are available for MSQ task engine controller tasks by using the following configs:
 
 | Property   | Description    | Default value |
 |-------|--------------|--------|
@@ -289,7 +289,7 @@ The Kafka supervisor now includes additional lag metrics for how many minutes of
 
 #### Kubernetes 
 
-- You can now ingest payloads larger than 128KiB when using HDFS as deep storage for Middle Manager-less ingestion [#17742](https://github.com/apache/druid/pull/17742)
+- You can now ingest payloads larger than 128 KiB when using HDFS as deep storage for Middle Manager-less ingestion [#17742](https://github.com/apache/druid/pull/17742)
 - You can now run task pods in a namespace different from the rest of the cluster [#17738](https://github.com/apache/druid/pull/17738)
 - You can now name your K8s job names using `druid.indexer.runner.k8sTaskPodNamePrefix` [#17749](https://github.com/apache/druid/pull/17749)
 - The logging level is now set to info. Previously, it was set to debug [#17752](https://github.com/apache/druid/pull/17752)
@@ -320,7 +320,7 @@ The previous behavior (no limit on interval per kill task) can be restored by se
 
 By default, the Docker image now uses the canonical hostname to register services in ZooKeeper for internal communication if you're running Druid in Kubernetes. Otherwise, it uses the IP address. [#17697](https://github.com/apache/druid/pull/17697). 
 
-You can set the environment variable `DRUID_SET_HOST_IP` to `1` to restore old behaviour.
+You can set the environment variable `DRUID_SET_HOST_IP` to `1` to restore old behavior.
 
 #### Updated configs
 
