@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -77,6 +78,12 @@ public abstract class WrappedSegmentReference implements SegmentReference
     } else {
       return SegmentReference.super.as(clazz);
     }
+  }
+
+  @Override
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  {
+    delegate.validateOrElseThrow(policyEnforcer);
   }
 
   @Override

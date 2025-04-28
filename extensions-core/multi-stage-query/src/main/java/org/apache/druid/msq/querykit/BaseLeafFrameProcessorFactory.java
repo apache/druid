@@ -162,8 +162,8 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     final ProcessorManager processorManager;
 
     if (segmentMapFnProcessor == null) {
-      final Function<SegmentReference, SegmentReference> segmentMapFn =
-          query.getDataSource().createSegmentMapFunction(query);
+      final Function<SegmentReference, SegmentReference> segmentMapFn = ExecutionVertex.of(query)
+                                                                                       .createSegmentMapFunction(frameContext.policyEnforcer());
       processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
       processorManager = new ChainedProcessorManager<>(ProcessorManagers.of(() -> segmentMapFnProcessor), processorManagerFn);
@@ -342,7 +342,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     if (broadcastInputs.isEmpty()) {
       if (ExecutionVertex.of(query).isSegmentMapFunctionExpensive()) {
         // Joins may require significant computation to compute the segmentMapFn. Offload it to a processor.
-        return new SimpleSegmentMapFnProcessor(query);
+        return new SimpleSegmentMapFnProcessor(query, frameContext.policyEnforcer());
       } else {
         // Non-joins are expected to have cheap-to-compute segmentMapFn. Do the computation in the factory thread,
         // without offloading to a processor.
@@ -351,6 +351,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     } else {
       return BroadcastJoinSegmentMapFnProcessor.create(
           query,
+          frameContext.policyEnforcer(),
           broadcastInputs,
           frameContext.memoryParameters().getBroadcastBufferMemory()
       );

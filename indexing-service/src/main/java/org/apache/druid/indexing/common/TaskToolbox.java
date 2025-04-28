@@ -46,6 +46,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -116,6 +117,7 @@ public class TaskToolbox
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final PolicyEnforcer policyEnforcer;
   private final IndexMergerV9 indexMergerV9;
   private final TaskReportFileWriter taskReportFileWriter;
 
@@ -165,6 +167,7 @@ public class TaskToolbox
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       IndexMergerV9 indexMergerV9,
       DruidNodeAnnouncer druidNodeAnnouncer,
       DruidNode druidNode,
@@ -209,6 +212,7 @@ public class TaskToolbox
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
+    this.policyEnforcer = policyEnforcer;
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
@@ -253,6 +257,11 @@ public class TaskToolbox
   public ServiceEmitter getEmitter()
   {
     return emitter;
+  }
+
+  public PolicyEnforcer getPolicyEnforcer()
+  {
+    return policyEnforcer;
   }
 
   public DataSegmentPusher getSegmentPusher()
@@ -560,6 +569,7 @@ public class TaskToolbox
     private Cache cache;
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;
+    private PolicyEnforcer policyEnforcer;
     private IndexMergerV9 indexMergerV9;
     private DruidNodeAnnouncer druidNodeAnnouncer;
     private DruidNode druidNode;
@@ -609,6 +619,7 @@ public class TaskToolbox
       this.cache = other.cache;
       this.cacheConfig = other.cacheConfig;
       this.cachePopulatorStats = other.cachePopulatorStats;
+      this.policyEnforcer = other.policyEnforcer;
       this.indexMergerV9 = other.indexMergerV9;
       this.druidNodeAnnouncer = other.druidNodeAnnouncer;
       this.druidNode = other.druidNode;
@@ -654,6 +665,12 @@ public class TaskToolbox
     public Builder emitter(final ServiceEmitter emitter)
     {
       this.emitter = emitter;
+      return this;
+    }
+
+    public Builder policyEnforcer(final PolicyEnforcer policyEnforcer)
+    {
+      this.policyEnforcer = policyEnforcer;
       return this;
     }
 
@@ -906,6 +923,7 @@ public class TaskToolbox
           cache,
           cacheConfig,
           cachePopulatorStats,
+          policyEnforcer,
           indexMergerV9,
           druidNodeAnnouncer,
           druidNode,
