@@ -121,6 +121,12 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   }
 
   @Override
+  public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
+  {
+    // No validation logic for compaction spec as of now
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

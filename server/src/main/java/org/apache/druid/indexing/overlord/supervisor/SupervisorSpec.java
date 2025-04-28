@@ -100,4 +100,16 @@ public interface SupervisorSpec
    * @return source like stream or topic name
    */
   String getSource();
+
+  /**
+   * Checks if a proposed evolution of the supervisor spec is allowed.
+   * <p>
+   * SupervisorSpec `that` is proposed to replace the current supervisor spec. Implementations of this method determine
+   * if the system should allow this evolution.
+   * </p>
+   *
+   * @param that the proposed supervisor spec
+   * @throws IllegalArgumentException if the evolution is not allowed
+   */
+  void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException;
 }

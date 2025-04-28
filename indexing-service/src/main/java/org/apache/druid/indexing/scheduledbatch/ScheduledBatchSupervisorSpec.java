@@ -189,6 +189,12 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
     return "";
   }
 
+  @Override
+  public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
+  {
+    // No validation logic for scheduled batch spec as of now.
+  }
+
   public CronSchedulerConfig getSchedulerConfig()
   {
     return schedulerConfig;

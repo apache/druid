@@ -77,6 +77,12 @@ public class TestSupervisorSpec implements SupervisorSpec
     return null;
   }
 
+  @Override
+  public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
+  {
+    // No validation logic for test spec
+  }
+
   @JsonProperty
   public Object getData()
   {

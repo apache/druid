@@ -174,6 +174,12 @@ public class SupervisorManager
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
+      if (shouldUpdateSpec) {
+        SupervisorSpec existingSpec = getSpec(spec.getId());
+        if (existingSpec != null) {
+          existingSpec.validateProposedSpecEvolution(spec);
+        }
+      }
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       createAndStartSupervisorInternal(spec, shouldUpdateSpec);
       return shouldUpdateSpec;
@@ -527,6 +533,15 @@ public class SupervisorManager
                               supervisorId,
                               supervisor.rhs.getType()
                           );
+    }
+  }
+
+  @Nullable
+  private SupervisorSpec getSpec(String id)
+  {
+    synchronized (lock) {
+      Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+      return supervisor == null ? null : supervisor.rhs;
     }
   }
 }

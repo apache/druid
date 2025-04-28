@@ -134,6 +134,12 @@ If you enable multi-topic ingestion for a datasource, downgrading to a version o
 28.0.0 will cause the ingestion for that datasource to fail.
 :::
 
+:::info
+Migrating an existing supervisor to use `topicPattern` instead of `topic` is not supported. It is also not supported to change the `topicPattern` of an existing supervisor to a different regex pattern.
+You can force the migration by terminating the existing supervisor and creating a new one with the new `topicPattern`. You will have to forcefully reset the offsets of the re-submitted supervisor to the earliest or latest offsets, depending on your spec.
+Note that resetting the offsets can lead to data duplication or data loss depending on the offset reset policy.
+:::
+
 You can ingest data from one or multiple topics.
 When ingesting data from multiple topics, Druid assigns partitions based on the hashcode of the topic name and the ID of the partition within that topic. The partition assignment might not be uniform across all the tasks. Druid assumes that partitions across individual topics have similar load. If you want to ingest from both high and low load topics in the same supervisor, it is recommended that you have a higher number of partitions for a high load topic and a lower number of partitions for a low load topic.
 

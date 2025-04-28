@@ -341,6 +341,12 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   }
 
   @Override
+  public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
+  {
+    // No validation logic for materialized view supervisor spec as of now
+  }
+
+  @Override
   public String getId()
   {
     return StringUtils.format("MaterializedViewSupervisor-%s", dataSourceName);

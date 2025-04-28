@@ -58,6 +58,12 @@ public class SupervisorSpecTest
     {
       return null;
     }
+
+    @Override
+    public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
+    {
+      // No validation logic for test spec
+    }
   };
 
   @Test
