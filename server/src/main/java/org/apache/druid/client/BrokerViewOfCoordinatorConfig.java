@@ -19,16 +19,26 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.client.selector.HistoricalFilter;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.CloneQueryMode;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
@@ -55,6 +65,24 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
   private Set<String> sourceCloneServers;
 
   @Inject
+  public BrokerViewOfCoordinatorConfig(
+      @Json final ObjectMapper jsonMapper,
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @Coordinator final ServiceLocator serviceLocator
+  )
+  {
+    this.coordinatorClient =
+        new CoordinatorClientImpl(
+            clientFactory.makeClient(
+                NodeRole.COORDINATOR.getJsonName(),
+                serviceLocator,
+                StandardRetryPolicy.builder().maxAttempts(15).build()
+            ),
+            jsonMapper
+        );
+  }
+
+  @VisibleForTesting
   public BrokerViewOfCoordinatorConfig(CoordinatorClient coordinatorClient)
   {
     this.coordinatorClient = coordinatorClient;
