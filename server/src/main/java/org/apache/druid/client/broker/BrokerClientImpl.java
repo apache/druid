@@ -33,7 +33,9 @@ import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -94,6 +96,22 @@ public class BrokerClientImpl implements BrokerClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig config)
+  {
+    final RequestBuilder requestBuilder =
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
+            .jsonContent(jsonMapper, config);
+
+    return FutureUtils.transform(
+        client.asyncRequest(requestBuilder, new BytesFullResponseHandler()),
+        holder -> {
+          final HttpResponseStatus status = holder.getStatus();
+          return status.equals(HttpResponseStatus.OK);
+        }
     );
   }
 }
