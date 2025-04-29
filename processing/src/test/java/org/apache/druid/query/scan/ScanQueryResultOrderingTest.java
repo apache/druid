@@ -35,16 +35,17 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,13 +64,12 @@ import java.util.stream.IntStream;
 
 /**
  * Tests the order in which Scan query results come back.
- *
+ * <p>
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
 @RunWith(Parameterized.class)
 public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 {
-  private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";
 
   private static final RowAdapter<Object[]> ROW_ADAPTER = columnName -> {
@@ -87,6 +87,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                                                                 .add(ID_COLUMN, ColumnType.LONG)
                                                                 .build();
 
+  private static final SegmentDescriptor DEFAULT_DESCRIPTOR = new SegmentDescriptor(Intervals.ETERNITY, "", 0);
   private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
       new RowBasedSegment<>(
           Sequences.simple(
@@ -301,16 +302,15 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 
   private void assertResultsEquals(final ScanQuery query, final List<Integer> expectedResults)
   {
-    final List<List<Pair<SegmentId, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
+    final List<List<Pair<Segment, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
     for (int i = 0; i <= segmentToServerMap.stream().max(Comparator.naturalOrder()).orElse(0); i++) {
       serverRunners.add(new ArrayList<>());
     }
 
     for (int segmentNumber = 0; segmentNumber < segmentToServerMap.size(); segmentNumber++) {
-      final SegmentId segmentId = SEGMENTS.get(segmentNumber).getId();
       final int serverNumber = segmentToServerMap.get(segmentNumber);
 
-      serverRunners.get(serverNumber).add(Pair.of(segmentId, segmentRunners.get(segmentNumber)));
+      serverRunners.get(serverNumber).add(Pair.of(SEGMENTS.get(segmentNumber), segmentRunners.get(segmentNumber)));
     }
 
     // Simulates what the Historical servers would do.
@@ -337,7 +337,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                                                       .withQuerySegmentSpec(
                                                           new MultipleSpecificSegmentSpec(
                                                               runners.stream()
-                                                                     .map(p -> p.lhs.toDescriptor())
+                                                                     .map(p -> DEFAULT_DESCRIPTOR)
                                                                      .collect(Collectors.toList())
                                                           )
                                                       )
