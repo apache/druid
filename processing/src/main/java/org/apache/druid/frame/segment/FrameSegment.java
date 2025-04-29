@@ -43,9 +43,11 @@ public class FrameSegment implements Segment
   private final FrameReader frameReader;
   private final SegmentId segmentId;
 
-  public FrameSegment(Frame frame, FrameReader frameReader, String unused)
+  public FrameSegment(Frame frame, FrameReader frameReader, String version)
   {
-    this(frame, frameReader, SegmentId.simple(SegmentId.DataSourceType.FRAME));
+    this.frame = frame;
+    this.frameReader = frameReader;
+    this.segmentId = SegmentId.simple(SegmentId.DataSourceType.FRAME).withVersion(version);
   }
 
   /**

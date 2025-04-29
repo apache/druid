@@ -133,7 +133,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
     final Iterable<Result<TopNResultValue>> results =
         engine.query(
             query,
-            new IncrementalIndexSegment(index, SegmentId.dummy(QueryRunnerTestHelper.DATA_SOURCE)),
+            new IncrementalIndexSegment(index, SegmentId.simpleTable(QueryRunnerTestHelper.DATA_SOURCE)),
             null
         ).toList();
 

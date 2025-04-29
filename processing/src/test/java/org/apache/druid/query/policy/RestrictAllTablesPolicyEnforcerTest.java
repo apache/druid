@@ -121,6 +121,17 @@ public class RestrictAllTablesPolicyEnforcerTest
   }
 
   @Test
+  public void test_validate_closedSegment() throws Exception
+  {
+    final RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
+    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    segment.close();
+
+    policyEnforcer.validateOrElseThrow(segment, null);
+  }
+
+  @Test
   public void test_validate_withAllowedPolicies() throws Exception
   {
     RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(

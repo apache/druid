@@ -32,6 +32,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
@@ -41,7 +42,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.stream.IntStream;
@@ -240,17 +240,18 @@ public final class SegmentId implements Comparable<SegmentId>
   }
 
   /**
-   * Creates a dummy SegmentId with the given data source. This method is useful in benchmark and test code.
+   * @deprecated use {@link #simple(DataSourceType)}} or {@link #simpleTable(String)}} instead.
    */
+  @Deprecated
   public static SegmentId dummy(String dataSource)
   {
     return of(dataSource, Intervals.ETERNITY, "dummy_version", 0);
   }
 
   /**
-   * Creates a dummy SegmentId with the given data source and partition number.
-   * This method is useful in benchmark and test code.
+   * @deprecated use {@link #simple(DataSourceType)}} or {@link #simpleTable(String)}} instead.
    */
+  @Deprecated
   public static SegmentId dummy(String dataSource, int partitionNum)
   {
     return of(dataSource, Intervals.ETERNITY, "dummy_version", partitionNum);
@@ -263,7 +264,15 @@ public final class SegmentId implements Comparable<SegmentId>
    */
   public static SegmentId simple(DataSourceType dataSourceType)
   {
-    return new SegmentId(dataSourceType, "", Intervals.ETERNITY, dataSourceType.name().toLowerCase(Locale.ENGLISH), 0);
+    return new SegmentId(dataSourceType, "", Intervals.ETERNITY, StringUtils.toLowerCase(dataSourceType.name()), 0);
+  }
+
+  /**
+   * Creates a {@link SegmentId} with the given data source.
+   */
+  public static SegmentId simpleTable(String dataSource)
+  {
+    return new SegmentId(DataSourceType.TABLE, dataSource, Intervals.ETERNITY, "", 0);
   }
 
   public enum DataSourceType
@@ -386,7 +395,7 @@ public final class SegmentId implements Comparable<SegmentId>
    */
   public SegmentId withInterval(Interval newInterval)
   {
-    return of(dataSource, newInterval, version, partitionNum);
+    return new SegmentId(dataSourceType, dataSource, newInterval, version, partitionNum);
   }
 
   /**
@@ -394,7 +403,7 @@ public final class SegmentId implements Comparable<SegmentId>
    */
   public SegmentId withVersion(String newVersion)
   {
-    return of(dataSource, interval, newVersion, partitionNum);
+    return new SegmentId(dataSourceType, dataSource, interval, newVersion, partitionNum);
   }
 
   /**

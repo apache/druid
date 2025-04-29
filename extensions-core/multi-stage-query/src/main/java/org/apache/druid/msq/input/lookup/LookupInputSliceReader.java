@@ -36,6 +36,7 @@ import org.apache.druid.query.lookup.LookupSegment;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.util.Iterator;
@@ -71,6 +72,7 @@ public class LookupInputSliceReader implements InputSliceReader
   )
   {
     final String lookupName = ((LookupInputSlice) slice).getLookupName();
+    final SegmentId lookupSegmentId = LookupSegment.buildSegmentId(lookupName);
 
     return ReadableInputs.segments(
         () -> Iterators.singletonIterator(
@@ -101,7 +103,7 @@ public class LookupInputSliceReader implements InputSliceReader
 
                       return ResourceHolder.fromCloseable(new CompleteSegment(null, segment));
                     },
-                    new RichSegmentDescriptor(LookupSegment.SEGMENT_ID.toDescriptor(), null)
+                    new RichSegmentDescriptor(lookupSegmentId.toDescriptor(), null)
                 )
             )
         )

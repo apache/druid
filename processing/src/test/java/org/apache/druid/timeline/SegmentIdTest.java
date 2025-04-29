@@ -77,6 +77,9 @@ public class SegmentIdTest
 
     DruidException e = Assert.assertThrows(DruidException.class, () -> SegmentId.of("", Intervals.ETERNITY, "ver", 0));
     Assert.assertEquals("Datasource is not specified", e.getMessage());
+
+    DruidException e2 = Assert.assertThrows(DruidException.class, () -> SegmentId.simpleTable(""));
+    Assert.assertEquals("Datasource is not specified", e2.getMessage());
   }
 
   @Test

@@ -27,6 +27,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.timeline.SegmentId;
 
 
 /**
@@ -78,11 +79,12 @@ public interface PolicyEnforcer
    */
   default void validateOrElseThrow(ReferenceCountingSegment segment, Policy policy) throws DruidException
   {
+    SegmentId segmentId = segment.getId();
     // This can happen if the segment is already closed
-    if (segment.getId() == null) {
+    if (segmentId == null) {
       return;
     }
-    switch (segment.getId().getDataSourceType()) {
+    switch (segmentId.getDataSourceType()) {
       case TABLE:
         // Table segment needs to be validated
         break;
@@ -101,7 +103,7 @@ public interface PolicyEnforcer
     }
     throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                         .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build("Failed security validation with segment [%s]", segment.getId());
+                        .build("Failed security validation with segment [%s]", segmentId);
   }
 
   /**

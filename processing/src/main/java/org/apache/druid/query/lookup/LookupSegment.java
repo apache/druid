@@ -38,17 +38,24 @@ import java.util.function.ToLongFunction;
  */
 public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
 {
-  public static final SegmentId SEGMENT_ID = SegmentId.simple(SegmentId.DataSourceType.LOOKUP);
   private static final RowSignature ROW_SIGNATURE =
       RowSignature.builder()
                   .add(LookupColumnSelectorFactory.KEY_COLUMN, ColumnType.STRING)
                   .add(LookupColumnSelectorFactory.VALUE_COLUMN, ColumnType.STRING)
                   .build();
 
-  public LookupSegment(final String unused, final LookupExtractorFactory lookupExtractorFactory)
+  /**
+   * Builds a {@link SegmentId} for a lookup segment.
+   */
+  public static SegmentId buildSegmentId(String version)
+  {
+    return SegmentId.simple(SegmentId.DataSourceType.LOOKUP).withVersion(version);
+  }
+
+  public LookupSegment(final String lookupName, final LookupExtractorFactory lookupExtractorFactory)
   {
     super(
-        SEGMENT_ID,
+        buildSegmentId(lookupName),
         Sequences.simple(() -> {
           final LookupExtractor extractor = lookupExtractorFactory.get();
 
