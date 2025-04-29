@@ -260,4 +260,12 @@ public class SegmentIdTest
     Assert.assertEquals(2, possibleParsings.size());
     Assert.assertEquals(expected, ImmutableSet.copyOf(possibleParsings));
   }
+
+  @Test
+  public void testIterateAllPossibleParsings_emptyDataSource()
+  {
+    String segmentId = "_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_ver";
+    Iterable<SegmentId> possibleParsings = SegmentId.iterateAllPossibleParsings(segmentId);
+    Assert.assertTrue(Iterables.isEmpty(possibleParsings));
+  }
 }

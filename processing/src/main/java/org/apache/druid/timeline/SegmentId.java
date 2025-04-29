@@ -134,7 +134,7 @@ public final class SegmentId implements Comparable<SegmentId>
 
   /**
    * Returns a (potentially empty) lazy iteration of all possible valid parsings of the given segment id string into
-   * {@code SegmentId} objects.
+   * {@code SegmentId} objects. Only {@link DataSourceType#TABLE} segment id string is supported.
    * <p>
    * Warning: most of the parsing work is repeated each time {@link Iterable#iterator()} of this iterable is consumed,
    * so it should be consumed only once if possible.
@@ -473,6 +473,7 @@ public final class SegmentId implements Comparable<SegmentId>
   {
     StringBuilder sb = new StringBuilder(safeUpperLimitOfStringSize());
 
+    // We're ignoring dataSourceType here.
     sb.append(dataSource).append(DELIMITER)
       .append(getIntervalStart()).append(DELIMITER)
       .append(getIntervalEnd()).append(DELIMITER)
