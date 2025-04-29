@@ -657,7 +657,7 @@ public class AggregationTestHelper implements Closeable
     }
     indexMerger.persist(index, outDir, IndexSpec.DEFAULT, null);
 
-    return new QueryableIndexSegment(indexIO.loadIndex(outDir), SegmentId.dummy("some-data-source"));
+    return new QueryableIndexSegment(indexIO.loadIndex(outDir), SegmentId.simpleTable("some-data-source"));
   }
 
   //Simulates running group-by query on individual segments as historicals would do, json serialize the results
@@ -677,7 +677,7 @@ public class AggregationTestHelper implements Closeable
           public Segment apply(File segmentDir)
           {
             try {
-              return new QueryableIndexSegment(indexIO.loadIndex(segmentDir), SegmentId.dummy("some-data-source"));
+              return new QueryableIndexSegment(indexIO.loadIndex(segmentDir), SegmentId.simpleTable("some-data-source"));
             }
             catch (IOException ex) {
               throw new RuntimeException(ex);

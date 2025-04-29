@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -61,19 +62,23 @@ public class SegmentIdTest
   {
     SegmentId desc = SegmentId.simple(SegmentId.DataSourceType.LOOKUP);
     Assert.assertEquals("_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_lookup", desc.toString());
-    Assert.assertEquals(null, SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertNull(SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertTrue(Iterables.isEmpty(SegmentId.iterateAllPossibleParsings(desc.toString())));
 
     desc = SegmentId.simple(SegmentId.DataSourceType.INLINE);
     Assert.assertEquals("_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_inline", desc.toString());
-    Assert.assertEquals(null, SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertNull(SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertTrue(Iterables.isEmpty(SegmentId.iterateAllPossibleParsings(desc.toString())));
 
     desc = SegmentId.simple(SegmentId.DataSourceType.EXTERNAL);
     Assert.assertEquals("_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_external", desc.toString());
-    Assert.assertEquals(null, SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertNull(SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertTrue(Iterables.isEmpty(SegmentId.iterateAllPossibleParsings(desc.toString())));
 
     desc = SegmentId.simple(SegmentId.DataSourceType.FRAME);
     Assert.assertEquals("_-146136543-09-08T08:23:32.096Z_146140482-04-24T15:36:27.903Z_frame", desc.toString());
-    Assert.assertEquals(null, SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertNull(SegmentId.tryExtractMostProbableDataSource(desc.toString()));
+    Assert.assertTrue(Iterables.isEmpty(SegmentId.iterateAllPossibleParsings(desc.toString())));
 
     DruidException e = Assert.assertThrows(DruidException.class, () -> SegmentId.of("", Intervals.ETERNITY, "ver", 0));
     Assert.assertEquals("Datasource is not specified", e.getMessage());

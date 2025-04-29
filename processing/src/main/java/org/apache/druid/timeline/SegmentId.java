@@ -304,12 +304,16 @@ public final class SegmentId implements Comparable<SegmentId>
       int partitionNum
   )
   {
-    this.dataSourceType = dataSourceType;
+    this.dataSourceType = Objects.requireNonNull(dataSourceType);
+    this.dataSource = STRING_INTERNER.intern(Objects.requireNonNull(dataSource));
     switch (dataSourceType) {
       case TABLE:
         if (Strings.isNullOrEmpty(dataSource)) {
           throw DruidException.defensive("Datasource is not specified");
         }
+        // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
+        // could be conditionally allowed via a system property.
+        this.version = Objects.requireNonNull(version);
         break;
       case LOOKUP:
       case INLINE:
@@ -318,20 +322,14 @@ public final class SegmentId implements Comparable<SegmentId>
         if (!Strings.isNullOrEmpty(dataSource)) {
           throw DruidException.defensive("Datasource is used for druid table only");
         }
+        // For non-table segments, version is a String that is not timestamp-based. Interning it makes sense.
+        this.version = STRING_INTERNER.intern(Objects.requireNonNull(version));
         break;
       default:
         throw DruidException.defensive("unreachable");
     }
-    this.dataSource = STRING_INTERNER.intern(Objects.requireNonNull(dataSource));
+
     this.interval = INTERVAL_INTERNER.intern(Objects.requireNonNull(interval));
-    if (DataSourceType.TABLE.equals(dataSourceType)) {
-      // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
-      // could be conditionally allowed via a system property.
-      this.version = Objects.requireNonNull(version);
-    } else {
-      // For non-table segments, version is a String that is not timestamp-based. Interning it makes sense.
-      this.version = STRING_INTERNER.intern(Objects.requireNonNull(version));
-    }
     this.partitionNum = partitionNum;
     this.hashCode = computeHashCode();
   }
