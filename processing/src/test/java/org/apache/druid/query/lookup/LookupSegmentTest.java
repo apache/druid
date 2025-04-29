@@ -106,7 +106,7 @@ public class LookupSegmentTest
   @Test
   public void test_getId()
   {
-    Assert.assertEquals(SegmentId.dummy(LOOKUP_NAME), LOOKUP_SEGMENT.getId());
+    Assert.assertEquals(SegmentId.simple(SegmentId.DataSourceType.LOOKUP), LOOKUP_SEGMENT.getId());
   }
 
   @Test

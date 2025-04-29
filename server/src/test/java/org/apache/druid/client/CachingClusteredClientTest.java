@@ -2768,7 +2768,7 @@ public class CachingClusteredClientTest
       private MyDataSegment()
       {
         super(
-            "",
+            "myDataSource",
             Intervals.utc(0, 1),
             "",
             null,

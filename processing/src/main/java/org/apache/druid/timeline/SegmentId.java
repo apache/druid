@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.stream.IntStream;
@@ -262,7 +263,7 @@ public final class SegmentId implements Comparable<SegmentId>
    */
   public static SegmentId simple(DataSourceType dataSourceType)
   {
-    return new SegmentId(dataSourceType, "", Intervals.ETERNITY, dataSourceType.name().toLowerCase(), 0);
+    return new SegmentId(dataSourceType, "", Intervals.ETERNITY, dataSourceType.name().toLowerCase(Locale.ENGLISH), 0);
   }
 
   public enum DataSourceType
@@ -333,7 +334,7 @@ public final class SegmentId implements Comparable<SegmentId>
     int hashCode = partitionNum;
     // 1000003 is a constant used in Google AutoValue, provides a little better distribution than 31
     hashCode = hashCode * 1000003 + version.hashCode();
-    hashCode = hashCode * 1000003 + dataSourceType.hashCode();
+    hashCode = hashCode * 1000003 + dataSourceType.ordinal();
     hashCode = hashCode * 1000003 + dataSource.hashCode();
     hashCode = hashCode * 1000003 + interval.hashCode();
     return hashCode;

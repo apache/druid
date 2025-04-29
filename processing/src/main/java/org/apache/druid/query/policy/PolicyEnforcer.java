@@ -28,7 +28,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 
-import java.util.Objects;
 
 /**
  * Interface for enforcing policies on data sources and segments in Druid queries.
@@ -79,7 +78,11 @@ public interface PolicyEnforcer
    */
   default void validateOrElseThrow(ReferenceCountingSegment segment, Policy policy) throws DruidException
   {
-    switch (Objects.requireNonNull(segment.getId()).getDataSourceType()) {
+    // This can happen if the segment is already closed
+    if (segment.getId() == null) {
+      return;
+    }
+    switch (segment.getId().getDataSourceType()) {
       case TABLE:
         // Table segment needs to be validated
         break;

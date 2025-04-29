@@ -24,6 +24,8 @@ import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.Locale;
+
 
 /**
  * Utility class containing methods that help in generating the {@link org.apache.druid.sql.calcite.parser.ParseException}
@@ -48,7 +50,7 @@ public class ParseExceptionUtils
     SegmentId segmentId = segment.getId();
     return StringUtils.format(
         "%s input source: %s",
-        segmentId.getDataSourceType().toString().toLowerCase(),
+        segmentId.getDataSourceType().toString().toLowerCase(Locale.ENGLISH),
         segmentId
     );
   }

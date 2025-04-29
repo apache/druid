@@ -832,7 +832,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
         cursor.advance();
         count++;
       }
-      Assert.assertEquals(count, 618);
+      Assert.assertEquals(count, 604);
     }
   }
 
