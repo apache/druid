@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common;
 import com.google.common.base.Strings;
 import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -770,5 +771,14 @@ public class StringUtils
   public static String escapeSql(String str)
   {
     return str == null ? null : StringUtils.replace(str, "'", "''");
+  }
+
+  /**
+   * Uses {@link StringEscapeUtils#escapeHtml4} to escape the HTML entities in
+   * the given string. This method can be used to sanitize a string for XSS.
+   */
+  public static String escapeHtml(String value)
+  {
+    return StringEscapeUtils.escapeHtml4(value);
   }
 }
