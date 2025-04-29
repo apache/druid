@@ -594,7 +594,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new DruidHookDispatcher()
     );
 
-    sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
+    sqlStatementFactory = QueryFrameworkUtils.createSqlMultiStatementFactory(engine, plannerFactory);
 
     authorizerMapper = CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER;
 
