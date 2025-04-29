@@ -28,12 +28,14 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
@@ -42,6 +44,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Properties;
+import java.util.Set;
 
 public class MySQLMetadataStorageModuleTest
 {
@@ -146,6 +149,13 @@ public class MySQLMetadataStorageModuleTest
               {
                 // Required for HeapMemorySegmentMetadataCache
                 return null;
+              }
+
+              @Self
+              @Provides
+              public Set<NodeRole> getNodeRoles()
+              {
+                return Set.of(NodeRole.OVERLORD);
               }
             }
         )

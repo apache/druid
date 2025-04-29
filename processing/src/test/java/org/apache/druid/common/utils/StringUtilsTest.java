@@ -87,4 +87,10 @@ public class StringUtilsTest
     Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("foo")), StringUtils.toUtf8ByteBuffer("foo"));
     Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("🙂")), StringUtils.toUtf8ByteBuffer("🙂"));
   }
+
+  @Test
+  public void testEscapeHtml()
+  {
+    Assert.assertEquals("invalid&lt;script&gt;SegmentId", StringUtils.escapeHtml("invalid<script>SegmentId"));
+  }
 }

@@ -23,6 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -34,6 +37,8 @@ import org.apache.druid.query.DruidMetrics;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionStatus;
 
+import java.util.Set;
+
 /**
  * Factory for {@link SegmentMetadataTransaction}s. If the
  * {@link SegmentMetadataCache} is enabled and ready, the transaction may
@@ -41,6 +46,15 @@ import org.skife.jdbi.v2.TransactionStatus;
  * <p>
  * This class serves as a wrapper over the {@link SQLMetadataConnector} to
  * perform transactions specific to segment metadata.
+ * <p>
+ * Only the Overlord can perform write operations on the metadata store or the
+ * cache via this transaction factory. The Coordinator performs read operations
+ * directly on the metadata store and uses the cache only to build the timeline
+ * in {@link SqlSegmentsMetadataManagerV2}. There is currently only one method
+ * called by the Coordinator that could benefit from reading from the cache,
+ * {@code MetadataResource.getUsedSegmentsInDataSourceForIntervals()}, but for
+ * now, it continues to read directly from the metadata store for consistency
+ * with older Druid versions.
  */
 public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTransactionFactory
 {
@@ -56,12 +70,15 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
   private final SegmentMetadataCache segmentMetadataCache;
   private final ServiceEmitter emitter;
 
+  private final boolean isNotOverlord;
+
   @Inject
   public SqlSegmentMetadataTransactionFactory(
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig tablesConfig,
       SQLMetadataConnector connector,
       @IndexingService DruidLeaderSelector leaderSelector,
+      @Self Set<NodeRole> nodeRoles,
       SegmentMetadataCache segmentMetadataCache,
       ServiceEmitter emitter
   )
@@ -72,6 +89,8 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
     this.leaderSelector = leaderSelector;
     this.segmentMetadataCache = segmentMetadataCache;
     this.emitter = emitter;
+
+    this.isNotOverlord = !nodeRoles.contains(NodeRole.OVERLORD);
   }
 
   public int getMaxRetries()
@@ -90,8 +109,11 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
-          // For read-only transactions, use cache only if it is already synced
-          if (segmentMetadataCache.isSyncedForRead()) {
+          if (isNotOverlord) {
+            // Read directly from the metadata store if not Overlord
+            return executeReadAndClose(sqlTransaction, callback);
+          } else if (segmentMetadataCache.isSyncedForRead()) {
+            // Use cache as it is already synced with the metadata store
             emitTransactionCount(Metric.READ_ONLY_TRANSACTIONS, dataSource);
             return segmentMetadataCache.readCacheForDataSource(dataSource, dataSourceCache -> {
               final SegmentMetadataReadTransaction cachedTransaction
@@ -113,6 +135,10 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
       SegmentMetadataTransaction.Callback<T> callback
   )
   {
+    if (isNotOverlord) {
+      throw DruidException.defensive("Only Overlord can perform write transactions on segment metadata.");
+    }
+
     return connector.retryTransaction(
         (handle, status) -> {
           final SegmentMetadataTransaction sqlTransaction
