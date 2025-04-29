@@ -82,7 +82,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
     private String taskId;
     public MSQControllerTask controllerTask;
-    private ControllerImpl controller ;
+    private ControllerImpl controller;
     private TaskStatus taskStatus;
     public ReportMap report;
 
@@ -93,7 +93,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
     public void addController(ControllerImpl controller)
     {
-      if(this.controller!=null ) {
+      if (this.controller != null) {
         throw DruidException.defensive("Attempt to register a second controller!");
       }
       this.controller = controller;
@@ -102,7 +102,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
     public ControllerImpl getController(String queryId)
     {
-      if(controller.queryId().equals(queryId)) {
+      if (controller.queryId().equals(queryId)) {
         return controller;
       }
       return null;
@@ -194,7 +194,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private MSQTestTaskDetails registerTestTask(String taskId)
   {
     MSQTestTaskDetails details = taskDetailsByTaskId.get(taskId);
-    if (details!= null) {
+    if (details != null) {
       LOG.warn("There is an un-closed taskId which will be overwritten; closing implicitly");
       details.close();
     }
@@ -215,7 +215,6 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   @Override
   public ListenableFuture<Void> cancelTask(String taskId)
   {
-    // FIXME: this seems fishy queryId stored and taskId lookup
     getControllerForQueryId(taskId).stop();
     return Futures.immediateFuture(null);
   }
@@ -223,7 +222,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private ControllerImpl getControllerForQueryId(String queryId)
   {
     MSQTestTaskDetails details = taskDetailsByQueryId.get(queryId);
-    if(details== null) {
+    if (details == null) {
       return null;
     }
     return details.getController(queryId);
