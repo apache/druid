@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -37,6 +38,9 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
@@ -78,6 +82,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
@@ -91,11 +96,12 @@ public class SqlStatementTest
   private static Closer resourceCloser;
   @ClassRule
   public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private TestRequestLogger testRequestLogger;
   private ListeningExecutorService executorService;
-  private SqlStatementFactory sqlStatementFactory;
   private final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(
       ImmutableMap.of("DEFAULT_KEY", "DEFAULT_VALUE"));
+
+  private PolicyEnforcer policyEnforcer;
+  private SqlStatementFactory sqlStatementFactory;
 
   @BeforeClass
   public static void setUpClass() throws Exception
@@ -135,45 +141,8 @@ public class SqlStatementTest
   {
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
-    final PlannerConfig plannerConfig = PlannerConfig.builder().build();
-    final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
-        conglomerate,
-        walker,
-        plannerConfig,
-        CalciteTests.TEST_AUTHORIZER_MAPPER
-    );
-    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
-    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-
-    testRequestLogger = new TestRequestLogger();
-    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
-
-    final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
-        operatorTable,
-        macroTable,
-        plannerConfig,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of()),
-        joinableFactoryWrapper,
-        CatalogResolver.NULL_RESOLVER,
-        new AuthConfig(),
-        new DruidHookDispatcher()
-    );
-
-    this.sqlStatementFactory = new SqlStatementFactory(
-        new SqlToolbox(
-            CalciteTests.createMockSqlEngine(walker, conglomerate),
-            plannerFactory,
-            new NoopServiceEmitter(),
-            testRequestLogger,
-            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            defaultQueryConfig,
-            new SqlLifecycleManager()
-        )
-    );
+    policyEnforcer = NoopPolicyEnforcer.instance();
+    this.sqlStatementFactory = buildSqlStatementFactory();
   }
 
   @After
@@ -273,6 +242,42 @@ public class SqlStatementTest
     catch (ISE e) {
       stmt.closeWithError(e);
     }
+  }
+
+  @Test
+  public void testDirectPolicyEnforcerThrowsForNoPolicy()
+  {
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    sqlStatementFactory = buildSqlStatementFactory();
+    SqlQueryPlus sqlReq = queryPlus(
+        "SELECT COUNT(*) AS cnt FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    ResultSet resultSet = stmt.plan();
+    DruidException e = Assert.assertThrows(DruidException.class, () -> resultSet.run());
+
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assert.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
+  }
+
+  @Test
+  public void testDirectPolicyEnforcerValidatesWithPolicy()
+  {
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    sqlStatementFactory = buildSqlStatementFactory();
+    SqlQueryPlus sqlReq = queryPlus(
+        "SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+
+    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    ResultSet resultSet = stmt.plan();
+    List<Object[]> results = resultSet.run().getResults().toList();
+
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{1L});
+    assertResultsEquals("SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6", expectedResults, results);
   }
 
   @Test
@@ -423,6 +428,38 @@ public class SqlStatementTest
     }
   }
 
+  @Test
+  public void testHttpPolicyEnforcerThrowsForNoPolicy() throws Exception
+  {
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    sqlStatementFactory = buildSqlStatementFactory();
+    HttpStatement stmt = sqlStatementFactory.httpStatement(
+        makeQuery("SELECT COUNT(*) AS cnt FROM druid.foo"),
+        request(true)
+    );
+    ResultSet resultSet = stmt.plan();
+    DruidException e = Assert.assertThrows(DruidException.class, () -> resultSet.run());
+
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assert.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
+  }
+
+  @Test
+  public void testHttpPolicyEnforcerValidatesWithPolicy()
+  {
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    sqlStatementFactory = buildSqlStatementFactory();
+    HttpStatement stmt = sqlStatementFactory.httpStatement(
+        makeQuery("SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6"),
+        request(true)
+    );
+    List<Object[]> results = stmt.plan().run().getResults().toList();
+
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{1L});
+    assertResultsEquals("SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6", expectedResults, results);
+  }
+
   //-----------------------------------------------------------------
   // Prepared statements: using a prepare/execute model.
 
@@ -518,6 +555,39 @@ public class SqlStatementTest
     }
   }
 
+  @Test
+  public void testPreparePolicyEnforcerThrowsForNoPolicy() throws Exception
+  {
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    sqlStatementFactory = buildSqlStatementFactory();
+    SqlQueryPlus sqlReq = queryPlus(
+        "SELECT COUNT(*) AS cnt FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+    PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
+    DruidException e = Assert.assertThrows(DruidException.class, () -> stmt.execute(Collections.emptyList()).execute());
+
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assert.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
+  }
+
+  @Test
+  public void testPreparePolicyEnforcerValidatesWithPolicy()
+  {
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    sqlStatementFactory = buildSqlStatementFactory();
+    SqlQueryPlus sqlReq = queryPlus(
+        "SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+    PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
+    List<Object[]> results = stmt.execute(Collections.emptyList()).execute().getResults().toList();
+
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{1L});
+    assertResultsEquals("SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6", expectedResults, results);
+  }
+
   //-----------------------------------------------------------------
   // Generic tests.
 
@@ -551,5 +621,49 @@ public class SqlStatementTest
     for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
       Assert.assertTrue(context.containsKey(defaultContextKey));
     }
+  }
+
+  private SqlStatementFactory buildSqlStatementFactory()
+  {
+    final PlannerConfig plannerConfig = PlannerConfig.builder().build();
+    final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
+        conglomerate,
+        walker,
+        plannerConfig,
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
+    final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
+    final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+
+    TestRequestLogger testRequestLogger = new TestRequestLogger();
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
+
+    final PlannerFactory plannerFactory = new PlannerFactory(
+        rootSchema,
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper(),
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig(),
+        policyEnforcer,
+        new DruidHookDispatcher()
+    );
+
+    return new SqlStatementFactory(
+        new SqlToolbox(
+            CalciteTests.createMockSqlEngine(walker, conglomerate),
+            plannerFactory,
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+            defaultQueryConfig,
+            new SqlLifecycleManager()
+        )
+    );
   }
 }

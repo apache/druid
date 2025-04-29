@@ -370,6 +370,7 @@ public class CoordinatorDynamicConfig
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", turboLoadingNodes=" + turboLoadingNodes +
+           ", cloneServers=" + cloneServers +
            '}';
   }
 
@@ -393,6 +394,7 @@ public class CoordinatorDynamicConfig
            && replicateAfterLoadTimeout == that.replicateAfterLoadTimeout
            && maxSegmentsInNodeLoadingQueue == that.maxSegmentsInNodeLoadingQueue
            && useRoundRobinSegmentAssignment == that.useRoundRobinSegmentAssignment
+           && smartSegmentLoading == that.smartSegmentLoading
            && pauseCoordination == that.pauseCoordination
            && Objects.equals(
                specificDataSourcesToKillUnusedSegmentsIn,
@@ -404,7 +406,8 @@ public class CoordinatorDynamicConfig
                that.dataSourcesToNotKillStalePendingSegmentsIn)
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
-           && Objects.equals(debugDimensions, that.debugDimensions);
+           && Objects.equals(debugDimensions, that.debugDimensions)
+           && Objects.equals(cloneServers, that.cloneServers);
   }
 
   @Override
@@ -417,6 +420,9 @@ public class CoordinatorDynamicConfig
         replicationThrottleLimit,
         balancerComputeThreads,
         maxSegmentsInNodeLoadingQueue,
+        useRoundRobinSegmentAssignment,
+        smartSegmentLoading,
+        replicateAfterLoadTimeout,
         specificDataSourcesToKillUnusedSegmentsIn,
         killTaskSlotRatio,
         maxKillTaskSlots,
@@ -424,7 +430,8 @@ public class CoordinatorDynamicConfig
         decommissioningNodes,
         pauseCoordination,
         debugDimensions,
-        turboLoadingNodes
+        turboLoadingNodes,
+        cloneServers
     );
   }
 

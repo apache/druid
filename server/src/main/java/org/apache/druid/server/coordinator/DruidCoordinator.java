@@ -94,6 +94,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -141,6 +142,8 @@ public class DruidCoordinator
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+  private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
+  private final CloneStatusManager cloneStatusManager;
 
   private volatile boolean started = false;
 
@@ -185,7 +188,9 @@ public class DruidCoordinator
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      CompactionStatusTracker compactionStatusTracker
+      CompactionStatusTracker compactionStatusTracker,
+      CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer,
+      CloneStatusManager cloneStatusManager
   )
   {
     this.config = config;
@@ -207,6 +212,8 @@ public class DruidCoordinator
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
+    this.cloneStatusManager = cloneStatusManager;
 
     this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
   }
@@ -442,6 +449,7 @@ public class DruidCoordinator
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStart();
       }
+      coordinatorDynamicConfigSyncer.onLeaderStart();
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
       dutiesRunnables.add(
@@ -523,6 +531,7 @@ public class DruidCoordinator
       }
       compactionStatusTracker.stop();
       taskMaster.onLeaderStop();
+      coordinatorDynamicConfigSyncer.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataManager.onLeaderStop();
@@ -558,7 +567,7 @@ public class DruidCoordinator
         new MarkOvershadowedSegmentsAsUnused(deleteSegments),
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
-        new CloneHistoricals(loadQueueManager),
+        new CloneHistoricals(loadQueueManager, cloneStatusManager),
         new CollectLoadQueueStats()
     );
   }

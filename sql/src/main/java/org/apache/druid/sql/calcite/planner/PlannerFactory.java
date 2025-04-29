@@ -40,6 +40,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -81,6 +82,7 @@ public class PlannerFactory extends PlannerToolbox
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final CatalogResolver catalog,
       final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
       final DruidHookDispatcher hookDispatcher
   )
   {
@@ -96,6 +98,7 @@ public class PlannerFactory extends PlannerToolbox
         calciteRuleManager,
         authorizerMapper,
         authConfig,
+        policyEnforcer,
         hookDispatcher
     );
   }

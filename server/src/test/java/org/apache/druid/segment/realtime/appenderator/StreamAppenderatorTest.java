@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -38,10 +39,14 @@ import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -1859,6 +1864,53 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           resultsAfterDrop4
       );
     }
+  }
+
+  @Test
+  public void testQueryFailWithSecurityValidation() throws Exception
+  {
+    final StubServiceEmitter serviceEmitter = new StubServiceEmitter();
+    final StreamAppenderatorTester tester =
+        new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                              .basePersistDirectory(temporaryFolder.newFolder())
+                                              .withServiceEmitter(serviceEmitter)
+                                              .withPolicyEnforcer(new RestrictAllTablesPolicyEnforcer(null))
+                                              .build();
+    final Appenderator appenderator = tester.getAppenderator();
+
+    appenderator.startJob();
+    appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+
+    // Query1: no policy restriction, fail
+    final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                         .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                         .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                         .aggregators(ImmutableList.of(new LongSumAggregatorFactory("count", "count")))
+                                         .granularity(Granularities.DAY)
+                                         .build();
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> QueryPlus.wrap(query1)
+                       .run(appenderator, ResponseContext.createEmpty())
+                       .toList()
+    );
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assert.assertEquals(
+        "Failed security validation with segment [foo_2000-01-01T00:00:00.000Z_2001-01-01T00:00:00.000Z_A]",
+        e.getMessage()
+    );
+
+    // Query2: with policy restriction, success
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create(StreamAppenderatorTester.DATASOURCE), NoRestrictionPolicy.instance());
+    final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
+                                         .dataSource(restrictedDataSource)
+                                         .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                         .aggregators(ImmutableList.of(new LongSumAggregatorFactory("count", "count")))
+                                         .granularity(Granularities.DAY)
+                                         .build();
+    QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
   }
 
   @Test
