@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidException.Category;
 import org.apache.druid.error.DruidException.Persona;
@@ -1017,9 +1016,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  /**
-   * Validates the results with slight loosening in case {@link NullHandling} is not sql compatible.
-   */
   public void assertResultsValid(final ResultMatchMode matchMode, final List<Object[]> expected, final QueryResults queryResults)
   {
     final List<Object[]> results = queryResults.results;
@@ -1056,7 +1052,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
+  public static void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
     int minSize = Math.min(results.size(), expectedResults.size());
     for (int i = 0; i < minSize; i++) {
@@ -1238,6 +1234,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
       final JsonNode newQueryNode = queryJsonMapper.valueToTree(newQuery);
       ((ObjectNode) newQueryNode).remove("context");
+      JsonNode fc = ((ObjectNode) newQueryNode).get("searchFilterContext");
+      if (fc != null) {
+        ((ObjectNode) fc).remove("nowMs");
+      }
+
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
     }
     catch (Exception e) {

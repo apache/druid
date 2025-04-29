@@ -54,7 +54,8 @@ and enter the name of the datasource listed above.
 
 Use the following query to create the `array-example` datasource:
 
-<details><summary>Datasource for arrays</summary>
+<details>
+<summary>Datasource for arrays</summary>
 
 ```sql
 REPLACE INTO "array-example" OVERWRITE ALL
@@ -87,7 +88,8 @@ PARTITIONED BY DAY
 
 Use the following query to create the `mvd-example` datasource:
 
-<details><summary>Datasource for multi-value string dimensions</summary>
+<details>
+<summary>Datasource for multi-value string dimensions</summary>
 
 ```sql
 REPLACE INTO "mvd-example" OVERWRITE ALL
@@ -118,7 +120,8 @@ Calculates the absolute value of a numeric expression.
 * **Syntax:** `ABS(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example applies the ABS function to the `ArrDelay` column from the `flight-carriers` datasource.
 
@@ -146,7 +149,8 @@ Calculates the arc cosine (arccosine) of a numeric expression.
 * **Syntax:** `ACOS(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the arc cosine of `0`.
 
@@ -170,7 +174,8 @@ Returns any value of the specified expression.
 * **Syntax**: `ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the state abbreviation, state name, and average flight time grouped by each state in `flight-carriers`:
 
@@ -203,7 +208,8 @@ Counts distinct values of a regular column or a prebuilt sketch column using an 
 * **Syntax**: `APPROX_COUNT_DISTINCT(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example counts the number of distinct airlines reported in `flight-carriers`:
 
@@ -230,7 +236,8 @@ Consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accur
 * **Syntax**: `APPROX_COUNT_DISTINCT_BUILTIN(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example counts the number of distinct airlines reported in `flight-carriers`:
 
@@ -256,7 +263,8 @@ Returns the approximate number of distinct values in a HLL sketch column or a re
 * **Syntax:** `APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the approximate number of distinct tail numbers in the `flight-carriers` datasource.
 
@@ -282,7 +290,8 @@ Returns the approximate number of distinct values in a Theta sketch column or a 
 * **Syntax:** `APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the approximate number of distinct tail numbers in the `Tail_Number` column of the `flight-carriers` datasource.
 
@@ -319,7 +328,8 @@ Computes approximate quantiles on a Quantiles sketch column or a regular numeric
 * **Syntax:** `APPROX_QUANTILE_DS(expr, probability, [k])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example approximates the median of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation on each execution.
 
@@ -345,7 +355,8 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 * **Syntax:** `APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource. The histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and ignores outlier values. 
 
@@ -371,7 +382,8 @@ Constructs a SQL `ARRAY` literal from the provided expression arguments. All arg
 * **Syntax**: `ARRAY[expr1, expr2, ...]`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example constructs arrays from the values of the `agent_category`, `browser`, and `browser_version` columns in the `kttm` datasource.
 
@@ -402,7 +414,8 @@ Returns an array of all values of the specified expression. To include only uniq
 * **Syntax**: `ARRAY_AGG([DISTINCT] expr, [size])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns arrays of unique values from the `OriginState` column in the `flight-carriers` datasource, grouped by `Reporting_Airline`.
 
@@ -434,7 +447,8 @@ Appends the expression to the array. The source array type determines the result
 * **Syntax**: `ARRAY_APPEND(arr, expr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example appends `c` to the values in the `arrayString` column from the `array-example` datasource.
 
@@ -464,7 +478,8 @@ Concatenates two arrays. The type of `arr1` determines the resulting array type.
 * **Syntax**: `ARRAY_CONCAT(arr1, arr2)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example concatenates the arrays in the `arrayLong` and `arrayDouble` columns from the `array-example` datasource.
 
@@ -494,7 +509,8 @@ Concatenates array inputs into a single array. To include only unique values, sp
 * **Syntax**: `ARRAY_CONCAT_AGG([DISTINCT] expr, [size])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example concatenates the array inputs from the `arrayDouble` column of the `array-example` datasource into a single array.
 
@@ -524,7 +540,8 @@ If the specified expression is a scalar value, returns true if the source array 
 * **Syntax**: `ARRAY_CONTAINS(arr, expr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true if the `arraySring` column from the `array-example` datasource contains `2`.
 
@@ -554,7 +571,8 @@ If the specified expression is an array, returns true if the source array contai
 * **Syntax**: `ARRAY_CONTAINS(arr, expr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true if the `arrayLong` column from the `array-example` datasource contains all elements of the provided expression.
 
@@ -584,7 +602,8 @@ Returns the length of the array.
 * **Syntax**: `ARRAY_LENGTH(arr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the length of array expressions in the `arrayDouble` column from the `array-example` datasource.
 
@@ -614,7 +633,8 @@ Returns the array element at the specified zero-based index. Returns null if the
 * **Syntax**: `ARRAY_OFFSET(arr, long)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the element at the specified zero-based index from the arrays in the `arrayLong` column of the `array-example` datasource.
 
@@ -639,12 +659,13 @@ Returns the following:
 
 ## ARRAY_OFFSET_OF
 
-Returns the zero-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the zero-based index of the first occurrence of the expression in the array. Returns null if the value isn't present.
 
 * **Syntax**: `ARRAY_OFFSET_OF(arr, expr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the zero-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array-example` datasource.
 
@@ -674,7 +695,8 @@ Returns the array element at the specified one-based index. Returns null if the 
 * **Syntax**: `ARRAY_ORDINAL(arr, long)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the element at the specified one-based index from the arrays in the `arrayLong` column of the `array-example` datasource.
 
@@ -699,12 +721,13 @@ Returns the following:
 
 ## ARRAY_ORDINAL_OF
 
-Returns the one-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the one-based index of the first occurrence of the expression in the array. Returns null if the value isn't present.
 
 * **Syntax**: `ARRAY_ORDINAL_OF(arr, expr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the one-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array-example` datasource.
 
@@ -734,7 +757,8 @@ Returns true if two arrays have any elements in common. Treats `NULL` values as 
 * **Syntax**: `ARRAY_OVERLAP(arr1, arr2)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true if columns `arrayString` and `arrayDouble` from the `array-example` datasource have common elements.
 
@@ -764,7 +788,8 @@ Checks if the scalar value is present in the array. Returns false if the value i
 * **Syntax**: `SCALAR_IN_ARRAY(expr, arr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true if the value `36` is present in the array generated from the elements in the `DestStateFips` column from the `flight-carriers` datasource.
 
@@ -796,7 +821,8 @@ Prepends the expression to the array. The source array type determines the resul
 * **Syntax**: `ARRAY_PREPEND(expr, arr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example prepends `c` to the arrays in the `arrayString` column from the `array-example` datasource.
 
@@ -826,7 +852,8 @@ Returns a subset of the array from the zero-based index `start` (inclusive) to `
 * **Syntax**: `ARRAY_SLICE(arr, start, end)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example constructs a new array from the elements of arrays in the `arrayDouble` column from the `array-example` datasource.
 
@@ -856,7 +883,8 @@ Converts an array of any type into a [multi-value string](sql-data-types.md#mult
 * **Syntax**: `ARRAY_TO_MV(arr)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts the arrays in the `arrayDouble` column from the `array-example` datasource into multi-value strings.
 
@@ -886,7 +914,8 @@ Joins all elements of the array into a string using the specified delimiter.
 * **Syntax**: `ARRAY_TO_STRING(arr, delimiter)`
 * **Function type:** Array
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts the arrays in the `arrayDouble` column of the `array-example` datasource into concatenated strings.
 
@@ -916,7 +945,8 @@ Calculates the arc sine (arcsine) of a numeric expression.
 * **Syntax:** `ASIN(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the arc sine of `1`.
 
@@ -939,7 +969,8 @@ Calculates the arc tangent (arctangent) of a numeric expression.
 * **Syntax:** `ATAN(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the arc tangent of `1`.
 
@@ -962,7 +993,8 @@ Calculates the arc tangent (arctangent) of a specified x and y coordinate.
 * **Syntax:** `ATAN2(x, y)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the arc tangent of the coordinate `(1, -1)`
 
@@ -986,7 +1018,8 @@ Calculates the average of a set of values.
 * **Function type:** Aggregation
 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the average minutes of delay for a particular airlines in `flight-carriers`:
 
@@ -1013,7 +1046,8 @@ Performs a bitwise AND operation on all input values.
 * **Syntax**: `BIT_AND(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the bitwise AND operation for all values in `passenger-count` from `taxi-trips`:
 
@@ -1040,7 +1074,8 @@ Performs a bitwise OR operation on all input values.
 * **Syntax**: `BIT_OR(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the bitwise OR operation for all values in `passenger-count` from `taxi-trips`:
 
@@ -1067,7 +1102,8 @@ Performs a bitwise XOR operation on all input values.
 * **Syntax**: `BIT_XOR(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the bitwise XOR operation for all values in `passenger-count` from `taxi-trips`:
 
@@ -1094,7 +1130,8 @@ Returns the bitwise AND between two expressions: `expr1 & expr2`.
 * **Syntax:** `BITWISE_AND(expr1, expr2)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example performs the bitwise AND operation `12 & 10`.
 
@@ -1118,7 +1155,8 @@ Returns the bitwise complement (bitwise not) for the expression: `~expr`.
 * **Syntax:** `BITWISE_COMPLEMENT(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example performs the bitwise complement operation `~12`.
 
@@ -1142,7 +1180,8 @@ Converts the bits of an IEEE 754 floating-point double value to long.
 * **Syntax:**`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the IEEE 754 floating-point double representation of `255` as a long. 
 
@@ -1167,7 +1206,8 @@ Converts a long to the IEEE 754 floating-point double specified by the bits stor
 * **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the long representation of `4643176031446892544` as an IEEE 754 floating-point double.
 
@@ -1191,7 +1231,8 @@ Returns the bitwise OR between the two expressions: `expr1 | expr2`.
 * **Syntax:** `BITWISE_OR(expr1, expr2)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example performs the bitwise OR operation `12 | 10`.
 
@@ -1215,7 +1256,8 @@ Returns the bitwise left shift by x positions of an expr: `expr << x`.
 * **Syntax:** `BITWISE_SHIFT_LEFT(expr, x)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example performs the bitwise SHIFT operation `2 << 3`.
 
@@ -1239,7 +1281,8 @@ Returns the bitwise right shift by x positions of an expr: `expr >> x`.
 * **Syntax:** `BITWISE_SHIFT_RIGHT(expr, x)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example performs the bitwise SHIFT operation `16 >> 3`.
 
@@ -1263,7 +1306,8 @@ Returns the bitwise exclusive OR between the two expressions: `expr1 ^ expr2`.
 * **Syntax:** `BITWISE_XOR(expr1, expr2)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example performs the bitwise XOR operation `12 ^ 10`.
 
@@ -1289,9 +1333,10 @@ Computes a [Bloom filter](../development/extensions-core/bloom-filter.md) from v
   `numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
-The following example returns a Base64-encoded Bloom filter representing the set of devices ,`agent_category`, used in Albania:
+The following example returns a Base64-encoded Bloom filter representing the set of devices, `agent_category`, used in Albania:
 
 ```sql
 SELECT "country",
@@ -1318,7 +1363,8 @@ Returns true if an expression is contained in a Base64-encoded [Bloom filter](..
 * **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `true` when a device type, `agent_category`, exists in the Bloom filter representing the set of devices used in Albania:
 
@@ -1352,7 +1398,8 @@ Trims characters from both the leading and trailing ends of an expression. Defau
 * **Syntax:** `BTRIM(expr[, chars])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example trims the `_` characters from both ends of the string expression.
 
@@ -1383,7 +1430,8 @@ Compares an expression to a set of values or expressions.
 * **Syntax:** `CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns a UI type based on the value of `agent_category` from the `kttm` datasource.
 
@@ -1416,7 +1464,8 @@ Evaluates a set of Boolean expressions.
 * **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the departure location corresponding to the value of the `OriginStateName` column from the `flight-carriers` datasource.
 
@@ -1449,7 +1498,8 @@ Converts a value into the specified data type.
 * **Syntax:** `CAST(value AS TYPE)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts the values in the `Distance` column from the `flight-carriers` datasource from `DOUBLE` to `VARCHAR`.
 
@@ -1479,7 +1529,8 @@ Rounds up a timestamp by a given time unit.
 * **Syntax:** `CEIL(timestamp_expr TO unit>)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example rounds up the `__time` column from the `taxi-trips` datasource to the nearest year.
 
@@ -1507,7 +1558,8 @@ Calculates the smallest integer value greater than or equal to the numeric expre
 * **Syntax:** `CEIL(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example applies the CEIL function to the `fare_amount` column from the `taxi-trips` datasource.
 
@@ -1552,7 +1604,8 @@ Returns the first non-null value.
 * **Syntax:** `COALESCE(expr, expr, ...)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the first non-null value from the list of parameters.
 
@@ -1577,7 +1630,8 @@ Concatenates a list of expressions.
 * **Syntax:** `CONCAT(expr[, expr,...])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example concatenates the `OriginCityName` column from `flight-carriers`, the string ` to `, and the `DestCityName` column from `flight-carriers`. 
 
@@ -1607,7 +1661,8 @@ Returns true if `str` is a substring of `expr`, case-sensitive. Otherwise, retur
 * **Syntax:** `CONTAINS_STRING(expr, str)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true if the `OriginCityName` column from the `flight-carriers` datasource contains the substring `San`. 
 
@@ -1638,7 +1693,8 @@ Calculates the trigonometric cosine of an angle expressed in radians.
 * **Syntax:** `COS(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the cosine of angle `PI/3` radians.
 
@@ -1661,7 +1717,8 @@ Calculates the trigonometric cotangent of an angle expressed in radians.
 * **Syntax:** `COT(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the cotangent of angle `PI/3` radians.
 
@@ -1685,7 +1742,8 @@ Counts the number of rows.
 COUNT DISTINCT is an alias for [`APPROX_COUNT_DISTINCT`](#approx_count_distinct).
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example counts the number of distinct flights per day after `'2005-01-01 00:00:00'` in `flight-carriers`:
 
@@ -1718,7 +1776,8 @@ Returns the cumulative distribution of the current row within the window calcula
 * **Syntax**: `CUME_DIST()`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the cumulative distribution of number of flights by airline from two airports on a single day.
 
@@ -1758,7 +1817,8 @@ Returns the current date in UTC time, unless you specify a different timezone in
 * **Syntax:** `CURRENT_DATE`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the current date.
 
@@ -1784,7 +1844,8 @@ Returns the current timestamp in UTC time, unless you specify a different timezo
 * **Syntax:** `CURRENT_TIMESTAMP`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the current timestamp.
 
@@ -1809,7 +1870,8 @@ Rounds down a timestamp by a given time unit.
 * **Syntax:** `DATE_TRUNC(unit, timestamp_expr)` 
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example truncates a timestamp from the `__time` column from the `taxi-trips` datasource to the most recent `decade`.
 
@@ -1852,7 +1914,8 @@ To enable support for a complex data type, load the [corresponding extension](..
 * **Syntax:** `DECODE_BASE64_COMPLEX(dataType, expr)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns a Theta sketch complex type from a Base64-encoded string representation of the sketch:
 
@@ -1873,7 +1936,8 @@ Decodes a Base64-encoded expression into a UTF-8 encoded string.
 * **Syntax:** `DECODE_BASE64_UTF8(expr)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example decodes the Base64-encoded representation of "Hello, World!":
 
@@ -1899,7 +1963,8 @@ Converts an angle from radians to degrees.
 * **Syntax:** `DEGREES(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts an angle of `PI` radians to degrees
 
@@ -1922,7 +1987,8 @@ Returns the rank for a row within a window without gaps. For example, if two row
 * **Syntax**: `DENSE_RANK()`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the dense rank by airline for flights from two airports on a single day.
 
@@ -1966,7 +2032,8 @@ The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consi
 * **Function type:** Scalar, numeric
 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
   The following calculates integer divisions of `78` by `10`.
 
@@ -1992,7 +2059,8 @@ Returns a string representing an approximation to the cumulative distribution fu
 * **Syntax:** `DS_CDF(expr, splitPoint0, splitPoint1, ...)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example specifies three split points to return cumulative distribution function approximations on the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation for each bin on each execution.
 
@@ -2018,7 +2086,8 @@ Returns the quantile estimate corresponding to the fraction from a Quantiles ske
 * **Syntax:** `DS_GET_QUANTILE(expr, fraction)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example approximates the median of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation with each execution.
 
@@ -2044,7 +2113,8 @@ Returns a string representing an array of quantile estimates corresponding to a 
 * **Syntax:** `DS_GET_QUANTILES(expr, fraction0, fraction1, ...)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example approximates the 25th, 50th, and 75th percentiles of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation for each percentile on each execution.
 
@@ -2070,7 +2140,8 @@ Returns an approximation to the histogram from a Quantiles sketch. The split poi
 * **Syntax:** `DS_HISTOGRAM(expr, splitPoint0, splitPoint1, ...)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example specifies three split points to approximate a histogram on the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation for each bin on each execution.
 
@@ -2097,7 +2168,8 @@ Creates a HLL sketch on a column containing HLL sketches or a regular column. Se
 * **Syntax:**`DS_HLL(expr, [lgK, tgtHllType])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example creates a HLL sketch on the `Tail_number` column of the `flight-carriers` datasource grouping by `OriginState` and `DestState`.
 
@@ -2128,7 +2200,8 @@ Returns a string summary of a Quantiles sketch.
 * **Syntax:** `DS_QUANTILE_SUMMARY(expr)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns a summary of a Quantiles sketch on the `Distance` column from the `flight-carriers` datasource.
 
@@ -2182,7 +2255,8 @@ Creates a Quantiles sketch on a Quantiles sketch column or a regular column. See
 * **Syntax:** `DS_QUANTILES_SKETCH(expr, [k])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example creates a Quantile sketch on the `Distance` column from the `flight-carriers` datasource.
 
@@ -2208,7 +2282,8 @@ Returns an approximate rank of a given value in a distribution. The rank represe
 * **Syntax:** `DS_RANK(expr, value)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the fraction of records in the `flight-carriers` datasource where the value in the `Distance` column is less than 500. The query may return a different approximation on each execution.
 
@@ -2235,7 +2310,8 @@ Creates a Theta sketch on a column containing Theta sketches or a regular column
 * **Syntax:** `DS_THETA(expr, [size])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example creates a Theta sketch on the `Tail_number` column of the `flight-carriers` datasource grouping by `OriginState` and `DestState`.
 
@@ -2267,7 +2343,8 @@ Creates a Tuple sketch on raw data or a precomputed sketch column. See [DataSket
               `DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr1[, metricColumnExpr2, ...], [nominalEntries])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example creates a Tuples sketch column that stores the arrival and departure delay minutes for each airline in `flight-carriers`:
 
@@ -2298,7 +2375,8 @@ Returns an intersection of Tuple sketches which each contain an array of double 
 * **Syntax**: `DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the total minutes of arrival delay for airlines flying out of `SFO` or `LAX`.
 An airline that doesn't fly out of both airports returns a value of 0.
@@ -2338,7 +2416,8 @@ Computes approximate sums of the values contained within a Tuple sketch which co
 * **Syntax**: `DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the sum of arrival and departure delay minutes for each airline in `flight-carriers`:
 
@@ -2388,7 +2467,8 @@ Returns a set difference of Tuple sketches which each contain an array of double
 * **Syntax**: `DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the total minutes of arrival delay for airlines that fly out of `SFO` but not `LAX`.
 
@@ -2427,7 +2507,8 @@ Returns a union of Tuple sketches which each contain an array of double values a
 * **Syntax**: `DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the total minutes of arrival delay for airlines flying out of either `SFO` or `LAX`.
 
@@ -2466,7 +2547,8 @@ Returns the value of a numeric or string expression corresponding to the earlies
 * **Syntax**: `EARLIEST(expr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the origin airport code associated with the earliest departing flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
 
@@ -2498,7 +2580,8 @@ Returns the value of a numeric or string expression corresponding to the earlies
 * **Syntax**: `EARLIEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the destination airport code associated with the earliest arriving flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
 
@@ -2530,7 +2613,8 @@ Calculates _e_ raised to the power of the numeric expression.
 * **Syntax:** `EXP(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates _e_ to the power of 1.
 
@@ -2553,7 +2637,8 @@ Extracts the value of some unit from the timestamp.
 * **Syntax:** `EXTRACT(unit FROM timestamp_expr)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example extracts the year from the `__time` column from the `taxi-trips` datasource.
 
@@ -2582,7 +2667,8 @@ Returns the value evaluated for the expression for the first row within the wind
 * **Syntax**: `FIRST_VALUE(expr)`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the name of the first airline in the window of flights by airline for two airports on a single day.
 
@@ -2623,7 +2709,8 @@ Rounds down a timestamp by a given time unit.
 * **Syntax:** `FLOOR(timestamp_expr TO unit)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example rounds down the `__time` column from the `taxi-trips` datasource to the nearest year.
 
@@ -2652,7 +2739,8 @@ Calculates the largest integer less than or equal to the numeric expression.
 * **Syntax:** `FLOOR(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example applies the FLOOR function to the `fare_amount` column from the `taxi-trips` datasource.
 
@@ -2679,7 +2767,8 @@ Returns the maximum value from the provided expressions. For information on how 
 * **Syntax:** `GREATEST([expr1, ...])`
 * **Function type:** Scalar, reduction
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the greatest value between the numeric constant `PI`, the integer number `4`, and the double `-5.0`. Druid interprets these arguments as DOUBLE data type.
 
@@ -2705,7 +2794,8 @@ Returns a number for each output row of a groupBy query, indicating whether the 
 * **Syntax**: `GROUPING(expr, expr...)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the total minutes of flight delay for each day of the week in `flight-carriers`.
 The GROUP BY clause creates two grouping sets, one for the day of the week and one for the grand total.
@@ -2749,7 +2839,8 @@ Returns the distinct count estimate from a HLL sketch. To round the distinct cou
 * **Function type:** Scalar, sketch
 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the distinct number of unique tail numbers in the `flight-carriers` datasource.
 
@@ -2776,7 +2867,8 @@ Returns the distinct count estimate and error bounds from a HLL sketch. To speci
 * **Syntax:** `HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, [numStdDev])`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the number of unique tail numbers in the `flight-carriers` datasource with error bounds at plus or minus one standard deviation.
 
@@ -2804,7 +2896,8 @@ Returns a human-readable string representation of a HLL sketch for debugging.
 * **Syntax:** `HLL_SKETCH_TO_STRING(expr)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the HLL sketch on column `Tail_Number` from the `flight-carriers` datasource as a human-readable string.
 
@@ -2857,7 +2950,8 @@ Returns a union of HLL sketches. See [DataSketches HLL Sketch module](../develop
 * **Function type:** Scalar, sketch
 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the union of the HLL sketch of tail numbers that took off from `CA` and the HLL sketch of tail numbers that took off from `TX`. The example uses the `Tail_Number` and `OriginState` columns from the `flight-carriers` datasource. 
 
@@ -2889,7 +2983,8 @@ Converts an integer byte size into human-readable [IEC](https://en.wikipedia.org
 * **Syntax:** `HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
   The following example converts `1000000` into IEC format.
 
@@ -2914,7 +3009,8 @@ Converts a byte size into human-readable [SI](https://en.wikipedia.org/wiki/Bina
 * **Syntax:** `HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts `1000000` into SI format.
 
@@ -2939,7 +3035,8 @@ Converts a byte size into human-readable SI format with single-character units.
 * **Syntax:** `HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
   The following example converts `1000000` into single character SI format.
 
@@ -2963,7 +3060,8 @@ Returns true if `str` is a substring of `expr`, case-insensitive. Otherwise, ret
 * **Syntax:** `ICONTAINS_STRING(expr, str)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true if the `OriginCityName` column from the `flight-carriers` datasource contains the case-insensitive substring `san`.  
 
@@ -2993,7 +3091,8 @@ Returns true if the IPv4 `address` belongs to the `subnet` literal, otherwise re
 * **Syntax:** `IPV4_MATCH(address, subnet)`
 * **Function type:** Scalar, IP address
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true if the IPv4 address in the `forward_for` column from the `kttm` datasource belongs to the subnet `181.13.41.0/24`.
 
@@ -3025,7 +3124,8 @@ Parses an IPv4 `address` into its integer notation.
 * **Syntax:** `IPV4_PARSE(address)`
 * **Function type:** Scalar, IP address
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns an integer that represents the IPv4 address `5.5.5.5`.
 
@@ -3052,7 +3152,8 @@ Converts an IPv4 `address` in integer notation into dot-decimal notation.
 * **Syntax:** `IPV4_STRINGIFY(address)`
 * **Function type:** Scalar, IP address
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the integer `84215045` in IPv4 dot-decimal notation.
 
@@ -3079,7 +3180,8 @@ Returns true if the IPv6 `address` belongs to the `subnet` literal. Otherwise, r
 * **Syntax:** `IPV6_MATCH(address, subnet)`
 * **Function type:** Scalar, IP address
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true because `75e9:efa4:29c6:85f6::232c` is in the subnet of `75e9:efa4:29c6:85f6::/64`.
 
@@ -3108,7 +3210,8 @@ Returns an array of field names from an expression, at a specified path.
 * **Syntax:** `JSON_KEYS(expr, path)`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns an array of field names from the nested column `agent`:
 
@@ -3137,7 +3240,8 @@ The function always returns a `COMPLEX<json>` object.
 * **Syntax:** `JSON_MERGE(expr1, expr2[, expr3 ...])`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example merges the `event` object with a static string `example_string`:
 
@@ -3171,7 +3275,8 @@ The function can accept colon-separated key-value pairs.
   `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example creates a new object `combinedJSON` from `continent` in `geo_ip` and `type` in `event`:
 
@@ -3203,7 +3308,8 @@ Returns an array of all paths which refer to literal values in an expression, in
 * **Syntax:** `JSON_PATHS(expr)`  
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns an array of distinct paths in the `geo_ip` nested column:
 
@@ -3230,7 +3336,8 @@ Extracts a `COMPLEX<json>` value from an expression at a specified path.
 * **Syntax:** `JSON_QUERY(expr, path)`  
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the values of `percentage` in the `event` nested column:
 
@@ -3263,7 +3370,8 @@ This function is mainly used to extract arrays of objects to use as inputs to ot
 * **Syntax:** `JSON_QUERY_ARRAY(expr, path)`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns an array of `percentage` values in the `event` nested column:
 
@@ -3297,7 +3405,8 @@ If the function can't infer the type, it defaults to `VARCHAR`.
 * **Syntax:** `JSON_VALUE(expr, path [RETURNING sqlType])`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the value of `city` in the `geo_ip` nested column:
 
@@ -3328,7 +3437,8 @@ If you do not supply an `offset`, returns the value evaluated at the row precedi
 * **Syntax**: `LAG(expr[, offset])`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the preceding airline in the window for flights by airline from two airports on a single day.
 
@@ -3367,7 +3477,8 @@ Returns the value evaluated for the expression for the last row within the windo
 * **Syntax**: `LAST_VALUE(expr)`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the last airline name in the window for flights for two airports on a single day.
 Note that the RANGE BETWEEN clause defines the window frame between the current row and the final row in the window instead of the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW when using ORDER BY.
@@ -3408,7 +3519,8 @@ Returns the value of a numeric or string expression corresponding to the latest 
 * **Syntax**: `LATEST(expr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the origin airport code associated with the latest departing flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
 
@@ -3440,7 +3552,8 @@ Returns the value of a numeric or string expression corresponding to the latest 
 * **Syntax**: `LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the destination airport code associated with the latest arriving flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
 
@@ -3472,7 +3585,8 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 * **Syntax**: `LEAD(expr[, offset])`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the subsequent value for an airline in the window for flights from two airports on a single day.
 
@@ -3511,7 +3625,8 @@ Returns the minimum value from the provided expressions. For information on how 
 * **Syntax:** `LEAST([expr1, ...])`
 * **Function type:** Scalar, reduction
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the minimum value between the strings `apple`, `orange`, and `pear`. Druid interprets these arguments as STRING data type. 
 
@@ -3537,7 +3652,8 @@ Returns the `N` leftmost characters of an expression, where `N` is an integer va
 * **Syntax:** `LEFT(expr, N)`
 * **Function type:** Scalar, string 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the `3` leftmost characters of the expression `ABCDEFG`.
 
@@ -3564,7 +3680,8 @@ Returns the length of the expression in UTF-16 code units.
 * **Syntax:** `LENGTH(expr)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the character length of the `OriginCityName` column from the `flight-carriers` datasource.
 
@@ -3602,7 +3719,8 @@ Calculates the natural logarithm of the numeric expression.
 * **Syntax:** `LN(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example applies the LN function to the `max_temperature` column from the `taxi-trips` datasource.
 
@@ -3631,7 +3749,8 @@ Calculates the base-10 logarithm of the numeric expression.
 * **Syntax:** `LOG10(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example applies the LOG10 function to the `max_temperature` column from the `taxi-trips` datasource.
 
@@ -3658,7 +3777,8 @@ Searches for `expr` in a registered [query-time lookup table](lookups.md) named 
 * **Syntax:** `LOOKUP(expr, lookupName[, defaultValue])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example uses a `map` type lookup table named `code_to_name`, which contains the following key-value pairs:
 
@@ -3697,7 +3817,8 @@ Returns the expression in lowercase.
 * **Syntax:** `LOWER(expr)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts the `OriginCityName` column from the `flight-carriers` datasource to lowercase.
 
@@ -3727,7 +3848,8 @@ Returns a string of size `length` from `expr`. When the length of `expr` is less
 * **Syntax:** `LPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example left pads the value of `OriginStateName` from the `flight-carriers` datasource to return a total of 11 characters.
 
@@ -3759,7 +3881,8 @@ Trims characters from the leading end of an expression. Defaults `chars` to a sp
 * **Syntax:** `LTRIM(expr[, chars])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example trims the `_` characters from the leading end of the string expression.
 
@@ -3787,7 +3910,8 @@ Returns the maximum value of a set of values.
 * **Function type:** Aggregation
 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the maximum delay in minutes for an airline in `flight-carriers`:
 
@@ -3814,7 +3938,8 @@ Converts a number of milliseconds since epoch into a timestamp.
 * **Syntax:** `MILLIS_TO_TIMESTAMP(millis_expr)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts 1375344877000 milliseconds from epoch into a timestamp. 
 
@@ -3839,7 +3964,8 @@ Returns the minimum value of a set of values.
 * **Syntax**: `MIN(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the minimum delay in minutes for an airline in `flight-carriers`:
 
@@ -3866,7 +3992,8 @@ Calculates x modulo y, or the remainder of x divided by y. Where x and y are num
 * **Syntax:** `MOD(x, y)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following calculates 78 MOD 10.
 
@@ -3889,7 +4016,8 @@ Adds the expression to the end of the array.
 * **Syntax:** `MV_APPEND(arr1, expr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example appends the string `label` to the multi-value string `tags` from `mvd-example`:
 
@@ -3916,7 +4044,8 @@ Concatenates two arrays.
 * **Syntax:** `MV_CONCAT(arr1, arr2)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example concatenates `tags` from `mvd-example` to itself:
 
@@ -3944,7 +4073,8 @@ Returns true if the expression is in the array, false otherwise.
 * **Syntax:** `MV_CONTAINS(arr, expr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example checks if the string `t3` exists within `tags` from `mvd-example`:
 
@@ -3973,7 +4103,8 @@ Filters a multi-value expression to exclude values from an array.
 * **Syntax:** `MV_FILTER_NONE(expr, arr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example filters `tags` from `mvd-example` to remove values `t1` or `t3`, if present:
 
@@ -4002,7 +4133,8 @@ Filters a multi-value expression to include only values contained in the array.
 * **Syntax:** `MV_FILTER_ONLY(expr, arr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example filters `tags` from `mvd-example` to only contain the values `t1` or `t3`:
 
@@ -4031,7 +4163,8 @@ Returns the length of an array expression.
 * **Syntax:** `MV_LENGTH(arr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the length of the `tags` multi-value strings from `mvd-example`:
 
@@ -4058,7 +4191,8 @@ Returns the array element at the given zero-based index.
 * **Syntax:** `MV_OFFSET(arr, long)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `tags` and the element at the third position of `tags` in `mvd-example`:
 
@@ -4087,7 +4221,8 @@ Returns the zero-based index of the first occurrence of a given expression in th
 * **Syntax:** `MV_OFFSET_OF(arr, expr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `tags` and the zero-based index of the string `t3` from `tags` in `mvd-example`:
 
@@ -4116,7 +4251,8 @@ Returns the array element at the given one-based index.
 * **Syntax:** `MV_ORDINAL(arr, long)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `tags` and the element at the third position of `tags` in `mvd-example`:
 
@@ -4145,7 +4281,8 @@ Returns the one-based index of the first occurrence of a given expression.
 * **Syntax:** `MV_ORDINAL_OF(arr, expr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `tags` and the one-based index of the string `t3` from `tags` in `mvd-example`:
 
@@ -4174,7 +4311,8 @@ Returns true if the two arrays have any elements in common, false otherwise.
 * **Syntax:** `MV_OVERLAP(arr1, arr2)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example identifies rows that contain `t1` or `t3` in `tags` from `mvd-example`:
 
@@ -4203,7 +4341,8 @@ Adds the expression to the beginning of the array.
 * **Syntax:** `MV_PREPEND(expr, arr)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example prepends the string dimension `label` to the multi-value string dimension `tags` from `mvd-example`:
 
@@ -4231,7 +4370,8 @@ Returns a slice of the array from the zero-based start and end indexes.
 * **Syntax:** `MV_SLICE(arr, start, end)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `tags` and the second and third values of `tags` from `mvd-example`:
 
@@ -4260,7 +4400,8 @@ Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.
 * **Syntax:** `MV_TO_ARRAY(str)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example transforms the `tags` column from `mvd-example` to arrays:
 
@@ -4287,7 +4428,8 @@ Joins all elements of the array together by the given delimiter.
 * **Syntax:** `MV_TO_STRING(arr, str)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example transforms the `tags` column from `mvd-example` to strings delimited by a space character:
 
@@ -4314,7 +4456,8 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 * **Syntax**: `NTILE(tiles)`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the results for flights by airline from two airports on a single day divided into 3 tiles.
 
@@ -4352,7 +4495,8 @@ Returns null if two values are equal, else returns the first value.
 * **Syntax:** `NULLIF(value1, value2)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns null if the `OriginState` column from the `flight-carriers` datasource is `PR`.
 
@@ -4382,7 +4526,8 @@ Returns `value1` if `value1` is not null, otherwise returns `value2`.
 * **Syntax:** `NVL(value1, value1)`
 * **Function type:** Scalar, other
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example replaces each null value in the `Tail_Number` column of the `flight-carriers` datasource with the string "No tail number."
 
@@ -4415,7 +4560,8 @@ If the input is invalid JSON or not a `VARCHAR`, it returns an error.
 * **Syntax:** `PARSE_JSON(expr)`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example creates a `COMPLEX<json>` object `gus` from a string of fields:
 
@@ -4440,7 +4586,8 @@ Converts a string into a long(BIGINT) with the given radix, or into DECIMAL(base
 * **Syntax:**`PARSE_LONG(string[, radix])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts the string representation of the binary, radix 2, number `1100` into its long (BIGINT) equivalent.
 
@@ -4468,7 +4615,8 @@ Returns the relative rank of the row calculated as a percentage according to the
 * **Syntax**: `PERCENT_RANK()`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the percent rank within the window for flights by airline from two airports on a single day.
 
@@ -4508,7 +4656,8 @@ Returns the one-based index position of a substring within an expression, option
 * **Syntax**: `POSITION(substring IN expr [FROM startingIndex])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the one-based index of the substring `PR` in the `OriginCityName` column from the `flight-carriers` datasource starting from index 5.
 
@@ -4538,7 +4687,8 @@ Calculates a numerical expression raised to the specified power.
 * **Syntax:** `POWER(base, exponent)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example raises 5 to the power of 2.
 
@@ -4561,7 +4711,8 @@ Converts an angle from degrees to radians.
 * **Syntax:** `RADIANS(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts an angle of `180` degrees to radians
 
@@ -4584,7 +4735,8 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 * **Syntax**: `RANK()`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the rank within the window for flights by airline from two airports on a single day.
 
@@ -4623,7 +4775,8 @@ Apply regular expression `pattern` to `expr` and extract the Nth capture group. 
 * **Syntax:** `REGEXP_EXTRACT(expr, pattern[, N])`
 * **Function type:** Scalar, string 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example uses regular expressions to find city names inside the `OriginCityName` column from the `flight-carriers` datasource by matching what comes before the comma.
 
@@ -4652,7 +4805,8 @@ Returns `true` if the regular expression `pattern` finds a match in `expr`. Retu
 * **Syntax:** `REGEXP_LIKE(expr, pattern)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns `true` when the `OriginCityName` column from `flight-carriers` has a city name containing a space.
 
@@ -4682,7 +4836,8 @@ Replaces all occurrences of a regular expression in a string expression with a r
 * **Syntax:** `REGEXP_REPLACE(expr, pattern, replacement)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example matches three consecutive words, where each word is its own capture group, and replaces the matched words with the word in the second capture group punctuated with exclamation marks.
 
@@ -4710,7 +4865,8 @@ Repeats the string expression `N` times, where `N` is an integer.
 * **Syntax:** `REPEAT(expr, N)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the string expression `abc` repeated `3` times.
 
@@ -4737,7 +4893,8 @@ Replaces instances of a substring with a replacement string in the given express
 * **Syntax:** `REPLACE(expr, substring, replacement)`
 * **Function type:** Scalar, string 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example replaces instances of the substring `abc` with `XYZ`.
 
@@ -4764,7 +4921,8 @@ Reverses the given expression.
 * **Syntax:** `REVERSE(expr)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example reverses the string expression `abc`.
 
@@ -4791,7 +4949,8 @@ Returns the `N` rightmost characters of an expression, where `N` is an integer v
 * **Syntax:** `RIGHT(expr, N)`
 * **Function type:** Scalar, string 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the `3` rightmost characters of the expression `ABCDEFG`.
 
@@ -4818,7 +4977,8 @@ Calculates the rounded value for a numerical expression.
 * **Syntax:** `ROUND(expr[, digits])`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column from the `taxi-trips` datasource.
 
@@ -4846,7 +5006,8 @@ Returns the number of the row within the window starting from 1.
 * **Syntax**: `ROW_NUMBER()`
 * **Function type:** Window
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the row number within the window for flights by airline from two airports on a single day.
 
@@ -4885,7 +5046,8 @@ Returns a string of size `length` from `expr`. When the length of `expr` is less
 * **Syntax:** `RPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example right pads the value of `OriginStateName` from the `flight-carriers` datasource to return a total of 11 characters.
 
@@ -4916,7 +5078,8 @@ Trims characters from the trailing end of an expression. Defaults `chars` to a s
 * **Syntax:** `RTRIM(expr[, chars])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example trims the `_` characters from the trailing end of the string expression.
 
@@ -4943,7 +5106,8 @@ Returns `x` divided by `y`, guarded on division by 0.
 * **Syntax:** `SAFE_DIVIDE(x, y)`
 * **Function type:** Scalar, numeric 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates divisions of integer `78` by integer `10`.
 
@@ -4968,7 +5132,8 @@ Calculates the trigonometric sine of an angle expressed in radians.
 * **Syntax:** `SIN(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the sine of angle `PI/3` radians.
 
@@ -4991,7 +5156,8 @@ Calculates the square root of a numeric expression.
 * **Syntax:** `SQRT(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the square root of 25.
 
@@ -5025,7 +5191,8 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 * **Syntax**: `STDDEV_POP(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the population standard deviation for minutes of delay for an airline in `flight-carriers`:
 
@@ -5053,7 +5220,8 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 * **Syntax**: `STDDEV_SAMP(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the sample standard deviation for minutes of delay for an airline in `flight-carriers`:
 
@@ -5080,7 +5248,8 @@ Collects all values of an expression into a single string.
 * **Syntax**: `STRING_AGG(expr, separator, [size])`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns all the distinct airlines from `flight-carriers` as a single space-delimited string:
 
@@ -5107,7 +5276,8 @@ Returns a string formatted in the manner of Java's [String.format](https://docs.
 * **Syntax:** `STRING_FORMAT(pattern[, args...])`
 * **Function type:** Scalar, string 
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example uses Java String format to pass in `Flight_Number_Reporting_Airline` and `origin_airport` columns, from the `flight-carriers` datasource, as arguments into the string. 
 
@@ -5146,7 +5316,8 @@ Splits `str1` into an multi-value string on the delimiter specified by `str2`, w
 * **Syntax:** `STRING_TO_MV(str1, str2)`
 * **Function type:** Multi-value string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example splits a street address by whitespace characters:
 
@@ -5180,7 +5351,8 @@ Returns the one-based index position of a substring within an expression. If `su
 * **Syntax:** `STRPOS(expr, substring)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns the one-based index position of `World`.
 
@@ -5217,7 +5389,8 @@ Returns a substring of the expression starting at a given one-based index. If `l
 * **Syntax:** `SUBSTRING(expr, index[, length])`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example extracts a substring from the string expression `abcdefghi` of length `3` starting at index `4`
 
@@ -5246,7 +5419,8 @@ Calculates the sum of a set of values.
 * **Syntax**: `SUM(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the total minutes of delay for an airline in `flight-carriers`:
 
@@ -5273,7 +5447,8 @@ Calculates the trigonometric tangent of an angle expressed in radians.
 * **Syntax:** `TAN(expr)`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the tangent of angle `PI/3` radians.
 
@@ -5296,7 +5471,8 @@ Concatenates two string expressions.
 * **Syntax:** `TEXTCAT(expr, expr)`
 * **Function type:** Scalar, string
   
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example concatenates the `OriginState` column from the `flight-carriers` datasource to `, USA`.
 
@@ -5325,7 +5501,8 @@ Returns the distinct count estimate from a Theta sketch. The `expr` argument mus
 * **Syntax:** `THETA_SKETCH_ESTIMATE(expr)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the distinct number of tail numbers in the `Tail_Number` column of the `flight-carriers` datasource.
 
@@ -5351,7 +5528,8 @@ Returns the distinct count estimate and error bounds from a Theta sketch. The `e
 * **Syntax:** `THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, errorBoundsStdDev)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Details</summary>
+<details>
+<summary>Details</summary>
 
 The following example estimates the number of distinct tail numbers in the `Tail_Number` column of the `flight-carriers` datasource with error bounds at plus or minus one standard deviation.
 
@@ -5377,7 +5555,8 @@ Returns an intersection of Theta sketches. Each input expression must return a T
 * **Syntax:** `THETA_SKETCH_INTERSECT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the intersection of distinct tail numbers in the `flight-carriers` datasource for flights originating in CA, TX, and NY.
 
@@ -5410,7 +5589,8 @@ Returns a set difference of Theta sketches. Each input expression must return a 
 * **Syntax:** `THETA_SKETCH_NOT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the number of distinct tail numbers in the `flight-carriers` datasource for flights not originating in CA, TX, or NY.
 
@@ -5444,7 +5624,8 @@ Returns a union of Theta sketches. Each input expression must return a Theta ske
 * **Syntax:**`THETA_SKETCH_UNION([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example estimates the number of distinct tail numbers that depart from CA, TX, or NY.
 
@@ -5476,7 +5657,8 @@ Rounds up a timestamp to a given ISO 8601 time period. You can specify `origin` 
 * **Syntax:** `TIME_CEIL(timestamp_expr, period[, origin[, timezone]])`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example rounds up the `__time` column from the `taxi-trips` datasource to the nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
 
@@ -5505,7 +5687,8 @@ Extracts the value of `unit` from the timestamp and returns it as a number. If p
 * **Syntax:** `TIME_EXTRACT(timestamp_expr[, unit[, timezone]])`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example extracts the hour from the `__time` column in the `taxi-trips` datasource and offsets its timezone by `-04:00` hours.
 
@@ -5535,7 +5718,8 @@ Rounds down a timestamp to a given ISO 8601 time period. You can specify `origin
 * **Syntax:** `TIME_FLOOR(timestamp_expr, period[, origin[, timezone]])`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example rounds down the `__time` column from the `taxi-trips` datasource to the nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
 
@@ -5565,7 +5749,8 @@ Formats a timestamp as a string in a provided [Joda DateTimeFormat pattern](http
 * **Syntax:** `TIME_FORMAT(timestamp_expr[, pattern[, timezone]])`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example formats the `__time` column from the `flight-carriers` datasource into a string format and offsets the result's timezone by `-05:00` hours.
 
@@ -5594,7 +5779,8 @@ Returns true if a timestamp is contained within a particular interval. Intervals
 * **Syntax:** `TIME_IN_INTERVAL(timestamp_expr, interval)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example returns true when a timestamp in the `__time` column of the `taxi-trips` datasource is within a hour interval starting from `2013-08-01T08:00:00`.
 
@@ -5624,7 +5810,8 @@ Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](htt
 * **Syntax:** `TIME_PARSE(string_expr[, pattern[, timezone]])`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example parses the `FlightDate` STRING column from the `flight-carriers` datasource into a valid timestamp with an offset of `-05:00` hours.
 
@@ -5653,7 +5840,8 @@ Shifts a timestamp by a given number of time units. The `period` parameter can b
 * **Syntax:** `TIME_SHIFT(timestamp_expr, period, step[, timezone])`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example shifts the `__time` column from the `taxi-trips` datasource back by 24 hours.
 
@@ -5683,7 +5871,8 @@ Returns the number of milliseconds since epoch for the given timestamp.
 * **Syntax:** `TIMESTAMP_TO_MILLIS(timestamp_expr)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts the `__time` column from the `taxi-trips` datasource into milliseconds since epoch.
 
@@ -5712,7 +5901,8 @@ Add a `unit` of time multiplied by `count` to `timestamp`.
 * **Syntax:** `TIMESTAMPADD(unit, count, timestamp)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example adds five months to the timestamp `2000-01-01 00:00:00`.
 
@@ -5739,7 +5929,8 @@ Returns the difference between two timestamps in a given unit.
 * **Syntax:** `TIMESTAMPDIFF(unit, timestamp1, timestamp2)`
 * **Function type:** Scalar, date and time
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the taxi trip length in minutes by subtracting the `__time` column from the `dropoff_datetime` column in the `taxi-trips` datasource.
 
@@ -5769,7 +5960,8 @@ Serializes an expression into a JSON string.
 * **Syntax:** `TO_JSON_STRING(expr)`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example writes the distinct column names in the `events` nested column to a JSON string:
 
@@ -5797,7 +5989,8 @@ Trims the leading and/or trailing characters of an expression. Defaults `chars` 
 * **Syntax:** `TRIM([BOTH|LEADING|TRAILING] [chars FROM] expr)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example trims `_` characters from both ends of the string expression.
 
@@ -5833,7 +6026,8 @@ Truncates a numerical expression to a specific number of decimal digits.
 * **Syntax:** `TRUNCATE(expr[, digits])`
 * **Function type:** Scalar, numeric
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following applies the TRUNCATE function to 1 decimal place on the `pickup_longitude` column from the `taxi-trips` datasource.
 
@@ -5868,7 +6062,8 @@ You can use this function instead of [PARSE_JSON](#parse_json) to insert a null 
 * **Syntax:** `TRY_PARSE_JSON(expr)`
 * **Function type:** JSON
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example creates a `COMPLEX<json>` object `gus` from a string of fields:
 
@@ -5909,7 +6104,8 @@ Returns the expression in uppercase.
 * **Syntax:** `UPPER(expr)`
 * **Function type:** Scalar, string
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example converts the `OriginCityName` column from the `flight-carriers` datasource to uppercase.
 
@@ -5939,7 +6135,8 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 * **Syntax**: `VAR_POP(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the population variance for minutes of delay by a particular airlines in `flight-carriers`:
 
@@ -5967,7 +6164,8 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 * **Syntax**: `VAR_SAMP(expr)`
 * **Function type:** Aggregation
 
-<details><summary>Example</summary>
+<details>
+<summary>Example</summary>
 
 The following example calculates the sample variance for minutes of delay for an airline in `flight-carriers`:
 

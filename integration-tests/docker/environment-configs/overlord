@@ -33,5 +33,5 @@ druid_indexer_storage_type=metadata
 druid_indexer_runner_type=remote
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/overlord
 druid_server_https_crlPath=/tls/revocations.crl
-druid_segments_manager_pollDuration=PT2S
-druid_segments_manager_useCache=true
+druid_manager_segments_pollDuration=PT5S
+druid_manager_segments_useCache=always

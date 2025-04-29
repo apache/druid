@@ -22,7 +22,6 @@ import {
   ButtonGroup,
   Callout,
   FormGroup,
-  Icon,
   Intent,
   Menu,
   MenuDivider,
@@ -83,6 +82,7 @@ import {
   dataTypeToIcon,
   deepSet,
   DruidError,
+  EXPERIMENTAL_ICON,
   filterMap,
   oneOf,
   queryDruidSql,
@@ -106,8 +106,6 @@ import { PreviewTable } from './preview-table/preview-table';
 import { RollupAnalysisPane } from './rollup-analysis-pane/rollup-analysis-pane';
 
 import './schema-step.scss';
-
-const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
 
 const queryRunner = new QueryRunner();
 

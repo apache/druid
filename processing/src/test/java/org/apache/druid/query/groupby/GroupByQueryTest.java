@@ -28,7 +28,6 @@ import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -38,6 +37,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -161,7 +161,8 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(aggs)
         .setGranularity(Granularities.DAY)
         .build();
-    Assert.assertEquals(innerQuerySegmentSpec, BaseQuery.getQuerySegmentSpecForLookUp(query));
+    ExecutionVertex ev = ExecutionVertex.of(query);
+    Assert.assertEquals(innerQuerySegmentSpec, ev.getEffectiveQuerySegmentSpec());
   }
 
   @Test

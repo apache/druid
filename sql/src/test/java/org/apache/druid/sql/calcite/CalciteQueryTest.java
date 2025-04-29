@@ -6107,6 +6107,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountStarWithFloorTimeFilterUsingMilliseconds()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE TIMESTAMP_TO_MILLIS(FLOOR(__time TO DAY)) >= 946684800000 AND "
+        + "TIMESTAMP_TO_MILLIS(FLOOR(__time TO DAY)) < 978307200000",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithMisalignedFloorTimeFilter()
   {
     testQuery(
@@ -12484,7 +12506,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
-  @NotYetSupported(Modes.REQUIRE_TIME_CONDITION)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
   @Test
   public void testRequireTimeConditionPositive3()
   {

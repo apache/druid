@@ -71,7 +71,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   }
 
   @Override
-  public DimensionIndexer<StructuredData, StructuredData, StructuredData> makeIndexer(boolean useMaxMemoryEstimates)
+  public DimensionIndexer<StructuredData, StructuredData, StructuredData> makeIndexer()
   {
     return new AutoTypeColumnIndexer(name, castTo);
   }

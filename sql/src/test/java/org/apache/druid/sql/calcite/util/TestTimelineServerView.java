@@ -25,7 +25,11 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
+import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.TableDataSource;
@@ -33,9 +37,12 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
-
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -47,7 +54,7 @@ public class TestTimelineServerView implements TimelineServerView
 {
   private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
       "dummy",
-      "dummy",
+      "dummy:15723",
       null,
       0,
       ServerType.HISTORICAL,
@@ -56,7 +63,7 @@ public class TestTimelineServerView implements TimelineServerView
   );
   private static final DruidServerMetadata DUMMY_SERVER_REALTIME = new DruidServerMetadata(
       "dummy2",
-      "dummy2",
+      "dummy2:15723",
       null,
       0,
       ServerType.REALTIME,
@@ -65,7 +72,7 @@ public class TestTimelineServerView implements TimelineServerView
   );
   private static final DruidServerMetadata DUMMY_BROKER = new DruidServerMetadata(
       "dummy3",
-      "dummy3",
+      "dummy3:15723",
       null,
       0,
       ServerType.BROKER,
@@ -81,7 +88,7 @@ public class TestTimelineServerView implements TimelineServerView
 
   public TestTimelineServerView(List<DataSegment> segments)
   {
-    this.segments.addAll(segments);
+    this(segments, Collections.emptyList());
   }
 
   public TestTimelineServerView(List<DataSegment> segments, List<DataSegment> realtimeSegments)
@@ -93,7 +100,22 @@ public class TestTimelineServerView implements TimelineServerView
   @Override
   public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource table)
   {
-    throw new UnsupportedOperationException();
+    for (DataSegment segment : segments) {
+      if (!segment.getDataSource().equals(table.getName())) {
+        continue;
+      }
+
+      VersionedIntervalTimeline<String, ServerSelector> timelineLookup = new VersionedIntervalTimeline<String, ServerSelector>(
+          Comparator.naturalOrder()
+      );
+      TierSelectorStrategy st = new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy());
+      ServerSelector sss = new ServerSelector(segment, st, HistoricalFilter.IDENTITY_FILTER);
+
+      PartitionChunk<ServerSelector> partitionChunk = new SingleElementPartitionChunk(sss);
+      timelineLookup.add(segment.getInterval(), segment.getVersion(), partitionChunk);
+      return Optional.of(timelineLookup);
+    }
+    return Optional.empty();
   }
 
   @Override

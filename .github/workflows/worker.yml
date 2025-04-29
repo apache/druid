@@ -29,7 +29,7 @@ on:
       key:
         required: false
         type: string
-        description: "Key for the matrix"
+        description: "Identifier for job"
       artifact_prefix:
         required: false
         type: string
@@ -44,7 +44,7 @@ env:
 
 jobs:
   execute:
-    name: "Execute (${{ inputs.key }})"
+    name: "${{ inputs.key }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

@@ -38,6 +38,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
@@ -274,21 +275,18 @@ public class ClientCompactionRunnerInfoTest
       List<DimensionSchema> dimensions
   )
   {
-    return new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        10000,
-        new Period(3600),
-        createTuningConfig(partitionsSpec),
-        granularitySpec,
-        new UserCompactionTaskDimensionsConfig(dimensions),
-        metricsSpec,
-        null,
-        null,
-        CompactionEngine.MSQ,
-        context
-    );
+    return InlineSchemaDataSourceCompactionConfig.builder()
+                                                 .forDataSource("dataSource")
+                                                 .withInputSegmentSizeBytes(500L)
+                                                 .withMaxRowsPerSegment(10000)
+                                                 .withSkipOffsetFromLatest(new Period(3600))
+                                                 .withTuningConfig(createTuningConfig(partitionsSpec))
+                                                 .withGranularitySpec(granularitySpec)
+                                                 .withDimensionsSpec(new UserCompactionTaskDimensionsConfig(dimensions))
+                                                 .withMetricsSpec(metricsSpec)
+                                                 .withEngine(CompactionEngine.MSQ)
+                                                 .withTaskContext(context)
+                                                 .build();
   }
 
   private static UserCompactionTaskQueryTuningConfig createTuningConfig(PartitionsSpec partitionsSpec)

@@ -99,7 +99,6 @@ public class RetrieveSegmentsActionsTest
   @Test
   public void testRetrieveUsedSegmentsAction()
   {
-    actionTestKit.syncSegmentMetadataCache();
     final RetrieveUsedSegmentsAction action =
         new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL));
     final Set<DataSegment> observedUsedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));

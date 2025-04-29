@@ -24,6 +24,7 @@ import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -234,6 +235,12 @@ public class CliPeon extends GuiceRunnable
           public void configure(Binder binder)
           {
             ServerRunnable.validateCentralizedDatasourceSchemaConfig(getProperties());
+            Preconditions.checkArgument(
+                taskAndStatusFile.size() >= 2,
+                "taskAndStatusFile array should contain 2 or more elements. Current array elements: [%s]",
+                taskAndStatusFile.toString()
+            );
+
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 
@@ -258,6 +265,7 @@ public class CliPeon extends GuiceRunnable
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
 
+            binder.bind(Properties.class).toInstance(properties);
             if (properties.getProperty("druid.indexer.runner.type", "").contains("k8s")) {
               log.info("Running peon in k8s mode");
               executorLifecycleConfig.setParentStreamDefined(false);

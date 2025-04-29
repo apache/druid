@@ -83,7 +83,7 @@ public class CompactionSupervisor implements Supervisor
     final AutoCompactionSnapshot snapshot;
     if (supervisorSpec.isSuspended()) {
       snapshot = AutoCompactionSnapshot.builder(dataSource)
-                                       .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED)
+                                       .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
                                        .build();
     } else if (!supervisorSpec.getValidationResult().isValid()) {
       snapshot = AutoCompactionSnapshot.builder(dataSource)

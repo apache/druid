@@ -30,7 +30,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;
@@ -48,7 +47,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -127,7 +125,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected boolean didTest = false;
 
-  static class IngestionDmlComponentSupplier extends StandardComponentSupplier
+  public static class IngestionDmlComponentSupplier extends StandardComponentSupplier
   {
     public IngestionDmlComponentSupplier(TempDirProducer tempFolderProducer)
     {
@@ -135,9 +133,9 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper queryJsonMapper, Injector injector)
+    public Class<? extends SqlEngine> getSqlEngineClass()
     {
-      return IngestionTestSqlEngine.INSTANCE;
+      return IngestionTestSqlEngine.class;
     }
 
     @Override

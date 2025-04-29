@@ -22,6 +22,7 @@ package org.apache.druid.msq.querykit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.TrueDimFilter;
@@ -78,7 +79,7 @@ public class RestrictedInputNumberDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(restrictedFooDataSource.isConcrete());
+    Assert.assertTrue(restrictedFooDataSource.isProcessable());
   }
 
   @Test
@@ -96,31 +97,12 @@ public class RestrictedInputNumberDataSourceTest
   }
 
   @Test
-  public void test_withUpdatedDataSource()
-  {
-    DataSource newRestrictedDataSource = restrictedFooDataSource.withUpdatedDataSource(restrictedBarDataSource);
-    Assert.assertEquals(newRestrictedDataSource, restrictedBarDataSource);
-  }
-
-  @Test
   public void test_equals()
   {
     EqualsVerifier.forClass(RestrictedInputNumberDataSource.class)
                   .usingGetClass()
                   .withNonnullFields("inputNumber", "policy")
                   .verify();
-  }
-
-  @Test
-  public void test_serde_roundTrip() throws Exception
-  {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final RestrictedInputNumberDataSource deserialized = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(restrictedFooDataSource),
-        RestrictedInputNumberDataSource.class
-    );
-
-    Assert.assertEquals(restrictedFooDataSource, deserialized);
   }
 
   @Test
@@ -154,5 +136,22 @@ public class RestrictedInputNumberDataSourceTest
   public void testStringRep()
   {
     Assert.assertNotEquals(restrictedFooDataSource.toString(), restrictedBarDataSource.toString());
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                          .registerModules(new MSQIndexingModule().getJacksonModules());
+
+    final RestrictedInputNumberDataSource dataSource = new RestrictedInputNumberDataSource(
+        0,
+        RowFilterPolicy.from(TrueDimFilter.instance())
+    );
+
+    Assert.assertEquals(
+        dataSource,
+        mapper.readValue(mapper.writeValueAsString(dataSource), DataSource.class)
+    );
   }
 }

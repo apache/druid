@@ -69,7 +69,7 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(filteredFooDataSource.isConcrete());
+    Assert.assertTrue(filteredFooDataSource.isProcessable());
   }
 
   @Test
@@ -90,20 +90,6 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Expected [1] child");
     filteredFooDataSource.withChildren(ImmutableList.of(fooDataSource, barDataSource));
-  }
-
-  @Test
-  public void test_withUpdatedDataSource()
-  {
-    FilteredDataSource newFilteredDataSource = (FilteredDataSource) filteredFooDataSource.withUpdatedDataSource(
-        new TableDataSource("bar"));
-    Assert.assertTrue(newFilteredDataSource.getBase().equals(barDataSource));
-  }
-
-  @Test
-  public void test_withAnalysis()
-  {
-    Assert.assertTrue(filteredFooDataSource.getAnalysis().equals(fooDataSource.getAnalysis()));
   }
 
   @Test

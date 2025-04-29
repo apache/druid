@@ -41,7 +41,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '11', '17', '21' ]
+        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
+        java: [ '11', '17', '21.0.4' ]
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
@@ -159,7 +160,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16.17.0
+          node-version: 18.0.0
 
       - name: docs
         run: |

@@ -84,6 +84,15 @@ public class ResolvedTable extends ObjectFacade
     return spec.properties();
   }
 
+  public <T> T decodeProperty(String key)
+  {
+    final Object value = spec.properties().get(key);
+    if (value == null) {
+      return null;
+    }
+    return (T) defn.property(key).decode(value, jsonMapper);
+  }
+
   public ObjectMapper jsonMapper()
   {
     return jsonMapper;

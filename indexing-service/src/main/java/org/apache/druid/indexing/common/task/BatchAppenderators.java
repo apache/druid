@@ -42,8 +42,7 @@ public final class BatchAppenderators
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     return newAppenderator(
@@ -55,8 +54,7 @@ public final class BatchAppenderators
         appenderatorConfig,
         toolbox.getSegmentPusher(),
         rowIngestionMeters,
-        parseExceptionHandler,
-        useMaxMemoryEstimates
+        parseExceptionHandler
     );
   }
 
@@ -69,8 +67,7 @@ public final class BatchAppenderators
       AppenderatorConfig appenderatorConfig,
       DataSegmentPusher segmentPusher,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     return appenderatorsManager.createBatchAppenderatorForTask(
@@ -84,7 +81,6 @@ public final class BatchAppenderators
         toolbox.getIndexMergerV9(),
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         toolbox.getCentralizedTableSchemaConfig()
     );
   }

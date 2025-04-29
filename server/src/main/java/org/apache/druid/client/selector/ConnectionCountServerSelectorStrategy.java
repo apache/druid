@@ -30,11 +30,15 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
   private static final Comparator<QueryableDruidServer> COMPARATOR =
-      Comparator.comparingInt(s -> ((DirectDruidClient) s.getQueryRunner()).getNumOpenConnections());
+      Comparator.comparingDouble(s ->
+                                     ((DirectDruidClient) s.getQueryRunner()).getNumOpenConnections()
+                                     + ThreadLocalRandom.current().nextDouble()
+      );
 
   @Nullable
   @Override

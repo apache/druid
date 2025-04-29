@@ -60,7 +60,7 @@ public class MSQControllerTaskTest
     return MSQSpec
         .builder()
         .destination(
-            new DataSourceMSQDestination("target", Granularities.DAY, null, INTERVALS, null, null)
+            new DataSourceMSQDestination("target", Granularities.DAY, null, INTERVALS, null, null, null)
         )
         .query(
             new Druids.ScanQueryBuilder()
@@ -126,14 +126,14 @@ public class MSQControllerTaskTest
   public void testGetTaskLockType()
   {
     final DataSourceMSQDestination appendDestination
-        = new DataSourceMSQDestination("target", Granularities.DAY, null, null, null, null);
+        = new DataSourceMSQDestination("target", Granularities.DAY, null, null, null, null, null);
     Assert.assertEquals(
         TaskLockType.SHARED,
         createControllerTask(msqSpecBuilder().destination(appendDestination)).getTaskLockType()
     );
 
     final DataSourceMSQDestination replaceDestination
-        = new DataSourceMSQDestination("target", Granularities.DAY, null, INTERVALS, null, null);
+        = new DataSourceMSQDestination("target", Granularities.DAY, null, INTERVALS, null, null, null);
     Assert.assertEquals(
         TaskLockType.EXCLUSIVE,
         createControllerTask(msqSpecBuilder().destination(replaceDestination)).getTaskLockType()

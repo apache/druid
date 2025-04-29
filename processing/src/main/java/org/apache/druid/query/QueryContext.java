@@ -28,6 +28,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -548,6 +549,15 @@ public class QueryContext
     return getBoolean(
         QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
+    );
+  }
+
+  public CloneQueryMode getCloneQueryMode()
+  {
+    return getEnum(
+        QueryContexts.CLONE_QUERY_MODE,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
     );
   }
 

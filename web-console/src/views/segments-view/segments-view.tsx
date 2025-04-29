@@ -44,7 +44,7 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import type { QueryWithContext, ShardSpec } from '../../druid-models';
+import type { QueryContext, QueryWithContext, ShardSpec } from '../../druid-models';
 import { computeSegmentTimeSpan, getDatasourceColor } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
@@ -319,6 +319,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           const orderByClause = sortedToOrderByClause(effectiveSorted);
 
           let queryParts: string[];
+          const sqlQueryContext: QueryContext = {};
           if (groupByInterval) {
             const innerQuery = compact([
               `SELECT "start", "end"`,
@@ -345,6 +346,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               orderByClause,
               `LIMIT ${pageSize * 1000}`,
             ]);
+
+            // This is needed because there might be an IN filter with {pageSize} intervals, the number of which exceeds the default inFunctionThreshold, set it to something greater than the {pageSize}
+            sqlQueryContext.inFunctionThreshold = pageSize + 1;
           } else {
             queryParts = compact([
               base,
@@ -358,7 +362,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          let result = await queryDruidSql({ query: sqlQuery }, cancelToken);
+          let result = await queryDruidSql(
+            { query: sqlQuery, context: sqlQueryContext },
+            cancelToken,
+          );
 
           if (visibleColumns.shown('Shard type', 'Shard spec')) {
             result = result.map(sr => ({
@@ -516,18 +523,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   ) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-        enableComparisons={enableComparisons}
-      >
-        {valueFn(row.value)}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          enableComparisons={enableComparisons}
+        >
+          {valueFn(row.value)}
+        </TableFilterableCell>
+      );
+    };
   }
 
   renderSegmentsTable() {
@@ -580,7 +588,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE}
+        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE || page > 0}
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}

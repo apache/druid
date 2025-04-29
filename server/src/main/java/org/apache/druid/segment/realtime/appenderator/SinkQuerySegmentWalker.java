@@ -60,7 +60,8 @@ import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
@@ -125,6 +126,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final PolicyEnforcer policyEnforcer;
 
   public SinkQuerySegmentWalker(
       String dataSource,
@@ -135,7 +137,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       QueryProcessingPool queryProcessingPool,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -147,6 +150,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
+    this.policyEnforcer = policyEnforcer;
 
     if (!cache.isLocal()) {
       log.warn("Configured cache[%s] is not local, caching will not be enabled.", cache.getClass().getName());
@@ -177,12 +181,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+    ExecutionVertex ev = ExecutionVertex.of(query);
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     final DataSource dataSourceFromQuery = query.getDataSource();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
 
     // Sanity check: make sure the query is based on the table we're meant to handle.
-    if (!analysis.getBaseTableDataSource().getName().equals(dataSource)) {
+    if (!ev.getBaseTableDataSource().getName().equals(dataSource)) {
       throw new ISE("Cannot handle datasource: %s", dataSourceFromQuery);
     }
 
@@ -204,7 +208,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> dataSourceFromQuery.createSegmentMapFunction(query)
+        () -> ev.createSegmentMapFunction(policyEnforcer)
     );
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment

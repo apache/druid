@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Classes, Intent } from '@blueprintjs/core';
+import { Classes, Icon, Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
@@ -279,6 +279,14 @@ export function formatNumber(n: NumberLike): string {
   return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
 }
 
+export function formatNumberAbbreviated(n: NumberLike): string {
+  return (n || 0).toLocaleString('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatRate(n: NumberLike) {
   return numeral(n).format('0,0.0') + '/s';
 }
@@ -456,6 +464,23 @@ export function findMap<T, Q>(
   f: (x: T, i: number) => Q | undefined,
 ): Q | undefined {
   return filterMap(xs, f)[0];
+}
+
+export function minBy<T>(xs: T[], f: (item: T, index: number) => number): T | undefined {
+  if (!xs.length) return undefined;
+
+  let minItem = xs[0];
+  let minValue = f(xs[0], 0);
+
+  for (let i = 1; i < xs.length; i++) {
+    const currentValue = f(xs[i], i);
+    if (currentValue < minValue) {
+      minValue = currentValue;
+      minItem = xs[i];
+    }
+  }
+
+  return minItem;
 }
 
 export function changeByIndex<T>(
@@ -691,3 +716,7 @@ export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean):
   const e = eq || ((a, b) => a === b);
   return xs.find(_ => e(_, x)) ? xs.filter(d => !e(d, x)) : xs.concat([x]);
 }
+
+export const EXPERIMENTAL_ICON = (
+  <Icon icon={IconNames.LAB_TEST} intent={Intent.WARNING} data-tooltip="Experimental" />
+);

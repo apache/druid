@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#--------------------------------------------------------------------
+
+# Helps to calculate new balancing
+# on the output a simple knapsack should be done...right now that's manual
+
+set -e
+
+find . -name 'TEST*xml' |
+# <testsuite ... name="org.apache.druid.query.policy.NoRestrictionPolicyTest" time="0.071" ...>
+xargs sed -nr '/^<testsuite/s/.*name=\"([^\"]+)\".*time=\"([^\"]+)\".*/\1\t\2/p' |
+# org.apache.druid.server.RequestLogLineTest      0.052
+sed -r 's/[^\t]+\.(.)[^\t.]+\t/\1\t/' > test_times
+
+for c in {A..Z} ;do
+ echo -n "$c    ";
+ (echo 0;grep "^$c" test_times| cut -f 2)|paste -s -d + -|bc
+done | sort -k 2 -nr
+# final output is a table like
+# <letter>	<sumTime>
+# C	88
+
+

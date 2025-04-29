@@ -26,6 +26,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
@@ -56,7 +57,8 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
   {
     // Verify that compaction config already exist. This config was inserted manually into the database using SQL script.
     // This auto compaction configuration payload is from Druid 0.21.0
-    DruidCompactionConfig coordinatorCompactionConfig = compactionResource.getCompactionConfig();
+    DruidCompactionConfig coordinatorCompactionConfig = DruidCompactionConfig.empty()
+        .withDatasourceConfigs(compactionResource.getAllCompactionConfigs());
     DataSourceCompactionConfig foundDataSourceCompactionConfig
         = coordinatorCompactionConfig.findConfigForDatasource(UPGRADE_DATASOURCE_NAME).orNull();
     Assert.assertNotNull(foundDataSourceCompactionConfig);
@@ -65,7 +67,7 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
     PartitionsSpec newPartitionsSpec = new DynamicPartitionsSpec(4000, null);
     Period newSkipOffset = Period.seconds(0);
 
-    DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(UPGRADE_DATASOURCE_NAME)
         .withSkipOffsetFromLatest(newSkipOffset)
@@ -99,13 +101,9 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
         .build();
     compactionResource.submitCompactionConfig(compactionConfig);
 
-    // Wait for compaction config to persist
-    Thread.sleep(2000);
-
     // Verify that compaction was successfully updated
-    coordinatorCompactionConfig = compactionResource.getCompactionConfig();
     foundDataSourceCompactionConfig
-        = coordinatorCompactionConfig.findConfigForDatasource(UPGRADE_DATASOURCE_NAME).orNull();
+        = compactionResource.getDataSourceCompactionConfig(UPGRADE_DATASOURCE_NAME);
     Assert.assertNotNull(foundDataSourceCompactionConfig);
     Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
     Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), newPartitionsSpec);

@@ -93,6 +93,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
         ]
       }
       onChange={[Function]}
+      onClose={[Function]}
       tableColumnsHidden={[]}
     />
   </Memo(ViewControlBar)>
@@ -172,7 +173,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "Header": "Type",
           "accessor": "type",
           "show": true,
-          "width": 80,
+          "width": 120,
         },
         {
           "Cell": [Function],
@@ -188,7 +189,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "accessor": "detailed_state",
           "id": "detailed_state",
           "show": true,
-          "width": 150,
+          "width": 170,
         },
         {
           "Cell": [Function],

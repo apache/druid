@@ -47,6 +47,7 @@ import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
@@ -176,6 +177,7 @@ public class WorkerTaskMonitorTest
                 null,
                 taskActionClientFactory,
                 null,
+                NoopPolicyEnforcer.instance(),
                 null,
                 null,
                 null,
@@ -183,6 +185,7 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 notifierFactory,
+                null,
                 null,
                 null,
                 NoopJoinableFactory.INSTANCE,

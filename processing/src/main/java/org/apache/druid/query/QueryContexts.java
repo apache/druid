@@ -65,6 +65,7 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
+  public static final String CLONE_QUERY_MODE = "cloneQueryMode";
   // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
@@ -149,6 +150,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  public static final CloneQueryMode DEFAULT_CLONE_QUERY_MODE = CloneQueryMode.EXCLUDECLONES;
   public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = true;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;

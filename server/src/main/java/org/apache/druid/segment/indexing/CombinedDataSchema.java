@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.indexing;
 
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
@@ -26,6 +27,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -42,6 +44,7 @@ public class CombinedDataSchema extends DataSchema
       AggregatorFactory[] aggregators,
       GranularitySpec granularitySpec,
       TransformSpec transformSpec,
+      @Nullable List<AggregateProjectionSpec> projections,
       @Nullable Set<String> multiValuedDimensions
   )
   {
@@ -52,7 +55,7 @@ public class CombinedDataSchema extends DataSchema
         aggregators,
         granularitySpec,
         transformSpec,
-        null,
+        projections,
         null,
         null
     );

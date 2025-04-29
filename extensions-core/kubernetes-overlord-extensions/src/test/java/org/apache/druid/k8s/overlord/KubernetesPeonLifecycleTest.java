@@ -75,7 +75,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     mapper = new TestUtils().getTestObjectMapper();
     task = K8sTestUtils.createTask(ID, 0);
-    k8sTaskId = new K8sTaskId(task);
+    k8sTaskId = new K8sTaskId(null, task);
     EasyMock.expect(logWatch.getOutput()).andReturn(IOUtils.toInputStream("", StandardCharsets.UTF_8)).anyTimes();
   }
 
@@ -84,6 +84,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -129,6 +130,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -173,6 +175,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -222,6 +225,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -266,6 +270,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -313,6 +318,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -351,6 +357,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -404,6 +411,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -464,6 +472,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -512,6 +521,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -562,6 +572,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -612,6 +623,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -651,6 +663,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -664,6 +677,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -685,6 +699,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -706,6 +721,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -721,6 +737,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -736,6 +753,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -751,6 +769,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -774,6 +793,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -790,6 +810,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -806,6 +827,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -822,6 +844,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -844,6 +867,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -872,6 +896,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -908,6 +933,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -944,6 +970,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,
@@ -981,6 +1008,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        k8sTaskId,
         kubernetesClient,
         taskLogs,
         mapper,

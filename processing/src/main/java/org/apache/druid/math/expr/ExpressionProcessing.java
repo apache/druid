@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 
 /**
- * Like {@link org.apache.druid.common.config.NullHandling}, except for expressions processing configs
+ * Expressions processing configs
  */
 public class ExpressionProcessing
 {

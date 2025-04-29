@@ -37,6 +37,8 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.server.http.SegmentLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -71,16 +73,19 @@ public class HttpLoadQueuePeonTest
 
   private TestHttpClient httpClient;
   private HttpLoadQueuePeon httpLoadQueuePeon;
+  private SegmentLoadingCapabilities segmentLoadingCapabilities;
 
   @Before
   public void setUp()
   {
+    segmentLoadingCapabilities = new SegmentLoadingCapabilities(1, 3);
     httpClient = new TestHttpClient();
     httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
         MAPPER,
         httpClient,
         new HttpLoadQueuePeonConfig(null, null, 10),
+        () -> SegmentLoadingMode.NORMAL,
         new WrappingScheduledExecutorService(
             "HttpLoadQueuePeonTest-%s",
             httpClient.processingExecutor,
@@ -316,12 +321,36 @@ public class HttpLoadQueuePeonTest
     );
   }
 
+  @Test
+  public void testBatchSize()
+  {
+    Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+
+    // Without a batch size runtime parameter
+    httpLoadQueuePeon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        httpClient,
+        new HttpLoadQueuePeonConfig(null, null, null),
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService(
+            "HttpLoadQueuePeonTest-%s",
+            httpClient.processingExecutor,
+            true
+        ),
+        httpClient.callbackExecutor
+    );
+
+    Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+    Assert.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));
+  }
+
   private LoadPeonCallback markSegmentProcessed(DataSegment segment)
   {
     return success -> httpClient.processedSegments.add(segment);
   }
 
-  private static class TestHttpClient implements HttpClient, DataSegmentChangeHandler
+  private class TestHttpClient implements HttpClient, DataSegmentChangeHandler
   {
     final BlockingExecutorService processingExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-%s");
     final BlockingExecutorService callbackExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-cb");
@@ -338,6 +367,7 @@ public class HttpLoadQueuePeonTest
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <Intermediate, Final> ListenableFuture<Final> go(
         Request request,
         HttpResponseHandler<Intermediate, Final> httpResponseHandler,
@@ -347,7 +377,17 @@ public class HttpLoadQueuePeonTest
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
+
       try {
+        if (request.getUrl().toString().contains("/loadCapabilities")) {
+          return (ListenableFuture<Final>) Futures.immediateFuture(
+              new ByteArrayInputStream(
+                  MAPPER.writerFor(SegmentLoadingCapabilities.class)
+                        .writeValueAsBytes(segmentLoadingCapabilities)
+              )
+          );
+        }
+
         List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
             request.getContent().array(),
             HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
@@ -357,7 +397,7 @@ public class HttpLoadQueuePeonTest
         for (DataSegmentChangeRequest cr : changeRequests) {
           cr.go(this, null);
           statuses.add(
-              new DataSegmentChangeResponse(cr, SegmentChangeStatus.SUCCESS)
+              new DataSegmentChangeResponse(cr, SegmentChangeStatus.success())
           );
         }
         return (ListenableFuture<Final>) Futures.immediateFuture(

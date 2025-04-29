@@ -62,7 +62,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
-    final List<ServerHolder> allServers = params.getDruidCluster().getAllServers();
+    final List<ServerHolder> allServers = params.getDruidCluster().getAllManagedServers();
     int numCancelledLoads = allServers.stream().mapToInt(
         server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, params)
     ).sum();

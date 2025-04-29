@@ -168,7 +168,7 @@ public class DruidOverlord
                 public void start()
                 {
                   taskMaster.becomeFullLeader();
-                  compactionScheduler.start();
+                  compactionScheduler.becomeLeader();
                   scheduledBatchTaskManager.start();
 
                   // Announce the node only after all the services have been initialized
@@ -181,7 +181,7 @@ public class DruidOverlord
                 {
                   serviceAnnouncer.unannounce(node);
                   scheduledBatchTaskManager.stop();
-                  compactionScheduler.stop();
+                  compactionScheduler.stopBeingLeader();
                   taskMaster.downgradeToHalfLeader();
                 }
               }

@@ -18,6 +18,7 @@
 
 export * from './async-query/async-query';
 export * from './compaction-config/compaction-config';
+export * from './compaction-dynamic-config/compaction-dynamic-config';
 export * from './compaction-status/compaction-status';
 export * from './coordinator-dynamic-config/coordinator-dynamic-config';
 export * from './dart/dart-query-entry';

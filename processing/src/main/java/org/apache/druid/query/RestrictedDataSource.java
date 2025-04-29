@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
 
@@ -117,9 +117,9 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
-    return base.isConcrete();
+    return base.isProcessable();
   }
 
   @Override
@@ -130,20 +130,14 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return create(newSource, policy);
-  }
-
-  @Override
-  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
+  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap, PolicyEnforcer policyEnforcer)
   {
     if (!policyMap.containsKey(base.getName())) {
       throw new ISE("Missing policy check result for table [%s]", base.getName());
     }
 
     Optional<Policy> newPolicy = policyMap.getOrDefault(base.getName(), Optional.empty());
-    if (!newPolicy.isPresent()) {
+    if (newPolicy.isEmpty()) {
       throw new ISE(
           "No restriction found on table [%s], but had policy [%s] before.",
           base.getName(),
@@ -164,6 +158,7 @@ public class RestrictedDataSource implements DataSource
     }
     // The only happy path is, newPolicy is NoRestrictionPolicy, which means this comes from an anthenticated and
     // authorized druid-internal request.
+    policyEnforcer.validateOrElseThrow(base, policy);
     return this;
   }
 
@@ -178,13 +173,7 @@ public class RestrictedDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[0];
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return base.getAnalysis();
+    return null;
   }
 
   @Override

@@ -47,7 +47,7 @@ const NEEDS_GROUPING_TO_ORDER = true;
 
 interface QueryAndMore {
   timezone: Timezone;
-  originalWhere: SqlExpression;
+  globalWhere: SqlExpression;
   queryAndHints: QueryAndHints;
 }
 
@@ -213,6 +213,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
       timezone,
       where,
       setWhere,
+      moduleWhere,
       parameterValues,
       setParameterValues,
       runSqlQuery,
@@ -224,13 +225,13 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
       if (!pivotColumn) return;
 
       return querySource
-        .getInitQuery(where)
+        .getInitQuery(where.and(moduleWhere))
         .addSelect(pivotColumn.expression.as('v'), { addToGroupBy: 'end' })
         .changeOrderByExpression(
           (measures.length ? measures[0].expression : F.count()).toOrderByExpression('DESC'),
         )
         .changeLimitValue(maxPivotValues);
-    }, [querySource, where, parameterValues]);
+    }, [querySource, where, moduleWhere, parameterValues]);
 
     const [pivotValueState, queryManager] = useQueryManager({
       query: pivotValueQuery,
@@ -249,10 +250,10 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
 
       return {
         timezone,
-        originalWhere: where,
+        globalWhere: where,
         queryAndHints: makeTableQueryAndHints({
           source: querySource.query,
-          where,
+          where: where.and(moduleWhere),
           splitColumns: parameterValues.splitColumns,
           timeBucket: parameterValues.timeBucket,
           showColumns: parameterValues.showColumns,
@@ -274,13 +275,13 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
     const [resultState] = useQueryManager({
       query: queryAndMore,
       processQuery: async (queryAndMore, cancelToken) => {
-        const { timezone, originalWhere, queryAndHints } = queryAndMore;
+        const { timezone, globalWhere, queryAndHints } = queryAndMore;
         const { query, columnHints } = queryAndHints;
         let result = await runSqlQuery({ query, timezone }, cancelToken);
         if (result.sqlQuery) {
           result = result.attachQuery(
             { query: '' },
-            result.sqlQuery.changeWhereExpression(originalWhere),
+            result.sqlQuery.changeWhereExpression(globalWhere),
           );
         }
         return {

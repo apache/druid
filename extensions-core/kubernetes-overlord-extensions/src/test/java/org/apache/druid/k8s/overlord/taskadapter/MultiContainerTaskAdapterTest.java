@@ -88,7 +88,7 @@ class MultiContainerTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
@@ -139,7 +139,7 @@ class MultiContainerTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpecOrder.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .withPrimaryContainerName("primary")
         .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
@@ -193,7 +193,7 @@ class MultiContainerTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("podSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .withPrimaryContainerName("primary")
         .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
         .build();

@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class CompactionSupervisorSpec implements SupervisorSpec
 {
@@ -40,6 +41,11 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   private final DataSourceCompactionConfig spec;
   private final CompactionScheduler scheduler;
   private final CompactionConfigValidationResult validationResult;
+
+  public static String getSupervisorIdForDatasource(String dataSource)
+  {
+    return ID_PREFIX + dataSource;
+  }
 
   @JsonCreator
   public CompactionSupervisorSpec(
@@ -70,7 +76,7 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   @Override
   public String getId()
   {
-    return ID_PREFIX + spec.getDataSource();
+    return getSupervisorIdForDatasource(spec.getDataSource());
   }
 
   public CompactionConfigValidationResult getValidationResult()
@@ -112,5 +118,24 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   public String getSource()
   {
     return "";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CompactionSupervisorSpec that = (CompactionSupervisorSpec) o;
+    return suspended == that.suspended && Objects.equals(spec, that.spec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(suspended, spec);
   }
 }

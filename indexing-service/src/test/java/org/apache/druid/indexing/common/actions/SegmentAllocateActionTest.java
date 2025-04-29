@@ -1168,7 +1168,7 @@ public class SegmentAllocateActionTest
     coordinator.deletePendingSegmentsForTaskAllocatorId(task1.getDataSource(), task1.getTaskAllocatorId());
 
     // Drop all segments
-    coordinator.markSegmentsAsUnusedWithinInterval(task0.getDataSource(), Intervals.ETERNITY);
+    coordinator.markSegmentsWithinIntervalAsUnused(task0.getDataSource(), Intervals.ETERNITY, null);
 
     // Allocate another id and ensure that it doesn't exist in the druid_segments table
     final SegmentIdWithShardSpec theId =

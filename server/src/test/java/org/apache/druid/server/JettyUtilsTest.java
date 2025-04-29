@@ -36,4 +36,28 @@ public class JettyUtilsTest
         )
     );
   }
+
+  @Test
+  public void testConcatenateForRewriteEmptyPath()
+  {
+    Assert.assertNull(
+        JettyUtils.concatenateForRewrite(
+            "http://example.com",
+            "",
+            "q=baz%20qux"
+        )
+    );
+  }
+
+  @Test
+  public void testConcatenateForRewriteInvalidPath()
+  {
+    Assert.assertNull(
+        JettyUtils.concatenateForRewrite(
+            "http://example.com",
+            "foo%20bar", // path must start with '/'
+            "q=baz%20qux"
+        )
+    );
+  }
 }

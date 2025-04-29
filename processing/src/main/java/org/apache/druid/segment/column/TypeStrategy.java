@@ -20,7 +20,6 @@
 package org.apache.druid.segment.column;
 
 import it.unimi.dsi.fastutil.Hash;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 
 import java.nio.ByteBuffer;
@@ -41,8 +40,8 @@ import java.util.Comparator;
  * All implementations of this mechanism support reading and writing ONLY non-null values. To handle nulls inline with
  * your values, consider {@link NullableTypeStrategy}, which might be acceptable to use if you need to read and write
  * nullable values, AND, you have enough memory to burn a full byte for every value you want to store. It will store
- * values with a leading byte containing either {@link NullHandling#IS_NULL_BYTE} or
- * {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate. If you have a lot of values to write and a lot of nulls,
+ * values with a leading byte containing either {@link TypeStrategies#IS_NULL_BYTE} or
+ * {@link TypeStrategies#IS_NOT_NULL_BYTE} as appropriate. If you have a lot of values to write and a lot of nulls,
  * consider alternative approaches to tracking your nulls instead.
  *
  * This mechanism allows using the natural {@link ByteBuffer#position()} and modify the underlying position as they

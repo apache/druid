@@ -1010,7 +1010,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       0,
                       MAX_INITIALIZATION_RETRIES,
                       null,
-                      null
+                      StringUtils.format("Failed to initialize supervisor[%s]", supervisorId)
                   );
                 }
                 catch (Exception e2) {
@@ -3222,7 +3222,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     final boolean stopTasksEarly;
     if (earlyStopTime != null && !earlyStopTime.isAfterNow()) {
-      log.info("Early stop requested, signalling tasks to complete.");
+      log.info("Early stop requested for supervisor[%s], signalling tasks to complete.", supervisorId);
       earlyStopTime = null;
       stopTasksEarly = true;
     } else {

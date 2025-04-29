@@ -67,7 +67,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final String PAYLOAD_TYPE = "BLOB";
   private static final String COLLATION = "";
 
-  static final int DEFAULT_MAX_TRIES = 10;
+  static final int QUIET_RETRIES = 2;
+  static final int DEFAULT_MAX_TRIES = 3;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
@@ -154,7 +155,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   )
   {
     try {
-      return RetryUtils.retry(() -> getDBI().withHandle(callback), myShouldRetry, DEFAULT_MAX_TRIES);
+      return RetryUtils.retry(
+          () -> getDBI().withHandle(callback),
+          myShouldRetry,
+          null,
+          DEFAULT_MAX_TRIES,
+          "Metadata transaction failed"
+      );
     }
     catch (Exception e) {
       Throwables.propagateIfPossible(e);
@@ -170,7 +177,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
   {
     try {
-      return RetryUtils.retry(() -> getDBI().inTransaction(TransactionIsolationLevel.READ_COMMITTED, callback), shouldRetry, quietTries, maxTries);
+      return RetryUtils.retry(
+          () -> getDBI().inTransaction(TransactionIsolationLevel.READ_COMMITTED, callback),
+          shouldRetry,
+          quietTries,
+          maxTries,
+          null,
+          "Metadata write transaction failed"
+      );
     }
     catch (Exception e) {
       Throwables.propagateIfPossible(e);
@@ -897,7 +911,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           () -> getDBI().inTransaction(TransactionIsolationLevel.READ_COMMITTED, callback),
           shouldRetry,
           quietTries,
-          maxTries
+          maxTries,
+          null,
+          "Metadata read transaction failed"
       );
     }
     catch (Exception e) {

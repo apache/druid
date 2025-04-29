@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import net.hydromatic.quidem.CommandHandler;
 import net.hydromatic.quidem.Quidem;
@@ -29,10 +30,16 @@ import org.apache.calcite.util.Closer;
 import org.apache.calcite.util.Util;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.apache.druid.concurrent.Threads;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.sql.calcite.MultiComponentSupplier;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,9 +51,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -72,8 +84,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <li>Copy over the .iq.out to .iq to accept the changes</li>
  * </ol>
  *
- * To shorten the above 2 steps you can run the test with system property quiem.overwrite=true
- *
+ * To shorten the above 2 steps you can run the test with system property quidem.overwrite=true
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DruidQuidemTestBase
@@ -91,7 +102,12 @@ public abstract class DruidQuidemTestBase
 
   private DruidQuidemRunner druidQuidemRunner;
 
-  public DruidQuidemTestBase()
+  public DruidQuidemTestBase(CommandHandler commandHandler)
+  {
+    this(new DruidQuidemRunner(commandHandler, Quidem::new));
+  }
+
+  public DruidQuidemTestBase(DruidQuidemRunner druidQuidemRunner)
   {
     String filterStr = System.getProperty(PROPERTY_FILTER, null);
     if (filterStr != null) {
@@ -100,58 +116,170 @@ public abstract class DruidQuidemTestBase
       }
       filter = new WildcardFileFilter(filterStr);
     }
-    druidQuidemRunner = new DruidQuidemRunner(createCommandHandler());
+    this.druidQuidemRunner = druidQuidemRunner;
   }
 
-  /** Creates a command handler. */
-  protected CommandHandler createCommandHandler()
+  protected static class QuidemTestCaseConfiguration
   {
-    return new DruidQuidemCommandHandler();
+    final String fileName;
+    final String componentSupplierName;
+
+    public QuidemTestCaseConfiguration(String componentSupplierName, String fileName)
+    {
+      this.fileName = fileName;
+      this.componentSupplierName = componentSupplierName;
+    }
+
+    public String getTestName()
+    {
+      if (componentSupplierName == null) {
+        return fileName;
+      } else {
+        return StringUtils.format("%s@%s", fileName, componentSupplierName);
+      }
+    }
+
+    @Override
+    public String toString()
+    {
+      return getTestName();
+    }
+  }
+
+  public List<QuidemTestCaseConfiguration> getTestConfigs() throws IOException
+  {
+    List<QuidemTestCaseConfiguration> ret = new ArrayList<>();
+    List<String> fileNames = getFileNames();
+    for (String file : fileNames) {
+      try {
+        ret.addAll(getConfigurationsFor(file));
+      }
+      catch (Exception e) {
+        throw DruidException.defensive(e, "While processing configurations for quidem file [%s]", file);
+      }
+    }
+    return ret;
+  }
+
+  private List<QuidemTestCaseConfiguration> getConfigurationsFor(String testFileName) throws IOException
+  {
+    File inFile = new File(getTestRoot(), testFileName);
+    List<QuidemTestCaseConfiguration> ret = new ArrayList<>();
+    for (Class<? extends QueryComponentSupplier> supplier : collectSuppliers(inFile)) {
+      String supplierName = supplier == null ? null : supplier.getSimpleName();
+      ret.add(new QuidemTestCaseConfiguration(supplierName, testFileName));
+    }
+    return ret;
+  }
+
+  private List<Class<? extends QueryComponentSupplier>> collectSuppliers(File inFile) throws IOException
+  {
+    Set<Class<MultiComponentSupplier>> metaSuppliers = collectMetaSuppliers(inFile);
+
+    switch (metaSuppliers.size()) {
+      case 0:
+        return Collections.singletonList(null);
+      case 1:
+        return MultiComponentSupplier.getSuppliers(Iterables.getOnlyElement(metaSuppliers));
+      default:
+        throw DruidException.defensive("Multiple MetaComponentSuppliers found [%s].", metaSuppliers);
+    }
+  }
+
+  private Set<Class<MultiComponentSupplier>> collectMetaSuppliers(File inFile) throws IOException
+  {
+    Set<Class<MultiComponentSupplier>> metaSuppliers = new HashSet<>();
+
+    for (String line : Files.readLines(inFile, StandardCharsets.UTF_8)) {
+      if (line.startsWith("!use")) {
+        String[] parts = line.split(" ");
+        if (parts.length == 2) {
+          SqlTestFrameworkConfig cfg = SqlTestFrameworkConfig.fromURL(parts[1]);
+          validateFrameworkConfig(cfg);
+          if (MultiComponentSupplier.class.isAssignableFrom(cfg.componentSupplier)) {
+            metaSuppliers.add((Class<MultiComponentSupplier>) cfg.componentSupplier);
+          }
+        }
+      }
+    }
+    return metaSuppliers;
+  }
+
+  @SuppressWarnings("unused")
+  protected void validateFrameworkConfig(SqlTestFrameworkConfig cfg)
+  {
+    // no-op
   }
 
   @ParameterizedTest
-  @MethodSource("getFileNames")
-  public void test(String testFileName) throws Exception
+  @MethodSource("getTestConfigs")
+  public void test(QuidemTestCaseConfiguration testConfig) throws Exception
   {
-    File inFile = new File(getTestRoot(), testFileName);
+    final String testName = testConfig.getTestName();
 
-    final File outFile = new File(inFile.getParentFile(), inFile.getName() + ".out");
-    druidQuidemRunner.run(inFile, outFile);
+    File inFile = new File(getTestRoot(), testConfig.fileName);
+    final File outFile = new File(getTestRoot(), testName + ".out");
+    try (AutoCloseable closeable = Threads.withThreadName(testName)) {
+      druidQuidemRunner.run(inFile, outFile, testConfig.componentSupplierName);
+    }
+    catch (Error e) {
+      // This catch is needed to workaround the way Quidem currently handles AssumptionViolatedException
+      Throwable cause = e.getCause();
+      if (cause != null && cause instanceof AssumptionViolatedException) {
+        AssumptionViolatedException assumptionViolatedException = (AssumptionViolatedException) cause;
+        throw assumptionViolatedException;
+      }
+      throw e;
+    }
+
   }
 
   public static class DruidQuidemRunner
   {
     private CommandHandler commandHandler;
+    private Function<Config, Quidem> quidemMaker;
 
-    public DruidQuidemRunner(CommandHandler commandHandler)
+    public DruidQuidemRunner()
+    {
+      this(new DruidQuidemCommandHandler(), Quidem::new);
+    }
+
+    public DruidQuidemRunner(CommandHandler commandHandler, Function<Config, Quidem> quidemMaker)
     {
       this.commandHandler = commandHandler;
+      this.quidemMaker = quidemMaker;
     }
 
     public void run(File inFile) throws Exception
     {
       File outFile = new File(inFile.getParent(), inFile.getName() + ".out");
-      run(inFile, outFile);
+      run(inFile, outFile, null);
     }
 
-    public void run(File inFile, final File outFile) throws Exception
+    public void run(File inFile, final File outFile, String componentSupplier) throws Exception
     {
       FileUtils.mkdirp(outFile.getParentFile());
       try (Reader reader = Util.reader(inFile);
-          Writer writer = Util.printWriter(outFile);
-          Closer closer = new Closer()) {
+           Writer writer = Util.printWriter(outFile);
+           Closer closer = new Closer()) {
 
         DruidQuidemConnectionFactory connectionFactory = new DruidQuidemConnectionFactory();
+        if (componentSupplier != null) {
+          connectionFactory.onSet("componentSupplier", componentSupplier);
+        }
         ConfigBuilder configBuilder = Quidem.configBuilder()
             .withConnectionFactory(connectionFactory)
             .withPropertyHandler(connectionFactory)
+            .withEnv(connectionFactory::envLookup)
             .withCommandHandler(commandHandler);
 
         Config config = configBuilder
             .withReader(reader)
-            .withWriter(writer).build();
+            .withWriter(writer)
+            .withStackLimit(-1)
+            .build();
 
-        new Quidem(config).execute();
+        quidemMaker.apply(config).execute();
       }
       catch (Exception e) {
         throw new RE(e, "Encountered exception while running [%s]", inFile);
@@ -162,17 +290,37 @@ public abstract class DruidQuidemTestBase
       if (!diff.isEmpty()) {
         if (isOverwrite()) {
           Files.copy(outFile, inFile);
+        } else if (isUnsupportedComponentSupplier(diff, componentSupplier)) {
+          System.out.println("Skipping verification of unsupported componentSupplier " + componentSupplier);
         } else {
           fail("Files differ: " + outFile + " " + inFile + "\n" + diff);
         }
+      } else {
+        if (outFile.exists()) {
+          outFile.delete();
+        }
       }
     }
+
 
     public static boolean isOverwrite()
     {
       String property = System.getProperty(OVERWRITE_PROPERTY, "false");
       return property.length() == 0 || Boolean.valueOf(property);
     }
+
+    private static boolean isUnsupportedComponentSupplier(String diff, String componentSupplier)
+    {
+      return diff.contains(StringUtils.format(
+          "Unsupported componentSupplier[%s], skipping verification of diff.",
+          componentSupplier
+      ));
+    }
+  }
+
+  protected CommandHandler getCommandHandler()
+  {
+    return new DruidQuidemCommandHandler();
   }
 
   protected final List<String> getFileNames() throws IOException
@@ -183,8 +331,12 @@ public abstract class DruidQuidemTestBase
     if (!testRoot.exists()) {
       throw new FileNotFoundException(StringUtils.format("testRoot [%s] doesn't exists!", testRoot));
     }
-    for (File f : testRoot.listFiles(this::isTestIncluded)) {
-      ret.add(f.getName());
+
+    for (File f : Files.fileTraverser().breadthFirst(testRoot)) {
+      if (isTestIncluded(f)) {
+        Path relativePath = testRoot.toPath().relativize(f.toPath());
+        ret.add(relativePath.toString());
+      }
     }
     if (ret.isEmpty()) {
       throw new IAE(
@@ -200,8 +352,8 @@ public abstract class DruidQuidemTestBase
   private boolean isTestIncluded(File f)
   {
     return !f.isDirectory()
-        && f.getName().endsWith(IQ_SUFFIX)
-        && filter.accept(f);
+           && f.getName().endsWith(IQ_SUFFIX)
+           && filter.accept(f);
   }
 
   protected abstract File getTestRoot();

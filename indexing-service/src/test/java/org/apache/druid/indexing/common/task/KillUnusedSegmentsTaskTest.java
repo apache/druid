@@ -40,6 +40,7 @@ import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.assertj.core.api.Assertions;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -62,7 +63,7 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 {
-  private static final String DATA_SOURCE = "dataSource";
+  private static final String DATA_SOURCE = "wiki";
 
   private TestTaskRunner taskRunner;
 
@@ -147,14 +148,15 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDeleteUnreferencedSiblings() throws Exception
   {
+    final SegmentId nonExistentParent = segment3.getId();
     final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
         segment1.getId().toString(),
-        "nonExistentParent",
+        nonExistentParent.toString(),
         segment2.getId().toString(),
-        "nonExistentParent"
+        nonExistentParent.toString()
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
-    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+    getStorageCoordinator().markSegmentsWithinIntervalAsUnused(DATA_SOURCE, Intervals.ETERNITY, null);
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
@@ -185,14 +187,15 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDoNotDeleteReferencedSibling() throws Exception
   {
+    final SegmentId nonExistentParent = segment3.getId();
     final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
         segment1.getId().toString(),
-        "nonExistentParent",
+        nonExistentParent.toString(),
         segment2.getId().toString(),
-        "nonExistentParent"
+        nonExistentParent.toString()
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
-    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+    getStorageCoordinator().markSegmentsWithinIntervalAsUnused(DATA_SOURCE, Intervals.ETERNITY, null);
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
