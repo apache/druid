@@ -190,10 +190,10 @@ public class Stats
   public static class Configuration
   {
     public static final CoordinatorStat BROKER_SYNC_TIME
-        = CoordinatorStat.toDebugAndEmit("brokerSyncTime", "config/broker/sync/time");
+        = CoordinatorStat.toDebugAndEmit("brokerSyncTime", "config/brokerSync/time");
     public static final CoordinatorStat TOTAL_SYNC_TIME
-        = CoordinatorStat.toDebugAndEmit("totalBrokerSyncTime", "config/broker/sync/global/time");
+        = CoordinatorStat.toDebugAndEmit("totalBrokerSyncTime", "config/brokerSync/total/time");
     public static final CoordinatorStat BROKER_SYNC_FAILURE
-        = CoordinatorStat.toDebugAndEmit("configSyncFailure", "config/broker/sync/error/count");
+        = CoordinatorStat.toDebugAndEmit("configSyncFailure", "config/brokerSync/error");
   }
 }
