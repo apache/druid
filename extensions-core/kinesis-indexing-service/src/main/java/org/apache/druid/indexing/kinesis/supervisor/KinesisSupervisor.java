@@ -387,7 +387,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionTimeLags);
+    return aggregatePartitionLags(partitionTimeLags);
   }
 
   @Override

@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
@@ -64,6 +65,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("taskDuration") Period taskDuration,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
+      @Nullable @JsonProperty("lagAggregator") LagAggregator lagAggregator,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
@@ -91,6 +93,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         autoScalerConfig,
+        Configs.valueOrDefault(lagAggregator, LagAggregator.DEFAULT),
         lateMessageRejectionStartDateTime,
         idleConfig,
         stopTaskCount

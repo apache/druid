@@ -363,7 +363,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionRecordLag);
+    return aggregatePartitionLags(partitionRecordLag);
   }
 
   @Override

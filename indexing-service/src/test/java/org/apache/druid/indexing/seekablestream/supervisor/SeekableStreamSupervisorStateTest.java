@@ -686,6 +686,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         null
@@ -789,6 +790,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         null
@@ -1075,21 +1077,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     DateTime startTime = DateTimes.nowUtc();
     SeekableStreamSupervisorIOConfig ioConfig = new SeekableStreamSupervisorIOConfig(
-            STREAM,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-            1,
-            1,
-            new Period("PT1H"),
-            new Period("PT1S"),
-            new Period("PT30S"),
-            false,
-            new Period("PT30M"),
-            null,
-            null,
-            null,
-            null,
-            new IdleConfig(true, 200L),
-            null
+        STREAM,
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("PT1S"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        LagAggregator.DEFAULT,
+        null,
+        new IdleConfig(true, 200L),
+        null
     ) {};
 
     EasyMock.reset(spec);
@@ -1294,6 +1297,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         stopTaskCount
@@ -1518,6 +1522,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         null
@@ -2560,6 +2565,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         null,
         null
@@ -2622,6 +2628,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
+        LagAggregator.DEFAULT,
         null,
         null,
         null

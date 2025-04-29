@@ -379,7 +379,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionRecordLag);
+    return aggregatePartitionLags(partitionRecordLag);
   }
 
   /**
