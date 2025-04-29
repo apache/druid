@@ -31,7 +31,6 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.OrderBy;
@@ -199,7 +198,7 @@ public class FrameTestUtil
     return new FrameSegment(
         cursorFactoryToFrame(adapter, frameType),
         FrameReader.create(adapter.getRowSignature()),
-        SegmentId.of("TestFrame", Intervals.ETERNITY, "0", 0)
+        "TestFrame"
     );
   }
 
@@ -244,7 +243,7 @@ public class FrameTestUtil
 
   /**
    * Reads a sequence of rows from a {@link CursorFactory}.
-   *
+   * <p>
    * If {@param populateRowNumberIfPresent} is set, and the provided signature contains {@link #ROW_NUMBER_COLUMN},
    * then that column will be populated with a row number from the cursor.
    *
@@ -280,7 +279,7 @@ public class FrameTestUtil
 
   /**
    * Creates a {@link CursorHolder} from a {@link CursorFactory}.
-   *
+   * <p>
    * If {@param populateRowNumber} is set, the row number will be populated into {@link #ROW_NUMBER_COLUMN}.
    *
    * @param cursorFactory     the cursor factory

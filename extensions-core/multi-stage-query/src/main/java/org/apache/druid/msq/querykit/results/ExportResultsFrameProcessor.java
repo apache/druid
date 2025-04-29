@@ -46,7 +46,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
-import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -151,7 +150,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
   private void exportFrame(final Frame frame)
   {
-    final Segment segment = new FrameSegment(frame, frameReader, SegmentId.dummy("test"));
+    final Segment segment = new FrameSegment(frame, frameReader, "test");
     try (final CursorHolder cursorHolder = segment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       if (cursor == null) {

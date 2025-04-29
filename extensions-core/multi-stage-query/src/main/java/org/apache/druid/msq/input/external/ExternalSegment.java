@@ -42,10 +42,9 @@ import java.util.function.Consumer;
  */
 public class ExternalSegment extends RowBasedSegment<InputRow>
 {
-
+  public static final SegmentId SEGMENT_ID = SegmentId.simple(SegmentId.DataSourceType.EXTERNAL);
   private final InputSource inputSource;
   private final RowSignature signature;
-  public static final String SEGMENT_ID = "__external";
 
   /**
    * @param inputSource       {@link InputSource} that the segment is a representation of
@@ -67,7 +66,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
   )
   {
     super(
-        SegmentId.dummy(SEGMENT_ID),
+        SEGMENT_ID,
         new BaseSequence<>(
             new BaseSequence.IteratorMaker<InputRow, CloseableIterator<InputRow>>()
             {

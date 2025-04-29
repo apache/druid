@@ -518,7 +518,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
           Collections.emptyList()
       ).lhs;
 
-      inputSegment = new FrameSegment(inputFrame, FrameReader.create(signature), SegmentId.dummy("xxx"));
+      inputSegment = new FrameSegment(inputFrame, FrameReader.create(signature), "xxx");
     }
 
     try (final CursorHolder cursorHolder = inputSegment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {

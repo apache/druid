@@ -296,12 +296,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       if (id1 != null && id2 != null) {
         if (id2.getIntervalEnd().isAfter(id1.getIntervalEnd()) ||
             (id2.getIntervalEnd().isEqual(id1.getIntervalEnd()) && id2.getPartitionNum() > id1.getPartitionNum())) {
-          mergedSegmentId = SegmentId.merged(dataSource, id2.getInterval(), id2.getPartitionNum());
+          mergedSegmentId = id2.withVersion(SegmentId.MERGED_VERSION);
           final SegmentAnalysis tmp = arg1;
           arg1 = arg2;
           arg2 = tmp;
         } else {
-          mergedSegmentId = SegmentId.merged(dataSource, id1.getInterval(), id1.getPartitionNum());
+          mergedSegmentId = id1.withVersion(SegmentId.MERGED_VERSION);
         }
         break;
       }
@@ -426,7 +426,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     if (arg1.getId() != null && arg2.getId() != null && arg1.getId().equals(arg2.getId())) {
       mergedId = arg1.getId();
     } else {
-      mergedId = mergedSegmentId == null ? "merged" : mergedSegmentId.toString();
+      mergedId = mergedSegmentId == null ? SegmentId.MERGED_VERSION : mergedSegmentId.toString();
     }
 
     final Boolean rollup;

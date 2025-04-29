@@ -51,7 +51,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
-import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,7 +64,6 @@ import java.util.stream.Collectors;
  */
 public class ExternalInputSliceReader implements InputSliceReader
 {
-  public static final String SEGMENT_ID = "__external";
   private final File temporaryDirectory;
 
   public ExternalInputSliceReader(final File temporaryDirectory)
@@ -153,7 +151,6 @@ public class ExternalInputSliceReader implements InputSliceReader
             reader = inputSource.reader(schema, inputFormat, temporaryDirectory);
           }
 
-          final SegmentId segmentId = SegmentId.dummy(SEGMENT_ID);
           final Segment segment = new ExternalSegment(
               inputSource,
               reader,
@@ -165,7 +162,7 @@ public class ExternalInputSliceReader implements InputSliceReader
           );
           return new SegmentWithDescriptor(
               () -> ResourceHolder.fromCloseable(new CompleteSegment(null, segment)),
-              new RichSegmentDescriptor(segmentId.toDescriptor(), null)
+              new RichSegmentDescriptor(ExternalSegment.SEGMENT_ID.toDescriptor(), null)
           );
         }
     );

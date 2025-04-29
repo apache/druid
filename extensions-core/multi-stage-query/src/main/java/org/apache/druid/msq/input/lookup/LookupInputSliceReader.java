@@ -32,10 +32,10 @@ import org.apache.druid.msq.input.ReadableInputs;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.lookup.LookupSegment;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.util.Iterator;
@@ -101,7 +101,7 @@ public class LookupInputSliceReader implements InputSliceReader
 
                       return ResourceHolder.fromCloseable(new CompleteSegment(null, segment));
                     },
-                    new RichSegmentDescriptor(SegmentId.dummy(lookupName).toDescriptor(), null)
+                    new RichSegmentDescriptor(LookupSegment.SEGMENT_ID.toDescriptor(), null)
                 )
             )
         )

@@ -33,7 +33,6 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.SegmentWrangler;
-import org.apache.druid.timeline.SegmentId;
 
 import java.util.function.Consumer;
 
@@ -43,10 +42,6 @@ import java.util.function.Consumer;
  */
 public class InlineInputSliceReader implements InputSliceReader
 {
-  public static final String SEGMENT_ID = "__inline";
-  private static final RichSegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR
-      = new RichSegmentDescriptor(SegmentId.dummy(SEGMENT_ID).toDescriptor(), null);
-
   private final SegmentWrangler segmentWrangler;
 
   public InlineInputSliceReader(SegmentWrangler segmentWrangler)
@@ -76,7 +71,7 @@ public class InlineInputSliceReader implements InputSliceReader
             segment -> ReadableInput.segment(
                 new SegmentWithDescriptor(
                     () -> ResourceHolder.fromCloseable(new CompleteSegment(null, segment)),
-                    DUMMY_SEGMENT_DESCRIPTOR
+                    new RichSegmentDescriptor(InlineSegmentWrangler.SEGMENT_ID.toDescriptor(), null)
                 )
             )
         )

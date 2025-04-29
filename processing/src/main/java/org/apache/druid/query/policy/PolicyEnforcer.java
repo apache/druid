@@ -28,6 +28,8 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 
+import java.util.Objects;
+
 /**
  * Interface for enforcing policies on data sources and segments in Druid queries.
  * <p>
@@ -77,8 +79,20 @@ public interface PolicyEnforcer
    */
   default void validateOrElseThrow(ReferenceCountingSegment segment, Policy policy) throws DruidException
   {
-    // Validation will always fail on lookups, external, and inline segments, because they will not have policies applied (except for NoopPolicyEnforcer).
-    // This is a temporary solution since we don't have a perfect way to identify segments that are backed by a regular table yet.
+    switch (Objects.requireNonNull(segment.getId()).getDataSourceType()) {
+      case TABLE:
+        // Table segment needs to be validated
+        break;
+      case LOOKUP:
+      case INLINE:
+      case EXTERNAL:
+      case FRAME:
+        // Policy is not applicable, return early
+        return;
+      default:
+        throw DruidException.defensive("unreachable");
+    }
+
     if (validate(policy)) {
       return;
     }

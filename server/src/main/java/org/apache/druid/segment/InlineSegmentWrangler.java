@@ -30,12 +30,12 @@ import java.util.Collections;
 
 /**
  * A {@link SegmentWrangler} for {@link InlineDataSource}.
- *
+ * <p>
  * It is not valid to pass any other DataSource type to the "getSegmentsForIntervals" method.
  */
 public class InlineSegmentWrangler implements SegmentWrangler
 {
-  private static final String SEGMENT_ID = "inline";
+  public static final SegmentId SEGMENT_ID = SegmentId.simple(SegmentId.DataSourceType.INLINE);
 
   @Override
   @SuppressWarnings("unchecked")
@@ -46,7 +46,7 @@ public class InlineSegmentWrangler implements SegmentWrangler
     if (inlineDataSource.rowsAreArrayList()) {
       return Collections.singletonList(
           new ArrayListSegment<>(
-              SegmentId.dummy(SEGMENT_ID),
+              SEGMENT_ID,
               (ArrayList<Object[]>) inlineDataSource.getRowsAsList(),
               inlineDataSource.rowAdapter(),
               inlineDataSource.getRowSignature()
@@ -56,7 +56,7 @@ public class InlineSegmentWrangler implements SegmentWrangler
 
     return Collections.singletonList(
         new RowBasedSegment<>(
-            SegmentId.dummy(SEGMENT_ID),
+            SEGMENT_ID,
             Sequences.simple(inlineDataSource.getRows()),
             inlineDataSource.rowAdapter(),
             inlineDataSource.getRowSignature()

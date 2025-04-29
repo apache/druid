@@ -23,10 +23,12 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -89,9 +91,11 @@ public final class SegmentId implements Comparable<SegmentId>
 
   private static final int DATE_TIME_SIZE_UPPER_LIMIT = "yyyy-MM-ddTHH:mm:ss.SSS+00:00".length();
 
+  public static final String MERGED_VERSION = "merged";
+
   public static SegmentId of(String dataSource, Interval interval, String version, int partitionNum)
   {
-    return new SegmentId(dataSource, interval, version, partitionNum);
+    return new SegmentId(DataSourceType.TABLE, dataSource, interval, version, partitionNum);
   }
 
   public static SegmentId of(String dataSource, Interval interval, String version, @Nullable ShardSpec shardSpec)
@@ -103,21 +107,21 @@ public final class SegmentId implements Comparable<SegmentId>
    * Tries to parse a segment id from the given String representation, or returns null on failure. If returns a non-null
    * {@code SegmentId} object, calling {@link #toString()} on the latter is guaranteed to return a string equal to the
    * argument string of the {@code tryParse()} call.
-   *
+   * <p>
    * It is possible that this method may incorrectly parse a segment id, for example if the dataSource name in the
    * segment id contains a DateTime parseable string such as 'datasource_2000-01-01T00:00:00.000Z' and dataSource was
    * provided as 'datasource'. The desired behavior in this case would be to return null since the identifier does not
    * actually belong to the provided dataSource but a non-null result would be returned. This is an edge case that would
    * currently only affect paged select queries with a union dataSource of two similarly-named dataSources as in the
    * given example.
-   *
+   * <p>
    * Another source of ambiguity is the end of a segment id like '_123' - it could always be interpreted either as the
    * partitionNum of the segment id, or as the end of the version, with the implicit partitionNum of 0. This method
    * prefers the first iterpretation. To iterate all possible parsings of a segment id, use {@link
    * #iteratePossibleParsingsWithDataSource}.
    *
    * @param dataSource the dataSource corresponding to this segment id
-   * @param segmentId segment id
+   * @param segmentId  segment id
    * @return a {@link SegmentId} object if the segment id could be parsed, null otherwise
    */
   @Nullable
@@ -130,7 +134,7 @@ public final class SegmentId implements Comparable<SegmentId>
   /**
    * Returns a (potentially empty) lazy iteration of all possible valid parsings of the given segment id string into
    * {@code SegmentId} objects.
-   *
+   * <p>
    * Warning: most of the parsing work is repeated each time {@link Iterable#iterator()} of this iterable is consumed,
    * so it should be consumed only once if possible.
    */
@@ -140,7 +144,7 @@ public final class SegmentId implements Comparable<SegmentId>
     String probableDataSource = tryExtractMostProbableDataSource(segmentId);
     // Iterate parsings with the most probably data source first to allow the users of iterateAllPossibleParsings() to
     // break from the iteration earlier with higher probability.
-    if (probableDataSource != null) {
+    if (!Strings.isNullOrEmpty(probableDataSource)) {
       List<SegmentId> probableParsings = iteratePossibleParsingsWithDataSource(probableDataSource, segmentId);
       Iterable<SegmentId> otherPossibleParsings = () -> IntStream
           .range(1, splits.size() - 3)
@@ -172,6 +176,9 @@ public final class SegmentId implements Comparable<SegmentId>
    */
   public static List<SegmentId> iteratePossibleParsingsWithDataSource(String dataSource, String segmentId)
   {
+    if (Strings.isNullOrEmpty(dataSource)) {
+      return Collections.emptyList();
+    }
     if (!segmentId.startsWith(dataSource) || segmentId.charAt(dataSource.length()) != DELIMITER) {
       return Collections.emptyList();
     }
@@ -211,7 +218,7 @@ public final class SegmentId implements Comparable<SegmentId>
   /**
    * Heuristically tries to extract the most probable data source from a String segment id representation, or returns
    * null on failure.
-   *
+   * <p>
    * This method is not guaranteed to return a non-null data source given a valid String segment id representation.
    */
   @VisibleForTesting
@@ -231,16 +238,6 @@ public final class SegmentId implements Comparable<SegmentId>
     }
   }
 
-
-  /**
-   * Creates a merged SegmentId for the given data source, interval and partition number. Used when segments are
-   * merged.
-   */
-  public static SegmentId merged(String dataSource, Interval interval, int partitionNum)
-  {
-    return of(dataSource, interval, "merged", partitionNum);
-  }
-
   /**
    * Creates a dummy SegmentId with the given data source. This method is useful in benchmark and test code.
    */
@@ -258,6 +255,26 @@ public final class SegmentId implements Comparable<SegmentId>
     return of(dataSource, Intervals.ETERNITY, "dummy_version", partitionNum);
   }
 
+  /**
+   * Creates a {@link SegmentId} with the given {@link DataSourceType}.
+   *
+   * @param dataSourceType the data source type, should be non-TABLE.
+   */
+  public static SegmentId simple(DataSourceType dataSourceType)
+  {
+    return new SegmentId(dataSourceType, "", Intervals.ETERNITY, dataSourceType.name().toLowerCase(), 0);
+  }
+
+  public enum DataSourceType
+  {
+    TABLE,
+    LOOKUP,
+    INLINE,
+    EXTERNAL,
+    FRAME
+  }
+
+  private final DataSourceType dataSourceType;
   private final String dataSource;
   private final Interval interval;
   private final String version;
@@ -269,13 +286,42 @@ public final class SegmentId implements Comparable<SegmentId>
    */
   private final int hashCode;
 
-  private SegmentId(String dataSource, Interval interval, String version, int partitionNum)
+  private SegmentId(
+      DataSourceType dataSourceType,
+      String dataSource,
+      Interval interval,
+      String version,
+      int partitionNum
+  )
   {
+    this.dataSourceType = dataSourceType;
+    switch (dataSourceType) {
+      case TABLE:
+        if (Strings.isNullOrEmpty(dataSource)) {
+          throw DruidException.defensive("Datasource is not specified");
+        }
+        break;
+      case LOOKUP:
+      case INLINE:
+      case EXTERNAL:
+      case FRAME:
+        if (!Strings.isNullOrEmpty(dataSource)) {
+          throw DruidException.defensive("Datasource is used for druid table only");
+        }
+        break;
+      default:
+        throw DruidException.defensive("unreachable");
+    }
     this.dataSource = STRING_INTERNER.intern(Objects.requireNonNull(dataSource));
     this.interval = INTERVAL_INTERNER.intern(Objects.requireNonNull(interval));
-    // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
-    // could be conditionally allowed via a system property.
-    this.version = Objects.requireNonNull(version);
+    if (DataSourceType.TABLE.equals(dataSourceType)) {
+      // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
+      // could be conditionally allowed via a system property.
+      this.version = Objects.requireNonNull(version);
+    } else {
+      // For non-table segments, version is a String that is not timestamp-based. Interning it makes sense.
+      this.version = STRING_INTERNER.intern(Objects.requireNonNull(version));
+    }
     this.partitionNum = partitionNum;
     this.hashCode = computeHashCode();
   }
@@ -287,12 +333,23 @@ public final class SegmentId implements Comparable<SegmentId>
     int hashCode = partitionNum;
     // 1000003 is a constant used in Google AutoValue, provides a little better distribution than 31
     hashCode = hashCode * 1000003 + version.hashCode();
-
+    hashCode = hashCode * 1000003 + dataSourceType.hashCode();
     hashCode = hashCode * 1000003 + dataSource.hashCode();
     hashCode = hashCode * 1000003 + interval.hashCode();
     return hashCode;
   }
 
+  /**
+   * Returns the {@link DataSourceType} of this segment.
+   */
+  public DataSourceType getDataSourceType()
+  {
+    return dataSourceType;
+  }
+
+  /**
+   * Returns the data source name of this segment.
+   */
   public String getDataSource()
   {
     return dataSource;
@@ -323,9 +380,20 @@ public final class SegmentId implements Comparable<SegmentId>
     return partitionNum;
   }
 
+  /**
+   * Returns a new {@link SegmentId} with new interval.
+   */
   public SegmentId withInterval(Interval newInterval)
   {
     return of(dataSource, newInterval, version, partitionNum);
+  }
+
+  /**
+   * Returns a new {@link SegmentId} with new version.
+   */
+  public SegmentId withVersion(String newVersion)
+  {
+    return of(dataSource, interval, newVersion, partitionNum);
   }
 
   /**
@@ -353,6 +421,7 @@ public final class SegmentId implements Comparable<SegmentId>
     // Compare hashCode instead of partitionNum: break the chain quicker if the objects are not equal. If the hashCodes
     // are equal as well as all other fields used to compute them, the partitionNums are also guaranteed to be equal.
     return hashCode == that.hashCode &&
+           dataSourceType.equals(that.dataSourceType) &&
            dataSource.equals(that.dataSource) &&
            interval.equals(that.interval) &&
            version.equals(that.version);
@@ -367,7 +436,11 @@ public final class SegmentId implements Comparable<SegmentId>
   @Override
   public int compareTo(SegmentId o)
   {
-    int result = dataSource.compareTo(o.dataSource);
+    int result = dataSourceType.compareTo(o.dataSourceType);
+    if (result != 0) {
+      return result;
+    }
+    result = dataSource.compareTo(o.dataSource);
     if (result != 0) {
       return result;
     }

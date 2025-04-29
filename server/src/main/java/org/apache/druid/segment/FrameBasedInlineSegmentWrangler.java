@@ -46,7 +46,7 @@ public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
             frameSignaturePair -> new FrameSegment(
                 frameSignaturePair.getFrame(),
                 FrameReader.create(frameSignaturePair.getRowSignature()),
-                SegmentId.dummy(SEGMENT_ID)
+                SegmentId.simple(SegmentId.DataSourceType.INLINE)
             )
         )
         .iterator();

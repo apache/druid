@@ -43,6 +43,15 @@ public class FrameSegment implements Segment
   private final FrameReader frameReader;
   private final SegmentId segmentId;
 
+  public FrameSegment(Frame frame, FrameReader frameReader, String unused)
+  {
+    this(frame, frameReader, SegmentId.simple(SegmentId.DataSourceType.FRAME));
+  }
+
+  /**
+   * @deprecated use {@link #FrameSegment(Frame, FrameReader, String)} instead
+   */
+  @Deprecated
   public FrameSegment(Frame frame, FrameReader frameReader, SegmentId segmentId)
   {
     this.frame = frame;

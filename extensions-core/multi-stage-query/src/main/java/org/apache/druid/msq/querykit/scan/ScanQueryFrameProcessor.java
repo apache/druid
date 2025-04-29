@@ -78,7 +78,6 @@ import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -313,7 +312,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null || cursor.isDone()) {
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("scan"));
+        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, "scan");
 
         final Segment mappedSegment = mapSegment(frameSegment);
         final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
