@@ -50,7 +50,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.StructuredData;
-import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -210,7 +209,7 @@ public class FrameChannelMergerBenchmark
    * Create {@link #numChannels} channels in {@link #channels}, with {@link #numRows} total rows split across the
    * channels according to {@link ChannelDistribution}. Each channel is individually sorted, as required
    * by {@link FrameChannelMerger}.
-   *
+   * <p>
    * Rows are fixed-length at {@link #rowLength} with fixed-length keys at {@link #keyLength}. Keys are generated
    * by {@link KeyGenerator}.
    */
@@ -268,7 +267,6 @@ public class FrameChannelMergerBenchmark
       final List<NonnullPair<Comparable, String>> rows = channelRows.get(channelNumber);
       final RowBasedSegment<NonnullPair<Comparable, String>> segment =
           new RowBasedSegment<>(
-              SegmentId.dummy("__dummy"),
               Sequences.simple(rows),
               columnName -> {
                 if (KEY.equals(columnName)) {
@@ -298,7 +296,7 @@ public class FrameChannelMergerBenchmark
    * Create {@link #numChannels} channels in {@link #channels}, with {@link #numRows} total rows split across the
    * channels according to {@link ChannelDistribution}. Each channel is individually sorted, as required
    * by {@link FrameChannelMerger}.
-   *
+   * <p>
    * Rows are fixed-length at {@link #rowLength} with fixed-length keys at {@link #keyLength}. Keys are generated
    * by {@link KeyGenerator}.
    */

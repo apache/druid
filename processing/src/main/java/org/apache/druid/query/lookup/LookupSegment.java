@@ -26,7 +26,6 @@ import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
-import org.apache.druid.timeline.SegmentId;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -44,10 +43,9 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
                   .add(LookupColumnSelectorFactory.VALUE_COLUMN, ColumnType.STRING)
                   .build();
 
-  public LookupSegment(final String lookupName, final LookupExtractorFactory lookupExtractorFactory)
+  public LookupSegment(final LookupExtractorFactory lookupExtractorFactory)
   {
     super(
-        SegmentId.dummy(lookupName),
         Sequences.simple(() -> {
           final LookupExtractor extractor = lookupExtractorFactory.get();
 

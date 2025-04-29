@@ -50,7 +50,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -1458,7 +1457,6 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     try (final RowBasedSegment<Map<String, Object>> segment = JoinTestHelper.withRowsFromResource(
         resource,
         rows -> new RowBasedSegment<>(
-            SegmentId.dummy(resource),
             limit < 0 ? Sequences.simple(rows) : Sequences.simple(rows).limit(limit),
             columnName -> m -> m.get(columnName),
             signature

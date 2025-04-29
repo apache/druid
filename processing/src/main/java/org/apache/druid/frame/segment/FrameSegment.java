@@ -21,6 +21,7 @@ package org.apache.druid.frame.segment;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.CursorFactory;
@@ -53,13 +54,13 @@ public class FrameSegment implements Segment
   @Override
   public SegmentId getId()
   {
-    return segmentId;
+    return null;
   }
 
   @Override
   public Interval getDataInterval()
   {
-    return segmentId.getInterval();
+    return Intervals.ETERNITY;
   }
 
   @Nullable

@@ -47,7 +47,6 @@ import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -126,7 +125,15 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         for (int k = 0; k <= limits.length; ++k) {
           int limit = (k == 0 ? -1 : limits[k - 1]);
           for (int l = 0; l <= orderings.length; ++l) {
-            validateDecorated(base, siggy, vals, interval, filter, OffsetLimit.limit(limit), l == 0 ? null : orderings[l - 1]);
+            validateDecorated(
+                base,
+                siggy,
+                vals,
+                interval,
+                filter,
+                OffsetLimit.limit(limit),
+                l == 0 ? null : orderings[l - 1]
+            );
           }
         }
       }
@@ -237,7 +244,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         {8L, 4L},
         {9L, 0L},
         {10L, 0L}
-        };
+    };
 
     MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
@@ -278,7 +285,6 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       decor.addFilter(filter);
 
       final ArrayListSegment<Object[]> seggy = new ArrayListSegment<>(
-          SegmentId.dummy("dummy"),
           new ArrayList<>(Arrays.asList(originalVals)),
           columnName -> {
             int index = siggy.indexOf(columnName);

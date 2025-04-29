@@ -47,10 +47,11 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
 
   public static ReferenceCountingSegment wrapRootGenerationSegment(Segment baseSegment)
   {
+    int partitionNum = baseSegment.getId() == null ? 0 : baseSegment.getId().getPartitionNum();
     return new ReferenceCountingSegment(
         Preconditions.checkNotNull(baseSegment, "baseSegment"),
-        baseSegment.getId().getPartitionNum(),
-        (baseSegment.getId().getPartitionNum() + 1),
+        partitionNum,
+        (partitionNum + 1),
         (short) 0,
         (short) 1
     );

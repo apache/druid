@@ -91,7 +91,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -115,7 +114,7 @@ import java.util.Optional;
 
 /**
  * Tests ClientQuerySegmentWalker.
- *
+ * <p>
  * Note that since SpecificSegmentsQuerySegmentWalker in the druid-sql module also uses ClientQuerySegmentWalker, it's
  * also exercised pretty well by the SQL tests (especially CalciteQueryTest). This class adds an extra layer of testing.
  * In particular, this class makes it easier to add tests that validate queries are *made* in the correct way, not just
@@ -139,11 +138,11 @@ public class ClientQuerySegmentWalkerTest
 
   private static final InlineDataSource FOO_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
-          .add(new Object[]{INTERVAL.getStartMillis(), "x", 1})
-          .add(new Object[]{INTERVAL.getStartMillis(), "x", 2})
-          .add(new Object[]{INTERVAL.getStartMillis(), "y", 3})
-          .add(new Object[]{INTERVAL.getStartMillis(), "z", 4})
-          .build(),
+                   .add(new Object[]{INTERVAL.getStartMillis(), "x", 1})
+                   .add(new Object[]{INTERVAL.getStartMillis(), "x", 2})
+                   .add(new Object[]{INTERVAL.getStartMillis(), "y", 3})
+                   .add(new Object[]{INTERVAL.getStartMillis(), "z", 4})
+                   .build(),
       RowSignature.builder()
                   .addTimeColumn()
                   .add("s", ColumnType.STRING)
@@ -153,11 +152,11 @@ public class ClientQuerySegmentWalkerTest
 
   private static final InlineDataSource BAR_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
-          .add(new Object[]{INTERVAL.getStartMillis(), "a", 1})
-          .add(new Object[]{INTERVAL.getStartMillis(), "a", 2})
-          .add(new Object[]{INTERVAL.getStartMillis(), "b", 3})
-          .add(new Object[]{INTERVAL.getStartMillis(), "c", 4})
-          .build(),
+                   .add(new Object[]{INTERVAL.getStartMillis(), "a", 1})
+                   .add(new Object[]{INTERVAL.getStartMillis(), "a", 2})
+                   .add(new Object[]{INTERVAL.getStartMillis(), "b", 3})
+                   .add(new Object[]{INTERVAL.getStartMillis(), "c", 4})
+                   .build(),
       RowSignature.builder()
                   .addTimeColumn()
                   .add("s", ColumnType.STRING)
@@ -167,11 +166,11 @@ public class ClientQuerySegmentWalkerTest
 
   private static final InlineDataSource MULTI_VALUE_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
-          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "b"), 1})
-          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "c"), 2})
-          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("b"), 3})
-          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("c"), 4})
-          .build(),
+                   .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "b"), 1})
+                   .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "c"), 2})
+                   .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("b"), 3})
+                   .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("c"), 4})
+                   .build(),
       RowSignature.builder()
                   .addTimeColumn()
                   .add("s", ColumnType.STRING)
@@ -182,11 +181,39 @@ public class ClientQuerySegmentWalkerTest
 
   private static final List<Object[]> ARRAY_INLINE_ROWS =
       ImmutableList.<Object[]>builder()
-          .add(new Object[]{INTERVAL.getStartMillis(), "x", 1, ImmutableList.of(1.0, 2.0), ImmutableList.of(1L, 2L), ImmutableList.of("1.0", "2.0")})
-          .add(new Object[]{INTERVAL.getStartMillis(), "x", 2, ImmutableList.of(2.0, 4.0), ImmutableList.of(2L, 4L), ImmutableList.of("2.0", "4.0")})
-          .add(new Object[]{INTERVAL.getStartMillis(), "y", 3, ImmutableList.of(3.0, 6.0), ImmutableList.of(3L, 6L), ImmutableList.of("3.0", "6.0")})
-          .add(new Object[]{INTERVAL.getStartMillis(), "z", 4, ImmutableList.of(4.0, 8.0), ImmutableList.of(4L, 8L), ImmutableList.of("4.0", "8.0")})
-          .build();
+                   .add(new Object[]{
+                       INTERVAL.getStartMillis(),
+                       "x",
+                       1,
+                       ImmutableList.of(1.0, 2.0),
+                       ImmutableList.of(1L, 2L),
+                       ImmutableList.of("1.0", "2.0")
+                   })
+                   .add(new Object[]{
+                       INTERVAL.getStartMillis(),
+                       "x",
+                       2,
+                       ImmutableList.of(2.0, 4.0),
+                       ImmutableList.of(2L, 4L),
+                       ImmutableList.of("2.0", "4.0")
+                   })
+                   .add(new Object[]{
+                       INTERVAL.getStartMillis(),
+                       "y",
+                       3,
+                       ImmutableList.of(3.0, 6.0),
+                       ImmutableList.of(3L, 6L),
+                       ImmutableList.of("3.0", "6.0")
+                   })
+                   .add(new Object[]{
+                       INTERVAL.getStartMillis(),
+                       "z",
+                       4,
+                       ImmutableList.of(4.0, 8.0),
+                       ImmutableList.of(4L, 8L),
+                       ImmutableList.of("4.0", "8.0")
+                   })
+                   .build();
 
   private static final InlineDataSource ARRAY_INLINE = InlineDataSource.fromIterable(
       ARRAY_INLINE_ROWS,
@@ -552,7 +579,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null)),
+                                               null
+                                           )),
                                            JoinAlgorithm.BROADCAST
                                        )
                                    )
@@ -625,7 +653,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null)),
+                                               null
+                                           )),
                                            JoinAlgorithm.BROADCAST
                                        )
                                    )
@@ -1137,7 +1166,7 @@ public class ClientQuerySegmentWalkerTest
             new Object[]{"4.0"},
             new Object[]{"6.0"},
             new Object[]{"8.0"}
-          )
+        )
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
@@ -1558,27 +1587,33 @@ public class ClientQuerySegmentWalkerTest
   public void testUnionQuery()
   {
     TimeseriesQuery subQuery1 = (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
-        .dataSource(FOO)
-        .granularity(Granularities.ALL)
-        .intervals(Collections.singletonList(INTERVAL))
-        .aggregators(new LongSumAggregatorFactory("sum", "n"))
-        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
-        .build()
-        .withId(DUMMY_QUERY_ID);
+                                                        .dataSource(FOO)
+                                                        .granularity(Granularities.ALL)
+                                                        .intervals(Collections.singletonList(INTERVAL))
+                                                        .aggregators(new LongSumAggregatorFactory("sum", "n"))
+                                                        .context(ImmutableMap.of(
+                                                            TimeseriesQuery.CTX_GRAND_TOTAL,
+                                                            false
+                                                        ))
+                                                        .build()
+                                                        .withId(DUMMY_QUERY_ID);
     TimeseriesQuery subQuery2 = (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
-        .dataSource(BAR)
-        .granularity(Granularities.ALL)
-        .intervals(Collections.singletonList(INTERVAL))
-        .aggregators(new LongSumAggregatorFactory("sum", "n"))
-        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
-        .build()
-        .withId(DUMMY_QUERY_ID);
+                                                        .dataSource(BAR)
+                                                        .granularity(Granularities.ALL)
+                                                        .intervals(Collections.singletonList(INTERVAL))
+                                                        .aggregators(new LongSumAggregatorFactory("sum", "n"))
+                                                        .context(ImmutableMap.of(
+                                                            TimeseriesQuery.CTX_GRAND_TOTAL,
+                                                            false
+                                                        ))
+                                                        .build()
+                                                        .withId(DUMMY_QUERY_ID);
     final Query query = Druids.newScanQueryBuilder()
-        .columns("sum")
-        .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.ETERNITY)))
-        .dataSource(
-            new UnionQuery(ImmutableList.of(subQuery1, subQuery2))
-        ).build();
+                              .columns("sum")
+                              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.ETERNITY)))
+                              .dataSource(
+                                  new UnionQuery(ImmutableList.of(subQuery1, subQuery2))
+                              ).build();
 
     testQuery(
         query,
@@ -1589,15 +1624,15 @@ public class ClientQuerySegmentWalkerTest
                 query.withDataSource(
                     InlineDataSource.fromIterable(
                         ImmutableList.of(
-                            new Object[] {946684800000L, 10L},
-                            new Object[] {946684800000L, 10L}
+                            new Object[]{946684800000L, 10L},
+                            new Object[]{946684800000L, 10L}
                         ),
                         RowSignature.builder().add("__time", ColumnType.LONG).add("sum", ColumnType.LONG).build()
                     )
                 )
             )
         ),
-        ImmutableList.of(new Object[] {10L}, new Object[] {10L})
+        ImmutableList.of(new Object[]{10L}, new Object[]{10L})
     );
 
     Assert.assertEquals(3, scheduler.getTotalRun().get());
@@ -1696,13 +1731,13 @@ public class ClientQuerySegmentWalkerTest
         new CapturingWalker(
             QueryStackTests.createClusterQuerySegmentWalker(
                 ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>builder()
-                    .put(FOO, makeTimeline(FOO, FOO_INLINE))
-                    .put(BAR, makeTimeline(BAR, BAR_INLINE))
-                    .put(MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE))
-                    .put(GLOBAL, makeTimeline(GLOBAL, FOO_INLINE))
-                    .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
-                    .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
-                    .build(),
+                            .put(FOO, makeTimeline(FOO, FOO_INLINE))
+                            .put(BAR, makeTimeline(BAR, BAR_INLINE))
+                            .put(MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE))
+                            .put(GLOBAL, makeTimeline(GLOBAL, FOO_INLINE))
+                            .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
+                            .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
+                            .build(),
                 conglomerate,
                 schedulerForTest,
                 injector
@@ -1856,7 +1891,6 @@ public class ClientQuerySegmentWalkerTest
         SHARD_SPEC.createChunk(
             ReferenceCountingSegment.wrapSegment(
                 new RowBasedSegment<>(
-                    SegmentId.of(name, INTERVAL, VERSION, SHARD_SPEC.getPartitionNum()),
                     Sequences.simple(dataSource.getRows()),
                     dataSource.rowAdapter(),
                     dataSource.getRowSignature()

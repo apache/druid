@@ -406,7 +406,6 @@ public class IndexBuilder
   public RowBasedSegment<InputRow> buildRowBasedSegmentWithoutTypeSignature()
   {
     return new RowBasedSegment<>(
-        SegmentId.dummy("IndexBuilder"),
         Sequences.simple(rows),
         RowAdapters.standardRow(),
         RowSignature.empty()
@@ -420,7 +419,6 @@ public class IndexBuilder
       final RowSignature signature = new QueryableIndexCursorFactory(index).getRowSignature();
 
       return new RowBasedSegment<>(
-          SegmentId.dummy("IndexBuilder"),
           Sequences.simple(rows),
           RowAdapters.standardRow(),
           signature

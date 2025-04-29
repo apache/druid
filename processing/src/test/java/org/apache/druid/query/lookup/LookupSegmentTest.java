@@ -34,7 +34,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -101,12 +100,12 @@ public class LookupSegmentTest
         }
       };
 
-  private static final LookupSegment LOOKUP_SEGMENT = new LookupSegment(LOOKUP_NAME, LOOKUP_EXTRACTOR_FACTORY);
+  private static final LookupSegment LOOKUP_SEGMENT = new LookupSegment(LOOKUP_EXTRACTOR_FACTORY);
 
   @Test
   public void test_getId()
   {
-    Assert.assertEquals(SegmentId.dummy(LOOKUP_NAME), LOOKUP_SEGMENT.getId());
+    Assert.assertNull(LOOKUP_SEGMENT.getId());
   }
 
   @Test

@@ -499,7 +499,6 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     if (inputFrameType == null) {
       // inputFrameType null means input is not a frame
       inputSegment = new RowBasedSegment<>(
-          SegmentId.dummy("dummy"),
           rows,
           columnName -> {
             final int columnNumber = signature.indexOf(columnName);

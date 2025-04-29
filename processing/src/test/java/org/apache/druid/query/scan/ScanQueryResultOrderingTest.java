@@ -89,7 +89,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 
   private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
       new RowBasedSegment<>(
-          SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(
                   new Object[]{DateTimes.of("2000T01"), 101},
@@ -106,7 +105,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
           ROW_SIGNATURE
       ),
       new RowBasedSegment<>(
-          SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
           Sequences.simple(
               ImmutableList.of(
                   new Object[]{DateTimes.of("2000T01"), 333},
@@ -123,7 +121,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
           ROW_SIGNATURE
       ),
       new RowBasedSegment<>(
-          SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(
                   new Object[]{DateTimes.of("2000-01-02T00"), 7},

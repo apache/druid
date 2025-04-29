@@ -38,6 +38,7 @@ import java.io.Closeable;
 @PublicApi
 public interface Segment extends Closeable
 {
+  @Nullable
   SegmentId getId();
 
   Interval getDataInterval();
