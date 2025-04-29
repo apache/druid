@@ -78,6 +78,23 @@ export const SQL_KEYWORDS = [
   'UNPIVOT',
   'MATCHED',
   'UPDATE SET',
+  'EPOCH',
+  'MILLISECOND',
+  'SECOND',
+  'MINUTE',
+  'HOUR',
+  'DAY',
+  'DOW',
+  'ISODOW',
+  'DOY',
+  'WEEK',
+  'MONTH',
+  'QUARTER',
+  'YEAR',
+  'ISOYEAR',
+  'DECADE',
+  'CENTURY',
+  'MILLENNIUM',
 ];
 
 export const SQL_EXPRESSION_PARTS = [
