@@ -29,8 +29,9 @@ import org.apache.druid.query.QueryContext;
 public interface QueryKitSpecFactory
 {
   /**
-   * Create a {@link QueryKitSpec}. This method provides controller contexts a way to customize parameters around the
-   * number of workers and partitions.
+   * Factorizes a {@link QueryKitSpec}.
+   *
+   * Implementation may customize the number of workers and partitions.
    */
   QueryKitSpec makeQueryKitSpec(
       QueryKit<Query<?>> queryKit,

@@ -32,8 +32,12 @@ import org.apache.druid.query.QueryContext;
 public class DartQueryKitSpecFactory implements QueryKitSpecFactory
 {
   @Override
-  public QueryKitSpec makeQueryKitSpec(QueryKit<Query<?>> queryKit, String queryId, MSQTuningConfig tuningConfig,
-      QueryContext queryContext, final ControllerQueryKernelConfig queryKernelConfig)
+  public QueryKitSpec makeQueryKitSpec(
+      final QueryKit<Query<?>> queryKit,
+      final String queryId,
+      final MSQTuningConfig tuningConfig,
+      final QueryContext queryContext,
+      final ControllerQueryKernelConfig queryKernelConfig)
   {
     return new QueryKitSpec(
         queryKit,

@@ -110,7 +110,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.sql.MSQQueryKitSpecFactory;
+import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.entity.PageInformation;
@@ -576,7 +576,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
         new SegmentGenerationTerminalStageSpecFactory(),
-        injector.getInstance(MSQQueryKitSpecFactory.class)
+        injector.getInstance(MSQTaskQueryKitSpecFactory.class)
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(

@@ -100,7 +100,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory,
-      final MSQQueryKitSpecFactory queryKitSpecFactory
+      final MSQTaskQueryKitSpecFactory queryKitSpecFactory
   )
   {
     this.overlordClient = overlordClient;

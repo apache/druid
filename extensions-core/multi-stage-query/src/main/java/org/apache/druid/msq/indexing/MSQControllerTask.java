@@ -56,7 +56,7 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
-import org.apache.druid.msq.sql.MSQQueryKitSpecFactory;
+import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -290,7 +290,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
         querySpec,
         new ResultsContext(getSqlTypeNames(), getSqlResultsContext()),
         context,
-        injector.getInstance(MSQQueryKitSpecFactory.class)
+        injector.getInstance(MSQTaskQueryKitSpecFactory.class)
     );
 
     final TaskReportQueryListener queryListener = new TaskReportQueryListener(

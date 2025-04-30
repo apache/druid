@@ -133,7 +133,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
 
-    String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
+    final String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
     final Map<String, Object> taskContext = new HashMap<>();
     taskContext.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, plannerContext.getLookupLoadingSpec().getMode());
@@ -143,7 +143,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final List<Pair<SqlTypeName, ColumnType>> typeList = getTypes(druidQuery, fieldMapping, plannerContext);
 
-    ResultsContext resultsContext = new ResultsContext(
+    final ResultsContext resultsContext = new ResultsContext(
         typeList.stream().map(typeInfo -> typeInfo.lhs).collect(Collectors.toList()),
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
@@ -259,9 +259,7 @@ public class MSQTaskQueryMaker implements QueryMaker
                .tuningConfig(makeMSQTuningConfig(plannerContext))
                .build();
 
-    if (druidQuery != null) {
-      MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), druidQuery.getQuery());
-    }
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), druidQuery.getQuery());
 
     return querySpec.withOverriddenContext(nativeQueryContext);
   }

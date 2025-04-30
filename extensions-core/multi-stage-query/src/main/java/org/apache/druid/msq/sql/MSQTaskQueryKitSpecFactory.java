@@ -30,12 +30,12 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 
-public class MSQQueryKitSpecFactory implements QueryKitSpecFactory
+public class MSQTaskQueryKitSpecFactory implements QueryKitSpecFactory
 {
   private DruidProcessingConfig processingConfig;
 
   @Inject
-  public MSQQueryKitSpecFactory(DruidProcessingConfig processingConfig)
+  public MSQTaskQueryKitSpecFactory(DruidProcessingConfig processingConfig)
   {
     this.processingConfig = processingConfig;
   }
