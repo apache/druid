@@ -112,7 +112,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     )
     {
       @Override
-      protected SegmentPublishResult updateDataSourceMetadataWithHandle(
+      protected SegmentPublishResult updateDataSourceMetadataInTransaction(
           SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
@@ -121,7 +121,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       {
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
-        return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
+        return super.updateDataSourceMetadataInTransaction(transaction, dataSource, startMetadata, endMetadata);
       }
     };
   }
