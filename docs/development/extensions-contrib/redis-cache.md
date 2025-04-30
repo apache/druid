@@ -47,18 +47,18 @@ To enable this extension after installation,
 
 ## Configuration
 
-### Cluster mode 
+### Cluster mode
 
 To utilize a redis cluster, following properties must be set.
 
 Note: some redis cloud service providers provide redis cluster service via a redis proxy, for these clusters, please follow the [Standalone mode](#standalone-mode) configuration below.
 
-| Properties |Description|Default|Required|
-|--------------------|-----------|-------|--------|
-|`druid.cache.cluster.nodes`| Redis nodes in a cluster, represented in comma separated string. See example below | None | yes |
-|`druid.cache.cluster.maxRedirection`| Max retry count | 5 | no |
+| Properties                           | Description                                                                        | Default | Required |
+| ------------------------------------ | ---------------------------------------------------------------------------------- | ------- | -------- |
+| `druid.cache.cluster.nodes`          | Redis nodes in a cluster, represented in comma separated string. See example below | None    | yes      |
+| `druid.cache.cluster.maxRedirection` | Max retry count                                                                    | 5       | no       |
 
-#### Example 
+#### Example
 
 ```properties
 # a typical redis cluster with 6 nodes
@@ -69,11 +69,11 @@ druid.cache.cluster.nodes=127.0.0.1:7001,127.0.0.1:7002,127.0.0.1:7003,127.0.0.1
 
 To use a standalone redis, following properties must be set.
 
-| Properties |Description|Default|Required|
-|--------------------|-----------|-------|--------|
-|`druid.cache.host`|Redis server host|None|yes|
-|`druid.cache.port`|Redis server port|None|yes|
-|`druid.cache.database`|Redis database index|0|no|
+| Properties             | Description          | Default | Required |
+| ---------------------- | -------------------- | ------- | -------- |
+| `druid.cache.host`     | Redis server host    | None    | yes      |
+| `druid.cache.port`     | Redis server port    | None    | yes      |
+| `druid.cache.database` | Redis database index | 0       | no       |
 
 Note: if both `druid.cache.cluster.nodes` and `druid.cache.host` are provided, cluster mode is preferred.
 
@@ -81,14 +81,15 @@ Note: if both `druid.cache.cluster.nodes` and `druid.cache.host` are provided, c
 
 Except for the properties above, there are some extra properties which can be customized to meet different needs.
 
-| Properties |Description|Default|Required|
-|--------------------|-----------|-------|--------|
-|`druid.cache.password`| Password to access redis server/cluster | None |no|
-|`druid.cache.expiration`|Expiration for cache entries | P1D |no|
-|`druid.cache.timeout`|Timeout for connecting to Redis and reading entries from Redis|PT2S|no|
-|`druid.cache.maxTotalConnections`|Max total connections to Redis|8|no|
-|`druid.cache.maxIdleConnections`|Max idle connections to Redis|8|no|
-|`druid.cache.minIdleConnections`|Min idle connections to Redis|0|no|
+| Properties                        | Description                                                    | Default | Required |
+| --------------------------------- | -------------------------------------------------------------- | ------- | -------- |
+| `druid.cache.password`            | Password to access redis server/cluster                        | None    | no       |
+| `druid.cache.expiration`          | Expiration for cache entries                                   | P1D     | no       |
+| `druid.cache.timeout`             | Timeout for connecting to Redis and reading entries from Redis | PT2S    | no       |
+| `druid.cache.maxTotalConnections` | Max total connections to Redis                                 | 8       | no       |
+| `druid.cache.maxIdleConnections`  | Max idle connections to Redis                                  | 8       | no       |
+| `druid.cache.minIdleConnections`  | Min idle connections to Redis                                  | 0       | no       |
+| `druid.cache.enableTls`           | Enable TLS based connection for Redis client. Boolean.         | false   |
 
 For `druid.cache.expiration` and `druid.cache.timeout` properties, values can be format of `Period` or a number in milliseconds.
 
@@ -106,6 +107,6 @@ druid.cache.expiration=3600000
 
 In addition to the normal cache metrics, the redis cache implementation also reports the following in both `total` and `delta`
 
-|Metric|Description|Normal value|
-|------|-----------|------------|
-|`query/cache/redis/*/requests`|Count of requests to redis cache|whatever request to redis will increase request count by 1|
+| Metric                         | Description                      | Normal value                                               |
+| ------------------------------ | -------------------------------- | ---------------------------------------------------------- |
+| `query/cache/redis/*/requests` | Count of requests to redis cache | whatever request to redis will increase request count by 1 |
