@@ -21,12 +21,7 @@ package org.apache.druid.msq.input;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.input.external.ExternalSegment;
-import org.apache.druid.msq.input.inline.InlineInputSliceReader;
-import org.apache.druid.query.lookup.LookupSegment;
-import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
-
-import javax.annotation.Nullable;
 
 /**
  * Utility class containing methods that help in generating the {@link org.apache.druid.sql.calcite.parser.ParseException}
@@ -39,7 +34,6 @@ public class ParseExceptionUtils
    * Given a segment, this returns the human-readable description of the segment which can allow user to figure out the
    * source of the parse exception
    */
-  @Nullable
   public static String generateReadableInputSourceNameFromMappedSegment(Segment segment)
   {
     if (segment instanceof ExternalSegment) {
@@ -47,14 +41,10 @@ public class ParseExceptionUtils
           "external input source: %s",
           ((ExternalSegment) segment).externalInputSource().toString()
       );
-    } else if (segment instanceof LookupSegment) {
-      return StringUtils.format("lookup input source: %s", segment.getId().getDataSource());
-    } else if (segment instanceof QueryableIndexSegment) {
+    } else if (segment.getId() != null) {
       return StringUtils.format("table input source: %s", segment.getId().getDataSource());
-    } else if (InlineInputSliceReader.SEGMENT_ID.equals(segment.getId().getDataSource())) {
-      return "inline input source";
+    } else {
+      return StringUtils.format("%s input", segment.asString());
     }
-
-    return null;
   }
 }

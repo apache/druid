@@ -183,7 +183,12 @@ public class ScanQueryEngine
                   throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                 }
                 responseContext.addRowScanCount(offset - lastOffset);
-                return new ScanResultValue(segment.asString(), allColumns, events, rowSignatureBuilder.build());
+                return new ScanResultValue(
+                    segment.getId() == null ? segment.asString() : segment.getId().toString(),
+                    allColumns,
+                    events,
+                    rowSignatureBuilder.build()
+                );
               }
 
               @Override

@@ -121,77 +121,78 @@ public class TestSegmentUtils
     }
   }
 
-  public static class SegmentForTesting extends QueryableIndexSegment implements Segment
+  private static final QueryableIndex INDEX = new QueryableIndex()
+  {
+    @Override
+    public Interval getDataInterval()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int getNumRows()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Indexed<String> getAvailableDimensions()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public BitmapFactory getBitmapFactoryForDimensions()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Nullable
+    @Override
+    public Metadata getMetadata()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Map<String, DimensionHandler> getDimensionHandlers()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<OrderBy> getOrdering()
+    {
+      return Cursors.ascendingTimeOrder();
+    }
+
+    @Override
+    public void close()
+    {
+
+    }
+
+    @Override
+    public List<String> getColumnNames()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Nullable
+    @Override
+    public ColumnHolder getColumnHolder(String columnName)
+    {
+      throw new UnsupportedOperationException();
+    }
+  };
+
+  public static class SegmentForTesting extends QueryableIndexSegment
   {
     private final String datasource;
     private final String version;
     private final Interval interval;
     private final Object lock = new Object();
     private volatile boolean closed = false;
-    private static final QueryableIndex INDEX = new QueryableIndex()
-    {
-      @Override
-      public Interval getDataInterval()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public int getNumRows()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public Indexed<String> getAvailableDimensions()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public BitmapFactory getBitmapFactoryForDimensions()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Nullable
-      @Override
-      public Metadata getMetadata()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public Map<String, DimensionHandler> getDimensionHandlers()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public List<OrderBy> getOrdering()
-      {
-        return Cursors.ascendingTimeOrder();
-      }
-
-      @Override
-      public void close()
-      {
-
-      }
-
-      @Override
-      public List<String> getColumnNames()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Nullable
-      @Override
-      public ColumnHolder getColumnHolder(String columnName)
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
 
     public SegmentForTesting(String datasource, Interval interval, String version)
     {
@@ -257,6 +258,26 @@ public class TestSegmentUtils
       synchronized (lock) {
         closed = true;
       }
+    }
+  }
+
+  /**
+   * A test segment that is backed by a {@link RowBasedSegment}. This is used to test the {@link QueryableIndexSegment}.
+   */
+  public static class InMemoryFakeSegment extends QueryableIndexSegment
+  {
+    private final RowBasedSegment<?> segment;
+
+    public InMemoryFakeSegment(SegmentId segmentId, RowBasedSegment<?> segment)
+    {
+      super(INDEX, segmentId);
+      this.segment = segment;
+    }
+
+    @Override
+    public CursorFactory asCursorFactory()
+    {
+      return segment.asCursorFactory();
     }
   }
 
