@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlQuery } from 'druid-query-toolkit';
+import { SqlQuery, SqlSetStatement } from 'druid-query-toolkit';
 
 export function wrapInExplainIfNeeded(query: string): string {
   try {
@@ -33,23 +33,9 @@ export function wrapInExplainAsParsedIfNeeded(query: string): string {
 }
 
 export function wrapInExplainAsStringIfNeeded(query: string): string {
-  const [setPart, queryPart] = partitionSetStatements(query);
+  const [setPart, queryPart] = SqlSetStatement.partitionSetStatements(query, true);
   if (/^\s*EXPLAIN\sPLAN\sFOR/im.test(queryPart)) return query;
 
-  // Specifically only replace the first occurrence
+  // Only replace the first occurrence
   return setPart + queryPart.replace(/REPLACE|INSERT|SELECT|WITH/i, 'EXPLAIN PLAN FOR\n$&');
-}
-
-export function partitionSetStatements(query: string): [string, string] {
-  const setStatementsTokens: string[] = [];
-  let m: RegExpExecArray | null = null;
-  do {
-    m = /^(?:SET[^;]+;|\s+|--[^\n]*\n|\/\*.*\*\/)/i.exec(query);
-    if (!m) break;
-
-    setStatementsTokens.push(m[0]);
-    query = query.slice(m[0].length);
-  } while (m);
-  const setStatements = setStatementsTokens.join('');
-  return [setStatements, query];
 }

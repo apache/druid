@@ -19,58 +19,12 @@
 import { sane } from 'druid-query-toolkit';
 
 import {
-  partitionSetStatements,
   wrapInExplainAsParsedIfNeeded,
   wrapInExplainAsStringIfNeeded,
   wrapInExplainIfNeeded,
 } from './explain';
 
 describe('explain utils', () => {
-  describe('partitionSetStatements', () => {
-    it('works in simple case', () => {
-      expect(
-        partitionSetStatements(sane`
-          -- A comment
-          SET timeout = 100;
-          SET timeout = 50;
-          SELECT * FROM wikipedia
-        `),
-      ).toEqual([
-        sane`
-          -- A comment
-          SET timeout = 100;
-          SET timeout = 50;
-
-        `,
-        'SELECT * FROM wikipedia',
-      ]);
-    });
-
-    it('only removes the first statements', () => {
-      expect(
-        partitionSetStatements(sane`
-          SET timeout = 100;
-          SELECT * FROM wikipedia
-
-
-          SET timeout = 50;
-          SET sqlTimeZone = 'Etc/UTC';
-          SELECT * FROM wikipedia
-        `),
-      ).toEqual([
-        'SET timeout = 100;\n',
-        sane`
-          SELECT * FROM wikipedia
-
-
-          SET timeout = 50;
-          SET sqlTimeZone = 'Etc/UTC';
-          SELECT * FROM wikipedia
-        `,
-      ]);
-    });
-  });
-
   describe('wrapInExplain*', () => {
     const queries: [string, string][] = [
       [

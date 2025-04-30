@@ -23,10 +23,10 @@ import {
   SqlFunction,
   SqlLiteral,
   SqlQuery,
+  SqlSetStatement,
   SqlStar,
 } from 'druid-query-toolkit';
 
-import { partitionSetStatements } from './explain';
 import type { RowColumn } from './general';
 import { offsetToRowColumn } from './general';
 
@@ -159,7 +159,10 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
     const initialWord = m[0].toUpperCase();
     if (sql && initialWord === 'SET') {
       const startOfSetStatements = remainingText.slice(m.index);
-      const [setPart, queryPart] = partitionSetStatements(startOfSetStatements);
+      const [setPart, queryPart] = SqlSetStatement.partitionSetStatements(
+        startOfSetStatements,
+        true,
+      );
       advanceBy += setPart.length;
       const nextWord = /SELECT|WITH|INSERT|REPLACE/i.exec(queryPart);
       if (nextWord) {
