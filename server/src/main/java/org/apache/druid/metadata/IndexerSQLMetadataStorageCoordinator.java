@@ -2083,7 +2083,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   /**
    * Read dataSource metadata as bytes, from a specific handle. Returns null if there is no metadata.
    */
-  private @Nullable byte[] retrieveDataSourceMetadataInTransactionAsBytes(
+  private @Nullable byte[] retrieveDataSourceMetadataAsBytes(
       final SegmentMetadataTransaction transaction,
       final String dataSource
   )
@@ -2128,7 +2128,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(endMetadata, "endMetadata");
 
     final byte[] oldCommitMetadataBytesFromDb =
-        retrieveDataSourceMetadataInTransactionAsBytes(transaction, dataSource);
+        retrieveDataSourceMetadataAsBytes(transaction, dataSource);
     final String oldCommitMetadataSha1FromDb;
     final DataSourceMetadata oldCommitMetadataFromDb;
 
