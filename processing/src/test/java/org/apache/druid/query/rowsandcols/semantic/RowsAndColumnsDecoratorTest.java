@@ -125,15 +125,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         for (int k = 0; k <= limits.length; ++k) {
           int limit = (k == 0 ? -1 : limits[k - 1]);
           for (int l = 0; l <= orderings.length; ++l) {
-            validateDecorated(
-                base,
-                siggy,
-                vals,
-                interval,
-                filter,
-                OffsetLimit.limit(limit),
-                l == 0 ? null : orderings[l - 1]
-            );
+            validateDecorated(base, siggy, vals, interval, filter, OffsetLimit.limit(limit), l == 0 ? null : orderings[l - 1]);
           }
         }
       }
@@ -244,7 +236,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         {8L, 4L},
         {9L, 0L},
         {10L, 0L}
-    };
+        };
 
     MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(

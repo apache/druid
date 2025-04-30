@@ -256,8 +256,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         ((MSQException) e.getCause().getCause()).getFault(),
         CoreMatchers.instanceOf(TooManyRowsInAWindowFault.class)
     );
-    Assert.assertTrue(e.getMessage()
-                       .contains("TooManyRowsInAWindow: Too many rows in a window (requested = 7, max = 2)"));
+    Assert.assertTrue(e.getMessage().contains("TooManyRowsInAWindow: Too many rows in a window (requested = 7, max = 2)"));
   }
 
   public void runProcessor(int maxRowsMaterialized, int expectedNumFramesWritten) throws Exception
@@ -287,12 +286,12 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     final WindowOperatorQuery query = new WindowOperatorQuery(
         new QueryDataSource(
             Druids.newScanQueryBuilder()
-                  .dataSource(new TableDataSource("test"))
-                  .intervals(new LegacySegmentSpec(Intervals.ETERNITY))
-                  .columns("cityName", "added")
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .context(new HashMap<>())
-                  .build()),
+                     .dataSource(new TableDataSource("test"))
+                     .intervals(new LegacySegmentSpec(Intervals.ETERNITY))
+                     .columns("cityName", "added")
+                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                     .context(new HashMap<>())
+                     .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         new HashMap<>(
             ImmutableMap.of(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, maxRowsMaterialized)

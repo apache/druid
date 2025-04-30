@@ -41,7 +41,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestSegmentUtils.InMemoryFakeSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -314,15 +313,16 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 
   private void assertResultsEquals(final ScanQuery query, final List<Integer> expectedResults)
   {
-    final List<List<Pair<Segment, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
+    final List<List<Pair<SegmentId, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
     for (int i = 0; i <= segmentToServerMap.stream().max(Comparator.naturalOrder()).orElse(0); i++) {
       serverRunners.add(new ArrayList<>());
     }
 
     for (int segmentNumber = 0; segmentNumber < segmentToServerMap.size(); segmentNumber++) {
+      final SegmentId segmentId = SEGMENTS.get(segmentNumber).getId();
       final int serverNumber = segmentToServerMap.get(segmentNumber);
 
-      serverRunners.get(serverNumber).add(Pair.of(SEGMENTS.get(segmentNumber), segmentRunners.get(segmentNumber)));
+      serverRunners.get(serverNumber).add(Pair.of(segmentId, segmentRunners.get(segmentNumber)));
     }
 
     // Simulates what the Historical servers would do.
@@ -349,7 +349,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                                                       .withQuerySegmentSpec(
                                                           new MultipleSpecificSegmentSpec(
                                                               runners.stream()
-                                                                     .map(p -> DEFAULT_DESCRIPTOR)
+                                                                     .map(p -> p.lhs.toDescriptor())
                                                                      .collect(Collectors.toList())
                                                           )
                                                       )

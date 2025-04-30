@@ -46,13 +46,13 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
   private final RowSignature signature;
 
   /**
-   * @param inputSource      {@link InputSource} that the segment is a representation of
-   * @param reader           reader to read the external input source
-   * @param inputStats       input stats
-   * @param warningCounters  warning counters tracking the warnings generated while reading the external source
-   * @param warningPublisher publisher to report the warnings generated
-   * @param channelCounters  channel counters to increment as we read through the files/units of the external source
-   * @param signature        signature of the external source
+   * @param inputSource       {@link InputSource} that the segment is a representation of
+   * @param reader            reader to read the external input source
+   * @param inputStats        input stats
+   * @param warningCounters   warning counters tracking the warnings generated while reading the external source
+   * @param warningPublisher  publisher to report the warnings generated
+   * @param channelCounters   channel counters to increment as we read through the files/units of the external source
+   * @param signature         signature of the external source
    */
   public ExternalSegment(
       final InputSource inputSource,

@@ -38,6 +38,9 @@ import java.io.Closeable;
 @PublicApi
 public interface Segment extends Closeable
 {
+  /**
+   * Returns a {@link SegmentId} for a segment, if it's backed by a real table, otherwise returns null.
+   */
   @Nullable
   SegmentId getId();
 
