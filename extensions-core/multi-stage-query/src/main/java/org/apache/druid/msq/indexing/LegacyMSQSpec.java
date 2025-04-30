@@ -119,7 +119,6 @@ public class LegacyMSQSpec extends MSQSpec
     private MSQTuningConfig tuningConfig;
     private QueryContext queryContext = QueryContext.empty();
 
-    @Deprecated
     public Builder query(Query<?> query)
     {
       this.query = query;
