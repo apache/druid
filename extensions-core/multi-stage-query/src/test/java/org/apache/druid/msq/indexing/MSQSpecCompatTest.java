@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
@@ -71,30 +72,65 @@ public class MSQSpecCompatTest
         .put("someThing", 111)
         .put("sqlInsertSegmentGranularity", "\"DAY\"")
         .build();
-    MSQSpec.builder()
-    .query(
-        Druids.newScanQueryBuilder()
-            .dataSource(
-                InlineDataSource.fromIterable(
-                    ImmutableList.of(new Object[]{2L}),
-                    resultSignature
+    MSQSpec msqSpec = MSQSpec.builder()
+        .query(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[] {2}),
+                        resultSignature
+                    )
                 )
-            )
-//            .setInterval(Intervals.ONLY_ETERNITY)
-            .intervals(QuerySegmentSpec.ETERNITY)
-            .columns("EXPR$0")
-            .columnTypes(ColumnType.LONG)
-            .context(context)
-            .build()
-    )
-    .columnMappings(ColumnMappings.identity(resultSignature))
-    .tuningConfig(MSQTuningConfig.defaultConfig())
-    .destination(
-                  DurableStorageMSQDestination.INSTANCE
-                 )
-    .build()
-;
+                .intervals(QuerySegmentSpec.ETERNITY)
+                .columns("EXPR$0")
+                .columnTypes(ColumnType.LONG)
+                .context(context)
+                .build()
+        )
+        .assignmentStrategy(WorkerAssignmentStrategy.AUTO)
+        .columnMappings(ColumnMappings.identity(resultSignature))
+        .tuningConfig(new MSQTuningConfig(1, 2, 3, 4, null))
+        .destination(TaskReportMSQDestination.INSTANCE)
+        .build();
+    validateMSQSpecCompat(info, msqSpec, MSQSpec.class);
+  }
 
+  @Test
+  public void testBuilder2(TestInfo info) throws Exception
+  {
+    RowSignature resultSignature = RowSignature.builder()
+        .add("EXPR$0", ColumnType.LONG)
+        .build();
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+        .put("someThing", 222)
+        .put("sqlInsertSegmentGranularity", "\"DAY\"")
+        .build();
+    MSQSpec msqSpec = MSQSpec.builder()
+        .query(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[] {2}),
+                        resultSignature
+                    )
+                )
+                .intervals(QuerySegmentSpec.ETERNITY)
+                .columns("EXPR$0")
+                .columnTypes(ColumnType.LONG)
+                .context(context)
+                .build()
+        )
+        .assignmentStrategy(WorkerAssignmentStrategy.MAX)
+        .columnMappings(ColumnMappings.identity(resultSignature))
+        .tuningConfig(MSQTuningConfig.defaultConfig())
+        .destination(DurableStorageMSQDestination.INSTANCE)
+        .build();
+    validateMSQSpecCompat(info, msqSpec, MSQSpec.class);
+  }
+
+  @Test
+  public void testComplexMSQSpec(TestInfo info) throws Exception
+  {
     MSQSpec msqSpec = new MSQSpec(
         GroupByQuery.builder()
             .setDataSource("foo")

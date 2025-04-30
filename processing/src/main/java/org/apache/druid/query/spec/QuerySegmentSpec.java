@@ -21,6 +21,7 @@ package org.apache.druid.query.spec;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -37,7 +38,7 @@ import java.util.List;
 })
 public interface QuerySegmentSpec
 {
-  QuerySegmentSpec ETERNITY = null;
+  public static QuerySegmentSpec ETERNITY = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
 
   List<Interval> getIntervals();
 
