@@ -31,11 +31,13 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClientImpl;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
 import org.apache.druid.testing.cluster.overlord.FaultyMetadataStorageCoordinator;
+import org.apache.druid.testing.cluster.overlord.FaultyTaskLockbox;
 import org.apache.druid.testing.cluster.task.FaultyCoordinatorClient;
 import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
 import org.apache.druid.testing.cluster.task.FaultyRemoteTaskActionClientFactory;
@@ -151,6 +153,7 @@ public class ClusterTestingModuleTest
       Assert.assertNotNull(taskConfig.getCoordinatorClientConfig());
       Assert.assertNotNull(taskConfig.getOverlordClientConfig());
       Assert.assertNotNull(taskConfig.getTaskActionClientConfig());
+      Assert.assertNotNull(taskConfig.getMetadataConfig());
 
       Assert.assertEquals(
           Duration.standardSeconds(10),
@@ -163,6 +166,9 @@ public class ClusterTestingModuleTest
       Assert.assertEquals(
           Duration.standardSeconds(30),
           taskConfig.getCoordinatorClientConfig().getMinSegmentHandoffDelay()
+      );
+      Assert.assertFalse(
+          taskConfig.getMetadataConfig().isCleanupPendingSegments()
       );
     }
     finally {
@@ -185,6 +191,9 @@ public class ClusterTestingModuleTest
       IndexerMetadataStorageCoordinator storageCoordinator =
           overlordInjector.getInstance(IndexerMetadataStorageCoordinator.class);
       Assert.assertTrue(storageCoordinator instanceof FaultyMetadataStorageCoordinator);
+
+      TaskLockbox taskLockbox = overlordInjector.getInstance(TaskLockbox.class);
+      Assert.assertTrue(taskLockbox instanceof FaultyTaskLockbox);
     }
     finally {
       System.clearProperty("druid.unsafe.cluster.testing");
@@ -200,9 +209,13 @@ public class ClusterTestingModuleTest
     final Map<String, Object> coordinatorClientConfig = Map.of(
         "minSegmentHandoffDelay", "PT30S"
     );
+    final Map<String, Object> metadataConfig = Map.of(
+        "cleanupPendingSegments", false
+    );
     return Map.of(
         "coordinatorClientConfig", coordinatorClientConfig,
-        "taskActionClientConfig", taskActionClientConfig
+        "taskActionClientConfig", taskActionClientConfig,
+        "metadataConfig", metadataConfig
     );
   }
 }

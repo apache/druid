@@ -21,31 +21,65 @@ package org.apache.druid.testing.cluster;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.indexing.common.task.Task;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
- * Config used for testing scalability of a Druid cluster by introducing faults
- * at various interface points.
+ * Config passed in the context parameter {@code "clusterTesting"} of a task,
+ * used for testing scalability of a Druid cluster by introducing faults at
+ * various interface points.
  */
 public class ClusterTestingTaskConfig
 {
+  /**
+   * Default config which does not trigger any faults for this task.
+   */
+  public static final ClusterTestingTaskConfig DEFAULT = new ClusterTestingTaskConfig(null, null, null, null);
+
+  private final MetadataConfig metadataConfig;
   private final OverlordClientConfig overlordClientConfig;
   private final CoordinatorClientConfig coordinatorClientConfig;
   private final TaskActionClientConfig taskActionClientConfig;
 
   @JsonCreator
   public ClusterTestingTaskConfig(
+      @JsonProperty("metadataConfig") @Nullable MetadataConfig metadataConfig,
       @JsonProperty("overlordClientConfig") @Nullable OverlordClientConfig overlordClientConfig,
       @JsonProperty("coordinatorClientConfig") @Nullable CoordinatorClientConfig coordinatorClientConfig,
       @JsonProperty("taskActionClientConfig") @Nullable TaskActionClientConfig taskActionClientConfig
   )
   {
+    this.metadataConfig = Configs.valueOrDefault(metadataConfig, MetadataConfig.DEFAULT);
     this.overlordClientConfig = Configs.valueOrDefault(overlordClientConfig, OverlordClientConfig.DEFAULT);
     this.coordinatorClientConfig = Configs.valueOrDefault(coordinatorClientConfig, CoordinatorClientConfig.DEFAULT);
     this.taskActionClientConfig = Configs.valueOrDefault(taskActionClientConfig, TaskActionClientConfig.DEFAULT);
+  }
+
+  /**
+   * Creates a {@link ClusterTestingTaskConfig} for the given Task by reading
+   * the task context parameter {@code "clusterTesting"}.
+   *
+   * @return Default config {@link ClusterTestingTaskConfig#DEFAULT} if not
+   * specified in the task context parameters.
+   */
+  public static ClusterTestingTaskConfig forTask(Task task, ObjectMapper mapper) throws JsonProcessingException
+  {
+    final Map<String, Object> configAsMap = task.getContextValue("clusterTesting");
+    final String json = mapper.writeValueAsString(configAsMap);
+
+    final ClusterTestingTaskConfig config = mapper.readValue(json, ClusterTestingTaskConfig.class);
+    return Configs.valueOrDefault(config, ClusterTestingTaskConfig.DEFAULT);
+  }
+
+  public MetadataConfig getMetadataConfig()
+  {
+    return metadataConfig;
   }
 
   public OverlordClientConfig getOverlordClientConfig()
@@ -74,7 +108,7 @@ public class ClusterTestingTaskConfig
   }
 
   /**
-   * Config for faulty overlord client.
+   * Config for manipulating communication of the task with the Overlord.
    */
   public static class OverlordClientConfig
   {
@@ -88,7 +122,7 @@ public class ClusterTestingTaskConfig
   }
 
   /**
-   * Config for faulty coordinator client.
+   * Config for manipulating communication of the task with the Coordinator.
    */
   public static class CoordinatorClientConfig
   {
@@ -130,7 +164,7 @@ public class ClusterTestingTaskConfig
   }
 
   /**
-   * Config for faulty task action client.
+   * Config for manipulating task actions submitted by the task to the Overlord.
    */
   public static class TaskActionClientConfig
   {
@@ -184,6 +218,30 @@ public class ClusterTestingTaskConfig
              "segmentPublishDelay=" + segmentPublishDelay +
              ", segmentAllocateDelay=" + segmentAllocateDelay +
              '}';
+    }
+  }
+
+  /**
+   * Config for manipulating metadata operations performed by the Overlord for
+   * the task.
+   */
+  public static class MetadataConfig
+  {
+    private static final MetadataConfig DEFAULT = new MetadataConfig(null);
+
+    private final boolean cleanupPendingSegments;
+
+    @JsonCreator
+    public MetadataConfig(
+        @JsonProperty("cleanupPendingSegments") @Nullable Boolean cleanupPendingSegments
+    )
+    {
+      this.cleanupPendingSegments = Configs.valueOrDefault(cleanupPendingSegments, true);
+    }
+
+    public boolean isCleanupPendingSegments()
+    {
+      return cleanupPendingSegments;
     }
   }
 }

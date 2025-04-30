@@ -26,11 +26,11 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import java.util.Map;
 
 /**
- * Calculates the maximum, average and minimum values of lag from the values of
- * lag for each stream partition.
+ * Calculates the maximum, average and total values of lag from the values of
+ * lag for each stream partition for a given supervisor.
  * <p>
  * This interface is currently needed only to augment the capability of the
- * default implementation for testing purposes.
+ * default implementation {@link DefaultLagAggregator} for testing purposes.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

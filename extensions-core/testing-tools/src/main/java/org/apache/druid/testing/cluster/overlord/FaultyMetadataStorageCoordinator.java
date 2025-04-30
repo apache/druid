@@ -30,6 +30,13 @@ import org.apache.druid.metadata.segment.SegmentMetadataTransactionFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 
+/**
+ * Implementation of {@code IndexerMetadataStorageCoordinator} that supports the
+ * following:
+ * <ul>
+ * <li></li>
+ * </ul>
+ */
 public class FaultyMetadataStorageCoordinator extends IndexerSQLMetadataStorageCoordinator
 {
   private static final Logger log = new Logger(FaultyMetadataStorageCoordinator.class);

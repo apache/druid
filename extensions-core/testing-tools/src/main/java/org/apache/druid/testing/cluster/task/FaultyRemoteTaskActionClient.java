@@ -31,6 +31,15 @@ import org.joda.time.Duration;
 
 import java.io.IOException;
 
+/**
+ * Implementation of {@link TaskActionClient} that supports the following:
+ * <ul>
+ * <li>Add a {@code segmentAllocateDelay} before sending a segment allocate
+ * request to the Overlord.</li>
+ * <li>Add a {@code segmentPublishDelay} before sending a segment publish
+ * request to the Overlord.</li>
+ * </ul>
+ */
 public class FaultyRemoteTaskActionClient implements TaskActionClient
 {
   private static final Logger log = new Logger(FaultyRemoteTaskActionClient.class);
@@ -45,6 +54,7 @@ public class FaultyRemoteTaskActionClient implements TaskActionClient
   {
     this.config = config;
     this.delegate = delegate;
+    log.info("Initializing FaultyRemoteTaskActionClient with config[%s].", config);
   }
 
   @Override

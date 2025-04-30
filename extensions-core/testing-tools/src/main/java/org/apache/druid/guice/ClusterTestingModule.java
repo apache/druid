@@ -27,11 +27,11 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -39,13 +39,13 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
 import org.apache.druid.testing.cluster.overlord.FaultyLagAggregator;
 import org.apache.druid.testing.cluster.overlord.FaultyMetadataStorageCoordinator;
+import org.apache.druid.testing.cluster.overlord.FaultyTaskLockbox;
 import org.apache.druid.testing.cluster.task.FaultyCoordinatorClient;
 import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
 import org.apache.druid.testing.cluster.task.FaultyRemoteTaskActionClientFactory;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -101,6 +101,9 @@ public class ClusterTestingModule implements DruidModule
       binder.bind(IndexerSQLMetadataStorageCoordinator.class)
             .to(FaultyMetadataStorageCoordinator.class)
             .in(ManageLifecycle.class);
+      binder.bind(TaskLockbox.class)
+            .to(FaultyTaskLockbox.class)
+            .in(LazySingleton.class);
     }
   }
 
@@ -130,12 +133,10 @@ public class ClusterTestingModule implements DruidModule
     public ClusterTestingTaskConfig get()
     {
       try {
-        final Map<String, Object> configAsMap = task.getContextValue("clusterTesting");
-        final String json = mapper.writeValueAsString(configAsMap);
-        final ClusterTestingTaskConfig testingConfig = mapper.readValue(json, ClusterTestingTaskConfig.class);
+        final ClusterTestingTaskConfig testingConfig = ClusterTestingTaskConfig.forTask(task, mapper);
         log.info("Running task in cluster testing mode with config[%s].", testingConfig);
 
-        return Configs.valueOrDefault(testingConfig, new ClusterTestingTaskConfig(null, null, null));
+        return testingConfig;
       }
       catch (IOException e) {
         throw new RuntimeException(e);

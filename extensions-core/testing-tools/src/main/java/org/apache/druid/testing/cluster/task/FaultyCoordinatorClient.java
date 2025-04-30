@@ -39,11 +39,18 @@ import org.joda.time.Duration;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Implementation of {@code CoordinatorClient} that supports the following:
+ * <ul>
+ * <li>Add a {@code minSegmentHandoffDelay} before making a call to Coordinator
+ * to get the handoff status of a single segment.</li>
+ * </ul>
+ */
 public class FaultyCoordinatorClient extends CoordinatorClientImpl
 {
   private static final Logger log = new Logger(FaultyCoordinatorClient.class);
 
-  private final ClusterTestingTaskConfig testingConfig;
+  private final ClusterTestingTaskConfig.CoordinatorClientConfig config;
   private final ConcurrentHashMap<SegmentDescriptor, Stopwatch> segmentHandoffTimers = new ConcurrentHashMap<>();
 
   @Inject
@@ -62,7 +69,8 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
         ),
         jsonMapper
     );
-    this.testingConfig = testingConfig;
+    this.config = testingConfig.getCoordinatorClientConfig();
+    log.info("Initializing FaultyCoordinatorClient with config[%s].", config);
   }
 
   @Override
@@ -75,9 +83,17 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
           d -> Stopwatch.createStarted()
       );
 
-      if (sinceHandoffCheckStarted.hasElapsed(minHandoffDelay)) {
+      if (sinceHandoffCheckStarted.isRunning()
+          && sinceHandoffCheckStarted.hasElapsed(minHandoffDelay)) {
         // Wait period is over, check with Coordinator now
-        segmentHandoffTimers.remove(descriptor);
+        log.info(
+            "Min handoff delay[%s] has elapsed for segment[%s]. Checking with Coordinator for actual handoff status.",
+            minHandoffDelay, descriptor
+        );
+
+        // Stop the Stopwatch but do not remove it from the map. This ensures
+        // that we do not create a new Stopwatch causing further delays.
+        sinceHandoffCheckStarted.stop();
       } else {
         // Until the min handoff delay has elapsed, keep returning false
         return Futures.immediateFuture(false);
@@ -90,6 +106,6 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
 
   private Duration getHandoffDelay()
   {
-    return testingConfig.getCoordinatorClientConfig().getMinSegmentHandoffDelay();
+    return config.getMinSegmentHandoffDelay();
   }
 }

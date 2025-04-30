@@ -27,6 +27,13 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.Map;
 
+/**
+ * Implementation of {@link LagAggregator} that supports the following:
+ * <ul>
+ * <li>Specify a {@code multiplier} to amplify the lag observed by the Overlord
+ * for a given supervisor.</li>
+ * </ul>
+ */
 public class FaultyLagAggregator implements LagAggregator
 {
   private static final Logger log = new Logger(FaultyLagAggregator.class);
@@ -40,6 +47,7 @@ public class FaultyLagAggregator implements LagAggregator
   )
   {
     this.multiplier = multiplier;
+    log.info("Multiplying lags by factor[%d].", multiplier);
   }
 
   @JsonProperty
@@ -51,12 +59,11 @@ public class FaultyLagAggregator implements LagAggregator
   @Override
   public <PartitionIdType> LagStats aggregate(Map<PartitionIdType, Long> partitionLags)
   {
-    log.info("Calculating faulty lags with multiplier[%d]", multiplier);
     LagStats originalAggregate = delegate.aggregate(partitionLags);
     return new LagStats(
-        originalAggregate.getMaxLag() * multiplier,
-        originalAggregate.getTotalLag() * multiplier,
-        originalAggregate.getAvgLag() * multiplier
+        originalAggregate.getMaxLag() * getMultiplier(),
+        originalAggregate.getTotalLag() * getMultiplier(),
+        originalAggregate.getAvgLag() * getMultiplier()
     );
   }
 }
