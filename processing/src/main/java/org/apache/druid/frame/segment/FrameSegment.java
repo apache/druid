@@ -42,13 +42,11 @@ public class FrameSegment implements Segment
 {
   private final Frame frame;
   private final FrameReader frameReader;
-  private final SegmentId segmentId;
 
-  public FrameSegment(Frame frame, FrameReader frameReader, SegmentId segmentId)
+  public FrameSegment(Frame frame, FrameReader frameReader)
   {
     this.frame = frame;
     this.frameReader = frameReader;
-    this.segmentId = segmentId;
   }
 
   @Override

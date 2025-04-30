@@ -58,7 +58,6 @@ import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -187,7 +186,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
 
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("x"));
+        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
         final SegmentReference mappedSegment = mapSegment(frameSegment);
 
         final Sequence<ResultRow> rowSequence =

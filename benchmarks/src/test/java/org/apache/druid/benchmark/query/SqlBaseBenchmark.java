@@ -475,8 +475,7 @@ public class SqlBaseBenchmark
           descriptor,
           new FrameSegment(
               FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.ROW_BASED),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable
@@ -497,8 +496,7 @@ public class SqlBaseBenchmark
           descriptor,
           new FrameSegment(
               FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.COLUMNAR),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable
