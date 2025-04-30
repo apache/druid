@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
@@ -55,7 +56,7 @@ public class LegacyMSQSpec extends MSQSpec
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig)
   {
     super(columnMappings, destination, assignmentStrategy, tuningConfig);
-    this.query = query;
+    this.query = Preconditions.checkNotNull(query, "query");
   }
 
   public static Builder builder()

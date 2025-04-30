@@ -42,6 +42,20 @@ public class MSQSpecTest
   }
 
   @Test
+  public void testQueryDefEquals()
+  {
+    EqualsVerifier.forClass(QueryDefMSQSpec.class)
+                  .withNonnullFields("destination", "tuningConfig")
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(MSQSpec.class)

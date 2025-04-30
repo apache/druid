@@ -20,9 +20,8 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -31,12 +30,10 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
-import java.util.Map;
 import java.util.Objects;
 
 public class QueryDefMSQSpec extends MSQSpec
 {
-
   protected final QueryDefinition queryDef;
 
   // jackson defaults
@@ -55,11 +52,10 @@ public class QueryDefMSQSpec extends MSQSpec
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig)
   {
     super(columnMappings, destination, assignmentStrategy, tuningConfig);
-    this.queryDef = queryDef;
+    this.queryDef = Preconditions.checkNotNull(queryDef, "queryDef");
   }
 
   @JsonProperty("queryDef")
-  @JsonInclude(value = Include.NON_NULL)
   public QueryDefinition getQueryDef()
   {
     return queryDef;
@@ -71,16 +67,6 @@ public class QueryDefMSQSpec extends MSQSpec
     return getContext().getString(BaseQuery.QUERY_ID);
   }
 
-  private boolean isLegacyMode()
-  {
-    return queryDef == null;
-  }
-
-  public QueryDefMSQSpec withOverriddenContext(Map<String, Object> contextOverride)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -88,13 +74,13 @@ public class QueryDefMSQSpec extends MSQSpec
       return false;
     }
     QueryDefMSQSpec that = (QueryDefMSQSpec) o;
-    return true;
+    return Objects.equals(queryDef, that.queryDef);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode());
+    return Objects.hash(super.hashCode(), queryDef);
   }
 
   public static class Builder
