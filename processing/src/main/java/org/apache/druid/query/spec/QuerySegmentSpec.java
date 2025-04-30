@@ -37,6 +37,8 @@ import java.util.List;
 })
 public interface QuerySegmentSpec
 {
+  QuerySegmentSpec ETERNITY = null;
+
   List<Interval> getIntervals();
 
   <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker);

@@ -26,7 +26,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -35,8 +38,10 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -46,6 +51,7 @@ import org.junit.jupiter.api.TestInfo;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -55,8 +61,40 @@ public class MSQSpecCompatTest
   private static final boolean OVERWRITE = false;
 
   @Test
-  public void testComplexMSQSpec(TestInfo info) throws Exception
+  public void testBuilder1(TestInfo info) throws Exception
   {
+    RowSignature resultSignature = RowSignature.builder()
+        .add("EXPR$0", ColumnType.LONG)
+        .build();
+
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+        .put("someThing", 111)
+        .put("sqlInsertSegmentGranularity", "\"DAY\"")
+        .build();
+    MSQSpec.builder()
+    .query(
+        Druids.newScanQueryBuilder()
+            .dataSource(
+                InlineDataSource.fromIterable(
+                    ImmutableList.of(new Object[]{2L}),
+                    resultSignature
+                )
+            )
+//            .setInterval(Intervals.ONLY_ETERNITY)
+            .intervals(QuerySegmentSpec.ETERNITY)
+            .columns("EXPR$0")
+            .columnTypes(ColumnType.LONG)
+            .context(context)
+            .build()
+    )
+    .columnMappings(ColumnMappings.identity(resultSignature))
+    .tuningConfig(MSQTuningConfig.defaultConfig())
+    .destination(
+                  DurableStorageMSQDestination.INSTANCE
+                 )
+    .build()
+;
+
     MSQSpec msqSpec = new MSQSpec(
         GroupByQuery.builder()
             .setDataSource("foo")
@@ -106,8 +144,7 @@ public class MSQSpecCompatTest
         MSQTuningConfig.defaultConfig()
     );
 
-    Class<MSQSpec> valueType = MSQSpec.class;
-    validateMSQSpecCompat(info, msqSpec, valueType);
+    validateMSQSpecCompat(info, msqSpec, MSQSpec.class);
   }
 
   private void validateMSQSpecCompat(TestInfo info, MSQSpec msqSpec, Class<MSQSpec> valueType) throws Exception
