@@ -45,6 +45,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.server.SegmentManager;
@@ -109,7 +110,8 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         cache,
         cacheConfig,
         segmentManager,
-        serverConfig
+        serverConfig,
+        NoopPolicyEnforcer.instance()
     );
   }
 

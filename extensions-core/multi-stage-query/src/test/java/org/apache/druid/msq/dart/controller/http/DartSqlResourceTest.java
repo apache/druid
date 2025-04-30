@@ -53,6 +53,7 @@ import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
@@ -225,6 +226,7 @@ public class DartSqlResourceTest extends MSQTestBase
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 
@@ -232,8 +234,8 @@ public class DartSqlResourceTest extends MSQTestBase
     final SqlToolbox toolbox = new SqlToolbox(
         engine,
         plannerFactory,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new DefaultQueryConfig(ImmutableMap.of()),
         lifecycleManager

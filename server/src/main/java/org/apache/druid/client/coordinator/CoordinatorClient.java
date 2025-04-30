@@ -26,6 +26,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -87,4 +88,10 @@ public interface CoordinatorClient
    */
   ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
 
+  /**
+   * Gets the latest coordinator dynamic config.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/config}
+   */
+  ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig();
 }

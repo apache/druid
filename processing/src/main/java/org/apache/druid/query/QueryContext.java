@@ -559,6 +559,15 @@ public class QueryContext
     );
   }
 
+  public CloneQueryMode getCloneQueryMode()
+  {
+    return getEnum(
+        QueryContexts.CLONE_QUERY_MODE,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
+    );
+  }
+
   public boolean getEnableRewriteJoinToFilter()
   {
     return getBoolean(

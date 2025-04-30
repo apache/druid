@@ -1296,7 +1296,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatment()
+  public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatement()
   {
     assertQueryIsUnplannable(
         "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",

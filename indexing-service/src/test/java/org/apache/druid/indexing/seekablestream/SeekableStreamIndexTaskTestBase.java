@@ -47,6 +47,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -100,6 +101,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
@@ -597,6 +599,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
             derby.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
+            Set.of(NodeRole.OVERLORD),
             NoopSegmentMetadataCache.instance(),
             NoopServiceEmitter.instance()
         ),
@@ -676,6 +679,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         null, // taskExecutorNode
         taskActionClientFactory,
         emitter,
+        NoopPolicyEnforcer.instance(),
         dataSegmentPusher,
         new TestDataSegmentKiller(),
         null, // DataSegmentMover

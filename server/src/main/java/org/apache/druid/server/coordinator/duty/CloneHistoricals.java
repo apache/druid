@@ -20,8 +20,11 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
@@ -32,6 +35,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -45,10 +49,15 @@ public class CloneHistoricals implements CoordinatorDuty
 {
   private static final Logger log = new Logger(CloneHistoricals.class);
   private final SegmentLoadQueueManager loadQueueManager;
+  private final CloneStatusManager cloneStatusManager;
 
-  public CloneHistoricals(SegmentLoadQueueManager loadQueueManager)
+  public CloneHistoricals(
+      final SegmentLoadQueueManager loadQueueManager,
+      final CloneStatusManager cloneStatusManager
+  )
   {
     this.loadQueueManager = loadQueueManager;
+    this.cloneStatusManager = cloneStatusManager;
   }
 
   @Override
@@ -56,6 +65,7 @@ public class CloneHistoricals implements CoordinatorDuty
   {
     final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
+    final DruidCluster cluster = params.getDruidCluster();
 
     if (cloneServers.isEmpty()) {
       // No servers to be cloned.
@@ -63,22 +73,21 @@ public class CloneHistoricals implements CoordinatorDuty
     }
 
     // Create a map of host to historical.
-    final Map<String, ServerHolder> historicalMap = params.getDruidCluster()
-                                                          .getHistoricals()
-                                                          .values()
-                                                          .stream()
-                                                          .flatMap(Collection::stream)
-                                                          .collect(Collectors.toMap(
-                                                              serverHolder -> serverHolder.getServer().getHost(),
-                                                              serverHolder -> serverHolder
-                                                          ));
+    final Map<String, ServerHolder> hostToHistoricalMap = cluster.getHistoricals()
+                                                                 .values()
+                                                                 .stream()
+                                                                 .flatMap(Collection::stream)
+                                                                 .collect(Collectors.toMap(
+                                                                     serverHolder -> serverHolder.getServer().getHost(),
+                                                                     serverHolder -> serverHolder
+                                                                 ));
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetHistoricalName = entry.getKey();
-      final ServerHolder targetServer = historicalMap.get(targetHistoricalName);
+      final ServerHolder targetServer = hostToHistoricalMap.get(targetHistoricalName);
 
       final String sourceHistoricalName = entry.getValue();
-      final ServerHolder sourceServer = historicalMap.get(sourceHistoricalName);
+      final ServerHolder sourceServer = hostToHistoricalMap.get(sourceHistoricalName);
 
       if (sourceServer == null || targetServer == null) {
         log.error(
@@ -114,6 +123,56 @@ public class CloneHistoricals implements CoordinatorDuty
       }
     }
 
+    final Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(hostToHistoricalMap, cloneServers);
+    cloneStatusManager.updateStatus(newStatusMap);
+
     return params;
+  }
+
+  /**
+   * Create a status map of cloning progress based on the cloneServers mapping and its current load queue.
+   */
+  private Map<String, ServerCloneStatus> createCurrentStatusMap(
+      Map<String, ServerHolder> historicalMap,
+      Map<String, String> cloneServers
+  )
+  {
+    final Map<String, ServerCloneStatus> newStatusMap = new HashMap<>();
+
+    for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
+      final String targetServerName = entry.getKey();
+      final ServerHolder targetServer = historicalMap.get(entry.getKey());
+      final String sourceServerName = entry.getValue();
+
+      long segmentLoad = 0L;
+      long bytesLeft = 0L;
+      long segmentDrop = 0L;
+
+      ServerCloneStatus newStatus;
+      if (targetServer == null) {
+        newStatus = ServerCloneStatus.unknown(sourceServerName, targetServerName);
+      } else {
+
+        ServerCloneStatus.State state;
+        if (!historicalMap.containsKey(sourceServerName)) {
+          state = ServerCloneStatus.State.SOURCE_SERVER_MISSING;
+        } else {
+          state = ServerCloneStatus.State.IN_PROGRESS;
+        }
+
+        for (Map.Entry<DataSegment, SegmentAction> queuedSegment : targetServer.getQueuedSegments().entrySet()) {
+          if (queuedSegment.getValue().isLoad()) {
+            segmentLoad += 1;
+            bytesLeft += queuedSegment.getKey().getSize();
+          } else {
+            segmentDrop += 1;
+          }
+        }
+        newStatus = new ServerCloneStatus(sourceServerName, targetServerName, state, segmentLoad, segmentDrop, bytesLeft);
+      }
+      newStatusMap.put(targetServerName, newStatus);
+    }
+
+    return newStatusMap;
   }
 }

@@ -558,8 +558,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   public static void insertUsedSegments(
       Set<DataSegment> dataSegments,
       Map<String, String> upgradedFromSegmentIdMap,
-      SQLMetadataConnector connector,
-      String table,
+      TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
       ObjectMapper jsonMapper
   )
   {
@@ -579,16 +578,18 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       );
     }
 
-    insertSegments(usedSegments, connector, table, jsonMapper);
+    insertSegments(usedSegments, derbyConnectorRule, jsonMapper);
   }
 
   public static void insertSegments(
       Set<DataSegmentPlus> dataSegments,
-      SQLMetadataConnector connector,
-      String table,
+      TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
       ObjectMapper jsonMapper
   )
   {
+    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+
     connector.retryWithHandle(
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(

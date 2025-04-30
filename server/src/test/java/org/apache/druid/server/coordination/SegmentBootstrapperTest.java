@@ -37,6 +37,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +52,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.druid.server.TestSegmentUtils.makeSegment;
+import static org.apache.druid.segment.TestSegmentUtils.makeSegment;
 
 public class SegmentBootstrapperTest
 {

@@ -227,7 +227,7 @@ public class CalcitePlanner implements Planner, ViewExpander
     }
     ensure(CalcitePlanner.State.STATE_2_READY);
     SqlParser parser = SqlParser.create(reader, parserConfig);
-    SqlNode sqlNode = parser.parseStmt();
+    SqlNode sqlNode = parser.parseStmtList();
     state = CalcitePlanner.State.STATE_3_PARSED;
     return sqlNode;
   }

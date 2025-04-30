@@ -694,10 +694,8 @@ public class HeapMemorySegmentMetadataCacheTest
 
   private void insertSegmentsInMetadataStore(Set<DataSegmentPlus> segments)
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-
     IndexerSqlMetadataStorageCoordinatorTestBase
-        .insertSegments(segments, derbyConnector, table, TestHelper.JSON_MAPPER);
+        .insertSegments(segments, derbyConnectorRule, TestHelper.JSON_MAPPER);
   }
 
   private void updateSegmentInMetadataStore(DataSegmentPlus segment)

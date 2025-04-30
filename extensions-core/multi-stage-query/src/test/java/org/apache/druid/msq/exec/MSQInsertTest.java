@@ -1084,6 +1084,33 @@ public class MSQInsertTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsArraySetStatement(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING_ARRAY).build();
+
+    testIngestQuery().setSql(
+                         "SET arrayIngestMode = 'array'; INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) as dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, new Object[]{"a", "b"}},
+                             new Object[]{0L, new Object[]{""}},
+                             new Object[]{0L, new Object[]{"b", "c"}},
+                             new Object[]{0L, new Object[]{"d"}}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
   public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsMvd(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -1125,6 +1152,22 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(localContext)
+                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+                         CoreMatchers.instanceOf(ISE.class),
+                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+                         )
+                     ))
+                     .verifyExecutionError();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1WithMultiValueDimGroupByWithoutGroupByEnableSetStatement(String contextName, Map<String, Object> context)
+  {
+    testIngestQuery().setSql(
+                         "SET groupByEnableMultiValueUnnesting = false; INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
+                     .setQueryContext(context)
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(

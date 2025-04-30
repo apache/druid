@@ -658,6 +658,138 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
 
 </details>
 
+
+### Get Historical Cloning Status
+
+Retrieves the current status of Historical cloning from the Coordinator.
+
+#### URL
+
+`GET` `/druid/coordinator/v1/config/cloneStatus`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="56" label="200 SUCCESS">
+
+
+<br/>
+
+*Successfully retrieved cloning status*
+
+</TabItem>
+</Tabs>
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="58" label="cURL">
+
+
+```shell
+curl "http://COORDINATOR_IP:COORDINATOR_PORT/druid/coordinator/v1/config/cloneStatus"
+```
+
+</TabItem>
+<TabItem value="59" label="HTTP">
+
+
+```http
+GET /druid/coordinator/v1/config/cloneStatus HTTP/1.1
+Host: http://COORDINATOR_IP:COORDINATOR_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+```json
+{
+  "cloneStatus": [
+    {
+      "sourceServer": "localhost:8089",
+      "targetServer": "localhost:8083",
+      "state": "IN_PROGRESS",
+      "segmentLoadsRemaining": 0,
+      "segmentDropsRemaining": 0,
+      "bytesToLoad": 0
+    }
+  ]
+}
+```
+
+</details>
+
+### Get Broker dynamic configuration view
+
+Retrieves the list of Brokers which have an up-to-date view of Coordinator dynamic configuration.
+
+#### URL
+
+`GET` `/druid/coordinator/v1/config/syncedBrokers`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="56" label="200 SUCCESS">
+
+
+<br/>
+
+*Successfully retrieved Broker Configuration view*
+
+</TabItem>
+</Tabs>
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="58" label="cURL">
+
+
+```shell
+curl "http://COORDINATOR_IP:COORDINATOR_PORT/druid/coordinator/v1/config/syncedBrokers"
+```
+
+</TabItem>
+<TabItem value="59" label="HTTP">
+
+
+```http
+GET /druid/coordinator/v1/config/syncedBrokers HTTP/1.1
+Host: http://COORDINATOR_IP:COORDINATOR_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+```json
+{
+  "syncedBrokers": [
+    {
+      "host": "localhost",
+      "port": 8082,
+      "syncTimeInMs": 1745756337472
+    }
+  ]
+}
+```
+
+</details>
+
 ## Overlord
 
 ### Get Overlord leader address

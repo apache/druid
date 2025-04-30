@@ -19,24 +19,16 @@
 
 package org.apache.druid.server.coordinator.simulate;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.SortOrder;
-import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -54,6 +46,18 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 
   private volatile DataSourcesSnapshot snapshot;
   private volatile boolean pollingStarted;
+
+  @Override
+  public void start()
+  {
+
+  }
+
+  @Override
+  public void stop()
+  {
+
+  }
 
   public boolean addSegment(DataSegment segment)
   {
@@ -100,13 +104,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     return pollingStarted;
   }
 
-  @Override
   public int markAsUsedAllNonOvershadowedSegmentsInDataSource(String dataSource)
   {
     return markNonOvershadowedSegmentsAsUsed(dataSource, Predicates.alwaysTrue());
   }
 
-  @Override
   public int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions)
   {
     final Set<String> allowedVersions = versions == null ? null : new HashSet<>(versions);
@@ -117,13 +119,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     );
   }
 
-  @Override
   public int markAsUsedNonOvershadowedSegments(String dataSource, Set<SegmentId> segmentIds)
   {
     return markNonOvershadowedSegmentsAsUsed(dataSource, segment -> segmentIds.contains(segment.getId()));
   }
 
-  @Override
   public boolean markSegmentAsUsed(String segmentId)
   {
     if (!allSegments.containsKey(segmentId)
@@ -135,13 +135,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     return true;
   }
 
-  @Override
   public int markAsUnusedAllSegmentsInDataSource(String dataSource)
   {
     return markSegmentsAsUnused(segment -> segment.getDataSource().equals(dataSource));
   }
 
-  @Override
   public int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions)
   {
     final Set<String> eligibleVersions = versions == null ? null : new HashSet<>(versions);
@@ -152,7 +150,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     );
   }
 
-  @Override
   public int markSegmentsAsUnused(Set<SegmentId> segmentIds)
   {
     return markSegmentsAsUnused(
@@ -160,7 +157,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     );
   }
 
-  @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
     boolean updated = usedSegments.remove(segmentId.toString()) != null;
@@ -171,24 +167,8 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     return updated;
   }
 
-  @Nullable
   @Override
-  public ImmutableDruidDataSource getImmutableDataSourceWithUsedSegments(String dataSource)
-  {
-    if (snapshot == null) {
-      getSnapshotOfDataSourcesWithAllUsedSegments();
-    }
-    return snapshot.getDataSource(dataSource);
-  }
-
-  @Override
-  public Collection<ImmutableDruidDataSource> getImmutableDataSourcesWithAllUsedSegments()
-  {
-    return getSnapshotOfDataSourcesWithAllUsedSegments().getDataSourcesWithAllUsedSegments();
-  }
-
-  @Override
-  public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
+  public DataSourcesSnapshot getRecentDataSourcesSnapshot()
   {
     if (snapshot == null) {
       snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values());
@@ -197,55 +177,15 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public Iterable<DataSegment> iterateAllUsedSegments()
+  public DataSourcesSnapshot forceUpdateDataSourcesSnapshot()
   {
-    return usedSegments.values();
+    snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values());
+    return snapshot;
   }
 
-  @Override
-  public Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
-      String datasource,
-      Interval interval,
-      boolean requiresLatest
-  )
-  {
-    VersionedIntervalTimeline<String, DataSegment> usedSegmentsTimeline
-        = getSnapshotOfDataSourcesWithAllUsedSegments().getUsedSegmentsTimelinesPerDataSource().get(datasource);
-    return Optional.fromNullable(usedSegmentsTimeline)
-                   .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(
-                       interval,
-                       Partitions.ONLY_COMPLETE
-                   ));
-  }
-
-  @Override
-  public Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
-      String datasource,
-      @Nullable Interval interval,
-      @Nullable Integer limit,
-      @Nullable String lastSegmentId,
-      @Nullable SortOrder sortOrder
-  )
-  {
-    return null;
-  }
-
-  @Override
   public Set<String> retrieveAllDataSourceNames()
   {
     return allSegments.values().stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
-  }
-
-  @Override
-  public List<Interval> getUnusedSegmentIntervals(
-      final String dataSource,
-      @Nullable final DateTime minStartTime,
-      final DateTime maxEndTime,
-      final int limit,
-      final DateTime maxUsedStatusLastUpdatedTime
-  )
-  {
-    return null;
   }
 
   @Override

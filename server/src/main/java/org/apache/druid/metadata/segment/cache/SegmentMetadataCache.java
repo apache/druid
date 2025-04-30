@@ -20,10 +20,11 @@
 package org.apache.druid.metadata.segment.cache;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.error.InvalidInput;
 
 /**
- * Cache for metadata of pending segments and committed segments maintained by
+ * Cache for metadata of pending segments and used segments maintained by
  * the Overlord to improve performance of segment allocation and other task actions.
  * <p>
  * Not to be confused with {@link org.apache.druid.segment.metadata.AbstractSegmentMetadataCache}
@@ -63,6 +64,17 @@ public interface SegmentMetadataCache
    * even before the sync has finished.
    */
   boolean isSyncedForRead();
+
+  /**
+   * Waits until the cache finishes the next sync with the metadata store or
+   * until the timeout elapses, whichever is sooner.
+   */
+  void awaitNextSync(long timeoutMillis);
+
+  /**
+   * @return Latest snapshot of the datasources with all their used segments.
+   */
+  DataSourcesSnapshot getDataSourcesSnapshot();
 
   /**
    * Performs a thread-safe read action on the cache for the given datasource.

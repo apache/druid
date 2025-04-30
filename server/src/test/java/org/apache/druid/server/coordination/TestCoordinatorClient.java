@@ -24,23 +24,31 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;
 import java.util.Set;
 
-class TestCoordinatorClient extends NoopCoordinatorClient
+public class TestCoordinatorClient extends NoopCoordinatorClient
 {
   private final Set<DataSegment> bootstrapSegments;
+  private final CoordinatorDynamicConfig config;
 
-  TestCoordinatorClient()
+  public TestCoordinatorClient()
   {
-    this(new HashSet<>());
+    this(new HashSet<>(), CoordinatorDynamicConfig.builder().build());
   }
 
-  TestCoordinatorClient(final Set<DataSegment> bootstrapSegments)
+  public TestCoordinatorClient(final Set<DataSegment> bootstrapSegments)
+  {
+    this(bootstrapSegments, CoordinatorDynamicConfig.builder().build());
+  }
+
+  public TestCoordinatorClient(final Set<DataSegment> bootstrapSegments, final CoordinatorDynamicConfig config)
   {
     this.bootstrapSegments = bootstrapSegments;
+    this.config = config;
   }
 
   @Override
@@ -49,5 +57,11 @@ class TestCoordinatorClient extends NoopCoordinatorClient
     return Futures.immediateFuture(
         new BootstrapSegmentsResponse(CloseableIterators.withEmptyBaggage(bootstrapSegments.iterator()))
     );
+  }
+
+  @Override
+  public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig()
+  {
+    return Futures.immediateFuture(config);
   }
 }
