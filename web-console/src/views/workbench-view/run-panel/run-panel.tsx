@@ -364,27 +364,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         />
                       );
                     })}
-
                     <MenuDivider />
                   </>
-                )}
-                {show('edit-query-context') && (
-                  <MenuItem
-                    icon={IconNames.PROPERTIES}
-                    text="Edit query context..."
-                    onClick={() => setEditContextDialogOpen(true)}
-                    label={pluralIfNeeded(Object.keys(query.queryContext).length, 'key')}
-                  />
-                )}
-                {show('define-parameters') && (
-                  <MenuItem
-                    icon={IconNames.HELP}
-                    text="Define parameters..."
-                    onClick={() => setEditParametersDialogOpen(true)}
-                    label={
-                      queryParameters ? pluralIfNeeded(queryParameters.length, 'parameter') : ''
-                    }
-                  />
                 )}
                 {show('timezone') && (
                   <MenuItem
@@ -651,6 +632,25 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       }}
                     />
                   </MenuItem>
+                )}
+                {(show('edit-query-context') || show('define-parameters')) && <MenuDivider />}
+                {show('edit-query-context') && (
+                  <MenuItem
+                    icon={IconNames.PROPERTIES}
+                    text="Edit query context..."
+                    onClick={() => setEditContextDialogOpen(true)}
+                    label={pluralIfNeeded(Object.keys(query.queryContext).length, 'key')}
+                  />
+                )}
+                {show('define-parameters') && (
+                  <MenuItem
+                    icon={IconNames.HELP}
+                    text="Define parameters..."
+                    onClick={() => setEditParametersDialogOpen(true)}
+                    label={
+                      queryParameters ? pluralIfNeeded(queryParameters.length, 'parameter') : ''
+                    }
+                  />
                 )}
               </Menu>
             }
