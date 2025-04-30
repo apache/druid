@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -302,6 +303,14 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
     public WindowedSegment(ReferenceCountingSegment segment, Interval interval, String version, int partitionNumber)
     {
+      if (segment.getId() != null) {
+        Preconditions.checkArgument(segment.getId().getInterval().contains(interval));
+      } else {
+        Preconditions.checkArgument(
+            segment.getDataInterval().contains(interval),
+            "Data interval for non-table segment should default to external"
+        );
+      }
       this.segment = segment;
       this.interval = interval;
       this.version = version;
