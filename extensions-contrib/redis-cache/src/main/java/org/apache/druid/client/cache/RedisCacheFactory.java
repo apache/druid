@@ -73,14 +73,16 @@ public class RedisCacheFactory
             config.getTimeout().getMillisecondsAsInt(), //read timeout
             config.getCluster().getMaxRedirection(),
             config.getPassword().getPassword(),
-            poolConfig
+            poolConfig,
+            config.getEnableTls()
         );
       } else {
         cluster = new JedisCluster(
             nodes,
             config.getTimeout().getMillisecondsAsInt(), //connection timeout and read timeout
             config.getCluster().getMaxRedirection(),
-            poolConfig
+            poolConfig,
+            config.getEnableTls()
         );
       }
 
@@ -105,7 +107,8 @@ public class RedisCacheFactory
               config.getTimeout().getMillisecondsAsInt(), //connection timeout and read timeout
               config.getPassword() == null ? null : config.getPassword().getPassword(),
               config.getDatabase(),
-              null
+              null,
+              config.getEnableTls()
           ),
           config
       );
