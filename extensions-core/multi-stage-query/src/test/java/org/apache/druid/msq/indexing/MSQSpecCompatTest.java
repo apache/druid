@@ -72,7 +72,7 @@ public class MSQSpecCompatTest
         .put("someThing", 111)
         .put("sqlInsertSegmentGranularity", "\"DAY\"")
         .build();
-    MSQSpec msqSpec = MSQSpec.builder()
+    MSQSpec msqSpec = LegacyMSQSpec.builder()
         .query(
             Druids.newScanQueryBuilder()
                 .dataSource(
@@ -92,7 +92,7 @@ public class MSQSpecCompatTest
         .tuningConfig(new MSQTuningConfig(1, 2, 3, 4, null))
         .destination(TaskReportMSQDestination.INSTANCE)
         .build();
-    validateMSQSpecCompat(info, msqSpec, MSQSpec.class);
+    validateMSQSpecCompat(info, msqSpec, LegacyMSQSpec.class);
   }
 
   @Test
@@ -105,7 +105,7 @@ public class MSQSpecCompatTest
         .put("someThing", 222)
         .put("sqlInsertSegmentGranularity", "\"DAY\"")
         .build();
-    MSQSpec msqSpec = MSQSpec.builder()
+    MSQSpec msqSpec = LegacyMSQSpec.builder()
         .query(
             Druids.newScanQueryBuilder()
                 .dataSource(
@@ -125,13 +125,13 @@ public class MSQSpecCompatTest
         .tuningConfig(MSQTuningConfig.defaultConfig())
         .destination(DurableStorageMSQDestination.INSTANCE)
         .build();
-    validateMSQSpecCompat(info, msqSpec, MSQSpec.class);
+    validateMSQSpecCompat(info, msqSpec, LegacyMSQSpec.class);
   }
 
   @Test
   public void testComplexMSQSpec(TestInfo info) throws Exception
   {
-    MSQSpec msqSpec = new MSQSpec(
+    MSQSpec msqSpec = new LegacyMSQSpec(
         GroupByQuery.builder()
             .setDataSource("foo")
             .setInterval(Intervals.ONLY_ETERNITY)
@@ -180,10 +180,10 @@ public class MSQSpecCompatTest
         MSQTuningConfig.defaultConfig()
     );
 
-    validateMSQSpecCompat(info, msqSpec, MSQSpec.class);
+    validateMSQSpecCompat(info, msqSpec, LegacyMSQSpec.class);
   }
 
-  private void validateMSQSpecCompat(TestInfo info, MSQSpec msqSpec, Class<MSQSpec> valueType) throws Exception
+  private void validateMSQSpecCompat(TestInfo info, MSQSpec msqSpec, Class<? extends MSQSpec> valueType) throws Exception
   {
     String str = JSON_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(msqSpec);
     MSQSpec readBack = JSON_MAPPER.readValue(str, valueType);
