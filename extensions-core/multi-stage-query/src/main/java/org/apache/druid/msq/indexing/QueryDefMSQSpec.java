@@ -19,54 +19,50 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Old MSQSpec with a native query in it.
- *
- * Usage of this class should be avoided in favor of {@link MSQSpec}.
- */
-public class LegacyMSQSpec extends MSQSpec
+public class QueryDefMSQSpec extends MSQSpec
 {
-  private final Query<?> query;
+
+  protected final QueryDefinition queryDef;
 
   // jackson defaults
-  public LegacyMSQSpec()
+  public QueryDefMSQSpec()
   {
     super();
-    this.query = null;
+    queryDef = null;
   }
 
-  public LegacyMSQSpec(
-      @JsonProperty("query") Query<?> query,
+  @JsonCreator
+  public QueryDefMSQSpec(
+      @JsonProperty("queryDef") QueryDefinition queryDef,
       @JsonProperty("columnMappings") ColumnMappings columnMappings,
       @JsonProperty("destination") MSQDestination destination,
       @JsonProperty("assignmentStrategy") WorkerAssignmentStrategy assignmentStrategy,
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig)
   {
     super(columnMappings, destination, assignmentStrategy, tuningConfig);
-    this.query = query;
+    this.queryDef = queryDef;
   }
 
-  public static Builder builder()
+  @JsonProperty("queryDef")
+  @JsonInclude(value = Include.NON_NULL)
+  public QueryDefinition getQueryDef()
   {
-    return new Builder();
-  }
-
-  @JsonProperty
-  public Query<?> getQuery()
-  {
-    return query;
+    return queryDef;
   }
 
   @Override
@@ -75,22 +71,14 @@ public class LegacyMSQSpec extends MSQSpec
     return getContext().getString(BaseQuery.QUERY_ID);
   }
 
-
-  @Override
-  public QueryContext getContext()
+  private boolean isLegacyMode()
   {
-    return QueryContext.of(query.getContext());
+    return queryDef == null;
   }
 
-  public LegacyMSQSpec withOverriddenContext(Map<String, Object> contextOverride)
+  public QueryDefMSQSpec withOverriddenContext(Map<String, Object> contextOverride)
   {
-    return new LegacyMSQSpec(
-        query.withOverriddenContext(contextOverride),
-        getColumnMappings(),
-        getDestination(),
-        getAssignmentStrategy(),
-        getTuningConfig()
-    );
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
@@ -99,29 +87,27 @@ public class LegacyMSQSpec extends MSQSpec
     if (!super.equals(o)) {
       return false;
     }
-    LegacyMSQSpec that = (LegacyMSQSpec) o;
-    return Objects.equals(query, that.query);
+    QueryDefMSQSpec that = (QueryDefMSQSpec) o;
+    return true;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), query);
+    return Objects.hash(super.hashCode());
   }
 
   public static class Builder
   {
-    private Query<?> query;
     private ColumnMappings columnMappings;
     private MSQDestination destination = TaskReportMSQDestination.instance();
     private WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
     private MSQTuningConfig tuningConfig;
-    private QueryContext queryContext = QueryContext.empty();
+    private QueryDefinition queryDef;
 
-    @Deprecated
-    public Builder query(Query<?> query)
+    public Builder queryDef(QueryDefinition queryDef)
     {
-      this.query = query;
+      this.queryDef = queryDef;
       return this;
     }
 
@@ -149,25 +135,24 @@ public class LegacyMSQSpec extends MSQSpec
       return this;
     }
 
-
-    public LegacyMSQSpec build()
+    public QueryDefMSQSpec build()
     {
       if (destination == null) {
         destination = TaskReportMSQDestination.instance();
       }
-      return new LegacyMSQSpec(
-          query.withOverriddenContext(queryContext.asMap()),
+      return new QueryDefMSQSpec(
+          queryDef,
           columnMappings,
           destination,
           assignmentStrategy,
           tuningConfig
       );
     }
+  }
 
-    public Builder queryContext(QueryContext queryContext)
-    {
-      this.queryContext = queryContext;
-      return this;
-    }
+  @Override
+  public QueryContext getContext()
+  {
+    return queryDef.getContext();
   }
 }

@@ -96,6 +96,7 @@ import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
@@ -644,7 +645,7 @@ public class ControllerImpl implements Controller
     final QueryContext queryContext = querySpec.getContext();
 
     final QueryDefinition queryDef;
-    if (querySpec.getQueryDef() == null) {
+    if (legacyQuery != null) {
       QueryKitBasedMSQPlanner qkPlanner = new QueryKitBasedMSQPlanner(
           querySpec,
           resultsContext,
@@ -660,7 +661,7 @@ public class ControllerImpl implements Controller
       );
       queryDef = qkPlanner.makeQueryDefinition();
     } else {
-      queryDef = querySpec.getQueryDef();
+      queryDef = ((QueryDefMSQSpec) querySpec).getQueryDef();
     }
 
     ensureExportLocationEmpty(context, querySpec.getDestination());

@@ -20,13 +20,9 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
-import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
@@ -34,13 +30,12 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import java.util.Objects;
 
-public class MSQSpec
+public abstract class MSQSpec
 {
   protected final ColumnMappings columnMappings;
   protected final MSQDestination destination;
   protected final WorkerAssignmentStrategy assignmentStrategy;
   protected final MSQTuningConfig tuningConfig;
-  protected final QueryDefinition queryDef;
 
   public MSQSpec()
   {
@@ -48,7 +43,6 @@ public class MSQSpec
     destination = null;
     assignmentStrategy = null;
     tuningConfig = null;
-    queryDef = null;
   }
 
   @JsonCreator
@@ -56,22 +50,16 @@ public class MSQSpec
       @JsonProperty("columnMappings") ColumnMappings columnMappings,
       @JsonProperty("destination") MSQDestination destination,
       @JsonProperty("assignmentStrategy") WorkerAssignmentStrategy assignmentStrategy,
-      @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig,
-      @JsonProperty("queryDef") QueryDefinition queryDef
+      @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig
   )
   {
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
     this.destination = Preconditions.checkNotNull(destination, "destination");
     this.assignmentStrategy = Preconditions.checkNotNull(assignmentStrategy, "assignmentStrategy");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.queryDef = queryDef;
   }
 
-  public QueryContext getContext()
-  {
-    Preconditions.checkNotNull(queryDef, "QueryDefinition should not be null");
-    return queryDef.getContext();
-  }
+  public abstract QueryContext getContext();
 
   @JsonProperty("columnMappings")
   public ColumnMappings getColumnMappings()
@@ -102,13 +90,6 @@ public class MSQSpec
     return getContext().getString(BaseQuery.QUERY_ID);
   }
 
-  @JsonProperty("queryDef")
-  @JsonInclude(value = Include.NON_NULL)
-  public QueryDefinition getQueryDef()
-  {
-    return queryDef;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -122,66 +103,12 @@ public class MSQSpec
     return Objects.equals(columnMappings, that.columnMappings)
            && Objects.equals(destination, that.destination)
            && Objects.equals(assignmentStrategy, that.assignmentStrategy)
-           && Objects.equals(tuningConfig, that.tuningConfig)
-           && Objects.equals(queryDef, that.queryDef);
+           && Objects.equals(tuningConfig, that.tuningConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(columnMappings, destination, assignmentStrategy, tuningConfig, queryDef);
-  }
-
-  public static class Builder
-  {
-    private ColumnMappings columnMappings;
-    private MSQDestination destination = TaskReportMSQDestination.instance();
-    private WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
-    private MSQTuningConfig tuningConfig;
-    private QueryDefinition queryDef;
-
-    public Builder queryDef(QueryDefinition queryDef)
-    {
-      this.queryDef = queryDef;
-      return this;
-    }
-
-    public Builder columnMappings(final ColumnMappings columnMappings)
-    {
-      this.columnMappings = columnMappings;
-      return this;
-    }
-
-    public Builder destination(final MSQDestination destination)
-    {
-      this.destination = destination;
-      return this;
-    }
-
-    public Builder assignmentStrategy(final WorkerAssignmentStrategy assignmentStrategy)
-    {
-      this.assignmentStrategy = assignmentStrategy;
-      return this;
-    }
-
-    public Builder tuningConfig(final MSQTuningConfig tuningConfig)
-    {
-      this.tuningConfig = tuningConfig;
-      return this;
-    }
-
-    public MSQSpec build()
-    {
-      if (destination == null) {
-        destination = TaskReportMSQDestination.instance();
-      }
-      return new MSQSpec(
-          columnMappings,
-          destination,
-          assignmentStrategy,
-          tuningConfig,
-          queryDef
-      );
-    }
+    return Objects.hash(columnMappings, destination, assignmentStrategy, tuningConfig);
   }
 }
