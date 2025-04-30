@@ -2210,7 +2210,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       publishResult = numRows == 1
           ? SegmentPublishResult.ok(Set.of())
-          : SegmentPublishResult.retryableFailure("Insert failed", dataSource);
+          : SegmentPublishResult.retryableFailure("Insert failed");
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final String updateSql = StringUtils.format(
@@ -2229,7 +2229,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       publishResult = numRows == 1
           ? SegmentPublishResult.ok(Set.of())
-          : SegmentPublishResult.retryableFailure("Compare-and-swap update failed", dataSource);
+          : SegmentPublishResult.retryableFailure("Compare-and-swap update failed");
     }
 
     if (publishResult.isSuccess()) {
