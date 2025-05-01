@@ -39,7 +39,7 @@ import java.io.Closeable;
 public interface Segment extends Closeable
 {
   /**
-   * Returns a {@link SegmentId} for a segment, if it's backed by a real table, otherwise returns null.
+   * Returns the {@link SegmentId} of this segment, if it is backed by a real table, otherwise returns null.
    */
   @Nullable
   SegmentId getId();
