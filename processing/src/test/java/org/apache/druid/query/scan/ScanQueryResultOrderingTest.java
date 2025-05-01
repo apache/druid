@@ -41,7 +41,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.TestSegmentUtils.InMemoryFakeSegment;
+import org.apache.druid.segment.TestSegmentUtils.InMemoryTestSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -90,8 +90,8 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                                                                 .build();
 
   private static final SegmentDescriptor DEFAULT_DESCRIPTOR = new SegmentDescriptor(Intervals.ETERNITY, "", 0);
-  private static final List<InMemoryFakeSegment> SEGMENTS = ImmutableList.of(
-      new InMemoryFakeSegment(
+  private static final List<InMemoryTestSegment> SEGMENTS = ImmutableList.of(
+      new InMemoryTestSegment(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
           new RowBasedSegment<>(
               Sequences.simple(
@@ -110,7 +110,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
               ROW_SIGNATURE
           )
       ),
-      new InMemoryFakeSegment(
+      new InMemoryTestSegment(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
           new RowBasedSegment<>(
               Sequences.simple(
@@ -129,7 +129,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
               ROW_SIGNATURE
           )
       ),
-      new InMemoryFakeSegment(
+      new InMemoryTestSegment(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
           new RowBasedSegment<>(
               Sequences.simple(

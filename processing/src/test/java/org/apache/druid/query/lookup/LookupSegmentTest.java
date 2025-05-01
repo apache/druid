@@ -100,12 +100,18 @@ public class LookupSegmentTest
         }
       };
 
-  private static final LookupSegment LOOKUP_SEGMENT = new LookupSegment(LOOKUP_EXTRACTOR_FACTORY);
+  private static final LookupSegment LOOKUP_SEGMENT = new LookupSegment(LOOKUP_NAME, LOOKUP_EXTRACTOR_FACTORY);
 
   @Test
   public void test_getId()
   {
     Assert.assertNull(LOOKUP_SEGMENT.getId());
+  }
+
+  @Test
+  public void test_asString()
+  {
+    Assert.assertEquals("lookup.mylookup", LOOKUP_SEGMENT.asString());
   }
 
   @Test

@@ -42,8 +42,9 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
                   .add(LookupColumnSelectorFactory.KEY_COLUMN, ColumnType.STRING)
                   .add(LookupColumnSelectorFactory.VALUE_COLUMN, ColumnType.STRING)
                   .build();
+  private final String lookupName;
 
-  public LookupSegment(final LookupExtractorFactory lookupExtractorFactory)
+  public LookupSegment(final String lookupName, final LookupExtractorFactory lookupExtractorFactory)
   {
     super(
         Sequences.simple(() -> {
@@ -78,5 +79,12 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
         },
         ROW_SIGNATURE
     );
+    this.lookupName = lookupName;
+  }
+
+  @Override
+  public String asString()
+  {
+    return "lookup." + lookupName;
   }
 }

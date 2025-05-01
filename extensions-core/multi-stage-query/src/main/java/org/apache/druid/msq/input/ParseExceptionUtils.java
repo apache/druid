@@ -21,6 +21,7 @@ package org.apache.druid.msq.input;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.input.external.ExternalSegment;
+import org.apache.druid.query.lookup.LookupSegment;
 import org.apache.druid.segment.Segment;
 
 import javax.annotation.Nullable;
@@ -46,6 +47,8 @@ public class ParseExceptionUtils
       );
     } else if (segment.getId() != null) {
       return StringUtils.format("table input source: %s", segment.getId().getDataSource());
+    } else if (segment instanceof LookupSegment) {
+      return StringUtils.format("lookup input source");
     }
     return null;
   }

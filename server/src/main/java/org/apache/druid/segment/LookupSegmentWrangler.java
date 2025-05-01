@@ -58,6 +58,7 @@ public class LookupSegmentWrangler implements SegmentWrangler
         container ->
             Collections.<Segment>singletonList(
                 new LookupSegment(
+                    lookupDataSource.getLookupName(),
                     container.getLookupExtractorFactory()
                 )
             )

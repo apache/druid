@@ -264,11 +264,11 @@ public class TestSegmentUtils
   /**
    * A test segment that is backed by a {@link RowBasedSegment}. This is used to test the {@link QueryableIndexSegment}.
    */
-  public static class InMemoryFakeSegment extends QueryableIndexSegment
+  public static class InMemoryTestSegment extends QueryableIndexSegment
   {
     private final RowBasedSegment<?> segment;
 
-    public InMemoryFakeSegment(SegmentId segmentId, RowBasedSegment<?> segment)
+    public InMemoryTestSegment(SegmentId segmentId, RowBasedSegment<?> segment)
     {
       super(INDEX, segmentId);
       this.segment = segment;
