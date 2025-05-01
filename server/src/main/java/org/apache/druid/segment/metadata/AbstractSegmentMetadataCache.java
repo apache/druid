@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -36,6 +35,7 @@ import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -80,7 +80,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -358,7 +357,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   {
     // report the cache init time
     if (initialized.getCount() == 1) {
-      long elapsedTime = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+      long elapsedTime = stopwatch.millisElapsed();
       emitMetric("metadatacache/init/time", elapsedTime);
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), elapsedTime);
       stopwatch.stop();
@@ -374,10 +373,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * Refresh is executed only when there are segments or datasources needing refresh.
    */
-  @SuppressWarnings("GuardedBy")
   protected boolean shouldRefresh()
   {
-    return (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty());
+    synchronized (lock) {
+      return !segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty();
+    }
   }
 
   public void awaitInitialization() throws InterruptedException
@@ -739,15 +739,16 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource. Returns the set of
    * segments actually refreshed, which may be a subset of the asked-for set.
+   * @return Set of segment IDs actually refreshed.
    */
-  public Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
+  private Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
       throws IOException
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     if (!segments.stream().allMatch(segmentId -> segmentId.getDataSource().equals(dataSource))) {
       // Sanity check. We definitely expect this to pass.
-      throw new ISE("'segments' must all match 'dataSource'!");
+      throw new ISE("All segments to refresh must belong to the same dataSource.");
     }
 
     log.debug("Refreshing metadata for datasource[%s].", dataSource);
@@ -778,10 +779,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         if (segmentId == null) {
           log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
-          final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
-
-          if (segmentMetadataQueryResultHandler(dataSource, segmentId, rowSignature, analysis)) {
+          if (updateSegmentMetadata(segmentId, analysis)) {
             retVal.add(segmentId);
           }
         }
@@ -793,7 +791,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       yielder.close();
     }
 
-    long refreshDurationMillis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+    long refreshDurationMillis = stopwatch.millisElapsed();
 
     emitMetric("metadatacache/refresh/time", refreshDurationMillis, builder);
 
@@ -814,20 +812,21 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * Action to be executed on the result of Segment metadata query.
+   * Updates metadata of a segment using the results of a metadata query.
    *
    * @return true if the segment metadata was updated successfully.
    */
-  protected boolean segmentMetadataQueryResultHandler(
-      String dataSource,
+  protected boolean updateSegmentMetadata(
       SegmentId segmentId,
-      RowSignature rowSignature,
       SegmentAnalysis analysis
   )
   {
+    final RowSignature rowSignature = analysisToRowSignature(analysis);
+    log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
+
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
-        dataSource,
+        segmentId.getDataSource(),
         (datasourceKey, dataSourceSegments) -> {
           if (dataSourceSegments == null) {
             // Datasource may have been removed or become unavailable while this refresh was ongoing.

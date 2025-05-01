@@ -29,10 +29,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.SegmentSchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.timeline.SegmentId;
 
@@ -103,7 +100,12 @@ public class SegmentSchemaBackFillQueue
   public void onLeaderStart()
   {
     if (isEnabled()) {
-      scheduledFuture = executor.scheduleAtFixedRate(this::processBatchesDueSafely, executionPeriod, executionPeriod, TimeUnit.MILLISECONDS);
+      scheduledFuture = executor.scheduleAtFixedRate(
+          this::processBatchesDueSafely,
+          executionPeriod,
+          executionPeriod,
+          TimeUnit.MILLISECONDS
+      );
     }
   }
 
@@ -118,13 +120,9 @@ public class SegmentSchemaBackFillQueue
 
   public void add(
       SegmentId segmentId,
-      RowSignature rowSignature,
-      Map<String, AggregatorFactory> aggregators,
-      long numRows
+      SchemaPayloadPlus schemaMetadata
   )
   {
-    SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);
-    SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, numRows);
     queue.add(
         new SegmentSchemaMetadataPlus(
             segmentId,

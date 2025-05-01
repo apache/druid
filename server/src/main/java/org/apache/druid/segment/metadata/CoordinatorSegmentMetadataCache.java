@@ -308,16 +308,17 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   @Override
-  protected boolean segmentMetadataQueryResultHandler(
-      String dataSource,
+  protected boolean updateSegmentMetadata(
       SegmentId segmentId,
-      RowSignature rowSignature,
       SegmentAnalysis analysis
   )
   {
+    final RowSignature rowSignature = analysisToRowSignature(analysis);
+    log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
+
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
-        dataSource,
+        segmentId.getDataSource(),
         (datasourceKey, dataSourceSegments) -> {
           if (dataSourceSegments == null) {
             // Datasource may have been removed or become unavailable while this refresh was ongoing.
@@ -338,13 +339,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     long numRows = analysis.getNumRows();
                     log.debug("Publishing segment schema. SegmentId [%s], RowSignature [%s], numRows [%d]", segmentId, rowSignature, numRows);
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
-                    // cache the signature
-                    segmentSchemaCache.addTemporarySchema(
-                        segmentId,
-                        new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregators), numRows)
+                    // Add the schema to the cache and queue it for backfill to DB
+                    final SchemaPayloadPlus schema = new SchemaPayloadPlus(
+                        new SchemaPayload(rowSignature, aggregators),
+                        numRows
                     );
-                    // queue the schema for publishing to the DB
-                    segmentSchemaBackfillQueue.add(segmentId, rowSignature, aggregators, numRows);
+                    segmentSchemaCache.addSchemaPendingBackfill(segmentId, schema);
+                    segmentSchemaBackfillQueue.add(segmentId, schema);
                     added.set(true);
                     return segmentMetadata;
                   }

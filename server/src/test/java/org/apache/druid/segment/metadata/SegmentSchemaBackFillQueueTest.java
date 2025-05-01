@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.TestDerbyConnector;
@@ -31,10 +30,12 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Rule;
 import org.junit.Test;
@@ -134,18 +135,19 @@ public class SegmentSchemaBackFillQueueTest
     segments.add(segment3);
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
 
-    final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
     aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
 
-    segmentIdSchemaMap.put(segment1.getId().toString(), Pair.of(new SchemaPayload(rowSignature, aggregatorFactoryMap), 20));
-    segmentIdSchemaMap.put(segment2.getId().toString(), Pair.of(new SchemaPayload(rowSignature, aggregatorFactoryMap), 20));
-    segmentIdSchemaMap.put(segment3.getId().toString(), Pair.of(new SchemaPayload(rowSignature, aggregatorFactoryMap), 20));
+    final SchemaPayloadPlus schema = new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregatorFactoryMap), 20L);
+    segmentIdSchemaMap.put(segment1.getId(), schema);
+    segmentIdSchemaMap.put(segment2.getId(), schema);
+    segmentIdSchemaMap.put(segment3.getId(), schema);
 
-    segmentSchemaBackFillQueue.add(segment1.getId(), rowSignature, aggregatorFactoryMap, 20);
-    segmentSchemaBackFillQueue.add(segment2.getId(), rowSignature, aggregatorFactoryMap, 20);
-    segmentSchemaBackFillQueue.add(segment3.getId(), rowSignature, aggregatorFactoryMap, 20);
+    segmentSchemaBackFillQueue.add(segment1.getId(), schema);
+    segmentSchemaBackFillQueue.add(segment2.getId(), schema);
+    segmentSchemaBackFillQueue.add(segment3.getId(), schema);
     segmentSchemaBackFillQueue.onLeaderStart();
     latch.await();
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);

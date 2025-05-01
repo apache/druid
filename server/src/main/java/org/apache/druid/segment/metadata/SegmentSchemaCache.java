@@ -65,7 +65,7 @@ public class SegmentSchemaCache
   private final AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
 
   /**
-   * Finalized segment schema information.
+   * Segment schemas for published used segments.
    */
   private final AtomicReference<PublishedSegmentSchemas> publishedSegmentSchemas
       = new AtomicReference<>(PublishedSegmentSchemas.EMPTY);
@@ -168,10 +168,7 @@ public class SegmentSchemaCache
    * is typically fetched from data nodes by issuing segment metadata queries.
    * Once this schema is persisted to DB, call {@link #markSchemaPersisted}.
    */
-  public void addTemporarySchema(
-      SegmentId segmentId,
-      SchemaPayloadPlus schema
-  )
+  public void addSchemaPendingBackfill(SegmentId segmentId, SchemaPayloadPlus schema)
   {
     schemasPendingBackfill.put(segmentId, schema);
   }
@@ -249,10 +246,10 @@ public class SegmentSchemaCache
     return realtimeSegmentSchemas.containsKey(segmentId) ||
            schemasPendingBackfill.containsKey(segmentId) ||
            recentlyBackfilledSchemas.containsKey(segmentId) ||
-           isFinalizedSegmentSchemaCached(segmentId);
+           isPublishedSegmentSchemaCached(segmentId);
   }
 
-  private boolean isFinalizedSegmentSchemaCached(SegmentId segmentId)
+  private boolean isPublishedSegmentSchemaCached(SegmentId segmentId)
   {
     SegmentMetadata segmentMetadata = getSegmentMetadataMap().get(segmentId);
     if (segmentMetadata != null) {

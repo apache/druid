@@ -67,8 +67,8 @@ public class SegmentSchemaCacheTest
     // this call shouldn't result in any error
     cache.markSchemaPersisted(id);
 
-    cache.addTemporarySchema(id, expected);
-    cache.addTemporarySchema(id2, expected);
+    cache.addSchemaPendingBackfill(id, expected);
+    cache.addSchemaPendingBackfill(id2, expected);
 
     Assert.assertTrue(cache.isSchemaCached(id));
     Assert.assertTrue(cache.isSchemaCached(id2));

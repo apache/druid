@@ -111,7 +111,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheTestBase
@@ -1626,7 +1625,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     serverView = new TestCoordinatorServerView(Collections.emptyList(), Collections.emptyList());
 
-    AtomicInteger refreshCount = new AtomicInteger();
+    final StubServiceEmitter emitter = new StubServiceEmitter();
 
     CountDownLatch latch = new CountDownLatch(2);
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
@@ -1635,20 +1634,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         segmentSchemaCache,
         backFillQueue,
         segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     ) {
-      @Override
-      public Set<SegmentId> refreshSegmentsForDataSource(String dataSource, Set<SegmentId> segments)
-          throws IOException
-      {
-        refreshCount.incrementAndGet();
-        return super.refreshSegmentsForDataSource(dataSource, segments);
-      }
-
       @Override
       public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
           throws IOException
@@ -1665,7 +1656,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.awaitInitialization();
 
     // verify metadata query is not executed, since the schema is already cached
-    Assert.assertEquals(0, refreshCount.get());
+    emitter.verifyNotEmitted("metadatacache/refresh/count");
 
     // verify that datasource schema is built
     verifyFooDSSchema(schema, 6);
