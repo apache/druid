@@ -108,6 +108,8 @@ The request body takes the following properties:
 Druid also allows you to submit SQL queries in text format which is simpler than above JSON format. 
 To do this, just set the `Content-Type` request header to `text/plain` or `application/x-www-form-urlencoded`, and pass SQL via the HTTP Body. 
 
+If `application/x-www-form-urlencoded` is used, make sure the SQL query is URL-encoded.
+
 If there are multiple `Content-Type` headers, the **first** one is used.
 
 For response, the `resultFormat` is always `object` with the HTTP response header `Content-Type: application/json`.
