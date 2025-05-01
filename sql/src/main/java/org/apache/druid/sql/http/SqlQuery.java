@@ -233,8 +233,7 @@ public class SqlQuery
    * it's not able to get the data from the stream of HttpServletRequest for such content type.
    * So we use HttpContext to get the request entity/string instead of using HttpServletRequest.
    *
-   * @throws HttpException       if the content type is not supported
-   * @throws BadRequestException if the SQL query is malformed or fail to read from the request
+   * @throws HttpException       if the content type is not supported or the SQL query is malformed
    */
   public static SqlQuery from(HttpContext httpContext) throws HttpException
   {
@@ -262,8 +261,7 @@ public class SqlQuery
   /**
    * For Router to use
    *
-   * @throws HttpException if the content type is not supported
-   * @throws IOException   if the SQL query is malformed or fail to read from the request
+   * @throws HttpException if the content type is not supported or the SQL query is malformed
    */
   public static SqlQuery from(HttpServletRequest request, ObjectMapper objectMapper) throws HttpException
   {
