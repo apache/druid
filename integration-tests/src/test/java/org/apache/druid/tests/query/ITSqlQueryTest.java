@@ -37,9 +37,11 @@ import org.apache.http.util.EntityUtils;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
 /**
  * Test the SQL endpoint with different Content-Type
@@ -58,10 +60,14 @@ public class ITSqlQueryTest
     void execute(String endpoint) throws IOException;
   }
 
-  private void executeWithRetry(String contentType, IExecutable executable)
+  interface OnRequest
   {
-    executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getBrokerUrl()), contentType, executable);
-    executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getRouterUrl()), contentType, executable);
+    void on(HttpPost request) throws IOException;
+  }
+
+  interface OnResponse
+  {
+    void on(int statusCode, HttpEntity response) throws IOException;
   }
 
   private void executeWithRetry(String endpoint, String contentType, IExecutable executable)
@@ -87,146 +93,37 @@ public class ITSqlQueryTest
     throw new ISE(contentType + " failed after 5 tries, last exception: " + lastException);
   }
 
-  @Test
-  public void testUnsupportedMediaType()
+  private void executeQuery(
+      String contentType,
+      OnRequest onRequest,
+      OnResponse onResponse
+  )
   {
-    executeWithRetry(
-        "<EMPTY>",
-        (endpoint) -> {
-          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-            HttpPost request = new HttpPost(endpoint);
-            request.addHeader("Content-Type", "application/xml");
-            request.setEntity(new StringEntity("select 1"));
-
-            try (CloseableHttpResponse response = client.execute(request)) {
-              assertEquals(HttpStatus.SC_UNSUPPORTED_MEDIA_TYPE, response.getStatusLine().getStatusCode());
-            }
-          }
+    IExecutable executable = (endpoint) -> {
+      try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+        HttpPost request = new HttpPost(endpoint);
+        if (contentType != null) {
+          request.addHeader("Content-Type", contentType);
         }
-    );
-  }
+        onRequest.on(request);
 
-  @Test
-  public void testTextPlain()
-  {
-    executeWithRetry(
-        "text/plain",
-        (endpoint) -> {
-          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-            HttpPost request = new HttpPost(endpoint);
-            request.addHeader("Content-Type", "text/plain");
-            request.setEntity(new StringEntity("select 1"));
+        try (CloseableHttpResponse response = client.execute(request)) {
+          HttpEntity responseEntity = response.getEntity();
+          assertNotNull(responseEntity);
 
-            try (CloseableHttpResponse response = client.execute(request)) {
-              assertEquals(200, response.getStatusLine().getStatusCode());
-
-              HttpEntity entity = response.getEntity();
-              assertNotNull(entity);
-              String responseBody = EntityUtils.toString(entity).trim();
-              assertEquals("[{\"EXPR$0\":1}]", responseBody);
-            }
-          }
+          onResponse.on(
+              response.getStatusLine().getStatusCode(),
+              responseEntity
+          );
         }
-    );
-  }
+      }
+    };
 
-  @Test
-  public void testFormURLEncoded()
-  {
-    executeWithRetry(
-        "application/x-www-form-urlencoded",
-        (endpoint) -> {
-          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-            HttpPost request = new HttpPost(endpoint);
-            request.addHeader("Content-Type", "application/x-www-form-urlencoded");
-            request.setEntity(new StringEntity(URLEncoder.encode("select 1", StandardCharsets.UTF_8)));
+    // Send query to broker to exeucte
+    executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getBrokerUrl()), contentType, executable);
 
-            try (CloseableHttpResponse response = client.execute(request)) {
-              assertEquals(200, response.getStatusLine().getStatusCode());
-
-              HttpEntity entity = response.getEntity();
-              assertNotNull(entity);
-              String responseBody = EntityUtils.toString(entity).trim();
-              assertEquals("[{\"EXPR$0\":1}]", responseBody);
-            }
-          }
-        }
-    );
-  }
-
-  @Test
-  public void testJSON()
-  {
-    executeWithRetry(
-        "application/json",
-        (endpoint) -> {
-          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-            HttpPost request = new HttpPost(endpoint);
-            request.addHeader("Content-Type", "application/json");
-            request.setEntity(new StringEntity(StringUtils.format("{\"query\":\"select 1\"}")));
-
-            try (CloseableHttpResponse response = client.execute(request)) {
-              assertEquals(200, response.getStatusLine().getStatusCode());
-
-              HttpEntity entity = response.getEntity();
-              assertNotNull(entity);
-              String responseBody = EntityUtils.toString(entity).trim();
-              assertEquals("[{\"EXPR$0\":1}]", responseBody);
-            }
-          }
-        }
-    );
-  }
-
-  @Test
-  public void testEmptyQuery()
-  {
-    executeWithRetry(
-        "text/plain",
-        (endpoint) -> {
-          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-            HttpPost request = new HttpPost(endpoint);
-            request.addHeader("Content-Type", "text/plain");
-
-            try (CloseableHttpResponse response = client.execute(request)) {
-              assertEquals(400, response.getStatusLine().getStatusCode());
-
-              HttpEntity entity = response.getEntity();
-              assertNotNull(entity);
-              String responseBody = EntityUtils.toString(entity).trim();
-              assertTrue(responseBody.contains("invalidInput"));
-            }
-          }
-        }
-    );
-  }
-
-  /**
-   * When multiple Content-Type headers are set, the first one(in this case it's the text format) should be used.
-   */
-  @Test
-  public void testMultipleContentType()
-  {
-    executeWithRetry(
-        "text/plain",
-        (endpoint) -> {
-          try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-            HttpPost request = new HttpPost(endpoint);
-            request.addHeader("Content-Type", "text/plain");
-            request.addHeader("Content-Type", "application/json");
-            request.setEntity(new StringEntity(StringUtils.format("SELECT 1")));
-
-            try (CloseableHttpResponse response = client.execute(request)) {
-              assertEquals(200, response.getStatusLine().getStatusCode());
-
-              HttpEntity entity = response.getEntity();
-              assertNotNull(entity);
-              String responseBody = EntityUtils.toString(entity).trim();
-              assertEquals("[{\"EXPR$0\":1}]", responseBody);
-            }
-          }
-        }
-    );
+    // Send query to router to execute
+    executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getRouterUrl()), contentType, executable);
   }
 
   private void assertEquals(String expected, String actual)
@@ -250,10 +147,220 @@ public class ITSqlQueryTest
     }
   }
 
-  private void assertTrue(boolean condition)
+  private void assertStringCompare(String expected, String actual, Function<String, Boolean> predicate)
   {
-    if (!condition) {
-      throw new ISE("Expected true");
+    if (!predicate.apply(expected)) {
+      throw new ISE("Expected: [%s] but got [%s]", expected, actual);
     }
+  }
+
+  @Test
+  public void testNullContentType()
+  {
+    executeQuery(
+        null,
+        (request) -> {
+          request.setEntity(new StringEntity("select 1"));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(HttpStatus.SC_UNSUPPORTED_MEDIA_TYPE, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  @Test
+  public void testUnsupportedCotentType()
+  {
+    executeQuery(
+        "application/xml",
+        (request) -> {
+          request.setEntity(new StringEntity("select 1"));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(HttpStatus.SC_UNSUPPORTED_MEDIA_TYPE, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  @Test
+  public void testTextPlain()
+  {
+    executeQuery(
+        MediaType.TEXT_PLAIN,
+        (request) -> {
+          request.setEntity(new StringEntity("select \n1"));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(200, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertEquals("[{\"EXPR$0\":1}]", responseBody);
+        }
+    );
+  }
+
+  @Test
+  public void testFormURLEncoded()
+  {
+    executeQuery(
+        MediaType.APPLICATION_FORM_URLENCODED,
+        (request) -> {
+          request.setEntity(new StringEntity(URLEncoder.encode("select 'x % y'", StandardCharsets.UTF_8)));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(200, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertEquals("[{\"EXPR$0\":\"x % y\"}]", responseBody);
+        }
+    );
+  }
+
+  @Test
+  public void testFormURLEncoded_InvalidEncoding()
+  {
+    executeQuery(
+        MediaType.APPLICATION_FORM_URLENCODED,
+        (request) -> {
+          request.setEntity(new StringEntity("select 'x % y'"));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(400, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Unable to decoded", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  @Test
+  public void testJSON()
+  {
+    executeQuery(
+        MediaType.APPLICATION_JSON,
+        (request) -> {
+          request.setEntity(new StringEntity(StringUtils.format("{\"query\":\"select 567\"}")));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(200, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertEquals("[{\"EXPR$0\":567}]", responseBody);
+        }
+    );
+  }
+
+  @Test
+  public void testInvalidJSONFormat()
+  {
+    executeQuery(
+        MediaType.APPLICATION_JSON,
+        (request) -> {
+          request.setEntity(new StringEntity(StringUtils.format("{\"query\":select 567}")));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(400, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Malformed SQL query", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  @Test
+  public void testEmptyQuery_TextPlain()
+  {
+    executeQuery(
+        MediaType.TEXT_PLAIN,
+        (request) -> {
+          // Empty query, DO NOTHING
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(400, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Empty query", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  @Test
+  public void testEmptyQuery_UrlEncoded()
+  {
+    executeQuery(
+        MediaType.APPLICATION_FORM_URLENCODED,
+        (request) -> {
+          // Empty query, DO NOTHING
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(400, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Empty query", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  @Test
+  public void testBlankQuery_TextPlain()
+  {
+    executeQuery(
+        MediaType.TEXT_PLAIN,
+        (request) -> {
+          // an query with blank characters
+          request.setEntity(new StringEntity("     "));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(400, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Empty query", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  @Test
+  public void testEmptyQuery_JSON()
+  {
+    executeQuery(
+        MediaType.APPLICATION_JSON,
+        (request) -> {
+          // Empty query, DO NOTHING
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(400, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertStringCompare("Empty query", responseBody, responseBody::contains);
+        }
+    );
+  }
+
+  /**
+   * When multiple Content-Type headers are set, the first one(in this case it's the text format) should be used.
+   */
+  @Test
+  public void testMultipleContentType()
+  {
+    executeQuery(
+        MediaType.TEXT_PLAIN,
+        (request) -> {
+          // Add one more Content-Type header
+          request.addHeader("Content-Type", MediaType.APPLICATION_JSON);
+          request.setEntity(new StringEntity(StringUtils.format("SELECT 1")));
+        },
+        (statusCode, responseEntity) -> {
+          assertEquals(200, statusCode);
+
+          String responseBody = EntityUtils.toString(responseEntity).trim();
+          assertEquals("[{\"EXPR$0\":1}]", responseBody);
+        }
+    );
   }
 }

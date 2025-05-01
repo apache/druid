@@ -22,10 +22,13 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.sun.jersey.api.container.ContainerException;
 import com.sun.jersey.api.core.HttpContext;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.commons.io.IOUtils;
@@ -38,6 +41,7 @@ import org.apache.druid.server.initialization.jetty.HttpException;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -229,41 +233,42 @@ public class SqlQuery
    * it's not able to get the data from the stream of HttpServletRequest for such content type.
    * So we use HttpContext to get the request entity/string instead of using HttpServletRequest.
    *
-   * @throws HttpException if the content type is not supported
+   * @throws HttpException       if the content type is not supported
    * @throws BadRequestException if the SQL query is malformed or fail to read from the request
    */
-  public static SqlQuery from(HttpContext httpContext)
+  public static SqlQuery from(HttpContext httpContext) throws HttpException
   {
-    MediaType mediaType = httpContext.getRequest().getMediaType();
-    if (mediaType == null) {
-      throw new HttpException(
-          Response.Status.UNSUPPORTED_MEDIA_TYPE,
-          "Unsupported Content-Type: null"
-      );
-    }
-
-    try {
-      return from(
-          mediaType.getType() + "/" + mediaType.getSubtype(),
-          () -> httpContext.getRequest().getEntity(SqlQuery.class),
-          () -> httpContext.getRequest().getEntity(String.class)
-      );
-    }
-    catch (IOException e) {
-      throw new BadRequestException("Unable to parse SQL query: " + e.getMessage());
-    }
+    return from(
+        httpContext.getRequest().getRequestHeaders().getFirst(HttpHeaders.CONTENT_TYPE),
+        () -> {
+          try {
+            return httpContext.getRequest().getEntity(SqlQuery.class);
+          }
+          catch (ContainerException e) {
+            if (e.getCause() instanceof JsonParseException) {
+              throw new HttpException(
+                  Response.Status.BAD_REQUEST,
+                  StringUtils.format("Malformed SQL query wrapped in JSON: %s", e.getCause().getMessage())
+              );
+            } else {
+              throw e;
+            }
+          }
+        },
+        () -> httpContext.getRequest().getEntity(String.class)
+    );
   }
 
   /**
    * For Router to use
+   *
    * @throws HttpException if the content type is not supported
-   * @throws IOException if the SQL query is malformed or fail to read from the request
+   * @throws IOException   if the SQL query is malformed or fail to read from the request
    */
-  public static SqlQuery from(HttpServletRequest request, ObjectMapper objectMapper) throws IOException
+  public static SqlQuery from(HttpServletRequest request, ObjectMapper objectMapper) throws HttpException
   {
-    String contentType = request.getContentType();
     return from(
-        contentType,
+        request.getContentType(),
         () -> objectMapper.readValue(request.getInputStream(), SqlQuery.class),
         () -> new String(IOUtils.toByteArray(request.getInputStream()), StandardCharsets.UTF_8)
     );
@@ -273,34 +278,73 @@ public class SqlQuery
       String contentType,
       ISqlQueryExtractor<SqlQuery> jsonQueryExtractor,
       ISqlQueryExtractor<String> rawQueryExtractor
-  ) throws IOException
+  ) throws HttpException
   {
-    if (MediaType.APPLICATION_JSON.equals(contentType)) {
+    try {
+      if (MediaType.APPLICATION_JSON.equals(contentType)) {
 
-      return jsonQueryExtractor.extract();
+        SqlQuery sqlQuery = jsonQueryExtractor.extract();
+        if (sqlQuery == null) {
+          throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+        }
+        return sqlQuery;
 
-    } else if (MediaType.TEXT_PLAIN.equals(contentType)) {
+      } else if (MediaType.TEXT_PLAIN.equals(contentType)) {
 
-      String sql = rawQueryExtractor.extract();
-      return new SqlQuery(sql, null, false, false, false, null, null);
+        String sql = rawQueryExtractor.extract().trim();
+        if (sql.isEmpty()) {
+          throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+        }
 
-    } else if (MediaType.APPLICATION_FORM_URLENCODED.equals(contentType)) {
+        return new SqlQuery(sql, null, false, false, false, null, null);
 
-      String sql = rawQueryExtractor.extract();
-      if (sql == null) {
-        throw new HttpException(Response.Status.BAD_REQUEST, "No SQL given");
+      } else if (MediaType.APPLICATION_FORM_URLENCODED.equals(contentType)) {
+
+        String sql = rawQueryExtractor.extract().trim();
+        if (sql.isEmpty()) {
+          throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+        }
+
+        try {
+          sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
+        }
+        catch (IllegalArgumentException e) {
+          throw new HttpException(
+              Response.Status.BAD_REQUEST,
+              "Unable to decoded URL-Encoded SQL query: " + e.getMessage()
+          );
+        }
+
+        return new SqlQuery(sql, null, false, false, false, null, null);
+
+      } else {
+        throw new HttpException(
+            Response.Status.UNSUPPORTED_MEDIA_TYPE,
+            StringUtils.format(
+                "Unsupported Content-Type: %s. Only application/json, text/plain or application/x-www-form-urlencoded is supported.",
+                contentType
+            )
+        );
       }
-
-      sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
-
-      return new SqlQuery(sql, null, false, false, false, null, null);
-
-    } else {
+    }
+    catch (MismatchedInputException e) {
+      if (e.getOriginalMessage().endsWith("end-of-input")) {
+        throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+      } else {
+        throw new HttpException(
+            Response.Status.BAD_REQUEST,
+            StringUtils.format("Malformed SQL query wrapped in JSON: %s", e.getMessage())
+        );
+      }
+    }
+    catch (JsonParseException e) {
       throw new HttpException(
-          Response.Status.UNSUPPORTED_MEDIA_TYPE,
-          StringUtils.format("Unsupported Content-Type: %s. Only application/json, text/plain or application/x-www-form-urlencoded is supported.",
-                             contentType)
+          Response.Status.BAD_REQUEST,
+          StringUtils.format("Malformed SQL query wrapped in JSON: %s", e.getMessage())
       );
+    }
+    catch (IOException e) {
+      throw new HttpException(Response.Status.BAD_REQUEST, "Unable to read query from request: " + e.getMessage());
     }
   }
 }

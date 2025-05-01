@@ -115,17 +115,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
   {
-    handleException(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, objectMapper, exception);
-  }
-
-  private void handleException(HttpServletResponse response, int statusCode, ObjectMapper objectMapper, Exception exception)
-      throws IOException
-  {
     QueryInterruptedException exceptionToReport = QueryInterruptedException.wrapIfNeeded(exception);
     LOG.warn(exceptionToReport, "Unexpected exception occurs");
     if (!response.isCommitted()) {
       response.resetBuffer();
-      response.setStatus(statusCode);
+      response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       objectMapper.writeValue(
           response.getOutputStream(),
           serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
@@ -290,12 +284,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         }
         LOG.debug("Forwarding SQL query to broker [%s]", targetServer.getHost());
       }
-      catch (IOException e) {
-        handleQueryParseException(request, response, objectMapper, e, false);
-        return;
-      }
       catch (HttpException e) {
-        handleException(response, e.getStatusCode().getStatusCode(), objectMapper, e);
+        handleQueryParseException(request, response, e.getStatusCode().getStatusCode(), objectMapper, e, false);
         return;
       }
       catch (Exception e) {
@@ -370,7 +360,20 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       HttpServletRequest request,
       HttpServletResponse response,
       ObjectMapper objectMapper,
-      IOException parseException,
+      Throwable parseException,
+      boolean isNativeQuery
+  ) throws IOException
+  {
+    handleQueryParseException(request, response, HttpServletResponse.SC_BAD_REQUEST, objectMapper, parseException, isNativeQuery);
+  }
+
+  private void handleQueryParseException(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      int httpStatusCode,
+      ObjectMapper objectMapper,
+      Throwable parseException,
+
       boolean isNativeQuery
   ) throws IOException
   {
@@ -405,7 +408,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     }
 
     // Write to the response
-    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    response.setStatus(httpStatusCode);
     response.setContentType(MediaType.APPLICATION_JSON);
     objectMapper.writeValue(
         response.getOutputStream(),
