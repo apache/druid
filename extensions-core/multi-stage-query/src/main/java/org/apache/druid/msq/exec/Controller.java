@@ -132,4 +132,5 @@ public interface Controller
   @Nullable
   TaskReport.ReportMap liveReports();
 
+  ControllerContext getControllerContext();
 }

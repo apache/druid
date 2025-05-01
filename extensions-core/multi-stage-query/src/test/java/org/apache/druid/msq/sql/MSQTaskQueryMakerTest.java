@@ -55,6 +55,7 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.JoinDataSource;
@@ -601,7 +602,8 @@ public class MSQTaskQueryMakerTest
         plannerContextMock,
         objectMapper,
         fieldMapping,
-        terminalStageSpecFactory
+        terminalStageSpecFactory,
+        new MSQTaskQueryKitSpecFactory(new DruidProcessingConfig())
     );
   }
 }

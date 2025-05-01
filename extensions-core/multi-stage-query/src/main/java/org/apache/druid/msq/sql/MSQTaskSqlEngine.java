@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
@@ -92,16 +93,20 @@ public class MSQTaskSqlEngine implements SqlEngine
   private final ObjectMapper jsonMapper;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
+  private final QueryKitSpecFactory queryKitSpecFactory;
+
   @Inject
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
-      final MSQTerminalStageSpecFactory terminalStageSpecFactory
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory,
+      final MSQTaskQueryKitSpecFactory queryKitSpecFactory
   )
   {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
     this.terminalStageSpecFactory = terminalStageSpecFactory;
+    this.queryKitSpecFactory = queryKitSpecFactory;
   }
 
   @Override
@@ -179,7 +184,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         plannerContext,
         jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory
+        terminalStageSpecFactory,
+        queryKitSpecFactory
     );
   }
 
@@ -213,7 +219,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         plannerContext,
         jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory
+        terminalStageSpecFactory,
+        queryKitSpecFactory
     );
   }
 

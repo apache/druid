@@ -17,18 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing.destination;
+package org.apache.druid.msq.exec;
 
-import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 
-/**
- * Configures ingestion queries to create new segments with the results in all cases.
- */
-public class SegmentGenerationTerminalStageSpecFactory implements MSQTerminalStageSpecFactory
+public interface QueryKitSpecFactory
 {
-  @Override
-  public TerminalStageSpec createTerminalStageSpec(PlannerContext plannerContext)
-  {
-    return SegmentGenerationStageSpec.instance();
-  }
+  /**
+   * Factorizes a {@link QueryKitSpec}.
+   *
+   * Implementation may customize the number of workers and partitions.
+   */
+  QueryKitSpec makeQueryKitSpec(
+      QueryKit<Query<?>> queryKit,
+      String queryId,
+      MSQTuningConfig tuningConfig,
+      QueryContext queryContext,
+      ControllerQueryKernelConfig queryKernelConfig);
 }

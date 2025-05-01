@@ -20,12 +20,15 @@
 package org.apache.druid.msq.dart.controller.sql;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.http.DartSqlResource;
@@ -47,6 +50,7 @@ import org.apache.druid.sql.destination.IngestDestination;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+@LazySingleton
 public class DartSqlEngine implements SqlEngine
 {
   private static final String NAME = "msq-dart";
@@ -69,6 +73,21 @@ public class DartSqlEngine implements SqlEngine
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
   private final ExecutorService controllerExecutor;
+
+  @Inject
+  public DartSqlEngine(
+      DartControllerContextFactory controllerContextFactory,
+      DartControllerRegistry controllerRegistry,
+      DartControllerConfig controllerConfig
+  )
+  {
+    this(
+        controllerContextFactory,
+        controllerRegistry,
+        controllerConfig,
+        Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
+    );
+  }
 
   public DartSqlEngine(
       DartControllerContextFactory controllerContextFactory,
