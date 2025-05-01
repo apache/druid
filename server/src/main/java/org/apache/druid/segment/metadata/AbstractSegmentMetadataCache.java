@@ -737,8 +737,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource. Returns the set of
-   * segments actually refreshed, which may be a subset of the asked-for set.
+   * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource.
+   *
    * @return Set of segment IDs actually refreshed.
    */
   private Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
@@ -748,7 +748,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     if (!segments.stream().allMatch(segmentId -> segmentId.getDataSource().equals(dataSource))) {
       // Sanity check. We definitely expect this to pass.
-      throw new ISE("All segments to refresh must belong to the same dataSource.");
+      throw new IAE("All segments to refresh must belong to the same dataSource[%s].", dataSource);
     }
 
     log.debug("Refreshing metadata for datasource[%s].", dataSource);

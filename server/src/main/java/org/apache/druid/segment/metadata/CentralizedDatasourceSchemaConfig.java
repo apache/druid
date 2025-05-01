@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
  * and caching of schema in memory.</li>
  * <li>Overlord: to enable publish of schema when segments are committed.</li>
  * <li>Peons: to enable inclusion of schema in segment publish requests.</li>
+ * <li>Brokers: to enable polling of cached schema from the Coordinator.</li>
  * </ul>
  * The corresponding segment schemas table is created in the metadata store only
  * when this config is enabled for the first time on a cluster. Subsequent
@@ -46,7 +47,8 @@ public class CentralizedDatasourceSchemaConfig
       = new CentralizedDatasourceSchemaConfig(null, null, null, null);
 
   /**
-   * Current version of the persisted segment schema format.
+   * Currently supported version of segment schema format. The schema cache can
+   * contain schemas for only this version.
    */
   public static final int SCHEMA_VERSION = 1;
 

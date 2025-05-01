@@ -587,20 +587,21 @@ This deep storage is used to interface with Cassandra. You must load the `druid-
 
 #### Centralized datasource schema (Experimental)
 
-This is an [experimental feature](../development/experimental.md) to centralize datasource schema management on the Coordinator.
-Traditionally, the schema of a datasource is built by each Broker by combining the schema of all available segments of that datasource.
-Brokers issue segment metadata queries to data nodes and tasks to fetch the schema for a given segment.
+This is an [experimental feature](../development/experimental.md) to improve datasource schema management by persisting segment schemas to the metadata store and caching them on the Coordinator.
+Traditionally, Brokers issue segment metadata queries to data nodes and tasks to fetch the schemas of all available segments.
+Each Broker then individually builds the schema of a datasource by combining the schemas of all the segments of that datasource.
+This mechanism is redundant and prone to errors as there is no single source of truth for schemas.
 
-Centralized schema management changes this flow as follows:
+Centralized schema management improves upon this design as follows:
 - Tasks publish segment schema along with segment metadata to the database.
-- Tasks push schema for realtime segments periodically to the Coordinator via the segment announcement flow.
+- Tasks announce schema for realtime segments periodically to the Coordinator.
 - Coordinator caches segment schemas and builds a combined schema for each datasource.
-- Each Broker queries the datasource schema from the Coordinator rather than building it on its own.
+- Broker poll the datasource schema cached on the Coordinator rather than building it on their own.
 - Brokers still retain the ability to build a datasource schema if they are unable to fetch it from the Coordinator.
 
 |Property|Description|Default|Required|
-|-----|-----------|-------|--------|
-|`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building in the Coordinator, this should be specified in the common runtime properties.|false|No.|
+|--------|-----------|-------|--------|
+|`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building and caching on the Coordinator. This property should be specified in the common runtime properties.|false|No.|
 |`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. This should be specified in the Middle Manager runtime properties.|false|No.|
 
 If you enable this feature, you can query datasources that are only stored in deep storage and are not loaded on a Historical. For more information, see [Query from deep storage](../querying/query-from-deep-storage.md).
