@@ -100,7 +100,7 @@ public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCach
         derbyConnector
     );
 
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    segmentSchemaCache = new SegmentSchemaCache();
     CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, false, 1L, null);
 
     backFillQueue =

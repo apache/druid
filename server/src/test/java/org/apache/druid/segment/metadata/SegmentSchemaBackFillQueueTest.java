@@ -34,7 +34,6 @@ import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Rule;
@@ -70,7 +69,7 @@ public class SegmentSchemaBackFillQueueTest
 
     SegmentSchemaTestUtils segmentSchemaTestUtils =
         new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
-    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache();
     CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, true, 1L, null);
 
     CountDownLatch latch = new CountDownLatch(1);
@@ -150,7 +149,7 @@ public class SegmentSchemaBackFillQueueTest
     segmentSchemaBackFillQueue.onLeaderStart();
     latch.await();
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
-    emitter.verifyValue("metadatacache/backfill/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 2);
-    emitter.verifyValue("metadatacache/backfill/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo1"), 1);
+    emitter.verifyValue(Metric.SCHEMAS_BACKFILLED, Map.of(DruidMetrics.DATASOURCE, "foo"), 2);
+    emitter.verifyValue(Metric.SCHEMAS_BACKFILLED, Map.of(DruidMetrics.DATASOURCE, "foo1"), 1);
   }
 }

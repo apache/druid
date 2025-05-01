@@ -216,13 +216,14 @@ public abstract class ServerRunnable extends GuiceRunnable
             .build(
                 StringUtils.format(
                     "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
-                    + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
+                    + "Please consider switching to HTTP-based segment discovery (set %1$s=%3$s) "
                     + "or disable the feature (set %4$s=false).",
                     ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
                     serverViewType,
                     ServerViewModule.SERVERVIEW_TYPE_HTTP,
                     CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
-                ));
+                )
+            );
       }
     }
   }

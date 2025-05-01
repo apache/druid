@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.ServerView;
@@ -46,6 +47,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -61,7 +63,6 @@ import org.apache.druid.timeline.SegmentId;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -103,7 +104,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
   private static final Long COLD_SCHEMA_PERIOD_MULTIPLIER = 3L;
   private static final Long COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS = TimeUnit.SECONDS.toMillis(50);
-  private static final String DEEP_STORAGE_ONLY_METRIC_PREFIX = "metadatacache/deepStorageOnly/";
 
   private final SegmentMetadataCacheConfig config;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
@@ -111,10 +111,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
-  private final ServiceEmitter emitter;
   private volatile SegmentReplicationStatus segmentReplicationStatus = null;
 
-  // Datasource schema built from only cold segments.
+  /**
+   * Datasource schema built from cold segments only. {@link #tables} contains
+   * schema built from hot segments, i.e. segments present on historicals.
+   * The overall schema of a datasource is obtained by merging the two schemas.
+   */
   private final ConcurrentHashMap<String, DataSourceInformation> coldSchemaTable = new ConcurrentHashMap<>();
 
   // Period for cold schema processing thread. This is a multiple of segment polling period.
@@ -145,13 +148,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.segmentsMetadataManagerConfigSupplier = segmentsMetadataManagerConfigSupplier;
-    this.emitter = emitter;
     this.coldSchemaExec = Execs.scheduledSingleThreaded("DruidColdSchema-ScheduledExecutor-%d");
 
     initServerViewTimelineCallback(serverView);
   }
 
-  long getColdSchemaExecPeriodMillis()
+  private long getColdSchemaExecPeriodMillis()
   {
     return (segmentsMetadataManagerConfigSupplier.get().getPollDuration().toStandardDuration().getMillis())
            * COLD_SCHEMA_PERIOD_MULTIPLIER;
@@ -239,7 +241,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       segmentSchemaBackfillQueue.onLeaderStart();
       cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
       coldSchemaExecFuture = coldSchemaExec.scheduleWithFixedDelay(
-          this::coldDatasourceSchemaExec,
+          this::refreshColdSegmentSchemas,
           getColdSchemaExecPeriodMillis(),
           getColdSchemaExecPeriodMillis(),
           TimeUnit.MILLISECONDS
@@ -337,7 +339,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     log.debug("Publishing segment schema. SegmentId [%s], RowSignature [%s], numRows [%d]", segmentId, rowSignature, numRows);
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
                     // cache the signature
-                    segmentSchemaCache.addTemporaryMetadataQueryResult(segmentId, rowSignature, aggregators, numRows);
+                    segmentSchemaCache.addTemporarySchema(
+                        segmentId,
+                        new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregators), numRows)
+                    );
                     // queue the schema for publishing to the DB
                     segmentSchemaBackfillQueue.add(segmentId, rowSignature, aggregators, numRows);
                     added.set(true);
@@ -450,7 +455,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       signatures.add(cold.getRowSignature());
 
       for (RowSignature signature : signatures) {
-        mergeRowSignature(columnTypes, signature);
+        extractColumnTypes(columnTypes, signature);
       }
 
       final RowSignature.Builder builder = RowSignature.builder();
@@ -567,37 +572,39 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     return replicaCountsInCluster == null ? null : replicaCountsInCluster.required();
   }
 
+  /**
+   * Recomputes the cold schema of all datasources and updates in {@link #coldSchemaTable}.
+   * The cold schema row signature is obtained by merging the column types from
+   * the schemas of all cold segments (used segments with zero replication).
+   */
   @VisibleForTesting
-  protected void coldDatasourceSchemaExec()
+  protected void refreshColdSegmentSchemas()
   {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
-    Set<String> dataSourceWithColdSegmentSet = new HashSet<>();
+    // Find cold segments for all datasources
+    int totalColdSegments = 0;
+    final Set<String> dataSourcesWithColdSegments = new HashSet<>();
 
-    int datasources = 0, dataSourceWithColdSegments = 0, totalColdSegments = 0;
-
-    Collection<ImmutableDruidDataSource> immutableDataSources =
-        segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSourcesWithAllUsedSegments();
-
-    for (ImmutableDruidDataSource dataSource : immutableDataSources) {
-      datasources++;
-      Collection<DataSegment> dataSegments = dataSource.getSegments();
-
+    final DataSourcesSnapshot snapshot = segmentsMetadataManager.getRecentDataSourcesSnapshot();
+    for (ImmutableDruidDataSource dataSource : snapshot.getDataSourcesWithAllUsedSegments()) {
       final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
 
+      // Identify cold segments for this datasource
       int coldSegments = 0;
-      int coldSegmentWithSchema = 0;
-
-      for (DataSegment segment : dataSegments) {
+      int coldSegmentsWithSchema = 0;
+      for (DataSegment segment : dataSource.getSegments()) {
         Integer replicationFactor = getReplicationFactor(segment.getId());
         if (replicationFactor != null && replicationFactor != 0) {
+          // This is not a cold segment
           continue;
         }
+
         Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segment.getId());
         if (optionalSchema.isPresent()) {
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
-          mergeRowSignature(columnTypes, rowSignature);
-          coldSegmentWithSchema++;
+          extractColumnTypes(columnTypes, rowSignature);
+          coldSegmentsWithSchema++;
         }
         coldSegments++;
       }
@@ -608,55 +615,50 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       }
 
       totalColdSegments += coldSegments;
+      final String dataSourceName = dataSource.getName();
+      dataSourcesWithColdSegments.add(dataSourceName);
 
-      String dataSourceName = dataSource.getName();
-
-      ServiceMetricEvent.Builder metricBuilder =
+      final ServiceMetricEvent.Builder metricBuilder =
           new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSourceName);
 
-      emitter.emit(metricBuilder.setMetric(DEEP_STORAGE_ONLY_METRIC_PREFIX + "segment/count", coldSegments));
+      emitMetric(Metric.USED_COLD_SEGMENTS, coldSegments, metricBuilder);
 
       if (columnTypes.isEmpty()) {
         // this datasource doesn't have schema for cold segments
         continue;
       }
 
+      // Build a row signature for cold segments of this datasource
       final RowSignature.Builder builder = RowSignature.builder();
       columnTypes.forEach(builder::add);
-
-      RowSignature coldSignature = builder.build();
-
-      dataSourceWithColdSegmentSet.add(dataSourceName);
-      dataSourceWithColdSegments++;
+      final RowSignature coldSignature = builder.build();
 
       DataSourceInformation druidTable = new DataSourceInformation(dataSourceName, coldSignature);
       DataSourceInformation oldTable = coldSchemaTable.put(dataSourceName, druidTable);
 
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-        log.info("Datasource[%s] has new cold row signature[%s].", dataSource, druidTable.getRowSignature());
+        log.info("Datasource[%s] has new cold row signature[%s].", dataSourceName, druidTable.getRowSignature());
       } else {
-        log.debug("Row signature for datasource[%s] is unchanged.", dataSource);
+        log.debug("Row signature for datasource[%s] is unchanged.", dataSourceName);
       }
 
-      emitter.emit(metricBuilder.setMetric(DEEP_STORAGE_ONLY_METRIC_PREFIX + "refresh/count", coldSegmentWithSchema));
-
-      log.debug("Built row signature[%s] from cold segments for datasource[%s].", coldSignature, datasources);
+      emitMetric(Metric.COLD_SEGMENT_SCHEMAS, coldSegmentsWithSchema, metricBuilder);
+      log.debug("Built row signature[%s] from cold segments for datasource[%s].", coldSignature, dataSourceName);
     }
 
-    // remove any stale datasource from the map
-    coldSchemaTable.keySet().retainAll(dataSourceWithColdSegmentSet);
+    // Remove any stale datasource from the map
+    coldSchemaTable.keySet().retainAll(dataSourcesWithColdSegments);
 
-    emitter.emit(
-        new ServiceMetricEvent.Builder().setMetric(
-            DEEP_STORAGE_ONLY_METRIC_PREFIX + "process/time",
-            stopwatch.millisElapsed()
-        )
+    emitMetric(
+        Metric.COLD_SCHEMA_REFRESH_DURATION_MILLIS,
+        stopwatch.millisElapsed()
     );
 
+    int numDatasources = snapshot.getDataSourcesMap().size();
     String executionStatsLog = StringUtils.format(
         "Cold schema processing took [%d] millis. "
         + "Processed total [%d] datasources, [%d] segments. Found [%d] datasources with cold segment schema.",
-        stopwatch.millisElapsed(), datasources, totalColdSegments, dataSourceWithColdSegments
+        stopwatch.millisElapsed(), numDatasources, totalColdSegments, dataSourcesWithColdSegments.size()
     );
     if (stopwatch.millisElapsed() > COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS) {
       log.info(executionStatsLog);
@@ -665,12 +667,15 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
   }
 
-  private void mergeRowSignature(final Map<String, ColumnType> columnTypes, final RowSignature signature)
+  /**
+   * Extracts column types from the given row signature.
+   */
+  private void extractColumnTypes(final Map<String, ColumnType> columnTypes, final RowSignature signature)
   {
     for (String column : signature.getColumnNames()) {
       final ColumnType columnType =
           signature.getColumnType(column)
-                   .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
+                   .orElseThrow(() -> new ISE("Encountered null type for column[%s]", column));
 
       columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
     }
@@ -692,7 +697,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segmentId);
         if (optionalSchema.isPresent()) {
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
-          mergeRowSignature(columnTypes, rowSignature);
+          extractColumnTypes(columnTypes, rowSignature);
         } else {
           markSegmentForRefreshIfNeeded(entry.getValue().getSegment());
         }
@@ -768,7 +773,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                             segmentId,
                             rowSignature.get()
                         );
-                        segmentSchemaCache.addRealtimeSegmentSchema(segmentId, rowSignature.get(), segmentSchema.getNumRows());
+                        final Long numRows = segmentSchema.getNumRows() == null
+                                             ? null : segmentSchema.getNumRows().longValue();
+                        segmentSchemaCache.addRealtimeSegmentSchema(
+                            segmentId,
+                            new SchemaPayloadPlus(new SchemaPayload(rowSignature.get()), numRows)
+                        );
 
                         // mark the datasource for rebuilding
                         markDataSourceAsNeedRebuild(dataSource);

@@ -62,12 +62,10 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.MetadataRuleManagerProvider;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
@@ -190,8 +188,6 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
-            JsonConfigProvider.bind(binder, SegmentsMetadataManagerConfig.CONFIG_PREFIX, SegmentsMetadataManagerConfig.class);
-            JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);

@@ -26,15 +26,15 @@ import org.apache.druid.common.config.Configs;
 import javax.annotation.Nullable;
 
 /**
- * Config for caching datasource schema on the Coordinator. This config must be
- * bound on the following services:
+ * Config for caching and managing datasource schema on the Coordinator.
+ * This config is used by the following services:
  * <ul>
  * <li>Coordinator: to enable backfill of segment schema in the metadata store
  * and caching of schema in memory.</li>
  * <li>Overlord: to enable publish of schema when segments are committed.</li>
  * <li>Peons: to enable inclusion of schema in segment publish requests.</li>
  * </ul>
- * The corresponding segment schema table is created in the metadata store only
+ * The corresponding segment schemas table is created in the metadata store only
  * when this config is enabled for the first time on a cluster. Subsequent
  * disabling of this config does not drop the table but the services do not read
  * or update it anymore.
@@ -62,8 +62,8 @@ public class CentralizedDatasourceSchemaConfig
   @JsonCreator
   public CentralizedDatasourceSchemaConfig(
       @JsonProperty("enabled") @Nullable Boolean enabled,
-      @JsonProperty("backfillEnabled") @Nullable Boolean backFillEnabled,
-      @JsonProperty("backfillPeriod") @Nullable Long backFillPeriod,
+      @JsonProperty("backFillEnabled") @Nullable Boolean backFillEnabled,
+      @JsonProperty("backFillPeriod") @Nullable Long backFillPeriod,
       @JsonProperty("taskSchemaPublishDisabled") @Nullable Boolean taskSchemaPublishDisabled
   )
   {

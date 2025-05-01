@@ -49,7 +49,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
-import org.apache.druid.guice.SegmentSchemaCacheModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
@@ -149,9 +148,6 @@ public class CliIndexer extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid", DruidNode.class, Parent.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
-
-
-            SegmentSchemaCacheModule.bindSchemaConfig(binder);
 
             CliPeon.configureIntermediaryData(binder);
             CliPeon.bindTaskConfigAndClients(binder);

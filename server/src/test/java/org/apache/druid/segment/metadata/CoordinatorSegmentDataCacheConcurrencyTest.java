@@ -136,7 +136,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new HashMap<>()
     );
 
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    segmentSchemaCache = new SegmentSchemaCache();
     CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, false, 1L, null);
 
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(

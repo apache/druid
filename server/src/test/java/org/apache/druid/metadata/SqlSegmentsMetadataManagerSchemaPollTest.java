@@ -54,7 +54,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
   public void setUp() throws Exception
   {
     setUp(derbyConnectorRule);
-    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
+    segmentSchemaCache = new SegmentSchemaCache();
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,

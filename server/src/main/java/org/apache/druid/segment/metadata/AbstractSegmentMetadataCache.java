@@ -202,10 +202,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @GuardedBy("lock")
   protected boolean isServerViewInitialized = false;
 
-  protected final ServiceEmitter emitter;
+  private final ServiceEmitter emitter;
 
   /**
-   * Map of datasource and generic object extending DataSourceInformation.
+   * Map from datasource name to DataSourceInformation.
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
   protected final ConcurrentHashMap<String, T> tables = new ConcurrentHashMap<>();
@@ -359,7 +359,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // report the cache init time
     if (initialized.getCount() == 1) {
       long elapsedTime = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-      emitter.emit(ServiceMetricEvent.builder().setMetric("metadatacache/init/time", elapsedTime));
+      emitMetric("metadatacache/init/time", elapsedTime);
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), elapsedTime);
       stopwatch.stop();
     }
@@ -755,7 +755,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
 
-    emitter.emit(builder.setMetric("metadatacache/refresh/count", segments.size()));
+    emitMetric("metadatacache/refresh/count", segments.size(), builder);
 
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
@@ -795,14 +795,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     long refreshDurationMillis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
-    emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
+    emitMetric("metadatacache/refresh/time", refreshDurationMillis, builder);
 
     log.debug(
-        "Refreshed metadata for datasource [%s] in %,d ms (%d segments queried, %d segments left).",
-        dataSource,
-        refreshDurationMillis,
-        retVal.size(),
-        segments.size() - retVal.size()
+        "Refreshed metadata for datasource[%s] in [%,d] ms (%d segments queried, %d segments left).",
+        dataSource, refreshDurationMillis, retVal.size(), segments.size() - retVal.size()
     );
 
     return retVal;
@@ -1040,6 +1037,18 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     synchronized (lock) {
       runnable.run();
     }
+  }
+
+  protected void emitMetric(String metric, long value)
+  {
+    emitter.emit(
+        ServiceMetricEvent.builder().setMetric(metric, value)
+    );
+  }
+
+  protected void emitMetric(String metric, long value, ServiceMetricEvent.Builder builder)
+  {
+    emitter.emit(builder.setMetric(metric, value));
   }
 
   /**

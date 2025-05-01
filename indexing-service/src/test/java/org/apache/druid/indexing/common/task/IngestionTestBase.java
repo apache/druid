@@ -176,7 +176,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
+    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache();
     segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
         segmentMetadataCache,
         segmentSchemaCache,

@@ -62,7 +62,6 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
-import org.apache.druid.guice.SegmentSchemaCacheModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
@@ -244,7 +243,6 @@ public class CliPeon extends GuiceRunnable
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 
-            SegmentSchemaCacheModule.bindSchemaConfig(binder);
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);

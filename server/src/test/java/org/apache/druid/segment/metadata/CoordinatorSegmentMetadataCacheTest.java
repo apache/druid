@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;
@@ -103,7 +102,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -134,8 +132,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
-    SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
-    Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
+    SegmentsMetadataManagerConfig metadataManagerConfig =
+        new SegmentsMetadataManagerConfig(Period.millis(10), null);
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
   }
 
@@ -1243,8 +1241,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
 
-    emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
-    emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
+    emitter.verifyEmitted("metadatacache/refresh/time", Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
+    emitter.verifyEmitted("metadatacache/refresh/count", Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
   }
 
   @Test
@@ -1623,8 +1621,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       return null;
     });
 
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentMetadataMap.build(), schemaPayloadMap.build()));
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentMetadataMap.build(), schemaPayloadMap.build());
     segmentSchemaCache.setInitialized();
 
     serverView = new TestCoordinatorServerView(Collections.emptyList(), Collections.emptyList());
@@ -1727,9 +1724,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentStatsMap.put(segment3.getId(), new SegmentMetadata((long) rowCountInspector.getNumRows(), "fp"));
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put("fp", new SchemaPayload(cursorFactory.getRowSignature()));
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
-    );
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentStatsMap.build(), schemaPayloadMap.build());
 
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     List<DataSegment> segments = segmentsMetadata.values()
@@ -1751,9 +1746,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         existingSegment.getId(),
         new SegmentMetadata(5L, "fp")
     );
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
-    );
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentStatsMap.build(), schemaPayloadMap.build());
 
     // find a druidServer holding existingSegment
     final Pair<DruidServer, DataSegment> pair = druidServers
@@ -1846,9 +1839,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         )
     );
 
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
-    );
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentStatsMap.build(), schemaPayloadMap.build());
 
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot()).thenReturn(
         DataSourcesSnapshot.fromUsedSegments(List.of(segment1, segment2, coldSegment, singleColdSegment))
@@ -1894,15 +1885,15 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     StubServiceEmitter emitter = new StubServiceEmitter("coordinator", "host");
     CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest(emitter);
 
-    schema.coldDatasourceSchemaExec();
+    schema.refreshColdSegmentSchemas();
 
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/process/time", 1);
+    emitter.verifyEmitted(Metric.USED_COLD_SEGMENTS, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted(Metric.COLD_SEGMENT_SCHEMAS, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted(Metric.COLD_SEGMENT_SCHEMAS, Map.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted(Metric.COLD_SEGMENT_SCHEMAS, Map.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted(Metric.COLD_SCHEMA_REFRESH_DURATION_MILLIS, 1);
 
-    Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
+    Assert.assertEquals(Set.of("foo", "cold"), schema.getDataSourceInformationMap().keySet());
 
     // verify that cold schema for both foo and cold is present
     RowSignature fooSignature = schema.getDatasource("foo").getRowSignature();
@@ -1975,16 +1966,16 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     verifyFooDSSchema(schema, 6);
     Assert.assertNull(schema.getDatasource("cold"));
 
-    schema.coldDatasourceSchemaExec();
+    schema.refreshColdSegmentSchemas();
 
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/deepStorageOnly/process/time", 1);
+    emitter.verifyEmitted(Metric.USED_COLD_SEGMENTS, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted(Metric.COLD_SEGMENT_SCHEMAS, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted(Metric.COLD_SEGMENT_SCHEMAS, Map.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted(Metric.COLD_SEGMENT_SCHEMAS, Map.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted(Metric.COLD_SCHEMA_REFRESH_DURATION_MILLIS, 1);
 
     // cold datasource should be present now
-    Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
+    Assert.assertEquals(Set.of("foo", "cold"), schema.getDataSourceInformationMap().keySet());
 
     RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
     List<String> columnNames = coldSignature.getColumnNames();
@@ -2067,9 +2058,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                       .add("c4", ColumnType.STRING)
                                       .build())
     );
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
-    );
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentStatsMap.build(), schemaPayloadMap.build());
 
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot()).thenReturn(
         DataSourcesSnapshot.fromUsedSegments(List.of(coldSegmentAlpha, hotSegmentGamma, coldSegmentGamma))
@@ -2105,7 +2094,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.updateSegmentReplicationStatus(segmentReplicationStatus);
 
-    schema.coldDatasourceSchemaExec();
+    schema.refreshColdSegmentSchemas();
     // alpha has only 1 cold segment
     Assert.assertNotNull(schema.getDatasource("alpha"));
     // gamma has both hot and cold segment
@@ -2123,7 +2112,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(coldSegmentBeta, hotSegmentGamma)));
 
-    schema.coldDatasourceSchemaExec();
+    schema.refreshColdSegmentSchemas();
     Assert.assertNotNull(schema.getDatasource("beta"));
     // alpha doesn't have any segments
     Assert.assertNull(schema.getDatasource("alpha"));
@@ -2136,7 +2125,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
-  public void testColdDatasourceSchemaExecRunsPeriodically() throws InterruptedException
+  public void testRefreshColdSegmentSchemasRunsPeriodically() throws InterruptedException
   {
     // Make sure the thread runs more than once
     CountDownLatch latch = new CountDownLatch(2);
@@ -2154,16 +2143,10 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
-      long getColdSchemaExecPeriodMillis()
-      {
-        return 10;
-      }
-
-      @Override
-      protected void coldDatasourceSchemaExec()
+      protected void refreshColdSegmentSchemas()
       {
         latch.countDown();
-        super.coldDatasourceSchemaExec();
+        super.refreshColdSegmentSchemas();
       }
     };
 
@@ -2331,9 +2314,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put("fp", new SchemaPayload(RowSignature.builder().add("c1", ColumnType.DOUBLE).build()));
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
-    );
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentStatsMap.build(), schemaPayloadMap.build());
 
     schema.addSegment(historicalServerMetadata, segments.get(0));
     schema.addSegment(historicalServerMetadata, segments.get(1));
@@ -2352,20 +2333,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentStatsMap = new ImmutableMap.Builder<>();
     segmentStatsMap.put(segments.get(0).getId(), new SegmentMetadata(20L, "fp"));
 
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
-    );
-
-    Map<SegmentId, DataSegment> segmentMap = new HashMap<>();
-    segmentMap.put(segments.get(0).getId(), segments.get(0));
-    segmentMap.put(segments.get(1).getId(), segments.get(1));
-
-    ImmutableDruidDataSource druidDataSource =
-        new ImmutableDruidDataSource(
-            "xyz",
-            Collections.emptyMap(),
-            segmentMap
-        );
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentStatsMap.build(), schemaPayloadMap.build());
 
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(segments.get(0), segments.get(1))));

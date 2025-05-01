@@ -181,12 +181,12 @@ public class SegmentSchemaBackFillQueue
         );
         // Mark the segments as published in the cache.
         for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
-          segmentSchemaCache.markMetadataQueryResultPublished(plus.getSegmentId());
+          segmentSchemaCache.markSchemaPersisted(plus.getSegmentId());
         }
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.DATASOURCE, entry.getKey())
-                              .setMetric("metadatacache/backfill/count", entry.getValue().size())
+                              .setMetric(Metric.SCHEMAS_BACKFILLED, entry.getValue().size())
         );
       }
       catch (Exception e) {
@@ -194,8 +194,10 @@ public class SegmentSchemaBackFillQueue
       }
     }
     emitter.emit(
-        ServiceMetricEvent.builder()
-                          .setMetric("metadatacache/backfill/time", stopwatch.millisElapsed())
+        ServiceMetricEvent.builder().setMetric(
+            Metric.BACKFILL_DURATION_MILLIS,
+            stopwatch.millisElapsed()
+        )
     );
   }
 }

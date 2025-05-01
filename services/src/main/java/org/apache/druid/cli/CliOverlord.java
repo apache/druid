@@ -51,7 +51,6 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
-import org.apache.druid.guice.SegmentSchemaCacheModule;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -210,8 +209,6 @@ public class CliOverlord extends ServerRunnable
                     .to(DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
-
-              SegmentSchemaCacheModule.bindSchemaConfig(binder);
 
               binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
               binder.bind(SegmentsMetadataManager.class)
