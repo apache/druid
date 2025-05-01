@@ -13,7 +13,8 @@
     "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md' || (./script/notify-spellcheck-issues && false)",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
-    "docusaurus": "docusaurus"
+    "docusaurus": "docusaurus",
+    "clear": "docusaurus clear"
   },
   "engines": {
     "node": ">=18.0"
