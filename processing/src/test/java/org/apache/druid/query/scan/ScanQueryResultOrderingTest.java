@@ -35,12 +35,10 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
-import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.TestSegmentUtils.InMemoryTestSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -89,59 +87,52 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                                                                 .add(ID_COLUMN, ColumnType.LONG)
                                                                 .build();
 
-  private static final SegmentDescriptor DEFAULT_DESCRIPTOR = new SegmentDescriptor(Intervals.ETERNITY, "", 0);
-  private static final List<InMemoryTestSegment> SEGMENTS = ImmutableList.of(
-      new InMemoryTestSegment(
+  private static final List<InMemoryTestSegment<Object[]>> SEGMENTS = ImmutableList.of(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
-          new RowBasedSegment<>(
-              Sequences.simple(
-                  ImmutableList.of(
-                      new Object[]{DateTimes.of("2000T01"), 101},
-                      new Object[]{DateTimes.of("2000T01"), 80},
-                      new Object[]{DateTimes.of("2000T01"), 232},
-                      new Object[]{DateTimes.of("2000T01"), 12},
-                      new Object[]{DateTimes.of("2000T02"), 808},
-                      new Object[]{DateTimes.of("2000T02"), 411},
-                      new Object[]{DateTimes.of("2000T02"), 383},
-                      new Object[]{DateTimes.of("2000T05"), 22}
-                  )
-              ),
-              ROW_ADAPTER,
-              ROW_SIGNATURE
-          )
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000T01"), 101},
+                  new Object[]{DateTimes.of("2000T01"), 80},
+                  new Object[]{DateTimes.of("2000T01"), 232},
+                  new Object[]{DateTimes.of("2000T01"), 12},
+                  new Object[]{DateTimes.of("2000T02"), 808},
+                  new Object[]{DateTimes.of("2000T02"), 411},
+                  new Object[]{DateTimes.of("2000T02"), 383},
+                  new Object[]{DateTimes.of("2000T05"), 22}
+              )
+          ),
+          ROW_ADAPTER,
+          ROW_SIGNATURE
       ),
-      new InMemoryTestSegment(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
-          new RowBasedSegment<>(
-              Sequences.simple(
-                  ImmutableList.of(
-                      new Object[]{DateTimes.of("2000T01"), 333},
-                      new Object[]{DateTimes.of("2000T01"), 222},
-                      new Object[]{DateTimes.of("2000T01"), 444},
-                      new Object[]{DateTimes.of("2000T01"), 111},
-                      new Object[]{DateTimes.of("2000T03"), 555},
-                      new Object[]{DateTimes.of("2000T03"), 999},
-                      new Object[]{DateTimes.of("2000T03"), 888},
-                      new Object[]{DateTimes.of("2000T05"), 777}
-                  )
-              ),
-              ROW_ADAPTER,
-              ROW_SIGNATURE
-          )
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000T01"), 333},
+                  new Object[]{DateTimes.of("2000T01"), 222},
+                  new Object[]{DateTimes.of("2000T01"), 444},
+                  new Object[]{DateTimes.of("2000T01"), 111},
+                  new Object[]{DateTimes.of("2000T03"), 555},
+                  new Object[]{DateTimes.of("2000T03"), 999},
+                  new Object[]{DateTimes.of("2000T03"), 888},
+                  new Object[]{DateTimes.of("2000T05"), 777}
+              )
+          ),
+          ROW_ADAPTER,
+          ROW_SIGNATURE
       ),
-      new InMemoryTestSegment(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
-          new RowBasedSegment<>(
-              Sequences.simple(
-                  ImmutableList.of(
-                      new Object[]{DateTimes.of("2000-01-02T00"), 7},
-                      new Object[]{DateTimes.of("2000-01-02T02"), 9},
-                      new Object[]{DateTimes.of("2000-01-02T03"), 8}
-                  )
-              ),
-              ROW_ADAPTER,
-              ROW_SIGNATURE
-          )
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000-01-02T00"), 7},
+                  new Object[]{DateTimes.of("2000-01-02T02"), 9},
+                  new Object[]{DateTimes.of("2000-01-02T03"), 8}
+              )
+          ),
+          ROW_ADAPTER,
+          ROW_SIGNATURE
       )
   );
 

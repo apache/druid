@@ -26,7 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentizerFactory;
@@ -203,14 +205,23 @@ public class TestSegmentUtils
   /**
    * A test segment that is backed by a {@link RowBasedSegment}. This is used to test the {@link QueryableIndexSegment}.
    */
-  public static class InMemoryTestSegment extends QueryableIndexSegment
+  public static class InMemoryTestSegment<RowType> extends QueryableIndexSegment
   {
-    private final RowBasedSegment<?> segment;
+    private final RowBasedSegment<RowType> segment;
 
-    public InMemoryTestSegment(SegmentId segmentId, RowBasedSegment<?> segment)
+    public InMemoryTestSegment(
+        final SegmentId segmentId,
+        final Sequence<RowType> rowSequence,
+        final RowAdapter<RowType> rowAdapter,
+        final RowSignature rowSignature
+    )
     {
       super(INDEX, segmentId);
-      this.segment = segment;
+      this.segment = new RowBasedSegment<>(
+          rowSequence,
+          rowAdapter,
+          rowSignature
+      );
     }
 
     @Override
