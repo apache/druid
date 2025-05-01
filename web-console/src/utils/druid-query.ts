@@ -239,7 +239,6 @@ export class DruidError extends Error {
     // Missing (;) after SET statement
     // ex: SET sqlTimeZone = 'America/Los_Angeles' SELECT * FROM "kttm_simple"
     // ex: Received an unexpected token [SELECT] (line [1], column [41]), acceptable options: [<EOF>, <QUOTED_STRING>, ";", "UESCAPE"]
-    // /Received an unexpected token \[;] \(line \[(\d+)], column \[(\d+)]\),/i
     const matchSemicolon =
       /Received an unexpected token \[(?:SET|SELECT)] \(line \[(\d+)], column \[(\d+)]\), acceptable options: \[[^;]*";"/i.exec(
         errorMessage,
