@@ -52,7 +52,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     return new ReferenceCountingSegment(
         Preconditions.checkNotNull(baseSegment, "baseSegment"),
         partitionNum,
-        (partitionNum + 1),
+        partitionNum + 1,
         (short) 0,
         (short) 1
     );
