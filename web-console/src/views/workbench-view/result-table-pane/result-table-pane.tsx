@@ -74,7 +74,7 @@ function isStringJsonObject(value: string): boolean {
   }
 }
 
-function isStringJsonQuoted(value: string): boolean {
+function isStringJsonString(value: string): boolean {
   if (!(value.startsWith('"') && value.endsWith('"'))) {
     return false;
   }
@@ -278,7 +278,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 }}
               />,
             );
-          } else if (columnValues.every(isStringJsonQuoted)) {
+          } else if (columnValues.every(isStringJsonString)) {
             menuItems.push(
               <MenuItem
                 key="unquote_json_string"
