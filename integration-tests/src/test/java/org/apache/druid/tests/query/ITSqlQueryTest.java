@@ -172,7 +172,7 @@ public class ITSqlQueryTest
   }
 
   @Test
-  public void testUnsupportedCotentType()
+  public void testUnsupportedContentType()
   {
     executeQuery(
         "application/xml",

@@ -229,7 +229,7 @@ public class SqlQuery
   /**
    * For BROKERs to use.
    * <p>
-   * Brokers use com.sun.jersey upon Jetty for RESTful API, however jersey internally has special handling for x-www-form-urlencoded,
+   * Brokers use com.sun.jersey upon Jetty for RESTful API, however jersey intØernally has special handling for x-www-form-urlencoded,
    * it's not able to get the data from the stream of HttpServletRequest for such content type.
    * So we use HttpContext to get the request entity/string instead of using HttpServletRequest.
    *
