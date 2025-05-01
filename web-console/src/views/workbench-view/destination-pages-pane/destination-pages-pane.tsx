@@ -94,14 +94,14 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
   }
 
   function getFilenamePageInfo(pageIndex: number) {
-    if (pageIndex < 0) return 'all_data';
+    if (pageIndex < 0) return '';
     const numPagesString = String(numPages);
     const pageNumberString = String(pageIndex + 1).padStart(numPagesString.length, '0');
-    return `page_${pageNumberString}_of_${numPagesString}`;
+    return `.page_${pageNumberString}_of_${numPagesString}`;
   }
 
   function getPageFilename(pageIndex: number) {
-    return `${prefix}_${getFilenamePageInfo(pageIndex)}.${desiredExtension}`;
+    return `${prefix}${getFilenamePageInfo(pageIndex)}.${desiredExtension}`;
   }
 
   return (
@@ -118,7 +118,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             value={prefix}
             onChange={(e: any) => setPrefix(e.target.value.slice(0, 200))}
             placeholder="file_prefix"
-            rightElement={<Button disabled text={`_page_X_of_Y.${desiredExtension}`} />}
+            rightElement={<Button disabled text={`.${desiredExtension}`} />}
             fill
           />
           <Popover
