@@ -69,8 +69,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private final int numPersistThreads;
   private final int maxColumnsToMerge;
 
-  private final boolean messageGapAggStatsEnabled;
-
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
       @Nullable Integer maxRowsInMemory,
@@ -93,8 +91,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
-      @Nullable Integer maxColumnsToMerge,
-      @Nullable Boolean messageGapAggStatsEnabled
+      @Nullable Integer maxColumnsToMerge
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -149,7 +146,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       this.numPersistThreads = Math.max(numPersistThreads, AppenderatorConfig.DEFAULT_NUM_PERSIST_THREADS);
     }
     this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
-    this.messageGapAggStatsEnabled = messageGapAggStatsEnabled != null && messageGapAggStatsEnabled;
   }
 
   @Override
@@ -297,12 +293,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return maxColumnsToMerge;
   }
 
-  @JsonProperty
-  public boolean getMessageGapAggStatsEnabled()
-  {
-    return messageGapAggStatsEnabled;
-  }
-
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -329,7 +319,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
            numPersistThreads == that.numPersistThreads &&
            maxColumnsToMerge == that.maxColumnsToMerge &&
-           messageGapAggStatsEnabled == that.messageGapAggStatsEnabled &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -363,8 +352,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
   }
 

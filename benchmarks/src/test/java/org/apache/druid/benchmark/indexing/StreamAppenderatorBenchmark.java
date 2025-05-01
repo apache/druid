@@ -28,7 +28,6 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
@@ -40,12 +39,9 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import java.io.IOException;
 
 @Warmup(iterations = 15)
-@Measurement(iterations = 15)
+@Measurement(iterations = 30)
 public class StreamAppenderatorBenchmark extends AppenderatorBenchmark
 {
-  @Param({"false", "true"})
-  private boolean messageGapAggStatsEnabled;
-
   @Setup
   @Override
   public void setup() throws IOException
@@ -57,7 +53,6 @@ public class StreamAppenderatorBenchmark extends AppenderatorBenchmark
         .maxSizeInBytes(100_000_000) // 100MB
         .basePersistDirectory(tempDir)
         .rowIngestionMeters(new SimpleRowIngestionMeters())
-        .withMessageGapAggStatsEnabled(messageGapAggStatsEnabled)
         .build();
 
     appenderator = tester.getAppenderator();

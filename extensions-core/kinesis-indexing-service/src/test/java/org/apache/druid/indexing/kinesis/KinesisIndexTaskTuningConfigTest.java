@@ -169,8 +169,7 @@ public class KinesisIndexTaskTuningConfigTest
         6000,
         1_000_000,
         new Period("P3D"),
-        1000,
-        null
+        1000
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -235,8 +234,7 @@ public class KinesisIndexTaskTuningConfigTest
         1_000_000,
         6000,
         new Period("P3D"),
-        1000,
-        null
+        1000
     );
 
     String serialized = mapper.writeValueAsString(new TestModifiedKinesisIndexTaskTuningConfig(base, "loool"));
@@ -331,7 +329,6 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         null,
-        null,
         null
     );
     KinesisIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
@@ -356,7 +353,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(10, (int) copy.getMaxRecordsPerPollConfigured());
     Assert.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
     Assert.assertEquals(-1, copy.getMaxColumnsToMerge());
-    Assert.assertFalse(copy.getMessageGapAggStatsEnabled());
   }
 
   @Test

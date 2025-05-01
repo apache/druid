@@ -173,8 +173,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxSavedParseExceptions,
         maxColumnsToMerge,
         awaitSegmentAvailabilityTimeoutMillis,
-        numPersistThreads,
-        null
+        numPersistThreads
     );
 
     if (maxNumSubTasks != null && maxNumConcurrentSubTasks != null) {

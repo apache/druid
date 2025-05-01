@@ -416,7 +416,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     runThread = Thread.currentThread();
 
     // Set up SegmentGenerationMetrics
-    this.segmentGenerationMetrics = new SegmentGenerationMetrics(tuningConfig.getMessageGapAggStatsEnabled());
+    this.segmentGenerationMetrics = new SegmentGenerationMetrics();
     final TaskRealtimeMetricsMonitor metricsMonitor =
         TaskRealtimeMetricsMonitorBuilder.build(task, segmentGenerationMetrics, rowIngestionMeters);
     toolbox.addMonitor(metricsMonitor);

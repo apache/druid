@@ -70,7 +70,6 @@ public abstract class TuningConfigBuilder<C>
   protected Long awaitSegmentAvailabilityTimeoutMillis;
   protected Integer maxAllowedLockCount;
   protected Integer numPersistThreads;
-  protected Boolean messageGapAggStatsEnabled;
 
   public TuningConfigBuilder<C> withTargetPartitionSize(Integer targetPartitionSize)
   {
@@ -270,12 +269,6 @@ public abstract class TuningConfigBuilder<C>
     return this;
   }
 
-  public TuningConfigBuilder<C> withMessageGapAggStatsEnabled(Boolean messageGapAggStatsEnabled)
-  {
-    this.messageGapAggStatsEnabled = messageGapAggStatsEnabled;
-    return this;
-  }
-
   public abstract C build();
 
   /**
@@ -332,8 +325,7 @@ public abstract class TuningConfigBuilder<C>
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
-          numPersistThreads,
-          messageGapAggStatsEnabled
+          numPersistThreads
       );
     }
   }

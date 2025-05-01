@@ -57,8 +57,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("extra") String extra,
-      @JsonProperty("messageGapAggStatsEnabled") @Nullable Boolean messageGapAggStatsEnabled
+      @JsonProperty("extra") String extra
   )
   {
     super(
@@ -82,8 +81,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
     this.extra = extra;
   }

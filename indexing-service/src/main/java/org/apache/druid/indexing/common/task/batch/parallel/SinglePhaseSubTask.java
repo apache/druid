@@ -363,12 +363,12 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics(false);
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     final TaskRealtimeMetricsMonitor metricsMonitor =
         TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, rowIngestionMeters);
     toolbox.addMonitor(metricsMonitor);
 
+    final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean useLineageBasedSegmentAllocation = getContextValue(

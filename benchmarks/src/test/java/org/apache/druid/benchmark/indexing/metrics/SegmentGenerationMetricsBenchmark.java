@@ -27,7 +27,6 @@ import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -54,9 +53,6 @@ public class SegmentGenerationMetricsBenchmark
 {
   private SegmentGenerationMetrics metrics;
 
-  @Param({"true", "false"})
-  private boolean enableMessageGapMetrics;
-
   // Pre-generated values for benchmarks
   private long messageGapValue;
   private long handoffTimeValue;
@@ -64,7 +60,7 @@ public class SegmentGenerationMetricsBenchmark
   @Setup(Level.Iteration)
   public void setup()
   {
-    metrics = new SegmentGenerationMetrics(enableMessageGapMetrics);
+    metrics = new SegmentGenerationMetrics();
 
     final ThreadLocalRandom random = ThreadLocalRandom.current();
     messageGapValue = random.nextLong(1, 10000);

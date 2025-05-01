@@ -87,8 +87,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @Deprecated @Nullable Integer maxRecordsPerPoll,
       @Nullable Integer maxBytesPerPoll,
       @Nullable Period intermediateHandoffPeriod,
-      @Nullable Integer maxColumnsToMerge,
-      @Nullable Boolean messageGapAggStatsEnabled
+      @Nullable Integer maxColumnsToMerge
   )
   {
     super(
@@ -113,8 +112,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxParseExceptions,
         maxSavedParseExceptions,
         null,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
     this.recordBufferSize = recordBufferSize;
     this.recordBufferSizeBytes = recordBufferSizeBytes;
@@ -160,8 +158,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("maxRecordsPerPoll") @Deprecated @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("maxBytesPerPoll") @Nullable Integer maxBytesPerPoll,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("messageGapAggStatsEnabled") @Nullable Boolean messageGapAggStatsEnabled
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     this(
@@ -192,8 +189,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxRecordsPerPoll,
         maxBytesPerPoll,
         intermediateHandoffPeriod,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
   }
 
@@ -297,8 +293,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxRecordsPerPollConfigured(),
         getMaxBytesPerPollConfigured(),
         getIntermediateHandoffPeriod(),
-        getMaxColumnsToMerge(),
-        getMessageGapAggStatsEnabled()
+        getMaxColumnsToMerge()
     );
   }
 
@@ -368,7 +363,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxBytesPerPoll=" + maxBytesPerPoll +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
-           ", messageGapAggStatsEnabled=" + getMessageGapAggStatsEnabled() +
            '}';
   }
 }

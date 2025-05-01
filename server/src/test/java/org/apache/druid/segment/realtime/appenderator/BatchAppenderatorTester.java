@@ -120,9 +120,11 @@ public class BatchAppenderatorTester implements AutoCloseable
       final RowIngestionMeters rowIngestionMeters
   )
   {
-    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, false);
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters,
+         false
+    );
   }
-
+  
   public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
@@ -172,10 +174,9 @@ public class BatchAppenderatorTester implements AutoCloseable
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
-        false
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
     );
-    metrics = new SegmentGenerationMetrics(false);
+    metrics = new SegmentGenerationMetrics();
 
     IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     IndexMergerV9 indexMerger = new IndexMergerV9(

@@ -60,7 +60,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     this.rowIngestionMeters = rowIngestionMeters;
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.metricTags = metricTags;
-    previousSegmentGenerationMetrics = new SegmentGenerationMetrics(segmentGenerationMetrics.isMessageGapAggStatsEnabled());
+    previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
 
@@ -132,17 +132,19 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.setMetric("ingest/events/messageGap", messageGap));
     }
 
-    final long minMessageGap = metrics.minMessageGap();
-    final long maxMessageGap = metrics.maxMessageGap();
+    final SegmentGenerationMetrics.MessageGapStats messageGapStats = metrics.getMessageGapStats();
+    final long minMessageGap = messageGapStats.getMinMessageGap();
+    final long maxMessageGap = messageGapStats.getMaxMessageGap();
     // Best-effort way to ensure parity amongst emitted metrics
-    if (metrics.isMessageGapAggStatsEnabled()) {
-      if (minMessageGap != Long.MAX_VALUE) {
-        emitter.emit(builder.setMetric("ingest/events/minMessageGap", minMessageGap));
-      }
-      if (maxMessageGap != Long.MIN_VALUE) {
-        emitter.emit(builder.setMetric("ingest/events/maxMessageGap", maxMessageGap));
-      }
-      emitter.emit(builder.setMetric("ingest/events/avgMessageGap", metrics.avgMessageGap()));
+    if (minMessageGap != Long.MAX_VALUE) {
+      emitter.emit(builder.setMetric("ingest/events/minMessageGap", minMessageGap));
+    }
+    if (maxMessageGap != Long.MIN_VALUE) {
+      emitter.emit(builder.setMetric("ingest/events/maxMessageGap", maxMessageGap));
+    }
+    final double avgMessageGap = messageGapStats.avgMessageGap();
+    if (!Double.isNaN(avgMessageGap)) {
+      emitter.emit(builder.setMetric("ingest/events/avgMessageGap", avgMessageGap));
     }
 
     long maxSegmentHandoffTime = metrics.maxSegmentHandoffTime();

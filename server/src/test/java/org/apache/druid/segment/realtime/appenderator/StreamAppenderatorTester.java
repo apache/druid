@@ -113,8 +113,7 @@ public class StreamAppenderatorTester implements AutoCloseable
       final DataSegmentAnnouncer announcer,
       final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       final ServiceEmitter serviceEmitter,
-      final PolicyEnforcer policyEnforcer,
-      final boolean messageGapAggStatsEnabled
+      final PolicyEnforcer policyEnforcer
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -125,7 +124,6 @@ public class StreamAppenderatorTester implements AutoCloseable
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), objectMapper)
-            .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
     );
 
     final Map<String, Object> parserMap = objectMapper.convertValue(
@@ -161,11 +159,10 @@ public class StreamAppenderatorTester implements AutoCloseable
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        basePersistDirectory,
-        messageGapAggStatsEnabled
+        basePersistDirectory
     );
 
-    metrics = new SegmentGenerationMetrics(tuningConfig.getMessageGapAggStatsEnabled());
+    metrics = new SegmentGenerationMetrics();
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
 
     IndexIO indexIO = new IndexIO(
@@ -360,7 +357,6 @@ public class StreamAppenderatorTester implements AutoCloseable
     private int delayInMilli = 0;
     private ServiceEmitter serviceEmitter;
     private PolicyEnforcer policyEnforcer = NoopPolicyEnforcer.instance();
-    private boolean messageGapAggStatsEnabled;
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -416,12 +412,6 @@ public class StreamAppenderatorTester implements AutoCloseable
       return this;
     }
 
-    public Builder withMessageGapAggStatsEnabled(final boolean messageGapAggStatsEnabled)
-    {
-      this.messageGapAggStatsEnabled = messageGapAggStatsEnabled;
-      return this;
-    }
-
     public StreamAppenderatorTester build()
     {
       return new StreamAppenderatorTester(
@@ -435,8 +425,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           new NoopDataSegmentAnnouncer(),
           CentralizedDatasourceSchemaConfig.create(),
           serviceEmitter,
-          policyEnforcer,
-          messageGapAggStatsEnabled
+          policyEnforcer
       );
     }
 
@@ -456,8 +445,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           dataSegmentAnnouncer,
           config,
           serviceEmitter,
-          policyEnforcer,
-          messageGapAggStatsEnabled
+          policyEnforcer
       );
     }
   }

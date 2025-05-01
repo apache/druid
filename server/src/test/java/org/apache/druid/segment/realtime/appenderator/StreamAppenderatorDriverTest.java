@@ -127,7 +127,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         new TestPublishedSegmentRetriever(streamAppenderatorTester.getPushedSegments()),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new SegmentGenerationMetrics(false)
+        new SegmentGenerationMetrics()
     );
 
     EasyMock.replay(dataSegmentKiller);

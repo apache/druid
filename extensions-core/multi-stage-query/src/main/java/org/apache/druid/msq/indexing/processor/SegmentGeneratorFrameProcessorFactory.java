@@ -164,7 +164,7 @@ public class SegmentGeneratorFrameProcessorFactory
         ));
     final SegmentGenerationProgressCounter segmentGenerationProgressCounter = counters.segmentGenerationProgress();
     final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper =
-        new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter, false);
+        new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {

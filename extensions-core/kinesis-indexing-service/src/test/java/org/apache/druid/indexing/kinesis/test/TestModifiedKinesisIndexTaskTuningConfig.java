@@ -64,8 +64,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("maxBytesPerPoll") @Nullable Integer maxBytesPerPoll,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("extra") String extra,
-      @JsonProperty("messageGapAggStatsEnabled") @Nullable Boolean messageGapAggStatsEnabled
+      @JsonProperty("extra") String extra
   )
   {
     super(
@@ -96,8 +95,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         maxRecordsPerPoll,
         maxBytesPerPoll,
         intermediateHandoffPeriod,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
     this.extra = extra;
   }
@@ -132,8 +130,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getMaxRecordsPerPollConfigured(),
         base.getMaxBytesPerPollConfigured(),
         base.getIntermediateHandoffPeriod(),
-        base.getMaxColumnsToMerge(),
-        base.getMessageGapAggStatsEnabled()
+        base.getMaxColumnsToMerge()
     );
     this.extra = extra;
   }

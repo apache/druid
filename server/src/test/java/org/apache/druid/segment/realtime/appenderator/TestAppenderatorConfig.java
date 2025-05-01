@@ -45,7 +45,6 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   private final IndexSpec indexSpecForIntermediatePersists;
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
-  private final boolean messageGapAggStatsEnabled;
 
   public TestAppenderatorConfig(
       AppendableIndexSpec appendableIndexSpec,
@@ -58,8 +57,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
       Long pushTimeout,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Integer maxColumnsToMerge,
-      File basePersistDirectory,
-      Boolean messageGapAggStatsEnabled
+      File basePersistDirectory
   )
   {
     this.appendableIndexSpec = appendableIndexSpec;
@@ -76,7 +74,6 @@ public class TestAppenderatorConfig implements AppenderatorConfig
 
     this.partitionsSpec = null;
     this.indexSpecForIntermediatePersists = this.indexSpec;
-    this.messageGapAggStatsEnabled = messageGapAggStatsEnabled;
   }
 
   @Override
@@ -166,12 +163,6 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   }
 
   @Override
-  public boolean getMessageGapAggStatsEnabled()
-  {
-    return messageGapAggStatsEnabled;
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -189,7 +180,6 @@ public class TestAppenderatorConfig implements AppenderatorConfig
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            pushTimeout == that.pushTimeout &&
-           messageGapAggStatsEnabled == that.messageGapAggStatsEnabled &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -213,8 +203,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
         maxPendingPersists,
         reportParseExceptions,
         pushTimeout,
-        segmentWriteOutMediumFactory,
-        messageGapAggStatsEnabled
+        segmentWriteOutMediumFactory
     );
   }
 
@@ -234,7 +223,6 @@ public class TestAppenderatorConfig implements AppenderatorConfig
            ", reportParseExceptions=" + reportParseExceptions +
            ", pushTimeout=" + pushTimeout +
            ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
-           ", messageGapAggStatsEnabled=" + messageGapAggStatsEnabled +
            '}';
   }
 }

@@ -53,8 +53,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
-      @Nullable Integer maxColumnsToMerge,
-      @Nullable Boolean messageGapAggStatsEnabled
+      @Nullable Integer maxColumnsToMerge
   )
   {
     super(
@@ -79,8 +78,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
   }
 
@@ -105,8 +103,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("messageGapAggStatsEnabled") @Nullable Boolean messageGapAggStatsEnabled
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     this(
@@ -130,8 +127,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
   }
 
@@ -159,8 +155,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
-        getMaxColumnsToMerge(),
-        getMessageGapAggStatsEnabled()
+        getMaxColumnsToMerge()
     );
   }
 
@@ -188,8 +183,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", numPersistThreads=" + getNumPersistThreads() +
            ", getMaxColumnsToMerge=" + getMaxColumnsToMerge() +
-           ", messageGapAggStatsEnabled=" + getMessageGapAggStatsEnabled() +
-           '}';
+        '}';
   }
 
 }

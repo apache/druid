@@ -20,18 +20,14 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.AtomicDouble;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Metrics for segment generation.
- */
 public class SegmentGenerationMetrics
 {
   private static final long NO_EMIT_SEGMENT_HANDOFF_TIME = -1L;
-
   private static final long NO_EMIT_MESSAGE_GAP = -1L;
 
   private final AtomicLong dedupCount = new AtomicLong(0);
@@ -41,9 +37,7 @@ public class SegmentGenerationMetrics
   private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
   private final AtomicLong failedPersists = new AtomicLong(0);
   private final AtomicLong failedHandoffs = new AtomicLong(0);
-  // Measures the number of rows that have been merged. Segments are merged into a single file before they are pushed to deep storage.
   private final AtomicLong mergedRows = new AtomicLong(0);
-  // Measures the number of rows that have been pushed to deep storage.
   private final AtomicLong pushedRows = new AtomicLong(0);
   private final AtomicLong mergeTimeMillis = new AtomicLong(0);
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
@@ -53,25 +47,37 @@ public class SegmentGenerationMetrics
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
   private final AtomicBoolean processingDone = new AtomicBoolean(false);
-
   private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
 
-  // Message gap accounting
-  private final AtomicLong minMessageGap = new AtomicLong(Long.MAX_VALUE);
-  private final AtomicLong maxMessageGap = new AtomicLong(Long.MIN_VALUE);
-  private final AtomicLong numMessageGap = new AtomicLong(0);
-  private final AtomicDouble avgMessageGap = new AtomicDouble(0);
-  private final boolean messageGapAggStatsEnabled;
-
-  public SegmentGenerationMetrics(final boolean messageGapAggStatsEnabled)
+  public static class MessageGapStats
   {
-    this.messageGapAggStatsEnabled = messageGapAggStatsEnabled;
+    long minMessageGap = Long.MAX_VALUE;
+    long maxMessageGap = Long.MIN_VALUE;
+    long numMessageGap = 0;
+    double totalMessageGap = 0;
+
+    public double avgMessageGap()
+    {
+      return totalMessageGap / numMessageGap;
+    }
+
+    public long getMinMessageGap()
+    {
+      return minMessageGap;
+    }
+
+    public long getMaxMessageGap()
+    {
+      return maxMessageGap;
+    }
+
+    public long getNumMessageGap()
+    {
+      return numMessageGap;
+    }
   }
 
-  public boolean isMessageGapAggStatsEnabled()
-  {
-    return messageGapAggStatsEnabled;
-  }
+  private final AtomicReference<MessageGapStats> messageGapStats = new AtomicReference<>(new MessageGapStats());
 
   public void incrementRowOutputCount(long numRows)
   {
@@ -125,20 +131,28 @@ public class SegmentGenerationMetrics
 
   public void reportMessageGap(final long messageGap)
   {
-    final long numEvent = this.numMessageGap.incrementAndGet();
-    this.avgMessageGap.getAndUpdate(oldAvg -> oldAvg + ((messageGap - oldAvg) / numEvent));
-    this.minMessageGap.getAndAccumulate(messageGap, Math::min);
-    this.maxMessageGap.getAndAccumulate(messageGap, Math::max);
+    final MessageGapStats newStats = new MessageGapStats();
+    messageGapStats.getAndUpdate(stats -> {
+      newStats.totalMessageGap = stats.totalMessageGap + messageGap;
+      newStats.numMessageGap = stats.numMessageGap + 1;
+      if (stats.minMessageGap > messageGap) {
+        newStats.minMessageGap = messageGap;
+      }
+      if (stats.maxMessageGap < messageGap) {
+        newStats.maxMessageGap = messageGap;
+      }
+      return newStats;
+    });
   }
 
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
   {
-    this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
+    this.messageMaxTimestamp.getAndAccumulate(messageMaxTimestamp, Math::max);
   }
 
   public void reportMaxSegmentHandoffTime(long maxSegmentHandoffTime)
   {
-    this.maxSegmentHandoffTime.set(Math.max(maxSegmentHandoffTime, this.maxSegmentHandoffTime.get()));
+    this.maxSegmentHandoffTime.getAndAccumulate(maxSegmentHandoffTime, Math::max);
   }
 
   public void markProcessingDone()
@@ -222,24 +236,9 @@ public class SegmentGenerationMetrics
     return sinkCount.get();
   }
 
-  public long maxMessageGap()
+  public MessageGapStats getMessageGapStats()
   {
-    return maxMessageGap.get();
-  }
-
-  public long minMessageGap()
-  {
-    return minMessageGap.get();
-  }
-
-  public double avgMessageGap()
-  {
-    return avgMessageGap.get();
-  }
-
-  public long numMessageGapEvent()
-  {
-    return numMessageGap.get();
+    return messageGapStats.get();
   }
 
   public long messageGap()
@@ -254,7 +253,7 @@ public class SegmentGenerationMetrics
 
   public SegmentGenerationMetrics snapshot()
   {
-    final SegmentGenerationMetrics retVal = new SegmentGenerationMetrics(messageGapAggStatsEnabled);
+    final SegmentGenerationMetrics retVal = new SegmentGenerationMetrics();
     retVal.dedupCount.set(dedupCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
     retVal.numPersists.set(numPersists.get());
@@ -281,12 +280,13 @@ public class SegmentGenerationMetrics
     }
     retVal.messageGap.set(messageGapSnapshot);
 
-    if (messageGapAggStatsEnabled) {
-      retVal.numMessageGap.set(numMessageGap.get());
-      retVal.avgMessageGap.set(avgMessageGap.get());
-      retVal.minMessageGap.set(minMessageGap.get());
-      retVal.maxMessageGap.set(maxMessageGap.get());
-    }
+    final MessageGapStats currentStats = messageGapStats.get();
+    final MessageGapStats newStats = new MessageGapStats();
+    newStats.totalMessageGap = currentStats.totalMessageGap;
+    newStats.numMessageGap = currentStats.numMessageGap;
+    newStats.minMessageGap = currentStats.minMessageGap;
+    newStats.maxMessageGap = currentStats.maxMessageGap;
+    retVal.messageGapStats.set(newStats);
 
     reset();
 
@@ -296,9 +296,6 @@ public class SegmentGenerationMetrics
   private void reset()
   {
     maxSegmentHandoffTime.set(NO_EMIT_SEGMENT_HANDOFF_TIME);
-    minMessageGap.set(Long.MAX_VALUE);
-    maxMessageGap.set(Long.MIN_VALUE);
-    avgMessageGap.set(0);
-    numMessageGap.set(0);
+    messageGapStats.set(new MessageGapStats());
   }
 }

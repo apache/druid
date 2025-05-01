@@ -69,7 +69,6 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         null,
         null,
         null,
-        null,
         null
         );
   }
@@ -102,8 +101,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("messageGapAggStatsEnabled") @Nullable Boolean messageGapAggStatsEnabled
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     super(
@@ -130,8 +128,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         recordBufferSize,
         recordBufferOfferTimeout,
         maxRecordsPerPoll,
-        maxColumnsToMerge,
-        messageGapAggStatsEnabled
+        maxColumnsToMerge
     );
     this.workerThreads = workerThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
@@ -192,34 +189,33 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
   public String toString()
   {
     return "RabbitStreamSupervisorTuningConfig{" +
-           "maxRowsInMemory=" + getMaxRowsInMemory() +
-           ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
-           ", maxTotalRows=" + getMaxTotalRows() +
-           ", maxBytesInMemory=" + getMaxBytesInMemoryOrDefault() +
-           ", skipBytesInMemoryOverheadCheck=" + isSkipBytesInMemoryOverheadCheck() +
-           ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
-           ", maxPendingPersists=" + getMaxPendingPersists() +
-           ", indexSpec=" + getIndexSpec() +
-           ", reportParseExceptions=" + isReportParseExceptions() +
-           ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
-           ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
-           ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
-           ", workerThreads=" + workerThreads +
-           ", chatRetries=" + chatRetries +
-           ", httpTimeout=" + httpTimeout +
-           ", shutdownTimeout=" + shutdownTimeout +
-           ", recordBufferSize=" + getRecordBufferSizeConfigured() +
-           ", recordBufferOfferTimeout=" + getRecordBufferOfferTimeout() +
-           ", offsetFetchPeriod=" + offsetFetchPeriod +
-           ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
-           ", logParseExceptions=" + isLogParseExceptions() +
-           ", maxParseExceptions=" + getMaxParseExceptions() +
-           ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
-           ", numPersistThreads=" + getNumPersistThreads() +
-           ", maxRecordsPerPoll=" + getMaxRecordsPerPollConfigured() +
-           ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
-           ", messageGapAggStatsEnabled=" + getMessageGapAggStatsEnabled() +
-           '}';
+        "maxRowsInMemory=" + getMaxRowsInMemory() +
+        ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
+        ", maxTotalRows=" + getMaxTotalRows() +
+        ", maxBytesInMemory=" + getMaxBytesInMemoryOrDefault() +
+        ", skipBytesInMemoryOverheadCheck=" + isSkipBytesInMemoryOverheadCheck() +
+        ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
+        ", maxPendingPersists=" + getMaxPendingPersists() +
+        ", indexSpec=" + getIndexSpec() +
+        ", reportParseExceptions=" + isReportParseExceptions() +
+        ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
+        ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
+        ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
+        ", workerThreads=" + workerThreads +
+        ", chatRetries=" + chatRetries +
+        ", httpTimeout=" + httpTimeout +
+        ", shutdownTimeout=" + shutdownTimeout +
+        ", recordBufferSize=" + getRecordBufferSizeConfigured() +
+        ", recordBufferOfferTimeout=" + getRecordBufferOfferTimeout() +
+        ", offsetFetchPeriod=" + offsetFetchPeriod +
+        ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
+        ", logParseExceptions=" + isLogParseExceptions() +
+        ", maxParseExceptions=" + getMaxParseExceptions() +
+        ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
+        ", numPersistThreads=" + getNumPersistThreads() +
+        ", maxRecordsPerPoll=" + getMaxRecordsPerPollConfigured() +
+        ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
+        '}';
   }
 
   @Override
@@ -249,8 +245,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         getRecordBufferOfferTimeout(),
         getMaxRecordsPerPollConfigured(),
         getNumPersistThreads(),
-        getMaxColumnsToMerge(),
-        getMessageGapAggStatsEnabled()
+        getMaxColumnsToMerge()
         );
   }
 }

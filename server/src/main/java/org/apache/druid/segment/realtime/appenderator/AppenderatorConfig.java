@@ -77,9 +77,4 @@ public interface AppenderatorConfig extends TuningConfig
   {
     return IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE;
   }
-
-  default boolean getMessageGapAggStatsEnabled()
-  {
-    return false;
-  }
 }
