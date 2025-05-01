@@ -24,12 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentizerFactory;
@@ -41,13 +38,11 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -121,68 +116,12 @@ public class TestSegmentUtils
     }
   }
 
-  private static final QueryableIndex INDEX = new QueryableIndex()
+  private static final QueryableIndex INDEX = new NoopQueryableIndex()
   {
-    @Override
-    public Interval getDataInterval()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int getNumRows()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Indexed<String> getAvailableDimensions()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public BitmapFactory getBitmapFactoryForDimensions()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Nullable
-    @Override
-    public Metadata getMetadata()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Map<String, DimensionHandler> getDimensionHandlers()
-    {
-      throw new UnsupportedOperationException();
-    }
-
     @Override
     public List<OrderBy> getOrdering()
     {
       return Cursors.ascendingTimeOrder();
-    }
-
-    @Override
-    public void close()
-    {
-
-    }
-
-    @Override
-    public List<String> getColumnNames()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Nullable
-    @Override
-    public ColumnHolder getColumnHolder(String columnName)
-    {
-      throw new UnsupportedOperationException();
     }
   };
 
