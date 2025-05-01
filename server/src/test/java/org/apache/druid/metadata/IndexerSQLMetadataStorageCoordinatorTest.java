@@ -70,7 +70,6 @@ import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.assertj.core.api.Assertions;
 import org.hamcrest.MatcherAssert;
-import org.jetbrains.annotations.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -946,7 +945,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       protected Set<DataSegment> insertSegments(
           SegmentMetadataTransaction transaction,
           Set<DataSegment> segments,
-          @Nullable SegmentSchemaMapping segmentSchemaMapping
+          SegmentSchemaMapping segmentSchemaMapping
       )
       {
         throw new RuntimeException("Fail segment insert");
