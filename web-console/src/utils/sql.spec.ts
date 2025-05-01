@@ -619,5 +619,225 @@ describe('sql', () => {
         ]
       `);
     });
+
+    it('works with SET statements', () => {
+      const text = sane`
+        SET timeout = 100;
+        SET timeout = 50;
+        SELECT * FROM wikipedia
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        [
+          {
+            "endOffset": 60,
+            "endRowColumn": {
+              "column": 23,
+              "row": 2,
+            },
+            "index": 0,
+            "sql": "SET timeout = 100;
+        SET timeout = 50;
+        SELECT * FROM wikipedia",
+            "startOffset": 0,
+            "startRowColumn": {
+              "column": 0,
+              "row": 0,
+            },
+          },
+        ]
+      `);
+    });
+
+    it('works with multiple SET statement queries', () => {
+      const text = sane`
+        SET timeout = 100;
+        SELECT * FROM wikipedia
+
+
+        SET timeout = 50;
+        SET sqlTimeZone = 'Etc/UTC';
+        SELECT * FROM wikipedia
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        [
+          {
+            "endOffset": 42,
+            "endRowColumn": {
+              "column": 23,
+              "row": 1,
+            },
+            "index": 0,
+            "sql": "SET timeout = 100;
+        SELECT * FROM wikipedia",
+            "startOffset": 0,
+            "startRowColumn": {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          {
+            "endOffset": 115,
+            "endRowColumn": {
+              "column": 23,
+              "row": 6,
+            },
+            "index": 1,
+            "sql": "SET timeout = 50;
+        SET sqlTimeZone = 'Etc/UTC';
+        SELECT * FROM wikipedia",
+            "startOffset": 45,
+            "startRowColumn": {
+              "column": 0,
+              "row": 4,
+            },
+          },
+        ]
+      `);
+    });
+
+    it('test', () => {
+      const text = sane`
+        SET finalizeAggregations = FALSE;
+        SET groupByEnableMultiValueUnnesting = FALSE;
+        REPLACE INTO "kttm-v2-2019-08-25" OVERWRITE ALL
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "agent_category",
+          "agent_type",
+          "browser",
+          "browser_version",
+          "city",
+          "continent",
+          "country",
+          "version",
+          "event_type",
+          "event_subtype",
+          "loaded_image",
+          "adblock_list",
+          "forwarded_for",
+          ARRAY_TO_MV("language") AS "language",
+          "number",
+          "os",
+          "path",
+          "platform",
+          "referrer",
+          "referrer_host",
+          "region",
+          "remote_address",
+          "screen",
+          "session",
+          "session_length",
+          "timezone",
+          "timezone_offset",
+          "window"
+        FROM "ext"
+        PARTITIONED BY DAY
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        [
+          {
+            "endOffset": 655,
+            "endRowColumn": {
+              "column": 18,
+              "row": 34,
+            },
+            "index": 0,
+            "sql": "SET finalizeAggregations = FALSE;
+        SET groupByEnableMultiValueUnnesting = FALSE;
+        REPLACE INTO "kttm-v2-2019-08-25" OVERWRITE ALL
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "agent_category",
+          "agent_type",
+          "browser",
+          "browser_version",
+          "city",
+          "continent",
+          "country",
+          "version",
+          "event_type",
+          "event_subtype",
+          "loaded_image",
+          "adblock_list",
+          "forwarded_for",
+          ARRAY_TO_MV("language") AS "language",
+          "number",
+          "os",
+          "path",
+          "platform",
+          "referrer",
+          "referrer_host",
+          "region",
+          "remote_address",
+          "screen",
+          "session",
+          "session_length",
+          "timezone",
+          "timezone_offset",
+          "window"
+        FROM "ext"
+        PARTITIONED BY DAY",
+            "startOffset": 0,
+            "startRowColumn": {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          {
+            "endOffset": 636,
+            "endRowColumn": {
+              "column": 10,
+              "row": 33,
+            },
+            "index": 1,
+            "sql": "SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "agent_category",
+          "agent_type",
+          "browser",
+          "browser_version",
+          "city",
+          "continent",
+          "country",
+          "version",
+          "event_type",
+          "event_subtype",
+          "loaded_image",
+          "adblock_list",
+          "forwarded_for",
+          ARRAY_TO_MV("language") AS "language",
+          "number",
+          "os",
+          "path",
+          "platform",
+          "referrer",
+          "referrer_host",
+          "region",
+          "remote_address",
+          "screen",
+          "session",
+          "session_length",
+          "timezone",
+          "timezone_offset",
+          "window"
+        FROM "ext"",
+            "startOffset": 128,
+            "startRowColumn": {
+              "column": 0,
+              "row": 3,
+            },
+          },
+        ]
+      `);
+    });
   });
 });

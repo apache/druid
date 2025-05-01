@@ -16,28 +16,6 @@
  * limitations under the License.
  */
 
-export * from './auto-granularity';
-export * from './base64-url';
-export * from './column-metadata';
-export * from './date';
-export * from './date-format';
-export * from './download';
-export * from './download-query-detail-archive';
-export * from './druid-lookup';
-export * from './druid-query';
-export * from './explain';
-export * from './formatter';
-export * from './general';
-export * from './local-storage-backed-visibility';
-export * from './local-storage-keys';
-export * from './mouse-tooltip/mouse-tooltip';
-export * from './object-change';
-export * from './query-action';
-export * from './query-manager';
-export * from './sanitizers';
-export * from './sql';
-export * from './stage';
-export * from './table-helpers';
-export * from './ticks';
-export * from './types';
-export * from './values-query';
+export type ArrayIngestMode = 'array' | 'mvd';
+
+export const DEFAULT_ARRAY_INGEST_MODE: ArrayIngestMode = 'array';

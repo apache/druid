@@ -16,15 +16,26 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { SqlQuery, SqlSetStatement } from 'druid-query-toolkit';
 
-import { ArrayModeSwitch } from './array-mode-switch';
+export function wrapInExplainIfNeeded(query: string): string {
+  try {
+    return wrapInExplainAsParsedIfNeeded(query);
+  } catch {
+    return wrapInExplainAsStringIfNeeded(query);
+  }
+}
 
-describe('ArrayModeSwitch', () => {
-  it('matches snapshot', () => {
-    const arrayInput = <ArrayModeSwitch arrayMode="multi-values" changeArrayMode={() => {}} />;
+export function wrapInExplainAsParsedIfNeeded(query: string): string {
+  const parsed = SqlQuery.parse(query);
+  if (parsed.explain) return query;
+  return parsed.makeExplain().toString();
+}
 
-    const { container } = render(arrayInput);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+export function wrapInExplainAsStringIfNeeded(query: string): string {
+  const [setPart, queryPart] = SqlSetStatement.partitionSetStatements(query, true);
+  if (/^\s*EXPLAIN\sPLAN\sFOR/im.test(queryPart)) return query;
+
+  // Only replace the first occurrence
+  return setPart + queryPart.replace(/REPLACE|INSERT|SELECT|WITH/i, 'EXPLAIN PLAN FOR\n$&');
+}
