@@ -113,12 +113,23 @@ If there are multiple `Content-Type` headers, the **first** one is used.
 For response, the `resultFormat` is always `object` with the HTTP response header `Content-Type: application/json`.
 If you want more control over the query context or response format, use the above JSON format request body instead.
 
-For example:
+The following example demonstrates how to submit a SQL query in text format:
 
 ```commandline
-echo 'SELECT 1' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @-
 echo 'SELECT 1' | curl -H 'Content-Type: text/plain' http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @- 
 ```
+
+We can also use `application/x-www-form-urlencoded` to submit URL-encoded SQL queries as shown by the following examples:
+
+```commandline
+echo 'SELECT%20%31' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @-
+echo 'SELECT 1' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data-urlencode @-
+```
+
+The `curl` tool uses `application/x-www-form-urlencoded` as Content-Type header if the header is not given.
+
+The first example pass the URL-encoded query `SELECT%20%31`, which is `SELECT 1`, to the `curl` and `curl` will directly sends it to the server.
+While the second example passes the raw query `SELECT 1` to `curl` and the `curl` encodes the query to `SELECT%20%31` because of `--data-urlencode` option and sends the encoded text to the server.
 
 #### Responses
 

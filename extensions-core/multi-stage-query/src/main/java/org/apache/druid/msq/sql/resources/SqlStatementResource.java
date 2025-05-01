@@ -173,8 +173,9 @@ public class SqlStatementResource
     return doPost(SqlQuery.from(httpContext), req);
   }
 
-  public Response doPost(SqlQuery sqlQuery,
-                         @Context final HttpServletRequest req)
+  @VisibleForTesting
+  Response doPost(final SqlQuery sqlQuery,
+                  final HttpServletRequest req)
   {
     SqlQuery modifiedQuery = createModifiedSqlQuery(sqlQuery);
 

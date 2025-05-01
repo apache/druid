@@ -30,6 +30,7 @@ import com.sun.jersey.api.core.HttpContext;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
@@ -297,7 +298,8 @@ public class SqlQuery
     } else {
       throw new HttpException(
           Response.Status.UNSUPPORTED_MEDIA_TYPE,
-          "Unsupported Content-Type: " + contentType
+          StringUtils.format("Unsupported Content-Type: %s. Only application/json, text/plain or application/x-www-form-urlencoded is supported.",
+                             contentType)
       );
     }
   }
