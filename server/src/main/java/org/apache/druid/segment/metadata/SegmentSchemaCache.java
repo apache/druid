@@ -177,14 +177,14 @@ public class SegmentSchemaCache
   }
 
   /**
-   * After, metadata query result is published to the DB, it is removed from temporaryMetadataQueryResults
+   * After metadata query result is published to the DB, it is removed from temporaryMetadataQueryResults
    * and added to temporaryPublishedMetadataQueryResults.
    */
   public void markMetadataQueryResultPublished(SegmentId segmentId)
   {
     SchemaPayloadPlus temporaryMetadataQueryResult = temporaryMetadataQueryResults.get(segmentId);
     if (temporaryMetadataQueryResult == null) {
-      log.error("SegmentId [%s] not found in temporaryMetadataQueryResults map.", segmentId);
+      log.error("SegmentId[%s] not found in temporaryMetadataQueryResults map.", segmentId);
     } else {
       temporaryPublishedMetadataQueryResults.put(segmentId, temporaryMetadataQueryResult);
     }
@@ -193,9 +193,11 @@ public class SegmentSchemaCache
   }
 
   /**
-   * Fetch schema for a given segment. Note, that there is no check on schema version in this method,
-   * since schema corresponding to a particular version {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION} is cached.
-   * Any change in version would require a service restart, so this cache will never have schema for multiple versions.
+   * Reads the schema for a given segment ID from the cache.
+   * <p>
+   * Note that there is no check on schema version in this method, since only
+   * schema corresponding to a single schema version is present in the cache at
+   * any time. Any change in version requires a service restart and the cache is rebuilt.
    */
   public Optional<SchemaPayloadPlus> getSchemaForSegment(SegmentId segmentId)
   {
@@ -231,10 +233,7 @@ public class SegmentSchemaCache
       SchemaPayload schemaPayload = getSchemaPayloadMap().get(segmentMetadata.getSchemaFingerprint());
       if (schemaPayload != null) {
         return Optional.of(
-            new SchemaPayloadPlus(
-                schemaPayload,
-                segmentMetadata.getNumRows()
-            )
+            new SchemaPayloadPlus(schemaPayload, segmentMetadata.getNumRows())
         );
       }
     }
@@ -243,7 +242,7 @@ public class SegmentSchemaCache
   }
 
   /**
-   * Check if the schema is cached.
+   * Check if the cache contains schema for the given segment ID.
    */
   public boolean isSchemaCached(SegmentId segmentId)
   {
@@ -262,20 +261,20 @@ public class SegmentSchemaCache
     return false;
   }
 
-  private ImmutableMap<SegmentId, SegmentMetadata> getSegmentMetadataMap()
+  private Map<SegmentId, SegmentMetadata> getSegmentMetadataMap()
   {
     return finalizedSegmentSchemaInfo.getFinalizedSegmentMetadata();
   }
 
-  private ImmutableMap<String, SchemaPayload> getSchemaPayloadMap()
+  private Map<String, SchemaPayload> getSchemaPayloadMap()
   {
     return finalizedSegmentSchemaInfo.getFinalizedSegmentSchema();
   }
 
   /**
-   * On segment removal, remove cached schema for the segment.
+   * Removes schema cached for this segment ID.
    */
-  public boolean segmentRemoved(SegmentId segmentId)
+  public void segmentRemoved(SegmentId segmentId)
   {
     // remove the segment from all the maps
     realtimeSegmentSchema.remove(segmentId);
@@ -284,11 +283,10 @@ public class SegmentSchemaCache
 
     // Since finalizedSegmentMetadata & finalizedSegmentSchema is updated on each DB poll,
     // there is no need to remove segment from them.
-    return true;
   }
 
   /**
-   * Remove schema for realtime segment.
+   * Removes schema for realtime segment.
    */
   public void realtimeSegmentRemoved(SegmentId segmentId)
   {

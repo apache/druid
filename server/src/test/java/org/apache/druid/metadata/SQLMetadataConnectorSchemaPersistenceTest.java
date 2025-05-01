@@ -34,7 +34,7 @@ public class SQLMetadataConnectorSchemaPersistenceTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;

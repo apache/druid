@@ -1536,10 +1536,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   @Test
   public void testSchemaBackfilling() throws InterruptedException
   {
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
-    config.setBackFillEnabled(true);
-    config.setBackFillPeriod(1);
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, true, 1L, null);
 
     backFillQueue =
         new SegmentSchemaBackFillQueue(

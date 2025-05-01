@@ -390,8 +390,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   @Test
   public void testRefreshOnEachCycleCentralizedDatasourceSchemaEnabled() throws InterruptedException
   {
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
+    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.enabled(true);
 
     serverView = new TestTimelineServerView(walker.getSegments(), Collections.emptyList());
     druidServers = serverView.getDruidServers();

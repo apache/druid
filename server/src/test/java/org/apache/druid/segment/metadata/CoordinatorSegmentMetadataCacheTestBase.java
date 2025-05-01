@@ -42,7 +42,7 @@ import java.util.Map;
 public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCacheTestBase
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   public final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -101,10 +101,7 @@ public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCach
     );
 
     segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
-    config.setBackFillEnabled(false);
-    config.setBackFillPeriod(1);
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, false, 1L, null);
 
     backFillQueue =
         new SegmentSchemaBackFillQueue(

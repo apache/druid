@@ -51,7 +51,7 @@ public class SegmentSchemaBackFillQueueTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -71,10 +71,7 @@ public class SegmentSchemaBackFillQueueTest
     SegmentSchemaTestUtils segmentSchemaTestUtils =
         new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
-    config.setBackFillEnabled(true);
-    config.setBackFillPeriod(1);
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, true, 1L, null);
 
     CountDownLatch latch = new CountDownLatch(1);
 
@@ -155,12 +152,5 @@ public class SegmentSchemaBackFillQueueTest
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
     emitter.verifyValue("metadatacache/backfill/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 2);
     emitter.verifyValue("metadatacache/backfill/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo1"), 1);
-  }
-
-  private CentralizedDatasourceSchemaConfig getEnabledConfig()
-  {
-    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
-    config.setEnabled(true);
-    return config;
   }
 }

@@ -96,7 +96,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private static final String DATASOURCE = "datasource";
   static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");
@@ -137,10 +137,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     );
 
     segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
-    config.setBackFillEnabled(false);
-    config.setBackFillPeriod(1);
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, false, 1L, null);
 
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

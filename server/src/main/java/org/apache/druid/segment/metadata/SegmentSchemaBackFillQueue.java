@@ -87,7 +87,7 @@ public class SegmentSchemaBackFillQueue
     this.fingerprintGenerator = fingerprintGenerator;
     this.emitter = emitter;
     this.config = config;
-    this.executionPeriod = config.getBackFillPeriod();
+    this.executionPeriod = config.getBackFillPeriodInMillis();
     this.executor = isEnabled() ? scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s") : null;
   }
 

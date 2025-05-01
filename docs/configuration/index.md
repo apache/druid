@@ -585,15 +585,18 @@ This deep storage is used to interface with Cassandra. You must load the `druid-
 |`druid.storage.host`|Cassandra host.|none|
 |`druid.storage.keyspace`|Cassandra key space.|none|
 
-#### Centralized datasource schema
+#### Centralized datasource schema (Experimental)
 
-Centralized datasource schema is an [experimental feature](../development/experimental.md) to centralized datasource schema building within the Coordinator.
-Traditionally, the datasource schema is built in the Brokers by combining schema for all the available segments of a datasource.
-Brokers issue segment metadata query to data nodes and tasks to fetch segment schema.
-In the new arrangement, tasks publish segment schema along with segment metadata to the database and schema for realtime segments is periodically pushed to the Coordinator in the segment announcement flow.
-This enables Coordinator to cache segment schemas and build datasource schema by combining segment schema.
-Brokers query the datasource schema from the Coordinator, while retaining the ability to build table schema if the
-need arises.
+This is an [experimental feature](../development/experimental.md) to centralize datasource schema management on the Coordinator.
+Traditionally, the schema of a datasource is built by each Broker by combining the schema of all available segments of that datasource.
+Brokers issue segment metadata queries to data nodes and tasks to fetch the schema for a given segment.
+
+Centralized schema management changes this flow as follows:
+- Tasks publish segment schema along with segment metadata to the database.
+- Tasks push schema for realtime segments periodically to the Coordinator via the segment announcement flow.
+- Coordinator caches segment schemas and builds a combined schema for each datasource.
+- Each Broker queries the datasource schema from the Coordinator rather than building it on its own.
+- Brokers still retain the ability to build a datasource schema if they are unable to fetch it from the Coordinator.
 
 |Property|Description|Default|Required|
 |-----|-----------|-------|--------|
@@ -1171,7 +1174,7 @@ If autoscaling is enabled, you can set these additional configs:
 
 The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../ingestion/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
 
-##### Segment metadata cache (EXPERIMENTAL)
+##### Segment metadata cache (Experimental)
 
 The following properties pertain to segment metadata caching on the Overlord that may be used to speed up segment allocation and other metadata operations.
 

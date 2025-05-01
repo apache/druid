@@ -53,7 +53,7 @@ import java.util.Set;
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
-  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED =
+  private static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED =
       CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
 
   private static final EmittingLogger log = new EmittingLogger(ServerRunnable.class);
@@ -207,7 +207,7 @@ public abstract class ServerRunnable extends GuiceRunnable
 
   protected static void validateCentralizedDatasourceSchemaConfig(Properties properties)
   {
-    if (isSegmentMetadataCacheEnabled(properties)) {
+    if (isSegmentSchemaCacheEnabled(properties)) {
       String serverViewType = properties.getProperty(ServerViewModule.SERVERVIEW_TYPE_PROPERTY);
       if (serverViewType != null && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
         throw DruidException
@@ -227,7 +227,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
   }
 
-  protected static boolean isSegmentMetadataCacheEnabled(Properties properties)
+  protected static boolean isSegmentSchemaCacheEnabled(Properties properties)
   {
     return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }

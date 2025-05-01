@@ -502,13 +502,17 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       dataSourcesNeedingRebuild.clear();
     }
 
-    log.debug("Datasources to rebuild are [%s]", dataSourcesToRebuild);
+    log.debug("Re-building schema for datasources[%s].", dataSourcesToRebuild);
     // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
 
       if (rowSignature == null) {
-        log.info("RowSignature null for dataSource [%s], implying that it no longer exists. All metadata removed.", dataSource);
+        log.info(
+            "Datasource[%s] no longer exists as its row signature is [null]."
+            + " Removing all cached metadata.",
+            dataSource
+        );
         tables.remove(dataSource);
         continue;
       }
@@ -517,9 +521,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       final DataSourceInformation oldTable = tables.put(dataSource, druidTable);
 
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-        log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
+        log.info("Datasource[%s] has a new row signature[%s].", dataSource, druidTable.getRowSignature());
       } else {
-        log.debug("[%s] signature is unchanged.", dataSource);
+        log.debug("Datasource[%s] row signature is unchanged.", dataSource);
       }
     }
   }
@@ -527,7 +531,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
   {
-    log.info("Logging a sample of 5 segments [%s] to be refreshed for datasource [%s]", Iterables.limit(ids, 5), dataSource);
+    log.info(
+        "Refreshing schema of [%d] segment IDs (sample=[%s]) for datasource[%s].",
+        ids.size(), Iterables.limit(ids, 5), dataSource
+    );
   }
 
   private void filterRealtimeSegments(Set<SegmentId> segmentIds)
@@ -626,14 +633,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       DataSourceInformation oldTable = coldSchemaTable.put(dataSourceName, druidTable);
 
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-        log.info("[%s] has new cold signature: %s.", dataSource, druidTable.getRowSignature());
+        log.info("Datasource[%s] has new cold row signature[%s].", dataSource, druidTable.getRowSignature());
       } else {
-        log.debug("[%s] signature is unchanged.", dataSource);
+        log.debug("Row signature for datasource[%s] is unchanged.", dataSource);
       }
 
       emitter.emit(metricBuilder.setMetric(DEEP_STORAGE_ONLY_METRIC_PREFIX + "refresh/count", coldSegmentWithSchema));
 
-      log.debug("[%s] signature from cold segments is [%s]", dataSourceName, coldSignature);
+      log.debug("Built row signature[%s] from cold segments for datasource[%s].", coldSignature, datasources);
     }
 
     // remove any stale datasource from the map

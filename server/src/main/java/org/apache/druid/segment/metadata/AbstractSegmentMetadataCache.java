@@ -818,7 +818,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
   /**
    * Action to be executed on the result of Segment metadata query.
-   * Returns if the segment metadata was updated.
+   *
+   * @return true if the segment metadata was updated successfully.
    */
   protected boolean segmentMetadataQueryResultHandler(
       String dataSource,
