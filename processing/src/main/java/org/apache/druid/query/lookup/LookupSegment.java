@@ -85,6 +85,6 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
   @Override
   public String asString()
   {
-    return "lookup." + lookupName;
+    return getClass().getSimpleName() + ":" + lookupName;
   }
 }
