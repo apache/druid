@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.initialization.jetty.HttpException;
 
 import javax.annotation.Nullable;
@@ -233,7 +232,7 @@ public class SqlQuery
    * it's not able to get the data from the stream of HttpServletRequest for such content type.
    * So we use HttpContext to get the request entity/string instead of using HttpServletRequest.
    *
-   * @throws HttpException       if the content type is not supported or the SQL query is malformed
+   * @throws HttpException if the content type is not supported or the SQL query is malformed
    */
   public static SqlQuery from(HttpContext httpContext) throws HttpException
   {
