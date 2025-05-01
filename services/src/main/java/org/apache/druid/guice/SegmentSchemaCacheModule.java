@@ -95,13 +95,4 @@ public class SegmentSchemaCacheModule implements Module
   {
     return scheduler;
   }
-
-  public static void bindSchemaConfig(Binder binder)
-  {
-    JsonConfigProvider.bind(
-        binder,
-        CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX,
-        CentralizedDatasourceSchemaConfig.class
-    );
-  }
 }
