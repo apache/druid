@@ -1240,8 +1240,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
 
-    emitter.verifyEmitted("metadatacache/refresh/time", Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
-    emitter.verifyEmitted("metadatacache/refresh/count", Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
+    emitter.verifyEmitted(Metric.REFRESH_DURATION_MILLIS, Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
+    emitter.verifyEmitted(Metric.REFRESHED_SEGMENTS, Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
   }
 
   @Test
@@ -1656,7 +1656,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.awaitInitialization();
 
     // verify metadata query is not executed, since the schema is already cached
-    emitter.verifyNotEmitted("metadatacache/refresh/count");
+    emitter.verifyNotEmitted(Metric.REFRESHED_SEGMENTS);
 
     // verify that datasource schema is built
     verifyFooDSSchema(schema, 6);

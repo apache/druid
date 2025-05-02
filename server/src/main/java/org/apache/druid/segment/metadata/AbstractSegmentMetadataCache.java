@@ -285,7 +285,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                 break;
               }
 
-              // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
+              // lastFailure != 0L means exceptions happened before and some refresh work was not completed.
               // so that even if ServerView is initialized, we can't let broker complete initialization.
               if (isServerViewInitialized && lastFailure == 0L) {
                 // Server view is initialized, but we don't need to do a refresh. Could happen if there are
@@ -358,7 +358,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // report the cache init time
     if (initialized.getCount() == 1) {
       long elapsedTime = stopwatch.millisElapsed();
-      emitMetric("metadatacache/init/time", elapsedTime);
+      emitMetric(Metric.STARTUP_DURATION_MILLIS, elapsedTime);
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), elapsedTime);
       stopwatch.stop();
     }
@@ -695,13 +695,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * Attempt to refresh "segmentSignatures" for a set of segments. Returns the set of segments actually refreshed,
-   * which may be a subset of the asked-for set.
+   * Attempt to refresh row signature for a set of segments.
+   *
+   * @return Set of segment IDs actually updated.
    */
   @VisibleForTesting
   public Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
   {
-    final Set<SegmentId> retVal = new HashSet<>();
+    final Set<SegmentId> updatedSegmentIds = new HashSet<>();
 
     // Organize segments by datasource.
     final Map<String, TreeSet<SegmentId>> segmentMap = new TreeMap<>();
@@ -712,11 +713,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
 
     for (Map.Entry<String, TreeSet<SegmentId>> entry : segmentMap.entrySet()) {
-      final String dataSource = entry.getKey();
-      retVal.addAll(refreshSegmentsForDataSource(dataSource, entry.getValue()));
+      updatedSegmentIds.addAll(refreshSegmentsForDataSource(entry.getKey(), entry.getValue()));
     }
 
-    return retVal;
+    return updatedSegmentIds;
   }
 
   private long recomputeIsRealtime(ImmutableSet<DruidServerMetadata> servers)
@@ -737,7 +737,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource.
+   * Attempt to refresh row signatures for a set of segments for a particular dataSource.
    *
    * @return Set of segment IDs actually refreshed.
    */
@@ -753,15 +753,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     log.debug("Refreshing metadata for datasource[%s].", dataSource);
 
-    final ServiceMetricEvent.Builder builder =
-        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
-
-    emitMetric("metadatacache/refresh/count", segments.size(), builder);
-
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
 
-    final Set<SegmentId> retVal = new HashSet<>();
+    final Set<SegmentId> updatedSegmentIds = new HashSet<>();
 
     logSegmentsToRefresh(dataSource, segments);
 
@@ -780,7 +775,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
           log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           if (updateSegmentMetadata(segmentId, analysis)) {
-            retVal.add(segmentId);
+            updatedSegmentIds.add(segmentId);
           }
         }
 
@@ -791,16 +786,20 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       yielder.close();
     }
 
-    long refreshDurationMillis = stopwatch.millisElapsed();
+    final long refreshDurationMillis = stopwatch.millisElapsed();
 
-    emitMetric("metadatacache/refresh/time", refreshDurationMillis, builder);
+    final ServiceMetricEvent.Builder builder =
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
+
+    emitMetric(Metric.REFRESHED_SEGMENTS, updatedSegmentIds.size(), builder);
+    emitMetric(Metric.REFRESH_DURATION_MILLIS, refreshDurationMillis, builder);
 
     log.debug(
         "Refreshed metadata for datasource[%s] in [%,d] ms (%d segments queried, %d segments left).",
-        dataSource, refreshDurationMillis, retVal.size(), segments.size() - retVal.size()
+        dataSource, refreshDurationMillis, updatedSegmentIds.size(), segments.size() - updatedSegmentIds.size()
     );
 
-    return retVal;
+    return updatedSegmentIds;
   }
 
   /**

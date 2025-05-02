@@ -45,6 +45,11 @@ public class Metric
   public static final String BROKER_POLL_DURATION_MILLIS = PREFIX + "poll/time";
   public static final String BROKER_POLL_FAILED = PREFIX + "poll/failed";
 
+  // Schema refresh metrics
+  public static final String STARTUP_DURATION_MILLIS = "metadatacache/init/time";
+  public static final String REFRESHED_SEGMENTS = PREFIX + "refresh/count";
+  public static final String REFRESH_DURATION_MILLIS = PREFIX + "refresh/time";
+
   /**
    * Number of used cold segments in the metadata store.
    */
