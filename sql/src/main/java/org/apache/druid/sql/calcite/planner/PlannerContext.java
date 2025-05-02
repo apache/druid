@@ -128,13 +128,13 @@ public class PlannerContext
   private final PlannerToolbox plannerToolbox;
   private final ExpressionParser expressionParser;
   private final String sql;
-  private final PlannerConfig plannerConfig;
   private final SqlEngine engine;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
 
+  private PlannerConfig plannerConfig;
   private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
@@ -557,6 +557,14 @@ public class PlannerContext
   {
     this.queryContext.putAll(toAdd);
     initializeContextFields();
+  }
+
+  /**
+   * Add additional query context parameters to planner config, overriding any existing values.
+   */
+  public void addAllToPlannerConfig(Map<String, Object> toAdd)
+  {
+    this.plannerConfig = this.plannerConfig.withOverrides(toAdd);
   }
 
   public SqlEngine getEngine()
