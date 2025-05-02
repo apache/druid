@@ -941,8 +941,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
     Assert.assertEquals(
-        1, emitter.getMetricEvents()
-                  .get(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC).size()
+        1,
+        emitter.getMetricEvents().get(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC).size()
     );
 
     autoScaler.reset();
@@ -993,8 +993,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
     Assert.assertEquals(
-        1, emitter.getMetricEvents()
-                  .get(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC).size()
+        1,
+        emitter.getMetricEvents().get(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC).size()
     );
 
     autoScaler.reset();
@@ -1050,8 +1050,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
 
     Assert.assertEquals(
-        1, emitter.getMetricEvents()
-                  .get(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC).size()
+        1,
+        emitter.getMetricEvents().get(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC).size()
     );
 
     autoScaler.reset();
