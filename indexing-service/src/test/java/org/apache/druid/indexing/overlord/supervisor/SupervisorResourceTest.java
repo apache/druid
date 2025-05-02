@@ -1349,12 +1349,6 @@ public class SupervisorResourceTest extends EasyMockSupport
     }
 
     @Override
-    public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
-    {
-      // no validation in test spec
-    }
-
-    @Override
     public boolean equals(Object o)
     {
       if (this == o) {

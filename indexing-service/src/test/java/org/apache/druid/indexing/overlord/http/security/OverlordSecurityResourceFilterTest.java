@@ -170,11 +170,6 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
           return null;
         }
 
-        @Override
-        public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
-        {
-          // No validation logic for test spec
-        }
       };
       EasyMock.expect(supervisorManager.getSupervisorSpec(EasyMock.anyString()))
               .andReturn(Optional.of(supervisorSpec))

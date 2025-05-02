@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -583,7 +584,7 @@ public class KafkaSupervisorSpecTest
   }
 
   @Test
-  public void testValidateProposedSpecEvolution() throws JsonProcessingException
+  public void testValidateSpecUpdateTo() throws JsonProcessingException
   {
     String sourceSpecJson = "{\n"
                   + "  \"type\": \"kafka\",\n"
@@ -703,8 +704,8 @@ public class KafkaSupervisorSpecTest
     KafkaSupervisorSpec invalidDestSpec = mapper.readValue(invalidDestSpecJson, KafkaSupervisorSpec.class);
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> sourceSpec.validateProposedSpecEvolution(invalidDestSpec)
+        DruidException.class,
+        () -> sourceSpec.validateSpecUpdateTo(invalidDestSpec)
     );
 
     // Changing topic name is not allowed
@@ -767,8 +768,8 @@ public class KafkaSupervisorSpecTest
     KafkaSupervisorSpec invalidDestSpecTwo = mapper.readValue(invalidDestSpecTwoJson, KafkaSupervisorSpec.class);
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> sourceSpec.validateProposedSpecEvolution(invalidDestSpecTwo)
+        DruidException.class,
+        () -> sourceSpec.validateSpecUpdateTo(invalidDestSpecTwo)
     );
 
     // Changing non-source related field is allowed. We change taskCount to 3
@@ -829,6 +830,6 @@ public class KafkaSupervisorSpecTest
                                     + "  }\n"
                                     + "}";
     KafkaSupervisorSpec validDestSpec = mapper.readValue(validDestSpecJson, KafkaSupervisorSpec.class);
-    sourceSpec.validateProposedSpecEvolution(validDestSpec);
+    sourceSpec.validateSpecUpdateTo(validDestSpec);
   }
 }

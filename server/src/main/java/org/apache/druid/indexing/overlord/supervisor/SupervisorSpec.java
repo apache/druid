@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -102,14 +103,17 @@ public interface SupervisorSpec
   String getSource();
 
   /**
-   * Checks if a proposed evolution of the supervisor spec is allowed.
+   * Checks if a spec can be replaced with a proposed spec (proposesSpec).
    * <p>
-   * SupervisorSpec `that` is proposed to replace the current supervisor spec. Implementations of this method determine
-   * if the system should allow this evolution.
+   * By default, this  method does no validation checks. Implementations of this method can choose to define rules
+   * for spec updates and throw an exception if the update is not allowed.
    * </p>
    *
-   * @param that the proposed supervisor spec
-   * @throws IllegalArgumentException if the evolution is not allowed
+   * @param proposedSpec the proposed supervisor spec
+   * @throws IllegalArgumentException if the spec update is not allowed
    */
-  void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException;
+  default void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+  {
+    // The default implementation does not do any validation checks.
+  }
 }

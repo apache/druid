@@ -174,12 +174,6 @@ public class SupervisorManager
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
-      if (shouldUpdateSpec) {
-        SupervisorSpec existingSpec = getSpec(spec.getId());
-        if (existingSpec != null) {
-          existingSpec.validateProposedSpecEvolution(spec);
-        }
-      }
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       createAndStartSupervisorInternal(spec, shouldUpdateSpec);
       return shouldUpdateSpec;
@@ -203,8 +197,16 @@ public class SupervisorManager
       try {
         byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
         Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
-        return currentSupervisor == null
-               || !Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs));
+        if (currentSupervisor == null || currentSupervisor.rhs == null) {
+          return true;
+        } else {
+          if (!Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
+            currentSupervisor.rhs.validateSpecUpdateTo(spec);
+            return true;
+          } else {
+            return false;
+          }
+        }
       }
       catch (JsonProcessingException ex) {
         log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());

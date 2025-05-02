@@ -202,13 +202,6 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return suspended;
   }
 
-  @Override
-  public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
-  {
-    // No vaildation logic in abstract class implementation. If concrete classes need to do evolution validation,
-    // they should override this method.
-  }
-
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
 
 }

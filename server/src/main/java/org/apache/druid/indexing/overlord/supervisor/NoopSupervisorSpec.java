@@ -131,12 +131,6 @@ public class NoopSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public void validateProposedSpecEvolution(SupervisorSpec that) throws IllegalArgumentException
-  {
-    // NoopSupervisorSpec does not check any evolution proposal
-  }
-
-  @Override
   public Supervisor createSupervisor()
   {
     return new Supervisor()
