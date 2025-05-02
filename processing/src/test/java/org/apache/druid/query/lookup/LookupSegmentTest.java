@@ -111,7 +111,7 @@ public class LookupSegmentTest
   @Test
   public void test_asString()
   {
-    Assert.assertEquals("lookup.mylookup", LOOKUP_SEGMENT.asString());
+    Assert.assertEquals("LookupSegment:mylookup", LOOKUP_SEGMENT.asString());
   }
 
   @Test
