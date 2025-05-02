@@ -29,6 +29,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -108,14 +109,14 @@ public class CoordinatorDynamicConfigSyncer
   private void broadcastConfigToBrokers()
   {
     invalidateInSyncBrokersIfNeeded();
-    final long broadcastStart = System.currentTimeMillis();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     for (DiscoveryDruidNode broker : getKnownBrokers()) {
       pushConfigToBroker(broker);
     }
     emitStat(
         Stats.Configuration.TOTAL_SYNC_TIME,
         RowKey.empty(),
-        System.currentTimeMillis() - broadcastStart
+        stopwatch.millisElapsed()
     );
   }
 
@@ -164,7 +165,7 @@ public class CoordinatorDynamicConfigSyncer
    */
   private void pushConfigToBroker(DiscoveryDruidNode broker)
   {
-    final long startTime = System.currentTimeMillis();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     final ServiceLocation brokerLocation = CoordinatorDynamicConfigSyncer.convertDiscoveryNodeToServiceLocation(broker);
     final BrokerClient brokerClient = new BrokerClientImpl(
         clientFactory.makeClient(
@@ -194,7 +195,7 @@ public class CoordinatorDynamicConfigSyncer
     emitStat(
         Stats.Configuration.BROKER_SYNC_TIME,
         RowKey.with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
-        System.currentTimeMillis() - startTime
+        stopwatch.millisElapsed()
     );
   }
 
