@@ -186,7 +186,7 @@ public class CoordinatorDynamicConfigSyncer
       // Catch and ignore the exception, wait for the next sync.
       log.error(e, "Exception while syncing dynamic configuration to broker[%s]", brokerLocation);
       emitStat(
-          Stats.Configuration.BROKER_SYNC_FAILURE,
+          Stats.Configuration.BROKER_SYNC_ERROR,
           RowKey.with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
           1
       );

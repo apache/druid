@@ -193,7 +193,7 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("brokerSyncTime", "config/brokerSync/time");
     public static final CoordinatorStat TOTAL_SYNC_TIME
         = CoordinatorStat.toDebugAndEmit("totalBrokerSyncTime", "config/brokerSync/total/time");
-    public static final CoordinatorStat BROKER_SYNC_FAILURE
+    public static final CoordinatorStat BROKER_SYNC_ERROR
         = CoordinatorStat.toDebugAndEmit("configSyncFailure", "config/brokerSync/error");
   }
 }
