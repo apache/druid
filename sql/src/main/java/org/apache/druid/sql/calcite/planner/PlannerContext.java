@@ -174,7 +174,7 @@ public class PlannerContext
     this.engine = engine;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
-    initializeContextFields();
+    initializeContextFieldsAndPlannerConfig();
   }
 
   public static PlannerContext create(
@@ -553,15 +553,7 @@ public class PlannerContext
   public void addAllToQueryContext(Map<String, Object> toAdd)
   {
     this.queryContext.putAll(toAdd);
-    initializeContextFields();
-  }
-
-  /**
-   * Add additional query context parameters to planner config, overriding any existing values.
-   */
-  public void addAllToPlannerConfig(Map<String, Object> toAdd)
-  {
-    this.plannerConfig = this.plannerConfig.withOverrides(toAdd);
+    initializeContextFieldsAndPlannerConfig();
   }
 
   public SqlEngine getEngine()
@@ -640,7 +632,7 @@ public class PlannerContext
 
 
 
-  private void initializeContextFields()
+  private void initializeContextFieldsAndPlannerConfig()
   {
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final DateTime utcNow;
