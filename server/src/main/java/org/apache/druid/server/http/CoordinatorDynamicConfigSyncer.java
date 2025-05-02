@@ -20,6 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
@@ -106,7 +107,8 @@ public class CoordinatorDynamicConfigSyncer
    * Push the latest coordinator dynamic config, provided by the configManager to all currently known Brokers. Also
    * invalidates the set of inSyncBrokers if the config has changed.
    */
-  private void broadcastConfigToBrokers()
+  @VisibleForTesting
+  void broadcastConfigToBrokers()
   {
     invalidateInSyncBrokersIfNeeded();
     final Stopwatch stopwatch = Stopwatch.createStarted();
