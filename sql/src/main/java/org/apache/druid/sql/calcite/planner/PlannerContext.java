@@ -163,7 +163,6 @@ public class PlannerContext
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
       final String sql,
-      final PlannerConfig plannerConfig,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -172,7 +171,6 @@ public class PlannerContext
     this.plannerToolbox = plannerToolbox;
     this.expressionParser = new ExpressionParserImpl(plannerToolbox.exprMacroTable());
     this.sql = sql;
-    this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.engine = engine;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -190,7 +188,6 @@ public class PlannerContext
     return new PlannerContext(
         plannerToolbox,
         sql,
-        plannerToolbox.plannerConfig().withOverrides(queryContext),
         engine,
         queryContext,
         hook
@@ -702,6 +699,12 @@ public class PlannerContext
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
       this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+    }
+
+    if (plannerConfig != null) {
+      plannerConfig = plannerConfig.withOverrides(queryContext);
+    } else {
+      plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
     }
   }
 }

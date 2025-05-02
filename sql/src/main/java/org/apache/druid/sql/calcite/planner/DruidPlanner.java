@@ -297,9 +297,8 @@ public class DruidPlanner implements Closeable
    * If an {@link SqlNode} is a {@link SqlNodeList}, it must consist of 0 or more {@link SqlSetOption} followed by a
    * single {@link SqlNode} which is NOT a {@link SqlSetOption}. All {@link SqlSetOption} will be converted into a
    * context parameters {@link Map} and added to the {@link PlannerContext} with
-   * {@link PlannerContext#addAllToQueryContext(Map)} and {@link PlannerContext#addAllToPlannerConfig(Map)}.
-   * The final {@link SqlNode} of the {@link SqlNodeList} is returned by this method as the {@link SqlNode} which
-   * should actually be validated and executed, and will have access to the
+   * {@link PlannerContext#addAllToQueryContext(Map)}. The final {@link SqlNode} of the {@link SqlNodeList} is returned
+   * by this method as the {@link SqlNode} which should actually be validated and executed, and will have access to the
    * modified query context through the {@link PlannerContext}. {@link SqlSetOption} override any existing query
    * context parameter values.
    */
@@ -350,7 +349,6 @@ public class DruidPlanner implements Closeable
         throw InvalidSqlInput.exception("Statement list is missing a non-SET statement to execute");
       }
       plannerContext.addAllToQueryContext(contextMap);
-      plannerContext.addAllToPlannerConfig(contextMap);
     }
     return root;
   }
