@@ -548,14 +548,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       gracefulShutdownInternal();
       changeTaskCountInIOConfig(desiredActiveTaskCount);
       clearAllocationInfo();
-      emitter.emit(ServiceMetricEvent.builder()
-                                     .setDimension("dataSource", dataSource)
-                                     .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-                                     .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
-                                     .setMetric(
-                                         AUTOSCALER_SCALING_TIME_METRIC,
-                                         System.currentTimeMillis() - scaleActionStart
-                                     ));
+      final long scaleActionEnd = System.currentTimeMillis();
+      try {
+        emitter.emit(ServiceMetricEvent.builder()
+                                       .setDimension("dataSource", dataSource)
+                                       .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                       .setDimensionIfNotNull(
+                                           DruidMetrics.TAGS,
+                                           spec.getContextValue(DruidMetrics.TAGS)
+                                       )
+                                       .setMetric(
+                                           AUTOSCALER_SCALING_TIME_METRIC,
+                                           scaleActionEnd - scaleActionStart
+                                       ));
+      }
+      catch (Exception e) {
+        log.warn(e, "Unable to emit scale action time for dataSource [%s]", dataSource);
+      }
       log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
       return true;
     }

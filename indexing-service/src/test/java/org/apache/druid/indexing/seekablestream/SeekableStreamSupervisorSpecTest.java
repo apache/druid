@@ -788,6 +788,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
+    Assert.assertEquals(
+        1,
+        emitter.getMetricEvents().get(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC).size()
+    );
     autoScaler.reset();
     autoScaler.stop();
   }
@@ -846,6 +850,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("Already at max task count"::equals));
+    Assert.assertFalse(emitter.getMetricEvents().containsKey(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC));
 
     autoScaler.reset();
     autoScaler.stop();
