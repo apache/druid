@@ -153,6 +153,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
   public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
   public static final String AUTOSCALER_REQUIRED_TASKS_METRIC = "task/autoScaler/requiredCount";
+  public static final String AUTOSCALER_SCALING_TIME_METRIC = "task/autoScaler/scaleActionTime";
 
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
@@ -543,9 +544,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           desiredActiveTaskCount,
           dataSource
       );
+      final long scaleActionStart = System.currentTimeMillis();
       gracefulShutdownInternal();
       changeTaskCountInIOConfig(desiredActiveTaskCount);
       clearAllocationInfo();
+      emitter.emit(ServiceMetricEvent.builder()
+                                     .setDimension("dataSource", dataSource)
+                                     .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                     .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
+                                     .setMetric(
+                                         AUTOSCALER_SCALING_TIME_METRIC,
+                                         System.currentTimeMillis() - scaleActionStart
+                                     ));
       log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
       return true;
     }
