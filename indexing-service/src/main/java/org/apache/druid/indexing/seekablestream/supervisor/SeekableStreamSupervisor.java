@@ -155,6 +155,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public static final String AUTOSCALER_REQUIRED_TASKS_METRIC = "task/autoScaler/requiredCount";
   public static final String AUTOSCALER_SCALING_TIME_METRIC = "task/autoScaler/scaleActionTime";
 
+  public static final String SUPERVISOR_INVALID_OFFSET_METRIC = "supervisor/error/invalidOffset";
+
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
   private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
@@ -3946,6 +3948,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.debug("Getting sequence [%s] from metadata storage for partition [%s]", sequence, partition);
       if (!taskTuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         if (!checkOffsetAvailability(partition, sequence)) {
+          emitter.emit(ServiceMetricEvent.builder()
+                                         .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                         .setDimension(DruidMetrics.PARTITION, partition)
+                                         .setDimension("sequence", sequence)
+                                         .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                         .setDimensionIfNotNull(
+                                             DruidMetrics.TAGS,
+                                             spec.getContextValue(DruidMetrics.TAGS)
+                                         )
+                                         .setMetric(SUPERVISOR_INVALID_OFFSET_METRIC, 1));
           if (taskTuningConfig.isResetOffsetAutomatically()) {
             resetInternal(
                 createDataSourceMetaDataForReset(ioConfig.getStream(), ImmutableMap.of(partition, sequence))

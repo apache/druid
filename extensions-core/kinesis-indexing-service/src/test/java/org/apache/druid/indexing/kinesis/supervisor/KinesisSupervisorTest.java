@@ -65,6 +65,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
@@ -919,6 +920,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "org.apache.druid.java.util.common.ISE",
         supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
     );
+    serviceEmitter.verifyEmitted(SeekableStreamSupervisor.SUPERVISOR_INVALID_OFFSET_METRIC, 1);
   }
 
   @Test
@@ -2861,6 +2863,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
+
+    serviceEmitter.verifyEmitted(SeekableStreamSupervisor.SUPERVISOR_INVALID_OFFSET_METRIC, 1);
   }
 
   @Test
@@ -5201,7 +5205,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             indexerMetadataStorageCoordinator,
             taskClientFactory,
             OBJECT_MAPPER,
-            new NoopServiceEmitter(),
+            serviceEmitter,
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             null,
@@ -5305,7 +5309,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             indexerMetadataStorageCoordinator,
             taskClientFactory,
             OBJECT_MAPPER,
-            new NoopServiceEmitter(),
+            serviceEmitter,
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             null,

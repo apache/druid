@@ -69,6 +69,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -370,7 +371,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         indexerMetadataStorageCoordinator,
         taskClientFactory,
         OBJECT_MAPPER,
-        new NoopServiceEmitter(),
+        serviceEmitter,
         new DruidMonitorSchedulerConfig(),
         rowIngestionMetersFactory,
         new SupervisorStateManagerConfig()
@@ -1366,6 +1367,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "org.apache.druid.java.util.common.ISE",
         supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
     );
+    serviceEmitter.verifyEmitted(SeekableStreamSupervisor.SUPERVISOR_INVALID_OFFSET_METRIC, 1);
   }
 
   @Test
@@ -3580,6 +3582,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
+
+    serviceEmitter.verifyEmitted(SeekableStreamSupervisor.SUPERVISOR_INVALID_OFFSET_METRIC, 1);
   }
 
   @Test
@@ -5365,7 +5369,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             indexerMetadataStorageCoordinator,
             taskClientFactory,
             OBJECT_MAPPER,
-            new NoopServiceEmitter(),
+            serviceEmitter,
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             supervisorConfig
