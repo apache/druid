@@ -179,7 +179,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
     @Override
     public <T> T as(@Nonnull Class<T> clazz)
     {
-      if (Cursor.class.equals(clazz)) {
+      if (CursorFactory.class.equals(clazz)) {
         return (T) cursorFactory;
       }
       return super.as(clazz);

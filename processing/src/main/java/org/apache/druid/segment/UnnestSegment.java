@@ -40,6 +40,7 @@ public class UnnestSegment extends WrappedSegmentReference
     this.unnestColumn = unnestColumn;
     this.filter = filter;
   }
+  
   @Nullable
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
