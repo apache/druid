@@ -360,7 +360,6 @@ public class SinkTest extends InitializedNullHandlingTest
         new FireHydrant(EasyMock.createMock(IncrementalIndex.class), 0, segmentId),
         new FireHydrant(
             new RowBasedSegment<>(
-                segmentId,
                 Sequences.empty(),
                 RowAdapters.standardRow(),
                 RowSignature.empty()
