@@ -140,7 +140,6 @@ public class FileRequestLoggerTest
     ObjectMapper objectMapper = new ObjectMapper();
     DateTime dateTime = DateTimes.nowUtc();
     File logDir = temporaryFolder.newFolder();
-    String nativeQueryLogString = dateTime + "\t" + HOST + "\t" + "native";
     String sqlQueryLogString = dateTime + "\t" + HOST + "\t" + "sql";
 
     FileRequestLogger hourlyLogger = new FileRequestLogger(
