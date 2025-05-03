@@ -273,8 +273,8 @@ To enable sending all the HTTP requests to a log, set `org.apache.druid.jetty.Re
 
 The `file` request logger stores daily request logs on disk.
 
-|Property|Description| Default           |
-|--------|-----------|-------------------|
+|Property|Description|Default|
+|--------|-----------|-------|
 |`druid.request.logging.dir`| Historical, Realtime, and Broker services maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in. | none|
 |`druid.request.logging.filePattern`| [Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file.| "yyyy-MM-dd'.log'"|
 | `druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least `PT1H`.| none|
