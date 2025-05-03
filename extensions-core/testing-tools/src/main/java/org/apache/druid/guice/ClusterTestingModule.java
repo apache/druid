@@ -131,7 +131,6 @@ public class ClusterTestingModule implements DruidModule
       this.mapper = mapper;
     }
 
-
     @Override
     public ClusterTestingTaskConfig get()
     {

@@ -19,22 +19,37 @@
 
 package org.apache.druid.guice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.cli.CliOverlord;
 import org.apache.druid.cli.CliPeon;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClientImpl;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
 import org.apache.druid.testing.cluster.overlord.FaultyMetadataStorageCoordinator;
 import org.apache.druid.testing.cluster.overlord.FaultyTaskLockbox;
@@ -56,6 +71,11 @@ import java.util.Set;
 
 public class ClusterTestingModuleTest
 {
+  private static final ObjectMapper MAPPER = TestHelper
+      .makeJsonMapper()
+      .registerModules(new IndexingServiceTuningConfigModule().getJacksonModules())
+      .registerModules(new IndexingServiceInputSourceModule().getJacksonModules());
+
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -122,7 +142,7 @@ public class ClusterTestingModuleTest
   }
 
   @Test
-  public void test_peonRunnable_hasFaultParams_ifProvidedInTaskContext() throws IOException
+  public void test_peonRunnable_getsConfigParams_ifProvidedInTaskContext() throws IOException
   {
     try {
       final CliPeon peon = new CliPeon();
@@ -138,7 +158,7 @@ public class ClusterTestingModuleTest
       );
 
       // Write out the task payload in a temporary json file
-      final String taskJson = TestHelper.JSON_MAPPER.writeValueAsString(task);
+      final String taskJson = MAPPER.writeValueAsString(task);
       File file = temporaryFolder.newFile("task.json");
       FileUtils.write(file, taskJson, StandardCharsets.UTF_8);
       peon.taskAndStatusFile = List.of(file.getParent(), "1");
@@ -149,27 +169,65 @@ public class ClusterTestingModuleTest
       final Injector peonInjector = peon.makeInjector(Set.of(NodeRole.PEON));
 
       final ClusterTestingTaskConfig taskConfig = peonInjector.getInstance(ClusterTestingTaskConfig.class);
-      Assert.assertNotNull(taskConfig);
-      Assert.assertNotNull(taskConfig.getCoordinatorClientConfig());
-      Assert.assertNotNull(taskConfig.getOverlordClientConfig());
-      Assert.assertNotNull(taskConfig.getTaskActionClientConfig());
-      Assert.assertNotNull(taskConfig.getMetadataConfig());
+      verifyTestingConfig(taskConfig);
+    }
+    finally {
+      System.clearProperty("druid.unsafe.cluster.testing");
+    }
+  }
 
-      Assert.assertEquals(
-          Duration.standardSeconds(10),
-          taskConfig.getTaskActionClientConfig().getSegmentPublishDelay()
+  @Test
+  public void test_parallelIndexSupervisorTask_withDruidInputSource_hasNoCircularDeps() throws IOException
+  {
+    try {
+      final CliPeon peon = new CliPeon();
+      System.setProperty("druid.unsafe.cluster.testing", "true");
+
+      // Create a ParallelIndexSupervisorTask
+      final IndexIO indexIO = new IndexIO(MAPPER, ColumnConfig.DEFAULT);
+      final DruidInputSource inputSource = new DruidInputSource(
+          "test",
+          Intervals.ETERNITY,
+          null,
+          TrueDimFilter.instance(),
+          null,
+          null,
+          indexIO,
+          new NoopCoordinatorClient(),
+          new SegmentCacheManagerFactory(indexIO, MAPPER),
+          new TaskConfigBuilder().build()
       );
-      Assert.assertEquals(
-          Duration.standardSeconds(5),
-          taskConfig.getTaskActionClientConfig().getSegmentAllocateDelay()
+      final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          inputSource,
+          new JsonInputFormat(null, null, null, null, null),
+          false,
+          null
       );
-      Assert.assertEquals(
-          Duration.standardSeconds(30),
-          taskConfig.getCoordinatorClientConfig().getMinSegmentHandoffDelay()
+      final Task task = new ParallelIndexSupervisorTask(
+          "test-task",
+          null,
+          null,
+          new ParallelIndexIngestionSpec(
+              DataSchema.builder().withDataSource("test").build(),
+              ioConfig,
+              ParallelIndexTuningConfig.defaultConfig()
+          ),
+          Map.of("clusterTesting", createClusterTestingConfigMap())
       );
-      Assert.assertFalse(
-          taskConfig.getMetadataConfig().isCleanupPendingSegments()
-      );
+
+      // Write out the task payload in a temporary json file
+      final String taskJson = MAPPER.writeValueAsString(task);
+      File file = temporaryFolder.newFile("task.json");
+      FileUtils.write(file, taskJson, StandardCharsets.UTF_8);
+      peon.taskAndStatusFile = List.of(file.getParent(), "1");
+
+      final Injector baseInjector = new StartupInjectorBuilder().forServer().build();
+      baseInjector.injectMembers(peon);
+
+      final Injector peonInjector = peon.makeInjector(Set.of(NodeRole.PEON));
+
+      final ClusterTestingTaskConfig taskConfig = peonInjector.getInstance(ClusterTestingTaskConfig.class);
+      verifyTestingConfig(taskConfig);
     }
     finally {
       System.clearProperty("druid.unsafe.cluster.testing");
@@ -200,22 +258,37 @@ public class ClusterTestingModuleTest
     }
   }
 
+  private static void verifyTestingConfig(ClusterTestingTaskConfig taskConfig)
+  {
+    Assert.assertNotNull(taskConfig);
+    Assert.assertNotNull(taskConfig.getCoordinatorClientConfig());
+    Assert.assertNotNull(taskConfig.getOverlordClientConfig());
+    Assert.assertNotNull(taskConfig.getTaskActionClientConfig());
+    Assert.assertNotNull(taskConfig.getMetadataConfig());
+
+    Assert.assertEquals(
+        Duration.standardSeconds(10),
+        taskConfig.getTaskActionClientConfig().getSegmentPublishDelay()
+    );
+    Assert.assertEquals(
+        Duration.standardSeconds(5),
+        taskConfig.getTaskActionClientConfig().getSegmentAllocateDelay()
+    );
+    Assert.assertEquals(
+        Duration.standardSeconds(30),
+        taskConfig.getCoordinatorClientConfig().getMinSegmentHandoffDelay()
+    );
+    Assert.assertFalse(
+        taskConfig.getMetadataConfig().isCleanupPendingSegments()
+    );
+  }
+
   private Map<String, Object> createClusterTestingConfigMap()
   {
-    final Map<String, Object> taskActionClientConfig = Map.of(
-        "segmentPublishDelay", "PT10S",
-        "segmentAllocateDelay", "PT5S"
-    );
-    final Map<String, Object> coordinatorClientConfig = Map.of(
-        "minSegmentHandoffDelay", "PT30S"
-    );
-    final Map<String, Object> metadataConfig = Map.of(
-        "cleanupPendingSegments", false
-    );
     return Map.of(
-        "coordinatorClientConfig", coordinatorClientConfig,
-        "taskActionClientConfig", taskActionClientConfig,
-        "metadataConfig", metadataConfig
+        "coordinatorClientConfig", Map.of("minSegmentHandoffDelay", "PT30S"),
+        "taskActionClientConfig", Map.of("segmentPublishDelay", "PT10S", "segmentAllocateDelay", "PT5S"),
+        "metadataConfig", Map.of("cleanupPendingSegments", false)
     );
   }
 }

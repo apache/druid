@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.discovery.NodeRole;
@@ -50,12 +51,12 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
 {
   private static final Logger log = new Logger(FaultyCoordinatorClient.class);
 
-  private final ClusterTestingTaskConfig.CoordinatorClientConfig config;
+  private final Provider<ClusterTestingTaskConfig> testConfigProvider;
   private final ConcurrentHashMap<SegmentDescriptor, Stopwatch> segmentHandoffTimers = new ConcurrentHashMap<>();
 
   @Inject
   public FaultyCoordinatorClient(
-      ClusterTestingTaskConfig testingConfig,
+      Provider<ClusterTestingTaskConfig> testingConfigProvider,
       @Json final ObjectMapper jsonMapper,
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       @Coordinator final ServiceLocator serviceLocator
@@ -69,8 +70,7 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
         ),
         jsonMapper
     );
-    this.config = testingConfig.getCoordinatorClientConfig();
-    log.info("Initializing FaultyCoordinatorClient with config[%s].", config);
+    this.testConfigProvider = testingConfigProvider;
   }
 
   @Override
@@ -106,6 +106,6 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
 
   private Duration getHandoffDelay()
   {
-    return config.getMinSegmentHandoffDelay();
+    return testConfigProvider.get().getCoordinatorClientConfig().getMinSegmentHandoffDelay();
   }
 }
