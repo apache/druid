@@ -59,7 +59,7 @@ public class FileRequestLoggerTest
     String nativeQueryLogString = dateTime + "\t" + HOST + "\t" + "native";
     String sqlQueryLogString = dateTime + "\t" + HOST + "\t" + "sql";
 
-    statFileRequestLogger fileRequestLogger = new FileRequestLogger(
+    FileRequestLogger fileRequestLogger = new FileRequestLogger(
         objectMapper,
         scheduler,
         logDir,
@@ -121,7 +121,7 @@ public class FileRequestLoggerTest
   public void testLogRemoveWithInvalidDuration() throws Exception
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("request logs retention period must be atleast PT1H");
+    expectedException.expectMessage("request logs retention period must be atleast as long as roll period");
     ObjectMapper objectMapper = new ObjectMapper();
     File logDir = temporaryFolder.newFolder();
     FileRequestLogger fileRequestLogger = new FileRequestLogger(

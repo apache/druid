@@ -60,7 +60,7 @@ public class FileRequestLogger implements RequestLogger
   private final Duration rollPeriod;
   private final Object lock = new Object();
 
-  private DateTime currentPeriod;
+  private DateTime currentPeriodStart;
   private OutputStreamWriter fileWriter;
 
   public FileRequestLogger(
@@ -79,12 +79,12 @@ public class FileRequestLogger implements RequestLogger
     this.durationToRetain = durationToRetain;
     this.rollPeriod = rollPeriod;
     Preconditions.checkArgument(
-        this.durationToRetain == null || this.durationToRetain.compareTo(Duration.standardHours(1)) >= 0,
-        "request logs retention period must be atleast PT1H"
-    );
-    Preconditions.checkArgument(
         this.rollPeriod == null || this.rollPeriod.compareTo(Duration.standardHours(1)) >= 0,
         "request logs roll period must be atleast PT1H"
+    );
+    Preconditions.checkArgument(
+        this.durationToRetain == null || this.durationToRetain.compareTo(this.rollPeriod) >= 0,
+        "request logs retention period must be atleast as long as roll period"
     );
   }
 
@@ -103,11 +103,11 @@ public class FileRequestLogger implements RequestLogger
         mutableDateTime.setHourOfDay(0);
       }
       synchronized (lock) {
-        currentPeriod = mutableDateTime.toDateTime(ISOChronology.getInstanceUTC());
+        currentPeriodStart = mutableDateTime.toDateTime(ISOChronology.getInstanceUTC());
 
         fileWriter = getFileWriter();
       }
-      long nextPeriodMillis = currentPeriod.plus(rollPeriod).getMillis();
+      long nextPeriodMillis = currentPeriodStart.plus(rollPeriod).getMillis();
       Duration initialDelay = new Duration(nextPeriodMillis - System.currentTimeMillis());
 
       ScheduledExecutors.scheduleWithFixedDelay(
@@ -121,11 +121,11 @@ public class FileRequestLogger implements RequestLogger
             {
               try {
                 synchronized (lock) {
-                  currentPeriod = currentPeriod.plus(rollPeriod);
+                  currentPeriodStart = currentPeriodStart.plus(rollPeriod);
 
                   CloseableUtils.closeAndSuppressExceptions(
                       fileWriter,
-                      e -> log.warn("Could not close log file for %s. Creating new log file anyway.", currentPeriod)
+                      e -> log.warn("Could not close log file for %s. Creating new log file anyway.", currentPeriodStart)
                   );
 
                   fileWriter = getFileWriter();
@@ -185,7 +185,7 @@ public class FileRequestLogger implements RequestLogger
   private OutputStreamWriter getFileWriter() throws FileNotFoundException
   {
     return new OutputStreamWriter(
-        new FileOutputStream(new File(baseDir, filePattern.print(currentPeriod)), true),
+        new FileOutputStream(new File(baseDir, filePattern.print(currentPeriodStart)), true),
         StandardCharsets.UTF_8
     );
   }
