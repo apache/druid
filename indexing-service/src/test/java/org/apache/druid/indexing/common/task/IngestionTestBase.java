@@ -183,7 +183,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector(),
         () -> new SegmentsMetadataManagerConfig(null, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        CentralizedDatasourceSchemaConfig.create(),
+        CentralizedDatasourceSchemaConfig::create,
         NoopServiceEmitter.instance(),
         objectMapper
     );
@@ -325,6 +325,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        Suppliers.ofInstance(CentralizedDatasourceSchemaConfig.create()),
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()

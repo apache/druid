@@ -153,6 +153,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        CentralizedDatasourceSchemaConfig::create,
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
             nameFormat,

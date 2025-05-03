@@ -90,6 +90,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
         jsonMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(storageConfig),
+        Suppliers.ofInstance(CentralizedDatasourceSchemaConfig.create()),
         connector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, segmentMetadataCacheExec, false),
         emitter
@@ -103,7 +104,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
         connector,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        CentralizedDatasourceSchemaConfig.create(),
+        CentralizedDatasourceSchemaConfig::create,
         emitter,
         jsonMapper
     );
@@ -184,7 +185,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
                 connector,
                 Suppliers.ofInstance(config),
                 derbyConnectorRule.metadataTablesConfigSupplier(),
-                CentralizedDatasourceSchemaConfig.create(true),
+                () -> CentralizedDatasourceSchemaConfig.create(true),
                 emitter,
                 jsonMapper
             )

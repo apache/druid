@@ -176,6 +176,7 @@ public class TaskActionTestKit extends ExternalResource
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
+        Suppliers.ofInstance(CentralizedDatasourceSchemaConfig.create()),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
         NoopServiceEmitter.instance()

@@ -63,7 +63,6 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   private final SegmentsMetadataManager delegate;
   private final SegmentMetadataCache segmentMetadataCache;
   private final SegmentsMetadataManagerConfig managerConfig;
-  private final CentralizedDatasourceSchemaConfig schemaConfig;
 
   public SqlSegmentsMetadataManagerV2(
       SegmentMetadataCache segmentMetadataCache,
@@ -71,7 +70,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
       SQLMetadataConnector connector,
       Supplier<SegmentsMetadataManagerConfig> managerConfig,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      Supplier<CentralizedDatasourceSchemaConfig> centralizedDatasourceSchemaConfig,
       ServiceEmitter serviceEmitter,
       ObjectMapper jsonMapper
   )
@@ -79,14 +78,13 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
     this.delegate = new SqlSegmentsMetadataManager(
         jsonMapper,
         managerConfig, tablesConfig, connector, segmentSchemaCache,
-        centralizedDatasourceSchemaConfig, serviceEmitter
+        centralizedDatasourceSchemaConfig.get(), serviceEmitter
     );
     this.managerConfig = managerConfig.get();
     this.segmentMetadataCache = segmentMetadataCache;
-    this.schemaConfig = centralizedDatasourceSchemaConfig;
 
     // Segment metadata cache currently cannot handle schema updates
-    if (segmentMetadataCache.isEnabled() && schemaConfig.isEnabled()) {
+    if (segmentMetadataCache.isEnabled() && centralizedDatasourceSchemaConfig.isEnabled()) {
       throw new IllegalArgumentException(
           "Segment metadata incremental cache['druid.manager.segments.useIncrementalCache']"
           + " and segment schema cache['druid.centralizedDatasourceSchema.enabled']"

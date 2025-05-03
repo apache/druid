@@ -48,6 +48,8 @@ import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -70,6 +72,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * In-memory implementation of {@link SegmentMetadataCache}.
@@ -109,6 +112,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final Duration pollDuration;
   private final UsageMode cacheMode;
   private final MetadataStorageTablesConfig tablesConfig;
+  private final CentralizedDatasourceSchemaConfig schemaConfig;
   private final SQLMetadataConnector connector;
 
   private final ListeningScheduledExecutorService pollExecutor;
@@ -141,6 +145,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       ObjectMapper jsonMapper,
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
+      Supplier<CentralizedDatasourceSchemaConfig> schemaConfig,
       SQLMetadataConnector connector,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter
@@ -150,6 +155,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.cacheMode = config.get().getCacheUsageMode();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
     this.tablesConfig = tablesConfig.get();
+    this.schemaConfig = schemaConfig.get();
     this.connector = connector;
     this.pollExecutor = isEnabled()
                         ? MoreExecutors.listeningDecorator(executorFactory.create(1, "SegmentMetadataCache-%s"))
@@ -539,6 +545,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     updateUsedSegmentPayloadsInCache(datasourceToSummary);
     retrieveAllPendingSegments(datasourceToSummary);
     updatePendingSegmentsInCache(datasourceToSummary, syncStartTime);
+    retrieveAllSegmentSchemas();
     markCacheSynced(syncStartTime);
 
     syncFinishTime.set(DateTimes.nowUtc());
@@ -679,7 +686,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   /**
    * Updates the cache of each datasource with the segment IDs fetched from the
    * metadata store in {@link #retrieveUsedSegmentIds}. The update done on each
-   * datasource cache is atomic.
+   * datasource cache is atomic. Also identifies the segment IDs which have been
+   * updated in the metadata store and need to be refreshed in the cache.
    */
   private void updateSegmentIdsInCache(
       Map<String, DatasourceSegmentSummary> datasourceToSummary,
@@ -871,6 +879,64 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   /**
+   * Retrieves all segment schemas from the metadata store irrespective of their
+   * used status or last updated time.
+   */
+  private void retrieveAllSegmentSchemas()
+  {
+    if (!schemaConfig.isEnabled()) {
+      return;
+    }
+
+    final Stopwatch fetchDuration = Stopwatch.createStarted();
+    final String sql = StringUtils.format(
+        "SELECT fingerprint, payload FROM %s WHERE version = %s",
+        tablesConfig.getSegmentSchemasTable(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
+
+    final List<SegmentSchemaRecord> records = inReadOnlyTransaction(
+        (handle, status) ->
+            handle.createQuery(sql)
+                  .setFetchSize(connector.getStreamingFetchSize())
+                  .map((index, r, ctx) -> mapToSchemaRecord(r))
+                  .list()
+    );
+
+    final Map<String, SchemaPayload> fingerprintToSchemaPayload =
+        records.stream().filter(Objects::nonNull).collect(Collectors.toMap(r -> r.fingerprint, r -> r.payload));
+
+    if (fingerprintToSchemaPayload.size() < records.size()) {
+      emitMetric("skipped_schemas", records.size() - fingerprintToSchemaPayload.size());
+    }
+    emitMetric("schema_poll_duration", fetchDuration.millisElapsed());
+
+    // TODO: update in schema cache directly
+    //  to update the schema cache, we would also need to get the current metadata map
+    //  since not all the segments would be fetched in every poll, so we would need to add some delta on top of it
+  }
+
+  /**
+   * Tries to parse the fields of the result set into a {@link SegmentSchemaRecord}.
+   *
+   * @return null if an error occurred while parsing the result
+   */
+  private SegmentSchemaRecord mapToSchemaRecord(ResultSet resultSet)
+  {
+    String fingerprint = null;
+    try {
+      fingerprint = resultSet.getString("fingerprint");
+      return new SegmentSchemaRecord(
+          fingerprint,
+          jsonMapper.readValue(resultSet.getBytes("payload"), SchemaPayload.class)
+      );
+    }
+    catch (Throwable t) {
+      log.error(t, "Could not read segment schema with fingerprint[%s]", fingerprint);
+      return null;
+    }
+  }
+
+  /**
    * Tries to parse the fields of the result set into a {@link DataSegmentPlus}.
    *
    * @return null if an error occurred while parsing the result
@@ -940,6 +1006,21 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     private void addPendingSegmentRecord(PendingSegmentRecord record)
     {
       persistedPendingSegments.add(record);
+    }
+  }
+
+  /**
+   * Represents a single entry in the segment schemas table.
+   */
+  private static class SegmentSchemaRecord
+  {
+    private final String fingerprint;
+    private final SchemaPayload payload;
+
+    private SegmentSchemaRecord(String fingerprint, SchemaPayload payload)
+    {
+      this.fingerprint = fingerprint;
+      this.payload = payload;
     }
   }
 }
