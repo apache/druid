@@ -62,7 +62,7 @@ public class TimeseriesQueryRunnerFactory
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> createRunner(final Segment segment)
   {
-    return new TimeseriesQueryRunner(engine, segment.asCursorFactory(), segment.as(TimeBoundaryInspector.class));
+    return new TimeseriesQueryRunner(engine, segment.as(CursorFactory.class), segment.as(TimeBoundaryInspector.class));
   }
 
   @Override

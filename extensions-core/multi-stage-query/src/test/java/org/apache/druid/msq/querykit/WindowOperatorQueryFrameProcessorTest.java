@@ -361,7 +361,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         signature
     );
 
-    return makeChannelFromCursorFactory(segment.asCursorFactory(), keyColumns);
+    return makeChannelFromCursorFactory(segment.as(CursorFactory.class), keyColumns);
   }
 
   private ReadableInput makeChannelFromCursorFactory(

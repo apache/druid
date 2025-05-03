@@ -81,7 +81,7 @@ import java.util.stream.Collectors;
  * the prefix, will be shadowed. It is up to the caller to ensure that no important columns are shadowed by the
  * chosen prefix.
  * <p>
- * When analyzed by {@link DataSourceAnalysis}, the right-hand side of this datasource
+ * When analyzed by {@link JoinDataSourceAnalysis}, the right-hand side of this datasource
  * will become a {@link PreJoinableClause} object.
  */
 public class JoinDataSource implements DataSource

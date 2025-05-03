@@ -60,7 +60,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
           }
         },
         ByteRowKeyComparatorTest.NO_COMPLEX_SIGNATURE
-    ).asCursorFactory();
+    ).as(CursorFactory.class);
 
     frameWithoutComplexColumns = Iterables.getOnlyElement(
         FrameSequenceBuilder.fromCursorFactory(rowBasedAdapterWithoutComplexColumn)
@@ -80,7 +80,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
           }
         },
         ByteRowKeyComparatorTest.SIGNATURE
-    ).asCursorFactory();
+    ).as(CursorFactory.class);
 
     frameWithComplexColumns = Iterables.getOnlyElement(
         FrameSequenceBuilder.fromCursorFactory(rowBasedAdapterWithComplexColumn)

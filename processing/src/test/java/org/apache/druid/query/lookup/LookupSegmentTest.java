@@ -27,6 +27,7 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.RowBasedCursorFactory;
@@ -124,25 +125,24 @@ public class LookupSegmentTest
   public void test_asQueryableIndex()
   {
     Assert.assertNull(LOOKUP_SEGMENT.as(QueryableIndex.class));
-    Assert.assertNull(LOOKUP_SEGMENT.asQueryableIndex());
   }
 
   @Test
-  public void test_asStorageAdapter_getRowSignature()
+  public void test_asCursorFactory_getRowSignature()
   {
     Assert.assertEquals(
         RowSignature.builder()
                     .add("k", ColumnType.STRING)
                     .add("v", ColumnType.STRING)
                     .build(),
-        LOOKUP_SEGMENT.asCursorFactory().getRowSignature()
+        LOOKUP_SEGMENT.as(CursorFactory.class).getRowSignature()
     );
   }
 
   @Test
-  public void test_asStorageAdapter_getColumnCapabilitiesK()
+  public void test_asCursorFactory_getColumnCapabilitiesK()
   {
-    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.asCursorFactory().getColumnCapabilities("k");
+    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.as(CursorFactory.class).getColumnCapabilities("k");
 
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
 
@@ -154,9 +154,9 @@ public class LookupSegmentTest
   }
 
   @Test
-  public void test_asStorageAdapter_getColumnCapabilitiesV()
+  public void test_asCursorFactory_getColumnCapabilitiesV()
   {
-    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.asCursorFactory().getColumnCapabilities("v");
+    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.as(CursorFactory.class).getColumnCapabilities("v");
 
     // Note: the "v" column does not actually have multiple values, but the RowBasedStorageAdapter doesn't allow
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
@@ -167,12 +167,12 @@ public class LookupSegmentTest
   }
 
   @Test
-  public void test_asStorageAdapter_makeCursor()
+  public void test_asCursorFactory_makeCursor()
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970/PT1H"))
                                                      .build();
-    try (final CursorHolder cursorHolder = LOOKUP_SEGMENT.asCursorFactory().makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = LOOKUP_SEGMENT.as(CursorFactory.class).makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       final List<Pair<String, String>> kvs = new ArrayList<>();
@@ -196,10 +196,10 @@ public class LookupSegmentTest
   }
 
   @Test
-  public void test_asStorageAdapter_isRowBasedAdapter()
+  public void test_asCursorFactory_isRowBasedAdapter()
   {
     // This allows us to assume that LookupSegmentTest is further exercising makeCursor and verifying misc.
     // methods like getMinTime, getMaxTime, getMetadata, etc, without checking them explicitly in _this_ test class.
-    MatcherAssert.assertThat(LOOKUP_SEGMENT.asCursorFactory(), CoreMatchers.instanceOf(RowBasedCursorFactory.class));
+    MatcherAssert.assertThat(LOOKUP_SEGMENT.as(CursorFactory.class), CoreMatchers.instanceOf(RowBasedCursorFactory.class));
   }
 }
