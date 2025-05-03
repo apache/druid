@@ -1710,7 +1710,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
-      log.warn(e, "Exception in supervisor run loop for dataSource [%s]", dataSource);
+      log.makeAlert(e, "Exception in supervisor run loop for dataSource [%s]", dataSource).emit();
     }
     finally {
       stateManager.markRunFinished();
