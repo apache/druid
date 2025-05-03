@@ -51,14 +51,14 @@ public interface LagAggregator
     @Override
     public <PartitionIdType> LagStats aggregate(Map<PartitionIdType, Long> partitionLags)
     {
-      long maxLag = 0, totalLag = 0, avgLag;
+      long maxLag = 0, totalLag = 0;
       for (long lag : partitionLags.values()) {
         if (lag > maxLag) {
           maxLag = lag;
         }
-        totalLag += lag;
+        totalLag += Math.max(lag, 0);
       }
-      avgLag = partitionLags.isEmpty() ? 0 : totalLag / partitionLags.size();
+      final long avgLag = partitionLags.isEmpty() ? 0 : totalLag / partitionLags.size();
       return new LagStats(maxLag, totalLag, avgLag);
     }
   }

@@ -38,22 +38,22 @@ public class FaultyLagAggregator implements LagAggregator
 {
   private static final Logger log = new Logger(FaultyLagAggregator.class);
 
-  private final int multiplier;
+  private final int lagMultiplier;
   private final LagAggregator delegate = LagAggregator.DEFAULT;
 
   @JsonCreator
   public FaultyLagAggregator(
-      @JsonProperty("multiplier") int multiplier
+      @JsonProperty("lagMultiplier") int lagMultiplier
   )
   {
-    this.multiplier = multiplier;
-    log.info("Multiplying lags by factor[%d].", multiplier);
+    this.lagMultiplier = lagMultiplier;
+    log.info("Multiplying lags by factor[%d].", lagMultiplier);
   }
 
   @JsonProperty
-  public int getMultiplier()
+  public int getLagMultiplier()
   {
-    return multiplier;
+    return lagMultiplier;
   }
 
   @Override
@@ -61,9 +61,9 @@ public class FaultyLagAggregator implements LagAggregator
   {
     LagStats originalAggregate = delegate.aggregate(partitionLags);
     return new LagStats(
-        originalAggregate.getMaxLag() * getMultiplier(),
-        originalAggregate.getTotalLag() * getMultiplier(),
-        originalAggregate.getAvgLag() * getMultiplier()
+        originalAggregate.getMaxLag() * getLagMultiplier(),
+        originalAggregate.getTotalLag() * getLagMultiplier(),
+        originalAggregate.getAvgLag() * getLagMultiplier()
     );
   }
 }

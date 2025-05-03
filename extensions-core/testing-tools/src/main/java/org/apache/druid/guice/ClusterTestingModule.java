@@ -75,17 +75,20 @@ public class ClusterTestingModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    if (!isClusterTestingEnabled) {
-      // Do nothing
-      return;
+    if (isClusterTestingEnabled) {
+      bindDependenciesForClusterTestingMode(binder);
     }
+  }
 
+  private void bindDependenciesForClusterTestingMode(Binder binder)
+  {
     if (roles.equals(Set.of(NodeRole.PEON))) {
-      // If this is a Peon, bind faulty clients for Coordinator, Overlord and task actions
+      // Bind cluster testing config
       binder.bind(ClusterTestingTaskConfig.class)
             .toProvider(TestConfigProvider.class)
             .in(LazySingleton.class);
 
+      // Bind faulty clients for Coordinator, Overlord and task actions
       binder.bind(CoordinatorClient.class)
             .to(FaultyCoordinatorClient.class)
             .in(LazySingleton.class);
@@ -112,7 +115,7 @@ public class ClusterTestingModule implements DruidModule
   {
     return List.of(
         new SimpleModule(getClass().getSimpleName())
-            .registerSubtypes(new NamedType(FaultyLagAggregator.class, "unsafe_cluster_testing"))
+            .registerSubtypes(new NamedType(FaultyLagAggregator.class, "faulty"))
     );
   }
 

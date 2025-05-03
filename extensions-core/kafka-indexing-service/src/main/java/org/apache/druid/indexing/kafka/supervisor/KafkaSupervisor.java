@@ -174,7 +174,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         includeOffsets ? latestSequenceFromStream : null,
         includeOffsets ? partitionLag : null,
         includeOffsets ? getPartitionTimeLag() : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? aggregatePartitionLags(partitionLag).getTotalLag() : null,
         includeOffsets ? sequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.isHealthy(),
