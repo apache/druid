@@ -273,11 +273,12 @@ To enable sending all the HTTP requests to a log, set `org.apache.druid.jetty.Re
 
 The `file` request logger stores daily request logs on disk.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.request.logging.dir`|Historical, Realtime, and Broker services maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in|none|
-|`druid.request.logging.filePattern`|[Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file|"yyyy-MM-dd'.log'"|
-| `druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least longer than `P1D`.| none|
+|Property| Description                                                                                                                                                                                                                                                              |Default|
+|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
+|`druid.request.logging.dir`| Historical, Realtime, and Broker services maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in. |none|
+|`druid.request.logging.filePattern`| [Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file.                                                                                                                                                    |"yyyy-MM-dd'.log'"|
+| `druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least `PT1H`.                                                                                                                                                                                         | none|
+| `druid.request.logging.rollPeriod`| Defines the log rotation period for request logs. The period should be at least `PT1H`. For periods smaller than 1 day, it is recommended to use `"yyyy-MM-dd-HH'.log'"` as the file pattern.                                                                            | none|
 
 The format of request logs is TSV, one line per requests, with five fields: timestamp, remote\_addr, native\_query, query\_context, sql\_query.
 
