@@ -190,9 +190,6 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final Object segmentGranularity = getSegmentGranularity(plannerContext);
 
-    // This parameter is used internally for the number of worker tasks only, so we subtract 1
-    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
-
     final List<Interval> replaceTimeChunks = getReplaceIntervals(sqlQueryContext);
 
     final MSQDestination destination;
@@ -230,6 +227,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final Map<String, Object> nativeQueryContextOverrides = new HashMap<>();
 
     // Add appropriate finalization to native query context.
+    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
     nativeQueryContextOverrides.put(QueryContexts.FINALIZE_KEY, finalizeAggregations);
 
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
@@ -239,7 +237,6 @@ public class MSQTaskQueryMaker implements QueryMaker
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
     }
 
-    // Native query context: sqlQueryContext plus things that we add prior to creating a controller task.
     nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
 
     // adding user
@@ -262,7 +259,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), druidQuery.getQuery());
 
-    return querySpec.withOverriddenContext(nativeQueryContext);
+    return querySpec;
   }
 
   public static List<Pair<SqlTypeName, ColumnType>> getTypes(
@@ -438,6 +435,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
     }
 
+    // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
     final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);
