@@ -206,35 +206,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     return querySpec;
   }
 
-  private static Map<String, Object> buildOverrideContext(final DruidQuery druidQuery, final PlannerContext plannerContext,
-      final MSQDestination destination)
-  {
-    final QueryContext sqlQueryContext = plannerContext.queryContext();
-    final Map<String, Object> nativeQueryContextOverrides = new HashMap<>();
-
-    // Add appropriate finalization to native query context.
-    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
-    nativeQueryContextOverrides.put(QueryContexts.FINALIZE_KEY, finalizeAggregations);
-
-    // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
-    nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
-    boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(druidQuery.getQuery(), destination);
-    if (isReindex) {
-      nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
-    }
-
-    nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
-
-    // adding user
-    nativeQueryContextOverrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
-
-    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
-    if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
-    }
-    return nativeQueryContextOverrides;
-  }
-
   private static MSQDestination buildMSQDestination(final IngestDestination targetDataSource,
       final List<Entry<Integer, String>> fieldMapping, final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory)
@@ -274,6 +245,37 @@ public class MSQTaskQueryMaker implements QueryMaker
       }
     }
     return destination;
+  }
+
+  private static Map<String, Object> buildOverrideContext(
+      final DruidQuery druidQuery,
+      final PlannerContext plannerContext,
+      final MSQDestination destination)
+  {
+    final QueryContext sqlQueryContext = plannerContext.queryContext();
+    final Map<String, Object> nativeQueryContextOverrides = new HashMap<>();
+
+    // Add appropriate finalization to native query context.
+    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
+    nativeQueryContextOverrides.put(QueryContexts.FINALIZE_KEY, finalizeAggregations);
+
+    // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
+    nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
+    boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(druidQuery.getQuery(), destination);
+    if (isReindex) {
+      nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
+    }
+
+    nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
+
+    // adding user
+    nativeQueryContextOverrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
+
+    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
+    if (msqMode != null) {
+      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
+    }
+    return nativeQueryContextOverrides;
   }
 
   public static List<Pair<SqlTypeName, ColumnType>> getTypes(
