@@ -20,6 +20,7 @@ import type { Field } from '../../components';
 import { filterMap, typeIsKnown } from '../../utils';
 import type { SampleResponse, TimeColumnAction } from '../../utils/sampler';
 import { getHeaderNamesFromSampleResponse } from '../../utils/sampler';
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
 import { guessColumnTypeFromSampleResponse } from '../ingestion-spec/ingestion-spec';
 import { TIME_COLUMN } from '../timestamp-spec/timestamp-spec';
 
@@ -165,7 +166,7 @@ export function getDimensionSpecs(
   sampleResponse: SampleResponse,
   columnTypeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
-  forceMvdInsteadOfArray: boolean,
+  arrayIngestMode: ArrayIngestMode,
   hasRollup: boolean,
   timeColumnAction: TimeColumnAction,
 ): (string | DimensionSpec)[] {
@@ -182,7 +183,7 @@ export function getDimensionSpecs(
     );
     let columnType = columnTypeHint || guessedColumnType;
 
-    if (forceMvdInsteadOfArray) {
+    if (arrayIngestMode === 'mvd') {
       if (columnType.startsWith('ARRAY')) {
         columnType = MADE_UP_MV_COLUMN_TYPE;
       }

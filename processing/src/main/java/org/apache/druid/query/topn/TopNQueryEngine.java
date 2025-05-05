@@ -81,7 +81,7 @@ public class TopNQueryEngine
       @Nullable final TopNQueryMetrics queryMetrics
   )
   {
-    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
     if (cursorFactory == null) {
       throw new SegmentMissingException(
           "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."

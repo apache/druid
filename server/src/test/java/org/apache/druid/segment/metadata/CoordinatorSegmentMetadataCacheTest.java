@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.InternalQueryConfig;
@@ -42,8 +43,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
@@ -117,13 +118,12 @@ import java.util.stream.Collectors;
 
 public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheTestBase
 {
-  // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");
   private CoordinatorSegmentMetadataCache runningSchema;
-  private CountDownLatch buildTableLatch = new CountDownLatch(1);
-  private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final CountDownLatch buildTableLatch = new CountDownLatch(1);
+  private final CountDownLatch markDataSourceLatch = new CountDownLatch(1);
+  private SegmentsMetadataManager segmentsMetadataManager;
   private Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
 
   @Before
@@ -131,8 +131,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   public void setUp() throws Exception
   {
     super.setUp();
-    sqlSegmentsMetadataManager = Mockito.mock(SqlSegmentsMetadataManager.class);
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments()).thenReturn(Collections.emptyList());
+    segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
@@ -166,7 +167,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -340,7 +341,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -553,7 +554,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -589,8 +590,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
-    SqlSegmentsMetadataManager sqlSegmentsMetadataManager = Mockito.mock(SqlSegmentsMetadataManager.class);
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments()).thenReturn(Collections.emptyList());
+    SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
     Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
@@ -603,7 +605,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -643,8 +645,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
-    SqlSegmentsMetadataManager sqlSegmentsMetadataManager = Mockito.mock(SqlSegmentsMetadataManager.class);
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments()).thenReturn(Collections.emptyList());
+    SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
     Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
@@ -657,7 +660,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -694,8 +697,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
-    SqlSegmentsMetadataManager sqlSegmentsMetadataManager = Mockito.mock(SqlSegmentsMetadataManager.class);
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments()).thenReturn(Collections.emptyList());
+    SegmentsMetadataManager segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
     Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
@@ -708,7 +712,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -751,7 +755,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -811,7 +815,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -874,7 +878,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -911,7 +915,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -961,7 +965,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -1035,7 +1039,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     );
 
@@ -1210,7 +1214,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         emitter,
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -1377,7 +1381,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -1458,7 +1462,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -1640,7 +1644,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -1802,6 +1806,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   private CoordinatorSegmentMetadataCache setupForColdDatasourceSchemaTest(ServiceEmitter emitter)
   {
     // foo has both hot and cold segments
+    final String fingerprint1 = "fingerprint-1";
+    final String fingerprint2 = "fingerprint-2";
     DataSegment coldSegment =
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -1822,11 +1828,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                    .build();
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
-    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, "foo-fingerprint"));
-    segmentStatsMap.put(singleColdSegment.getId(), new SegmentMetadata(20L, "cold-fingerprint"));
+    segmentStatsMap.put(coldSegment.getId(), new SegmentMetadata(20L, fingerprint1));
+    segmentStatsMap.put(singleColdSegment.getId(), new SegmentMetadata(20L, fingerprint2));
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
     schemaPayloadMap.put(
-        "foo-fingerprint",
+        fingerprint1,
         new SchemaPayload(RowSignature.builder()
                                       .add("dim1", ColumnType.STRING)
                                       .add("c1", ColumnType.STRING)
@@ -1834,7 +1840,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                       .build())
     );
     schemaPayloadMap.put(
-        "cold-fingerprint",
+        fingerprint2,
         new SchemaPayload(
             RowSignature.builder()
                               .add("f1", ColumnType.STRING)
@@ -1847,25 +1853,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
-    Map<SegmentId, DataSegment> segmentMap = new HashMap<>();
-    segmentMap.put(coldSegment.getId(), coldSegment);
-    segmentMap.put(segment1.getId(), segment1);
-    segmentMap.put(segment2.getId(), segment2);
-    druidDataSources.add(new ImmutableDruidDataSource(
-        coldSegment.getDataSource(),
-        Collections.emptyMap(),
-        segmentMap
-    ));
-    druidDataSources.add(new ImmutableDruidDataSource(
-        singleColdSegment.getDataSource(),
-        Collections.emptyMap(),
-        Collections.singletonMap(singleColdSegment.getId(), singleColdSegment)
-    ));
-
-    Mockito.when(
-               sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-           .thenReturn(druidDataSources);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot()).thenReturn(
+        DataSourcesSnapshot.fromUsedSegments(List.of(segment1, segment2, coldSegment, singleColdSegment))
+    );
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
@@ -1876,7 +1866,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         emitter,
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     );
 
@@ -2043,7 +2033,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     DataSegment coldSegmentGamma =
         DataSegment.builder()
             .dataSource("gamma")
-            .interval(Intervals.of("2000/P2Y"))
+            .interval(Intervals.of("2000/P1Y"))
             .version("1")
             .shardSpec(new LinearShardSpec(0))
             .size(0)
@@ -2084,29 +2074,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
-    druidDataSources.add(
-        new ImmutableDruidDataSource(
-            "alpha",
-            Collections.emptyMap(),
-            Collections.singletonMap(coldSegmentAlpha.getId(), coldSegmentAlpha)
-        )
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot()).thenReturn(
+        DataSourcesSnapshot.fromUsedSegments(List.of(coldSegmentAlpha, hotSegmentGamma, coldSegmentGamma))
     );
-
-    Map<SegmentId, DataSegment> gammaSegments = new HashMap<>();
-    gammaSegments.put(hotSegmentGamma.getId(), hotSegmentGamma);
-    gammaSegments.put(coldSegmentGamma.getId(), coldSegmentGamma);
-
-    druidDataSources.add(
-        new ImmutableDruidDataSource(
-            "gamma",
-            Collections.emptyMap(),
-            gammaSegments
-        )
-    );
-
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-           .thenReturn(druidDataSources);
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
@@ -2117,7 +2087,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     );
 
@@ -2153,25 +2123,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Assert.assertEquals(new HashSet<>(Arrays.asList("alpha", "gamma")), schema.getDataSourceInformationMap().keySet());
 
-    druidDataSources.clear();
-    druidDataSources.add(
-        new ImmutableDruidDataSource(
-            "beta",
-            Collections.emptyMap(),
-            Collections.singletonMap(coldSegmentBeta.getId(), coldSegmentBeta)
-        )
-    );
-
-    druidDataSources.add(
-        new ImmutableDruidDataSource(
-            "gamma",
-            Collections.emptyMap(),
-            Collections.singletonMap(hotSegmentGamma.getId(), hotSegmentGamma)
-        )
-    );
-
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-           .thenReturn(druidDataSources);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(coldSegmentBeta, hotSegmentGamma)));
 
     schema.coldDatasourceSchemaExec();
     Assert.assertNotNull(schema.getDatasource("beta"));
@@ -2200,7 +2153,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -2249,7 +2202,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     );
 
@@ -2348,7 +2301,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     ) {
       @Override
@@ -2417,8 +2370,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             segmentMap
         );
 
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(ArgumentMatchers.anyString()))
-           .thenReturn(druidDataSource);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(segments.get(0), segments.get(1))));
 
     Set<SegmentId> segmentsToRefresh = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
     segmentsToRefresh.remove(segments.get(1).getId());

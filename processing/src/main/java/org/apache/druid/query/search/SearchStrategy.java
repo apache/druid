@@ -26,6 +26,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
@@ -38,6 +39,7 @@ import org.joda.time.Interval;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public abstract class SearchStrategy
@@ -77,7 +79,7 @@ public abstract class SearchStrategy
             ignore.add(factory.getName());
           }
         }
-        final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
+        final RowSignature rowSignature = Objects.requireNonNull(segment.as(CursorFactory.class)).getRowSignature();
         for (String columnName : rowSignature.getColumnNames()) {
           if (!ignore.contains(columnName)) {
             dims.add(columnName);

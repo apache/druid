@@ -37,7 +37,6 @@ import org.apache.druid.metadata.SQLMetadataRuleManagerProvider;
 import org.apache.druid.metadata.SQLMetadataSupervisorManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.segment.SegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
@@ -85,11 +84,6 @@ public class SQLMetadataStorageDruidModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataManager.class))
-            .addBinding(type)
-            .to(SqlSegmentsMetadataManager.class)
-            .in(LazySingleton.class);
-
     PolyBind.optionBinder(binder, Key.get(SegmentsMetadataManagerProvider.class))
             .addBinding(type)
             .to(SqlSegmentsMetadataManagerProvider.class)
@@ -105,8 +99,8 @@ public class SQLMetadataStorageDruidModule implements Module
             .to(SQLMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
-    // SegmentMetadataCache is bound for all services but is used only by the Overlord
-    // Similar to some other classes bound here, such as IndexerSQLMetadataStorageCoordinator
+    // SegmentMetadataCache is bound for all services but is used only by the Overlord and Coordinator
+    // similar to some other classes bound here, such as IndexerSQLMetadataStorageCoordinator
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);

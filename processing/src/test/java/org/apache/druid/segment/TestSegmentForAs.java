@@ -53,19 +53,6 @@ public class TestSegmentForAs implements Segment
     return id.getInterval();
   }
 
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return as(QueryableIndex.class);
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return as(CursorFactory.class);
-  }
-
   @SuppressWarnings("unchecked")
   @Nullable
   @Override

@@ -48,10 +48,11 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
 
   public static ReferenceCountingSegment wrapRootGenerationSegment(Segment baseSegment)
   {
+    int partitionNum = baseSegment.getId() == null ? 0 : baseSegment.getId().getPartitionNum();
     return new ReferenceCountingSegment(
         Preconditions.checkNotNull(baseSegment, "baseSegment"),
-        baseSegment.getId().getPartitionNum(),
-        (baseSegment.getId().getPartitionNum() + 1),
+        partitionNum,
+        partitionNum + 1,
         (short) 0,
         (short) 1
     );
@@ -104,20 +105,6 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   public Interval getDataInterval()
   {
     return !isClosed() ? baseObject.getDataInterval() : null;
-  }
-
-  @Override
-  @Nullable
-  public QueryableIndex asQueryableIndex()
-  {
-    return !isClosed() ? baseObject.asQueryableIndex() : null;
-  }
-
-  @Nullable
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return !isClosed() ? baseObject.asCursorFactory() : null;
   }
 
   @Override

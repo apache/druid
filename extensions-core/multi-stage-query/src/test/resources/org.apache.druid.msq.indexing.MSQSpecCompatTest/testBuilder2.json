@@ -1,0 +1,35 @@
+{
+  "query" : {
+    "queryType" : "scan",
+    "dataSource" : {
+      "type" : "inline",
+      "columnNames" : [ "EXPR$0" ],
+      "columnTypes" : [ "LONG" ],
+      "rows" : [ [ 2 ] ]
+    },
+    "intervals" : {
+      "type" : "intervals",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    },
+    "resultFormat" : "list",
+    "columns" : [ "EXPR$0" ],
+    "context" : {
+      "someThing" : 222,
+      "sqlInsertSegmentGranularity" : "\"DAY\""
+    },
+    "columnTypes" : [ "LONG" ],
+    "granularity" : {
+      "type" : "all"
+    },
+    "legacy" : false
+  },
+  "columnMappings" : [ {
+    "queryColumn" : "EXPR$0",
+    "outputColumn" : "EXPR$0"
+  } ],
+  "destination" : {
+    "type" : "durableStorage"
+  },
+  "assignmentStrategy" : "max",
+  "tuningConfig" : { }
+}

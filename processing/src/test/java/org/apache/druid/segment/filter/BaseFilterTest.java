@@ -621,11 +621,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     )
                     .put(
                         "rowBasedWithoutTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asCursorFactory(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().as(CursorFactory.class), () -> {})
                     )
                     .put(
                         "rowBasedWithTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asCursorFactory(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().as(CursorFactory.class), () -> {})
                     )
                     .put("frame (row-based)", input -> {
                       // remove variant type columns from row frames since they aren't currently supported
@@ -649,7 +649,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
-                      return Pair.of(segment.asCursorFactory(), segment);
+                      return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .put("frame (columnar)", input -> {
                       // remove array type columns from columnar frames since they aren't currently supported
@@ -673,7 +673,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
-                      return Pair.of(segment.asCursorFactory(), segment);
+                      return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .build();
 

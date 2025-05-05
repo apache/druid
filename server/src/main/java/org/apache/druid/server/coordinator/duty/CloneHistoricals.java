@@ -105,7 +105,7 @@ public class CloneHistoricals implements CoordinatorDuty
         if (!targetProjectedSegments.contains(segment) && loadQueueManager.loadSegment(segment, targetServer, SegmentAction.LOAD)) {
           stats.add(
               Stats.Segments.ASSIGNED_TO_CLONE,
-              RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
+              RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
               1L
           );
         }
@@ -116,7 +116,7 @@ public class CloneHistoricals implements CoordinatorDuty
         if (!sourceProjectedSegments.contains(segment) && loadQueueManager.dropSegment(segment, targetServer)) {
           stats.add(
               Stats.Segments.DROPPED_FROM_CLONE,
-              RowKey.of(Dimension.SERVER, targetServer.getServer().getHost()),
+              RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
               1L
           );
         }

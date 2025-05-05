@@ -856,11 +856,7 @@ public class SqlTestFramework
           new DruidHookDispatcher()
       );
       componentSupplier.finalizePlanner(this);
-      this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
-          framework.engine,
-          plannerFactory,
-          authConfig
-      );
+      this.statementFactory = QueryFrameworkUtils.createSqlMultiStatementFactory(framework.engine, plannerFactory);
       componentSupplier.populateViews(viewManager, plannerFactory);
     }
 

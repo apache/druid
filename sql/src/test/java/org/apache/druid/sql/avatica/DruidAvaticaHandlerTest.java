@@ -89,6 +89,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
@@ -108,6 +109,7 @@ import org.skife.jdbi.v2.ResultIterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -205,7 +207,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     ServerWrapper(final DruidMeta druidMeta) throws Exception
     {
       this.druidMeta = druidMeta;
-      server = new Server(0);
+      server = new Server(new InetSocketAddress("localhost", 0));
       server.setHandler(getAvaticaHandler(druidMeta));
       server.start();
       url = StringUtils.format(
@@ -342,7 +344,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testSelectCount() throws SQLException
   {
     try (Statement stmt = client.createStatement()) {
-      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo;");
       final List<Map<String, Object>> rows = getRows(resultSet);
       Assert.assertEquals(
           ImmutableList.of(
@@ -1048,7 +1050,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   private SqlStatementFactory makeStatementFactory()
   {
-    return CalciteTests.createSqlStatementFactory(
+    return QueryFrameworkUtils.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
         new PlannerFactory(
             makeRootSchema(),
@@ -1787,6 +1789,36 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     exec.shutdown();
     server.close();
+  }
+
+  @Test
+  public void testMultiStatementFails() throws SQLException
+  {
+    try (Statement stmt = client.createStatement()) {
+      Throwable t = Assert.assertThrows(
+          AvaticaSqlException.class,
+          () -> stmt.executeQuery("SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo")
+      );
+      // ugly error message for statement
+      Assert.assertEquals(
+          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: SQL query string must contain only a single statement -> DruidException: SQL query string must contain only a single statement",
+          t.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testMultiPreparedStatementFails() throws SQLException
+  {
+    Throwable t = Assert.assertThrows(
+        AvaticaSqlException.class,
+        () -> client.prepareStatement("SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo")
+    );
+    // sad error message for prepared statement
+    Assert.assertEquals(
+        "Error -1 (00000) : while preparing SQL: SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo",
+        t.getMessage()
+    );
   }
 
   // Test the async feature using DBI, as used internally in Druid.

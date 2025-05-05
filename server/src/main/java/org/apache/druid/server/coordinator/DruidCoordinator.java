@@ -104,7 +104,6 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -231,7 +230,7 @@ public class DruidCoordinator
 
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(boolean useClusterView)
   {
-    final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
+    final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     return computeUnderReplicated(dataSegments, useClusterView);
   }
 
@@ -251,7 +250,7 @@ public class DruidCoordinator
 
     final Object2IntOpenHashMap<String> datasourceToUnavailableSegments = new Object2IntOpenHashMap<>();
 
-    final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
+    final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
       SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
       if (replicaCount != null && (replicaCount.totalLoaded() > 0 || replicaCount.required() == 0)) {
@@ -272,7 +271,7 @@ public class DruidCoordinator
 
     final Object2IntOpenHashMap<String> datasourceToDeepStorageOnlySegments = new Object2IntOpenHashMap<>();
 
-    final Iterable<DataSegment> dataSegments = metadataManager.segments().iterateAllUsedSegments();
+    final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
       SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
       if (replicaCount != null && replicaCount.totalLoaded() == 0 && replicaCount.required() == 0) {
@@ -286,10 +285,9 @@ public class DruidCoordinator
   public Map<String, Double> getDatasourceToLoadStatus()
   {
     final Map<String, Double> loadStatus = new HashMap<>();
-    final Collection<ImmutableDruidDataSource> dataSources =
-        metadataManager.segments().getImmutableDataSourcesWithAllUsedSegments();
+    final DataSourcesSnapshot snapshot = metadataManager.segments().getRecentDataSourcesSnapshot();
 
-    for (ImmutableDruidDataSource dataSource : dataSources) {
+    for (ImmutableDruidDataSource dataSource : snapshot.getDataSourcesWithAllUsedSegments()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int numPublishedSegments = segments.size();
 
@@ -349,8 +347,7 @@ public class DruidCoordinator
   {
     return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
         metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
-        metadataManager.segments()
-                       .getSnapshotOfDataSourcesWithAllUsedSegments(),
+        metadataManager.segments().getRecentDataSourcesSnapshot(),
         CompactionEngine.NATIVE
     );
   }
@@ -374,6 +371,7 @@ public class DruidCoordinator
       }
       started = true;
 
+      metadataManager.startCache();
       coordLeaderSelector.registerListener(
           new DruidLeaderSelector.Listener()
           {
@@ -402,6 +400,7 @@ public class DruidCoordinator
       }
 
       coordLeaderSelector.unregisterListener();
+      metadataManager.stopCache();
       started = false;
       stopAllDutyGroups();
     }
@@ -580,7 +579,7 @@ public class DruidCoordinator
         config.getCoordinatorIndexingPeriod()
     );
     if (killUnusedConfig.isCleanupEnabled()) {
-      duties.add(new KillUnusedSegments(metadataManager.segments(), overlordClient, killUnusedConfig));
+      duties.add(new KillUnusedSegments(metadataManager.indexer(), overlordClient, killUnusedConfig));
     }
     if (config.getKillConfigs().pendingSegments().isCleanupEnabled()) {
       duties.add(new KillStalePendingSegments(overlordClient));
@@ -608,7 +607,7 @@ public class DruidCoordinator
         )
     );
     duties.add(
-        new KillCompactionConfig(killConfigs.compactionConfigs(), metadataManager.segments(), metadataManager.configs())
+        new KillCompactionConfig(killConfigs.compactionConfigs(), metadataManager.indexer(), metadataManager.configs())
     );
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       duties.add(new KillUnreferencedSegmentSchema(killConfigs.segmentSchemas(), metadataManager.schemas()));
@@ -666,8 +665,11 @@ public class DruidCoordinator
       if (rootCause instanceof HttpResponseException) {
         HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
         if (status.getCode() == 404) {
-          log.info("Could not update segments via Overlord API. Updating metadata store directly.");
-          return metadataManager.segments().markSegmentsAsUnused(segmentIds);
+          log.warn(
+              "Could not mark segments as unused since Overlord is on an older version."
+              + " Upgrade the Overlord to a newer version to allow updating segments."
+          );
+          return 0;
         }
       }
 
@@ -724,12 +726,12 @@ public class DruidCoordinator
             // use a future snapshotTime to ensure that compaction always runs
             dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
                 metadataManager.segments()
-                               .getSnapshotOfDataSourcesWithAllUsedSegments()
+                               .getRecentDataSourcesSnapshot()
                                .iterateAllUsedSegmentsInSnapshot(),
                 DateTimes.nowUtc().plusMinutes(60)
             );
           } else {
-            dataSourcesSnapshot = metadataManager.segments().getSnapshotOfDataSourcesWithAllUsedSegments();
+            dataSourcesSnapshot = metadataManager.segments().getRecentDataSourcesSnapshot();
           }
 
           final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams

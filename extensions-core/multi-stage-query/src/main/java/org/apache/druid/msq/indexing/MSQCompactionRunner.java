@@ -263,11 +263,14 @@ public class MSQCompactionRunner implements CompactionRunner
         query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
       }
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+      DataSourceMSQDestination destination = buildMSQDestination(compactionTask, dataSchema);
 
-      MSQSpec msqSpec = MSQSpec.builder()
-                               .query(query)
+      boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
+
+      LegacyMSQSpec msqSpec = LegacyMSQSpec.builder()
+                               .query(query.withOverriddenContext(Collections.singletonMap(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)))
                                .columnMappings(getColumnMappings(dataSchema))
-                               .destination(buildMSQDestination(compactionTask, dataSchema))
+                               .destination(destination)
                                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(compactionTaskContext))
                                .tuningConfig(buildMSQTuningConfig(compactionTask, compactionTaskContext))
                                .build();

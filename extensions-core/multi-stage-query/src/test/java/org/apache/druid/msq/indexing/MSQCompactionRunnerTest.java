@@ -80,6 +80,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -396,7 +397,7 @@ public class MSQCompactionRunnerTest
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 
-    MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+    LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
     Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
     Assert.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
@@ -477,7 +478,7 @@ public class MSQCompactionRunnerTest
         Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
     );
 
-    MSQSpec actualMSQSpec = Iterables.getOnlyElement(msqControllerTasks).getQuerySpec();
+    LegacyMSQSpec actualMSQSpec = Iterables.getOnlyElement(msqControllerTasks).getQuerySpec();
 
     Assert.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
     ScanQuery scanQuery = (ScanQuery) actualMSQSpec.getQuery();
@@ -527,7 +528,7 @@ public class MSQCompactionRunnerTest
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 
-    MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+    LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
     Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
     Assert.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
@@ -612,7 +613,7 @@ public class MSQCompactionRunnerTest
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 
-    MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+    LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
     Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
     Assert.assertEquals(getExpectedDestinationWithProjections(), actualMSQSpec.getDestination());

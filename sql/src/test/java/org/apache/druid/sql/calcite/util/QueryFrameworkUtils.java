@@ -23,12 +23,11 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.java.util.emitter.core.NoopEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -47,11 +46,15 @@ import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.sql.DirectStatement;
+import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -75,8 +78,8 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
-
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -94,8 +97,8 @@ public class QueryFrameworkUtils
         conglomerate,
         walker,
         new DefaultGenericQueryMetricsFactory(),
-        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopRequestLogger(),
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
         authorizerMapper,
@@ -103,22 +106,42 @@ public class QueryFrameworkUtils
     );
   }
 
+  /**
+   * Create a standard {@link SqlStatementFactory} for testing with a new {@link SqlToolbox} created by
+   * {@link #createTestToolbox(SqlEngine, PlannerFactory)}
+   */
   public static SqlStatementFactory createSqlStatementFactory(
       final SqlEngine engine,
-      final PlannerFactory plannerFactory,
-      final AuthConfig authConfig
+      final PlannerFactory plannerFactory
   )
   {
-    SqlToolbox toolbox = new SqlToolbox(
+    return new SqlStatementFactory(createTestToolbox(engine, plannerFactory));
+  }
+
+  /**
+   * Create a {@link TestMultiStatementFactory}, a special {@link SqlStatementFactory} which allows multi-statement SET
+   * parsing for {@link SqlStatementFactory#directStatement(SqlQueryPlus)} and
+   * {@link SqlStatementFactory#preparedStatement(SqlQueryPlus)}.
+   */
+  public static SqlStatementFactory createSqlMultiStatementFactory(
+      final SqlEngine engine,
+      final PlannerFactory plannerFactory
+  )
+  {
+    return new TestMultiStatementFactory(createTestToolbox(engine, plannerFactory), engine, plannerFactory);
+  }
+
+  private static SqlToolbox createTestToolbox(SqlEngine engine, PlannerFactory plannerFactory)
+  {
+    return new SqlToolbox(
         engine,
         plannerFactory,
-        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopRequestLogger(),
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );
-    return new SqlStatementFactory(toolbox);
   }
 
   public static DruidSchemaCatalog createMockRootSchema(
@@ -311,5 +334,71 @@ public class QueryFrameworkUtils
   public static LookupSchema createMockLookupSchema(final Injector injector)
   {
     return new LookupSchema(injector.getInstance(LookupExtractorFactoryContainerProvider.class));
+  }
+
+
+
+  /**
+   * SqlStatementFactory which overrides direct statement creation to allow calcite tests to test multi-part set
+   * statements e.g. like 'SET vectorize = 'force'; SET useApproxCountDistinct = true; SELECT 1 + 1'
+   */
+  static class TestMultiStatementFactory extends SqlStatementFactory
+  {
+    private final SqlToolbox toolbox;
+    private final SqlEngine engine;
+    private final PlannerFactory plannerFactory;
+
+    public TestMultiStatementFactory(SqlToolbox lifecycleToolbox, SqlEngine engine, PlannerFactory plannerFactory)
+    {
+      super(lifecycleToolbox);
+      this.toolbox = lifecycleToolbox;
+      this.engine = engine;
+      this.plannerFactory = plannerFactory;
+    }
+
+    @Override
+    public DirectStatement directStatement(SqlQueryPlus sqlRequest)
+    {
+      // override direct statement creation to allow calcite tests to test multi-part set statements
+      return new DirectStatement(toolbox, sqlRequest)
+      {
+        @Override
+        protected DruidPlanner createPlanner()
+        {
+          return plannerFactory.createPlanner(
+              engine,
+              queryPlus.sql(),
+              queryContext,
+              hook,
+              true
+          );
+        }
+      };
+    }
+
+    @Override
+    public PreparedStatement preparedStatement(SqlQueryPlus sqlRequest)
+    {
+      return new PreparedStatement(toolbox, sqlRequest)
+      {
+        @Override
+        protected DruidPlanner getPlanner()
+        {
+          return plannerFactory.createPlanner(
+              engine,
+              queryPlus.sql(),
+              queryContext,
+              hook,
+              true
+          );
+        }
+
+        @Override
+        public DirectStatement execute(List<TypedValue> parameters)
+        {
+          return directStatement(queryPlus.withParameters(parameters));
+        }
+      };
+    }
   }
 }

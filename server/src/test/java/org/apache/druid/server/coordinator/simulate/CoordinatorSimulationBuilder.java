@@ -38,7 +38,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -212,7 +212,7 @@ public class CoordinatorSimulationBuilder
         env.coordinatorInventoryView,
         env.serviceEmitter,
         env.executorFactory,
-        new SimOverlordClient(env.metadataManager.segments()),
+        new SimOverlordClient(env.segmentManager),
         env.loadQueueTaskMaster,
         env.loadQueueManager,
         new ServiceAnnouncer.Noop(),
@@ -487,7 +487,8 @@ public class CoordinatorSimulationBuilder
           null,
           ruleManager,
           null,
-          null
+          null,
+          NoopSegmentMetadataCache.instance()
       );
 
       this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);
@@ -636,9 +637,9 @@ public class CoordinatorSimulationBuilder
 
   private static class SimOverlordClient extends NoopOverlordClient
   {
-    private final SegmentsMetadataManager segmentsMetadataManager;
+    private final TestSegmentsMetadataManager segmentsMetadataManager;
 
-    private SimOverlordClient(SegmentsMetadataManager segmentsMetadataManager)
+    private SimOverlordClient(TestSegmentsMetadataManager segmentsMetadataManager)
     {
       this.segmentsMetadataManager = segmentsMetadataManager;
     }

@@ -22,8 +22,10 @@ package org.apache.druid.indexing.overlord;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -44,6 +46,12 @@ import java.util.Set;
  */
 public interface IndexerMetadataStorageCoordinator
 {
+  /**
+   * @return Set of all datasource names for which there are used or unused
+   * segments present in the metadata store.
+   */
+  Set<String> retrieveAllDatasourceNames();
+
   /**
    * Retrieves all published segments that have partial or complete overlap with
    * the given interval and are marked as used.
@@ -501,4 +509,87 @@ public interface IndexerMetadataStorageCoordinator
    * @param segmentIds ids of the first segments which had the corresponding load spec
    */
   Map<String, Set<String>> retrieveUpgradedToSegmentIds(String dataSource, Set<String> segmentIds);
+
+  /**
+   * Returns a list of unused segments and their associated metadata for a given datasource over an
+   * optional interval. The order in which segments are iterated is from earliest start-time, with ties being broken
+   * with earliest end-time first. Note: the iteration may not be as trivially cheap as for example, iteration over an
+   * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned iterable only
+   * once rather than several times.
+   *
+   * @param datasource    the name of the datasource.
+   * @param interval      an optional interval to search over. If none is specified, {@link org.apache.druid.java.util.common.Intervals#ETERNITY}
+   * @param limit         an optional maximum number of results to return. If none is specified, the results are not limited.
+   * @param lastSegmentId an optional last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or  {@link SortOrder#ASC}, or < this segment
+   *                      lexigraphically if sortOrder is {@link SortOrder#DESC}. If none is specified, no such filter is used.
+   * @param sortOrder     an optional order with which to return the matching segments by id, start time, end time.
+   *                      If none is specified, the order of the results is not guarenteed.
+   */
+  List<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable String lastSegmentId,
+      @Nullable SortOrder sortOrder
+  );
+
+  /**
+   * Returns a list of up to {@code limit} unused segment intervals for the specified datasource. Segments are filtered
+   * based on the following criteria:
+   *
+   * <li> The start time of the segment must be no earlier than the specified {@code minStartTime} (if not null). </li>
+   * <li> The end time of the segment must be no later than the specified {@code maxEndTime}. </li>
+   * <li> The {@code used_status_last_updated} time of the segment must be no later than {@code maxUsedStatusLastUpdatedTime}.
+   *      Segments that have no {@code used_status_last_updated} time (due to an upgrade from legacy Druid) will
+   *      have {@code maxUsedStatusLastUpdatedTime} ignored. </li>
+   *
+   * @return list of intervals ordered by segment start time and then by end time. Note that the list may contain
+   * duplicate intervals.
+   *
+   */
+  List<Interval> getUnusedSegmentIntervals(
+      String dataSource,
+      @Nullable DateTime minStartTime,
+      DateTime maxEndTime,
+      int limit,
+      DateTime maxUsedStatusLastUpdatedTime
+  );
+
+  /**
+   * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,
+   * the segments were marked as used). If the call results in a database error, an exception is relayed to the caller.
+   *
+   * @return Number of segments updated in the metadata store
+   */
+  int markAllNonOvershadowedSegmentsAsUsed(String dataSource);
+
+  /**
+   * Marks non-overshadowed unused segments for the given interval and optional list of versions
+   * as used. If versions are not specified, all versions of non-overshadowed unused segments in the interval
+   * will be marked as used. If an empty list of versions is passed, no segments are marked as used.
+   *
+   * @return Number of segments updated in the metadata store
+   */
+  int markNonOvershadowedSegmentsAsUsed(String dataSource, Interval interval, @Nullable List<String> versions);
+
+  /**
+   * Marks the given segment IDs as "used" only if there are not already overshadowed
+   * by other used segments. Qualifying segment IDs that are already marked as
+   * "used" are not updated.
+   *
+   * @return Number of segments updated
+   * @throws org.apache.druid.error.DruidException of category INVALID_INPUT if
+   *                                               any of the given segment IDs
+   *                                               do not exist in the metadata store.
+   */
+  int markNonOvershadowedSegmentsAsUsed(String dataSource, Set<SegmentId> segmentIds);
+
+  /**
+   * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
+   * segment was marked as used), false otherwise. If the call results in a database error, an exception is relayed to
+   * the caller.
+   */
+  boolean markSegmentAsUsed(SegmentId segmentId);
+
 }

@@ -24,12 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentizerFactory;
@@ -47,7 +46,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -121,77 +119,22 @@ public class TestSegmentUtils
     }
   }
 
-  public static class SegmentForTesting extends QueryableIndexSegment implements Segment
+  private static final QueryableIndex INDEX = new NoopQueryableIndex()
+  {
+    @Override
+    public List<OrderBy> getOrdering()
+    {
+      return Cursors.ascendingTimeOrder();
+    }
+  };
+
+  public static class SegmentForTesting extends QueryableIndexSegment
   {
     private final String datasource;
     private final String version;
     private final Interval interval;
     private final Object lock = new Object();
     private volatile boolean closed = false;
-    private static final QueryableIndex INDEX = new QueryableIndex()
-    {
-      @Override
-      public Interval getDataInterval()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public int getNumRows()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public Indexed<String> getAvailableDimensions()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public BitmapFactory getBitmapFactoryForDimensions()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Nullable
-      @Override
-      public Metadata getMetadata()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public Map<String, DimensionHandler> getDimensionHandlers()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public List<OrderBy> getOrdering()
-      {
-        return Cursors.ascendingTimeOrder();
-      }
-
-      @Override
-      public void close()
-      {
-
-      }
-
-      @Override
-      public List<String> getColumnNames()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Nullable
-      @Override
-      public ColumnHolder getColumnHolder(String columnName)
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
 
     public SegmentForTesting(String datasource, Interval interval, String version)
     {
@@ -229,24 +172,12 @@ public class TestSegmentUtils
     }
 
     @Override
-    public QueryableIndex asQueryableIndex()
-    {
-      return INDEX;
-    }
-
-    @Override
-    public CursorFactory asCursorFactory()
-    {
-      return new QueryableIndexCursorFactory(INDEX);
-    }
-
-    @Override
     public <T> T as(@Nonnull Class<T> clazz)
     {
       if (clazz.equals(QueryableIndex.class)) {
-        return (T) asQueryableIndex();
+        return (T) INDEX;
       } else if (clazz.equals(CursorFactory.class)) {
-        return (T) asCursorFactory();
+        return (T) new QueryableIndexCursorFactory(INDEX);
       }
       return null;
     }
@@ -257,6 +188,39 @@ public class TestSegmentUtils
       synchronized (lock) {
         closed = true;
       }
+    }
+  }
+
+  /**
+   * A test segment that is backed by a {@link RowBasedSegment}. This is used to test the {@link QueryableIndexSegment}.
+   */
+  public static class InMemoryTestSegment<RowType> extends QueryableIndexSegment
+  {
+    private final RowBasedSegment<RowType> segment;
+
+    public InMemoryTestSegment(
+        final SegmentId segmentId,
+        final Sequence<RowType> rowSequence,
+        final RowAdapter<RowType> rowAdapter,
+        final RowSignature rowSignature
+    )
+    {
+      super(INDEX, segmentId);
+      this.segment = new RowBasedSegment<>(
+          rowSequence,
+          rowAdapter,
+          rowSignature
+      );
+    }
+
+    @Nullable
+    @Override
+    public <T> T as(@Nonnull Class<T> clazz)
+    {
+      if (CursorFactory.class.isAssignableFrom(clazz)) {
+        return (T) segment.as(CursorFactory.class);
+      }
+      return null;
     }
   }
 
