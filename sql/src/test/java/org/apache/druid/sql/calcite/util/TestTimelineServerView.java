@@ -26,6 +26,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -108,7 +109,7 @@ public class TestTimelineServerView implements TimelineServerView
           Comparator.naturalOrder()
       );
       TierSelectorStrategy st = new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy());
-      ServerSelector sss = new ServerSelector(segment, st);
+      ServerSelector sss = new ServerSelector(segment, st, HistoricalFilter.IDENTITY_FILTER);
 
       PartitionChunk<ServerSelector> partitionChunk = new SingleElementPartitionChunk(sss);
       timelineLookup.add(segment.getInterval(), segment.getVersion(), partitionChunk);

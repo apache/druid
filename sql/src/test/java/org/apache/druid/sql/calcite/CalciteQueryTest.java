@@ -6107,6 +6107,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountStarWithFloorTimeFilterUsingMilliseconds()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE TIMESTAMP_TO_MILLIS(FLOOR(__time TO DAY)) >= 946684800000 AND "
+        + "TIMESTAMP_TO_MILLIS(FLOOR(__time TO DAY)) < 978307200000",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithMisalignedFloorTimeFilter()
   {
     testQuery(
@@ -15831,5 +15853,116 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 new Object[]{null, "true", 15420L}
             )
         ).run();
+  }
+
+  @Test
+  public void testMultiStatementSetsContext()
+  {
+    HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    expectedContext.put("useApproximateCountDistinct", true);
+    expectedContext.put("timeout", 9000.0);
+    expectedContext.put("vectorize", "force");
+    // sql query id is also set in the base context sent with the query, expect the SET statement to override this
+    expectedContext.put(QueryContexts.CTX_SQL_QUERY_ID, "dummy2");
+
+    testBuilder().sql(
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; set sqlQueryId = 'dummy2'; select 3;;;"
+    ).expectedQueries(
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          List.<Object[]>of(new Object[]{3L}),
+                          RowSignature.builder().add("EXPR$0", ColumnType.LONG).build())
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("EXPR$0")
+                  .columnTypes(ColumnType.LONG)
+                  .context(expectedContext)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{3}
+        )
+    ).run();
+  }
+
+  @Test
+  public void testMultiStatementSetsContextTimezone()
+  {
+    cannotVectorizeUnlessFallback();
+    testBuilder().sql(
+        "SET sqlTimeZone = 'America/Los_Angeles';\n"
+        + "SELECT\n"
+        + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))"
+    ).expectedQueries(
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'America/Los_Angeles'),'YEAR','America/Los_Angeles')",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_LOS_ANGELES)
+                        .build()
+        )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{1999L, 1L},
+            new Object[]{2000L, 3L},
+            new Object[]{2001L, 2L}
+        )
+    ).run();
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidNoNonSetStatement()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000",
+        DruidException.class,
+        "Statement list is missing a non-SET statement to execute"
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidRegularStatementInMiddle()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = TRUE; SELECT 1 + 1; set timeout = 90000",
+        DruidException.class,
+        "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[SELECT 1 + 1]"
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidSetNotLiteral()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = vectorize; SELECT 1 + 1;",
+        DruidException.class,
+        "Assigned value must be a literal for SET statement[SET \"useApproximateCountDistinct\" = \"vectorize\"]"
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsInvalidTooManyNonSetStatements()
+  {
+    testQueryThrows(
+        "set useApproximateCountDistinct = TRUE; set timeout = 90000; select 1; select 2",
+        DruidException.class,
+        "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[SELECT 1]"
+    );
   }
 }

@@ -60,6 +60,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchAppr
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.PhysicalSegmentInspector;
@@ -452,6 +453,7 @@ public class SqlBaseBenchmark
         new JoinableFactoryWrapper(QueryFrameworkUtils.createDefaultJoinableFactory(injector)),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 
@@ -473,8 +475,7 @@ public class SqlBaseBenchmark
           descriptor,
           new FrameSegment(
               FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.ROW_BASED),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable
@@ -495,8 +496,7 @@ public class SqlBaseBenchmark
           descriptor,
           new FrameSegment(
               FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.COLUMNAR),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable

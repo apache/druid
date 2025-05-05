@@ -22,6 +22,7 @@ package org.apache.druid.msq.sql;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.MetadataCatalog;
@@ -40,8 +41,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
+import org.apache.druid.msq.exec.QueryKitSpecFactory;
+import org.apache.druid.msq.exec.ResultsContext;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -58,6 +61,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
@@ -79,6 +83,7 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -101,6 +106,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final ObjectMapper jsonMapper;
   private final List<Entry<Integer, String>> fieldMapping;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
+  private final QueryKitSpecFactory queryKitSpecFactory;
 
   MSQTaskQueryMaker(
       @Nullable final IngestDestination targetDataSource,
@@ -108,7 +114,8 @@ public class MSQTaskQueryMaker implements QueryMaker
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
       final List<Entry<Integer, String>> fieldMapping,
-      final MSQTerminalStageSpecFactory terminalStageSpecFactory
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory,
+      final QueryKitSpecFactory queryKitSpecFactory
   )
   {
     this.targetDataSource = targetDataSource;
@@ -117,6 +124,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
     this.terminalStageSpecFactory = terminalStageSpecFactory;
+    this.queryKitSpecFactory = queryKitSpecFactory;
   }
 
   @Override
@@ -125,7 +133,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
 
-    String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
+    final String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
     final Map<String, Object> taskContext = new HashMap<>();
     taskContext.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, plannerContext.getLookupLoadingSpec().getMode());
@@ -135,13 +143,27 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final List<Pair<SqlTypeName, ColumnType>> typeList = getTypes(druidQuery, fieldMapping, plannerContext);
 
+    final ResultsContext resultsContext = new ResultsContext(
+        typeList.stream().map(typeInfo -> typeInfo.lhs).collect(Collectors.toList()),
+        SqlResults.Context.fromPlannerContext(plannerContext)
+    );
+
+    final LegacyMSQSpec querySpec = makeLegacyMSQSpec(
+        targetDataSource,
+        druidQuery,
+        druidQuery.getQuery().context(),
+        fieldMapping,
+        plannerContext,
+        terminalStageSpecFactory
+    );
+
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
-        makeQuerySpec(targetDataSource, druidQuery, fieldMapping, plannerContext, terminalStageSpecFactory),
+        querySpec,
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
-        SqlResults.Context.fromPlannerContext(plannerContext),
-        typeList.stream().map(typeInfo -> typeInfo.lhs).collect(Collectors.toList()),
+        resultsContext.getSqlResultsContext(),
+        resultsContext.getSqlTypeNames(),
         typeList.stream().map(typeInfo -> typeInfo.rhs).collect(Collectors.toList()),
         taskContext
     );
@@ -150,9 +172,11 @@ public class MSQTaskQueryMaker implements QueryMaker
     return QueryResponse.withEmptyContext(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
   }
 
-  public static MSQSpec makeQuerySpec(
+
+  public static LegacyMSQSpec makeLegacyMSQSpec(
       @Nullable final IngestDestination targetDataSource,
       final DruidQuery druidQuery,
+      final QueryContext queryContext,
       final List<Entry<Integer, String>> fieldMapping,
       final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
@@ -174,24 +198,9 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (msqMode != null) {
       MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContext);
     }
-
     final Object segmentGranularity = getSegmentGranularity(plannerContext);
 
-    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
-
-    if (maxNumTasks < 2) {
-      throw InvalidInput.exception(
-          "MSQ context maxNumTasks [%,d] cannot be less than 2, since at least 1 controller and 1 worker is necessary",
-          maxNumTasks
-      );
-    }
-
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
-    final int maxNumWorkers = maxNumTasks - 1;
-    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);
-    final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(sqlQueryContext);
-    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(sqlQueryContext, plannerContext.getJsonMapper());
     final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
 
     final List<Interval> replaceTimeChunks = getReplaceIntervals(sqlQueryContext);
@@ -203,7 +212,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     } else if (targetDataSource instanceof TableDestination) {
       destination = buildTableDestination(
           targetDataSource,
-          druidQuery,
           fieldMapping,
           plannerContext,
           terminalStageSpecFactory,
@@ -236,17 +244,22 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
     nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
+    boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(druidQuery.getQuery(), destination);
+    if (isReindex) {
+      nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
+    }
 
-    final MSQSpec querySpec =
-        MSQSpec.builder()
-               .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
+    final LegacyMSQSpec querySpec =
+        LegacyMSQSpec.builder()
+               .query(druidQuery.getQuery())
+               .queryContext(queryContext.override(nativeQueryContextOverrides))
                .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
-               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, maxNumSegments, indexSpec))
+               .tuningConfig(makeMSQTuningConfig(plannerContext))
                .build();
 
-    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), querySpec.getQuery());
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), druidQuery.getQuery());
 
     return querySpec.withOverriddenContext(nativeQueryContext);
   }
@@ -257,28 +270,32 @@ public class MSQTaskQueryMaker implements QueryMaker
       final PlannerContext plannerContext
   )
   {
-    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(plannerContext.queryContext());
-
+    RelDataType outputRowType = druidQuery.getOutputRowType();
+    RowSignature outputRowSignature = druidQuery.getOutputRowSignature();
     // For assistance computing return types if !finalizeAggregations.
-    final Map<String, ColumnType> aggregationIntermediateTypeMap =
-        finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
+    final Map<String, ColumnType> aggregationIntermediateTypeMap;
+    if (MultiStageQueryContext.isFinalizeAggregations(plannerContext.queryContext())) {
+      /* Not needed */
+      aggregationIntermediateTypeMap = Collections.emptyMap();
+    } else {
+      aggregationIntermediateTypeMap = buildAggregationIntermediateTypeMap(druidQuery);
+    }
 
     final List<Pair<SqlTypeName, ColumnType>> retVal = new ArrayList<>();
 
     for (final Entry<Integer, String> entry : fieldMapping) {
-      final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
+      final String queryColumn = outputRowSignature.getColumnName(entry.getKey());
 
       final SqlTypeName sqlTypeName;
 
-      if (!finalizeAggregations && aggregationIntermediateTypeMap.containsKey(queryColumn)) {
+      if (aggregationIntermediateTypeMap.containsKey(queryColumn)) {
         final ColumnType druidType = aggregationIntermediateTypeMap.get(queryColumn);
         sqlTypeName = new RowSignatures.ComplexSqlType(SqlTypeName.OTHER, druidType, true).getSqlTypeName();
       } else {
-        sqlTypeName = druidQuery.getOutputRowType().getFieldList().get(entry.getKey()).getType().getSqlTypeName();
+        sqlTypeName = outputRowType.getFieldList().get(entry.getKey()).getType().getSqlTypeName();
       }
 
-      final ColumnType columnType =
-          druidQuery.getOutputRowSignature().getColumnType(queryColumn).orElse(ColumnType.STRING);
+      final ColumnType columnType = outputRowSignature.getColumnType(queryColumn).orElse(ColumnType.STRING);
 
       retVal.add(Pair.of(sqlTypeName, columnType));
     }
@@ -359,14 +376,12 @@ public class MSQTaskQueryMaker implements QueryMaker
 
   private static MSQDestination buildTableDestination(
       IngestDestination targetDataSource,
-      DruidQuery druidQuery,
       List<Entry<Integer, String>> fieldMapping,
       PlannerContext plannerContext,
       MSQTerminalStageSpecFactory terminalStageSpecFactory,
       Object segmentGranularity,
-      QueryContext sqlQueryContext,
-      List<Interval> replaceTimeChunks
-  )
+      final QueryContext sqlQueryContext,
+      final List<Interval> replaceTimeChunks)
   {
     final MSQDestination destination;
     Granularity segmentGranularityObject;
@@ -402,13 +417,33 @@ public class MSQTaskQueryMaker implements QueryMaker
         null,
         projectionSpecs,
         terminalStageSpecFactory.createTerminalStageSpec(
-            druidQuery,
             plannerContext
         )
     );
     MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext, dataSourceDestination.isReplaceTimeChunks());
     destination = dataSourceDestination;
     return destination;
+  }
+
+  private static MSQTuningConfig makeMSQTuningConfig(final PlannerContext plannerContext)
+  {
+    final QueryContext sqlQueryContext = plannerContext.queryContext();
+    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
+
+    if (maxNumTasks < 2) {
+      throw InvalidInput.exception(
+          "MSQ context maxNumTasks [%,d] cannot be less than 2, since at least 1 controller and 1 worker is necessary",
+          maxNumTasks
+      );
+    }
+
+    final int maxNumWorkers = maxNumTasks - 1;
+    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
+    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);
+    final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(sqlQueryContext);
+    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(sqlQueryContext, plannerContext.getJsonMapper());
+    MSQTuningConfig tuningConfig = new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, maxNumSegments, indexSpec);
+    return tuningConfig;
   }
 
   private static List<AggregateProjectionSpec> getProjections(

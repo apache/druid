@@ -45,6 +45,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -155,7 +156,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction();
+    final Function<SegmentReference, SegmentReference> segmentMapFn = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance());
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
         toolChest.postMergeQueryDecoration(
@@ -263,7 +264,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
       for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : timeline.lookup(interval)) {
         for (PartitionChunk<ReferenceCountingSegment> chunk : holder.getObject()) {
-          retVal.add(new WindowedSegment(chunk.getObject(), holder.getInterval()));
+          retVal.add(new WindowedSegment(chunk.getObject(), holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()));
         }
       }
 
@@ -286,7 +287,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
             spec.getVersion(),
             spec.getPartitionNumber()
         );
-        retVal.add(new WindowedSegment(entry.getObject(), spec.getInterval()));
+        retVal.add(new WindowedSegment(entry.getObject(), spec.getInterval(), spec.getVersion(), spec.getPartitionNumber()));
       }
 
       return retVal;
@@ -297,12 +298,23 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   {
     private final ReferenceCountingSegment segment;
     private final Interval interval;
+    private final String version;
+    private final int partitionNumber;
 
-    public WindowedSegment(ReferenceCountingSegment segment, Interval interval)
+    public WindowedSegment(ReferenceCountingSegment segment, Interval interval, String version, int partitionNumber)
     {
+      if (segment.getId() != null) {
+        Preconditions.checkArgument(segment.getId().getInterval().contains(interval));
+      } else {
+        Preconditions.checkArgument(
+            segment.getDataInterval().contains(interval),
+            "Data interval for non-table segment should default to external"
+        );
+      }
       this.segment = segment;
       this.interval = interval;
-      Preconditions.checkArgument(segment.getId().getInterval().contains(interval));
+      this.version = version;
+      this.partitionNumber = partitionNumber;
     }
 
     public ReferenceCountingSegment getSegment()
@@ -317,7 +329,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
     public SegmentDescriptor getDescriptor()
     {
-      return new SegmentDescriptor(interval, segment.getId().getVersion(), segment.getId().getPartitionNum());
+      return new SegmentDescriptor(interval, version, partitionNumber);
     }
   }
 }

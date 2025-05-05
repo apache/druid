@@ -145,6 +145,15 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testDefaultCloneQueryMode()
+  {
+    Assert.assertEquals(
+        CloneQueryMode.EXCLUDECLONES,
+        QueryContext.empty().getCloneQueryMode()
+    );
+  }
+
+  @Test
   public void testCatalogValidationEnabled()
   {
     Assert.assertEquals(

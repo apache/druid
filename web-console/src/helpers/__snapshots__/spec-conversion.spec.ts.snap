@@ -2,6 +2,9 @@
 
 exports[`spec conversion converts index_hadoop spec (with rollup) 1`] = `
 -- This SQL query was auto generated from an ingestion spec
+SET arrayIngestMode = 'array';
+SET finalizeAggregations = FALSE;
+SET groupByEnableMultiValueUnnesting = FALSE;
 REPLACE INTO "newSource" OVERWRITE ALL
 WITH "source" AS (SELECT * FROM TABLE(
   EXTERN(
@@ -30,6 +33,9 @@ PARTITIONED BY HOUR
 
 exports[`spec conversion converts index_parallel spec (with rollup) 1`] = `
 -- This SQL query was auto generated from an ingestion spec
+SET arrayIngestMode = 'array';
+SET finalizeAggregations = FALSE;
+SET groupByEnableMultiValueUnnesting = FALSE;
 REPLACE INTO "wikipedia_rollup" OVERWRITE ALL
 WITH "source" AS (SELECT * FROM TABLE(
   EXTERN(
@@ -70,6 +76,11 @@ PARTITIONED BY HOUR
 
 exports[`spec conversion converts index_parallel spec (without rollup) 1`] = `
 -- This SQL query was auto generated from an ingestion spec
+SET arrayIngestMode = 'array';
+SET maxNumTasks = 5;
+SET maxParseExceptions = 3;
+SET finalizeAggregations = FALSE;
+SET groupByEnableMultiValueUnnesting = FALSE;
 REPLACE INTO "wikipedia" OVERWRITE ALL
 WITH "source" AS (SELECT * FROM TABLE(
   EXTERN(
@@ -111,6 +122,11 @@ CLUSTERED BY "isRobot"
 
 exports[`spec conversion converts with issue when there is a __time transform 1`] = `
 -- This SQL query was auto generated from an ingestion spec
+SET arrayIngestMode = 'array';
+SET maxNumTasks = 5;
+SET maxParseExceptions = 3;
+SET finalizeAggregations = FALSE;
+SET groupByEnableMultiValueUnnesting = FALSE;
 REPLACE INTO "wikipedia" OVERWRITE ALL
 WITH "source" AS (SELECT * FROM TABLE(
   EXTERN(
@@ -151,6 +167,11 @@ CLUSTERED BY "isRobot"
 
 exports[`spec conversion converts with issue when there is a dimension transform and strange filter 1`] = `
 -- This SQL query was auto generated from an ingestion spec
+SET arrayIngestMode = 'array';
+SET maxNumTasks = 5;
+SET maxParseExceptions = 3;
+SET finalizeAggregations = FALSE;
+SET groupByEnableMultiValueUnnesting = FALSE;
 REPLACE INTO "wikipedia" OVERWRITE ALL
 WITH "source" AS (SELECT * FROM TABLE(
   EXTERN(
@@ -192,6 +213,11 @@ CLUSTERED BY "isRobot"
 
 exports[`spec conversion converts with when the __time column is used as the __time column 1`] = `
 -- This SQL query was auto generated from an ingestion spec
+SET arrayIngestMode = 'array';
+SET maxNumTasks = 5;
+SET maxParseExceptions = 3;
+SET finalizeAggregations = FALSE;
+SET groupByEnableMultiValueUnnesting = FALSE;
 REPLACE INTO "wikipedia" OVERWRITE ALL
 WITH "source" AS (SELECT * FROM TABLE(
   EXTERN(
@@ -211,6 +237,9 @@ CLUSTERED BY "isRobot"
 
 exports[`spec conversion works with ARRAY mode 1`] = `
 -- This SQL query was auto generated from an ingestion spec
+SET arrayIngestMode = 'array';
+SET finalizeAggregations = FALSE;
+SET groupByEnableMultiValueUnnesting = FALSE;
 REPLACE INTO "lol" OVERWRITE ALL
 WITH "source" AS (SELECT * FROM TABLE(
   EXTERN(

@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
@@ -110,6 +111,80 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
         query,
         ImmutableList.of(),
         ImmutableList.of(new Object[]{explanation, resources, attributes})
+    );
+  }
+
+  @Test
+  public void testSetStatementWithExplainSanity()
+  {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
+    final String query = "SET plannerStrategy = 'DECOUPLED';\n"
+            + " EXPLAIN PLAN FOR SELECT COUNT(*)\n"
+            + "FROM (\n"
+            + "  SELECT DISTINCT dim2\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+            + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL\n"
+            + "  )\n"
+            + ")";
+
+    final String explanation = "DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])\n" +
+            "  DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "    DruidJoin(condition=[=($1, $2)], joinType=[inner])\n" +
+            "      DruidProject(dim2=[$2], $f1=[SUBSTRING($2, 1, 1)], druid=[logical])\n" +
+            "        DruidTableScan(table=[[druid, foo]], druid=[logical])\n" +
+            "      DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "        DruidProject(EXPR$0=[SUBSTRING($1, 1, 1)], druid=[logical])\n" +
+            "          DruidFilter(condition=[IS NOT NULL($1)])\n" +
+            "            DruidTableScan(table=[[druid, foo]], druid=[logical])\n";
+    final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"SELECT\"}";
+
+    testQuery(
+            query,
+            ImmutableList.of(),
+            ImmutableList.of(new Object[]{explanation, resources, attributes})
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsContextOverridesQueryContext()
+  {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
+    final String query = "SET plannerStrategy = 'DECOUPLED';\n"
+            + " SET timeout = 90000;\n"
+            + " EXPLAIN PLAN FOR \n"
+            + "SELECT COUNT(*)\n"
+            + "FROM (\n"
+            + "  SELECT DISTINCT dim2\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+            + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL\n"
+            + "  )\n"
+            + ")";
+
+    final String explanation = "DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])\n" +
+            "  DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "    DruidJoin(condition=[=($1, $2)], joinType=[inner])\n" +
+            "      DruidProject(dim2=[$2], $f1=[SUBSTRING($2, 1, 1)], druid=[logical])\n" +
+            "        DruidTableScan(table=[[druid, foo]], druid=[logical])\n" +
+            "      DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "        DruidProject(EXPR$0=[SUBSTRING($1, 1, 1)], druid=[logical])\n" +
+            "          DruidFilter(condition=[IS NOT NULL($1)])\n" +
+            "            DruidTableScan(table=[[druid, foo]], druid=[logical])\n";
+
+    final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"SELECT\"}";
+
+    testQuery(
+            query,
+            ImmutableMap.of("plannerStrategy", "COUPLED"),
+            ImmutableList.of(),
+            ImmutableList.of(new Object[]{explanation, resources, attributes})
     );
   }
 

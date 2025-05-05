@@ -33,7 +33,6 @@ import {
   DEFAULT_SERVER_QUERY_CONTEXT,
   Execution,
   externalConfigToIngestQueryPattern,
-  getQueryContextKey,
   ingestQueryPatternToQuery,
 } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
@@ -51,11 +50,6 @@ import { SchemaStep } from './schema-step/schema-step';
 import { TitleFrame } from './title-frame/title-frame';
 
 import './sql-data-loader-view.scss';
-
-const INITIAL_QUERY_CONTEXT: QueryContext = {
-  finalizeAggregations: false,
-  groupByEnableMultiValueUnnesting: false,
-};
 
 interface LoaderContent extends QueryWithContext {
   id?: string;
@@ -148,17 +142,6 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <SchemaStep
           queryString={content.queryString}
           onQueryStringChange={queryString => setContent({ ...content, queryString })}
-          forceSegmentSortByTime={getQueryContextKey(
-            'forceSegmentSortByTime',
-            content.queryContext || {},
-            serverQueryContext,
-          )}
-          changeForceSegmentSortByTime={forceSegmentSortByTime =>
-            setContent({
-              ...content,
-              queryContext: { ...content?.queryContext, forceSegmentSortByTime },
-            })
-          }
           enableAnalyze={false}
           goToQuery={() => goToQuery(content)}
           onBack={() => setContent(undefined)}
@@ -220,8 +203,6 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
             initInputFormat={inputFormat}
             doneButton={false}
             onSet={({ inputSource, inputFormat, signature, timeExpression, arrayMode }) => {
-              const queryContext: QueryContext = { ...INITIAL_QUERY_CONTEXT };
-              if (arrayMode === 'arrays') queryContext.arrayIngestMode = 'array';
               setContent({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(
@@ -231,7 +212,6 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
                     arrayMode,
                   ),
                 ).toString(),
-                queryContext,
               });
             }}
             altText="Skip the wizard and continue with custom SQL"

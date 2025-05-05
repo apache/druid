@@ -75,6 +75,7 @@ public class MSQDruidMeta extends DruidMeta
   {
     String taskId = extractTaskId(druidStatement);
 
+
     MSQTaskReportPayload payload = (MSQTaskReportPayload) overlordClient.getReportForTask(taskId)
         .get(MSQTaskReport.REPORT_KEY)
         .getPayload();
@@ -109,6 +110,7 @@ public class MSQDruidMeta extends DruidMeta
     Signature signature = makeSignature(druidStatement, payload.getResults().getSignature());
     @SuppressWarnings("unchecked")
     Frame firstFrame = Frame.create(0, true, (List<Object>) resultRows);
+    overlordClient.closeTask(taskId);
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(

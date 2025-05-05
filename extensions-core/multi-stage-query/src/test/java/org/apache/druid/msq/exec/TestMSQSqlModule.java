@@ -27,6 +27,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
+import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
@@ -52,9 +53,10 @@ public class TestMSQSqlModule extends TestDruidModule
   @LazySingleton
   public MSQTaskSqlEngine createEngine(
       ObjectMapper queryJsonMapper,
-      MSQTestOverlordServiceClient indexingServiceClient)
+      MSQTestOverlordServiceClient indexingServiceClient,
+      MSQTaskQueryKitSpecFactory queryKitSpecFactory)
   {
-    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper, new SegmentGenerationTerminalStageSpecFactory());
+    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper, new SegmentGenerationTerminalStageSpecFactory(), queryKitSpecFactory);
   }
 
   @Provides

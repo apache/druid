@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -113,7 +114,7 @@ public class SimpleServerView implements TimelineServerView
   {
     final ServerSelector selector = selectors.computeIfAbsent(
         segment.getId().toString(),
-        k -> new ServerSelector(segment, tierSelectorStrategy)
+        k -> new ServerSelector(segment, tierSelectorStrategy, HistoricalFilter.IDENTITY_FILTER)
     );
     selector.addServerAndUpdateSegment(servers.get(server), segment);
     // broker needs to skip tombstones in its timelines

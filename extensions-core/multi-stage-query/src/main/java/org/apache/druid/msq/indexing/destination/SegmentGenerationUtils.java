@@ -74,13 +74,14 @@ public final class SegmentGenerationUtils
       RowSignature querySignature,
       ClusterBy queryClusterBy,
       ColumnMappings columnMappings,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      Query<?> query
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-    final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
+    final boolean isRollupQuery = isRollupQuery(query);
     final boolean forceSegmentSortByTime =
-        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
+        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
 
     final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
@@ -90,7 +91,7 @@ public final class SegmentGenerationUtils
             forceSegmentSortByTime,
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery(),
+            query,
             destination.getDimensionSchemas()
         );
 
@@ -99,7 +100,7 @@ public final class SegmentGenerationUtils
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
                      .withDimensions(dimensionsAndAggregators.lhs)
                      .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
-                     .withGranularity(makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withGranularity(makeGranularitySpecForIngestion(query, querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
                      .withProjections(destination.getProjections())
                      .build();
   }

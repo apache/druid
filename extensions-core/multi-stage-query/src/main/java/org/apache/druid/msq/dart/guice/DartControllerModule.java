@@ -32,7 +32,6 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.ControllerMessageListener;
@@ -113,22 +112,6 @@ public class DartControllerModule implements DruidModule
     )
     {
       return new DartMessageRelays(discoveryProvider, messageRelayFactory);
-    }
-
-    @Provides
-    @LazySingleton
-    public DartSqlEngine makeSqlEngine(
-        DartControllerContextFactory controllerContextFactory,
-        DartControllerRegistry controllerRegistry,
-        DartControllerConfig controllerConfig
-    )
-    {
-      return new DartSqlEngine(
-          controllerContextFactory,
-          controllerRegistry,
-          controllerConfig,
-          Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
-      );
     }
   }
 }

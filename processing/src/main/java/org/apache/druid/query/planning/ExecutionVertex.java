@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -392,10 +393,13 @@ public class ExecutionVertex
   /**
    * Assembles the segment mapping function which should be applied to the input segments.
    */
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction()
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(PolicyEnforcer policyEnforcer)
   {
     DataSource topDataSource = getTopDataSource();
-    return topDataSource.createSegmentMapFunction(topQuery);
+    return topDataSource.createSegmentMapFunction(topQuery).andThen(segmentReference -> {
+      segmentReference.validateOrElseThrow(policyEnforcer);
+      return segmentReference;
+    });
   }
 
   /**

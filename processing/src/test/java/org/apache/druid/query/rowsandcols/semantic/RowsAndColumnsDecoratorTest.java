@@ -47,7 +47,6 @@ import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -278,7 +277,6 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       decor.addFilter(filter);
 
       final ArrayListSegment<Object[]> seggy = new ArrayListSegment<>(
-          SegmentId.dummy("dummy"),
           new ArrayList<>(Arrays.asList(originalVals)),
           columnName -> {
             int index = siggy.indexOf(columnName);
