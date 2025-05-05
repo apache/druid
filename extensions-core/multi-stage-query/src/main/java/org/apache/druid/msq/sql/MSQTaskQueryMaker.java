@@ -188,16 +188,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     // which *does* influence task execution.
     final QueryContext sqlQueryContext = plannerContext.queryContext();
 
-    // Native query context: sqlQueryContext plus things that we add prior to creating a controller task.
-    final Map<String, Object> nativeQueryContext = new HashMap<>(sqlQueryContext.asMap());
-
-    // adding user
-    nativeQueryContext.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
-
-    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
-    if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContext);
-    }
     final Object segmentGranularity = getSegmentGranularity(plannerContext);
 
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
@@ -247,6 +237,17 @@ public class MSQTaskQueryMaker implements QueryMaker
     boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(druidQuery.getQuery(), destination);
     if (isReindex) {
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
+    }
+
+    // Native query context: sqlQueryContext plus things that we add prior to creating a controller task.
+    nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
+
+    // adding user
+    nativeQueryContextOverrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
+
+    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
+    if (msqMode != null) {
+      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
     }
 
     final LegacyMSQSpec querySpec =
