@@ -255,7 +255,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Segment mappedSegment = mapSegment(segmentHolder.get().getSegment());
-      final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+      final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
       if (cursorFactory == null) {
         throw new ISE(
             "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
@@ -315,7 +315,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
 
         final Segment mappedSegment = mapSegment(frameSegment);
-        final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+        final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
         if (cursorFactory == null) {
           throw new ISE(
               "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."

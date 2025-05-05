@@ -1462,7 +1462,7 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
             signature
         )
     )) {
-      final CursorFactory cursorFactory = segment.asCursorFactory();
+      final CursorFactory cursorFactory = segment.as(CursorFactory.class);
       return makeChannelFromCursorFactory(cursorFactory, keyColumns);
     }
   }

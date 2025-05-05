@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -61,19 +60,6 @@ public class FrameSegment implements Segment
     return Intervals.ETERNITY;
   }
 
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return null;
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return frameReader.makeCursorFactory(frame);
-  }
-
   @Override
   public void close()
   {
@@ -87,7 +73,9 @@ public class FrameSegment implements Segment
   {
     if (CloseableShapeshifter.class.equals(clazz)) {
       return (T) new ColumnBasedFrameRowsAndColumns(frame, frameReader.signature());
+    } else if (CursorFactory.class.equals(clazz)) {
+      return (T) frameReader.makeCursorFactory(frame);
     }
-    return Segment.super.as(clazz);
+    return null;
   }
 }

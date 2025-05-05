@@ -44,9 +44,9 @@ public class ArrayListSegment<RowType> extends RowBasedSegment<RowType>
    * this, and callers will expect it.
    * <p>
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of
-   * {@link #asCursorFactory()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's
-   * cursor factory will allow creation of selectors on any field, using the {@link RowAdapter#columnFunction} for that
-   * field, even if it doesn't appear in "rowSignature".
+   * {@link #as(Class)} for {@link CursorFactory}. Note that the {@link ColumnSelectorFactory} implementation returned
+   * by this segment's cursor factory will allow creation of selectors on any field, using the
+   * {@link RowAdapter#columnFunction} for that field, even if it doesn't appear in "rowSignature".
    *
    * @param rows         objects that comprise this segment. Must be re-iterable if support for {@link Cursor#reset()}
    *                     is required. Otherwise, does not need to be re-iterable.

@@ -38,6 +38,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.RowSignature;
@@ -51,6 +52,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ExportResultsFrameProcessor implements FrameProcessor<Object>
@@ -151,7 +153,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private void exportFrame(final Frame frame)
   {
     final Segment segment = new FrameSegment(frame, frameReader);
-    try (final CursorHolder cursorHolder = segment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (final CursorHolder cursorHolder = Objects.requireNonNull(segment.as(CursorFactory.class))
+                                                  .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       if (cursor == null) {
         exportWriter.writeRowEnd();

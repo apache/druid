@@ -35,6 +35,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 
@@ -84,43 +85,42 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
 
       @Nullable
       @Override
-      public QueryableIndex asQueryableIndex()
+      public <T> T as(@Nonnull Class<T> clazz)
       {
-        return queryableIndex;
-      }
-
-      @Override
-      public CursorFactory asCursorFactory()
-      {
-        return new CursorFactory()
-        {
-          @Override
-          public CursorHolder makeCursorHolder(CursorBuildSpec spec)
+        if (CursorFactory.class.equals(clazz)) {
+          return (T) new CursorFactory()
           {
-            return new CursorHolder()
+            @Override
+            public CursorHolder makeCursorHolder(CursorBuildSpec spec)
             {
-              @Nullable
-              @Override
-              public Cursor asCursor()
+              return new CursorHolder()
               {
-                return null;
-              }
-            };
-          }
+                @Nullable
+                @Override
+                public Cursor asCursor()
+                {
+                  return null;
+                }
+              };
+            }
 
-          @Override
-          public RowSignature getRowSignature()
-          {
-            return RowSignature.empty();
-          }
+            @Override
+            public RowSignature getRowSignature()
+            {
+              return RowSignature.empty();
+            }
 
-          @Override
-          @Nullable
-          public ColumnCapabilities getColumnCapabilities(String column)
-          {
-            return null;
-          }
-        };
+            @Override
+            @Nullable
+            public ColumnCapabilities getColumnCapabilities(String column)
+            {
+              return null;
+            }
+          };
+        } else if (QueryableIndex.class.equals(clazz)) {
+          return (T) queryableIndex;
+        }
+        return null;
       }
 
       @Override

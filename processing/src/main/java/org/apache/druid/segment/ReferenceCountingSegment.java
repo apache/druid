@@ -108,20 +108,6 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   }
 
   @Override
-  @Nullable
-  public QueryableIndex asQueryableIndex()
-  {
-    return !isClosed() ? baseObject.asQueryableIndex() : null;
-  }
-
-  @Nullable
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return !isClosed() ? baseObject.asCursorFactory() : null;
-  }
-
-  @Override
   public boolean overshadows(ReferenceCountingSegment other)
   {
     if (baseObject.getId().getDataSource().equals(other.baseObject.getId().getDataSource())

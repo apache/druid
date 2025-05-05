@@ -71,24 +71,12 @@ public class ReferenceCountingSegmentTest
           }
 
           @Override
-          public QueryableIndex asQueryableIndex()
-          {
-            return index;
-          }
-
-          @Override
-          public CursorFactory asCursorFactory()
-          {
-            return cursorFactory;
-          }
-
-          @Override
           public <T> T as(Class<T> clazz)
           {
             if (clazz.equals(QueryableIndex.class)) {
-              return (T) asQueryableIndex();
+              return (T) index;
             } else if (clazz.equals(CursorFactory.class)) {
-              return (T) asCursorFactory();
+              return (T) cursorFactory;
             } else if (clazz.equals(IndexedTable.class)) {
               return (T) indexedTable;
             }
@@ -171,8 +159,8 @@ public class ReferenceCountingSegmentTest
   {
     Assert.assertEquals(segmentId, segment.getId());
     Assert.assertEquals(dataInterval, segment.getDataInterval());
-    Assert.assertEquals(index, segment.asQueryableIndex());
-    Assert.assertEquals(cursorFactory, segment.asCursorFactory());
+    Assert.assertEquals(index, segment.as(QueryableIndex.class));
+    Assert.assertEquals(cursorFactory, segment.as(CursorFactory.class));
   }
 
   @Test
