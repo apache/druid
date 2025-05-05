@@ -266,8 +266,6 @@ public class MSQTaskQueryMaker implements QueryMaker
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
     }
 
-    nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
-
     // adding user
     nativeQueryContextOverrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
 
