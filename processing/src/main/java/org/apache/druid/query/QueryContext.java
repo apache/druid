@@ -651,7 +651,7 @@ public class QueryContext
   }
 
   /**
-   * Returns true if {@link QueryContexts#CTX_FULL_REPORT} is set to true, false if it is set to false or not set at all.
+   * Returns true if {@link QueryContexts#CTX_FULL_REPORT} is set to true, false if it is set to false or not set.
    */
   public boolean getFullReport()
   {

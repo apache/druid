@@ -563,7 +563,6 @@ public abstract class AbstractAuthConfigurationTest
   public void test_msqQueryWithContext_datasourceAndContextParamsUser_succeed() throws Exception
   {
     final String query = "select count(*) from auth_test";
-    // Testing basic-auth admin, can read all rows
     StatusResponseHolder responseHolder = makeMSQQueryRequest(
         getHttpClient(User.DATASOURCE_AND_CONTEXT_PARAMS_USER),
         query,
