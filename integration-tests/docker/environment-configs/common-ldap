@@ -29,7 +29,7 @@ DRUID_DEP_LIB_DIR=/shared/hadoop_xml:/shared/docker/lib/*:/usr/local/druid/lib/m
 
 # Druid configs
 # If you are making a change in load list below, make the necessary changes in github actions too
-druid_extensions_loadList=["mysql-metadata-storage","druid-s3-extensions","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches"]
+druid_extensions_loadList=["mysql-metadata-storage","druid-s3-extensions","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-multi-stage-query"]
 druid_extensions_directory=/shared/docker/extensions
 druid_auth_authenticator_ldap_authorizerName=ldapauth
 druid_auth_authenticator_ldap_initialAdminPassword=priest
