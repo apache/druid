@@ -284,6 +284,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     {
       return baseSequenceName;
     }
+
+    @Override
+    public String toString()
+    {
+      return "TaskGroup{" +
+             "groupId=" + groupId +
+             ", startingSequences=" + startingSequences +
+             ", unfilteredStartingSequencesForSequenceName=" + unfilteredStartingSequencesForSequenceName +
+             ", tasks=" + tasks +
+             ", minimumMessageTime=" + minimumMessageTime +
+             ", maximumMessageTime=" + maximumMessageTime +
+             ", exclusiveStartSequenceNumberPartitions=" + exclusiveStartSequenceNumberPartitions +
+             ", checkpointSequences=" + checkpointSequences +
+             ", baseSequenceName='" + baseSequenceName + '\'' +
+             ", completionTimeout=" + completionTimeout +
+             ", handoffEarly=" + handoffEarly +
+             '}';
+    }
   }
 
   private class TaskData
@@ -462,7 +480,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               log.info(
                   "Skipping DynamicAllocationTasksNotice execution for datasource [%s] because following tasks are pending [%s]",
                   dataSource,
-                  pendingCompletionTaskGroups
+                  list
               );
               return;
             }
