@@ -1,0 +1,549 @@
+!set sqlJoinAlgorithm sortMerge
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSsb/norm
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM ssb_denorm;
++------+
+| cnt  |
++------+
+| 6001 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM ssb_norm_customer;
++------+
+| cnt  |
++------+
+| 3000 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM ssb_norm_date;
++------+
+| cnt  |
++------+
+| 2557 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: A04
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM ssb_norm_lineorder;
++------+
+| cnt  |
++------+
+| 6001 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: A05
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM ssb_norm_part;
++-----+
+| cnt |
++-----+
+| 200 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: A06
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM ssb_norm_supplier;
++------+
+| cnt  |
++------+
+| 2000 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q1_0_sortMerge
+#-------------------------------------------------------------------------
+SELECT sum(lo_extendedprice*lo_discount) AS revenue
+FROM ssb_norm_lineorder,
+     ssb_norm_date
+WHERE lo_orderdate = d_datekey
+  AND d_year = 1993
+  AND lo_discount BETWEEN 1 AND 3
+  AND lo_quantity < 25;
++-----------+
+| revenue   |
++-----------+
+| 496986424 |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q1_1_sortMerge
+#-------------------------------------------------------------------------
+SELECT sum(lo_extendedprice*lo_discount) AS revenue
+FROM ssb_norm_lineorder,
+     ssb_norm_date
+WHERE lo_orderdate = d_datekey
+  AND d_yearmonthnum = 199401
+  AND lo_discount BETWEEN 4 AND 6
+  AND lo_quantity BETWEEN 26 AND 35;
++-----------+
+| revenue   |
++-----------+
+| 130440815 |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q1_2_sortMerge
+#-------------------------------------------------------------------------
+SELECT sum(lo_extendedprice*lo_discount) AS revenue
+FROM ssb_norm_lineorder,
+     ssb_norm_date
+WHERE lo_orderdate = d_datekey
+  AND d_weeknuminyear = 6
+  AND d_year = 1994
+  AND lo_discount BETWEEN 5 AND 7
+  AND lo_quantity BETWEEN 26 AND 35;
++----------+
+| revenue  |
++----------+
+| 54026994 |
++----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q2_0_sortMerge
+#-------------------------------------------------------------------------
+SELECT sum(lo_revenue),
+       d_year,
+       p_brand1
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_supplier t2 ON lo_suppkey = t2.s_suppkey
+WHERE lo_orderdate = d_datekey
+  AND lo_partkey = p_partkey
+  AND lo_suppkey = t2.s_suppkey
+  AND p_category = 'MFGR#12'
+  AND t2.s_region = 'AMERICA'
+GROUP BY d_year,
+         p_brand1
+ORDER BY d_year,
+         p_brand1;
++----------+--------+-----------+
+| EXPR$0   | d_year | p_brand1  |
++----------+--------+-----------+
+|  1198812 |   1992 | MFGR#1215 |
+|  4240431 |   1992 | MFGR#1219 |
+| 10171469 |   1992 | MFGR#1220 |
+|  4314679 |   1992 | MFGR#1225 |
+|  5650533 |   1992 | MFGR#1226 |
+|  6418813 |   1992 | MFGR#1234 |
+|  2408375 |   1992 | MFGR#1235 |
+|  1392171 |   1992 | MFGR#1240 |
+|  1910749 |   1993 | MFGR#1216 |
+|  1891501 |   1993 | MFGR#1217 |
+|   956763 |   1993 | MFGR#122  |
+|  8592202 |   1993 | MFGR#1224 |
+|  2455961 |   1993 | MFGR#1235 |
+|  7185744 |   1993 | MFGR#125  |
+|  7379080 |   1994 | MFGR#1213 |
+|  7237036 |   1994 | MFGR#1218 |
+|  2096340 |   1994 | MFGR#123  |
+|   281356 |   1994 | MFGR#1231 |
+|  4099922 |   1995 | MFGR#1212 |
+|  3660284 |   1995 | MFGR#1217 |
+|  6996944 |   1995 | MFGR#122  |
+|  1778895 |   1995 | MFGR#1226 |
+|  5417412 |   1995 | MFGR#123  |
+|  1250539 |   1995 | MFGR#1232 |
+|  1397772 |   1995 | MFGR#1233 |
+|  3934180 |   1995 | MFGR#1237 |
+|  2889162 |   1995 | MFGR#124  |
+|  3968076 |   1995 | MFGR#128  |
+|   575014 |   1996 | MFGR#1211 |
+|  1266018 |   1996 | MFGR#1213 |
+|  2681289 |   1996 | MFGR#122  |
+|  6616779 |   1996 | MFGR#1221 |
+|  8687289 |   1996 | MFGR#1228 |
+|  3447369 |   1996 | MFGR#1229 |
+|  3057601 |   1996 | MFGR#1235 |
+|  2668498 |   1996 | MFGR#127  |
+|  3725976 |   1997 | MFGR#1214 |
+|  2850000 |   1997 | MFGR#1226 |
+|  4347652 |   1997 | MFGR#1229 |
+|  2073004 |   1997 | MFGR#123  |
+|   455844 |   1997 | MFGR#129  |
+|  6482923 |   1998 | MFGR#129  |
++----------+--------+-----------+
+(42 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q2_1_sortMerge
+#-------------------------------------------------------------------------
+SELECT sum(lo_revenue),
+       d_year,
+       p_brand1
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_supplier t2 ON lo_suppkey = t2.s_suppkey
+WHERE lo_orderdate = d_datekey
+  AND lo_partkey = p_partkey
+  AND lo_suppkey = t2.s_suppkey
+  AND p_brand1 BETWEEN 'MFGR#2221' AND 'MFGR#2228'
+  AND t2.s_region = 'ASIA'
+GROUP BY d_year,
+         p_brand1
+ORDER BY d_year,
+         p_brand1;
++---------+--------+-----------+
+| EXPR$0  | d_year | p_brand1  |
++---------+--------+-----------+
+| 6897772 |   1994 | MFGR#2221 |
+| 6618927 |   1994 | MFGR#2223 |
+| 5831985 |   1995 | MFGR#2222 |
+| 3783129 |   1995 | MFGR#2228 |
+| 5934309 |   1996 | MFGR#2222 |
+|  299449 |   1997 | MFGR#2224 |
+|   94275 |   1997 | MFGR#2228 |
+| 3558219 |   1998 | MFGR#2223 |
+| 4455177 |   1998 | MFGR#2226 |
+| 4649879 |   1998 | MFGR#2228 |
++---------+--------+-----------+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q2_2_sortMerge
+#-------------------------------------------------------------------------
+SELECT sum(lo_revenue),
+       d_year,
+       p_brand1
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_supplier t2 ON lo_suppkey = t2.s_suppkey
+WHERE lo_orderdate = d_datekey
+  AND lo_partkey = p_partkey
+  AND lo_suppkey = t2.s_suppkey
+  AND p_brand1 = 'MFGR#2221'
+  AND t2.s_region = 'EUROPE'
+GROUP BY d_year,
+         p_brand1
+ORDER BY d_year,
+         p_brand1;
++--------+--------+----------+
+| EXPR$0 | d_year | p_brand1 |
++--------+--------+----------+
++--------+--------+----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q3_0_sortMerge
+#-------------------------------------------------------------------------
+SELECT t2.c_nation,
+       s_nation,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_customer t2 ON lo_custkey = t2.c_custkey
+WHERE lo_custkey = t2.c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND t2.c_region = 'ASIA'
+  AND s_region = 'ASIA'
+  AND d_year >= 1992
+  AND d_year <= 1997
+GROUP BY t2.c_nation,
+         s_nation,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++-----------+-----------+--------+----------+
+| c_nation  | s_nation  | d_year | revenue  |
++-----------+-----------+--------+----------+
+| INDONESIA | CHINA     |   1992 | 10260314 |
+| JAPAN     | INDONESIA |   1992 |  5666112 |
+| CHINA     | JAPAN     |   1992 |  5409547 |
+| INDIA     | CHINA     |   1992 |  1527152 |
+| JAPAN     | JAPAN     |   1992 |  1283092 |
+| INDONESIA | JAPAN     |   1992 |  1230574 |
+| JAPAN     | CHINA     |   1992 |  1070322 |
+| INDONESIA | CHINA     |   1993 |  6194976 |
+| INDONESIA | VIETNAM   |   1993 |  4332064 |
+| INDIA     | VIETNAM   |   1994 |  7324202 |
+| INDONESIA | INDONESIA |   1994 |  5064633 |
+| INDONESIA | CHINA     |   1995 |  3923422 |
+| INDONESIA | INDIA     |   1995 |  2305549 |
+| JAPAN     | VIETNAM   |   1995 |   452944 |
+| INDONESIA | CHINA     |   1996 |  5324910 |
+| INDONESIA | JAPAN     |   1996 |  4128684 |
+| INDONESIA | INDONESIA |   1997 |  3026994 |
++-----------+-----------+--------+----------+
+(17 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q3_1_sortMerge
+#-------------------------------------------------------------------------
+SELECT t2.c_city,
+       s_city,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_customer t2 ON lo_custkey = t2.c_custkey
+WHERE lo_custkey = t2.c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND t2.c_nation = 'UNITED STATES'
+  AND s_nation = 'UNITED STATES'
+  AND d_year >= 1992
+  AND d_year <= 1997
+GROUP BY t2.c_city,
+         s_city,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++--------+--------+--------+---------+
+| c_city | s_city | d_year | revenue |
++--------+--------+--------+---------+
++--------+--------+--------+---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q3_2_sortMerge
+#-------------------------------------------------------------------------
+SELECT t2.c_city,
+       s_city,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_customer t2 ON lo_custkey = t2.c_custkey
+WHERE lo_custkey = t2.c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND (t2.c_city='UNITED KI1'
+       OR t2.c_city='UNITED KI5')
+  AND (s_city='UNITED KI1'
+       OR s_city='UNITED KI5')
+  AND d_year >= 1992
+  AND d_year <= 1997
+GROUP BY t2.c_city,
+         s_city,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++--------+--------+--------+---------+
+| c_city | s_city | d_year | revenue |
++--------+--------+--------+---------+
++--------+--------+--------+---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q3_3_sortMerge
+#-------------------------------------------------------------------------
+SELECT t2.c_city,
+       s_city,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_customer t2 ON lo_custkey = t2.c_custkey
+WHERE lo_custkey = t2.c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND (t2.c_city='UNITED KI1'
+       OR t2.c_city='UNITED KI5')
+  AND (s_city='UNITED KI1'
+       OR s_city='UNITED KI5')
+  AND d_yearmonth = 'Dec1997'
+GROUP BY t2.c_city,
+         s_city,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++--------+--------+--------+---------+
+| c_city | s_city | d_year | revenue |
++--------+--------+--------+---------+
++--------+--------+--------+---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q4_0_sortMerge
+#-------------------------------------------------------------------------
+SELECT t2.d_year,
+       c_nation,
+       sum(lo_revenue - lo_supplycost) AS profit
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_date t2 ON lo_orderdate = t2.d_datekey
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_partkey = p_partkey
+  AND lo_orderdate = t2.d_datekey
+  AND c_region = 'AMERICA'
+  AND s_region = 'AMERICA'
+  AND (p_mfgr = 'MFGR#1'
+       OR p_mfgr = 'MFGR#2')
+GROUP BY t2.d_year,
+         c_nation
+ORDER BY t2.d_year,
+         c_nation;
++--------+---------------+----------+
+| d_year | c_nation      | profit   |
++--------+---------------+----------+
+|   1992 | ARGENTINA     | 27310376 |
+|   1992 | CANADA        | 22833941 |
+|   1992 | PERU          | 30170370 |
+|   1992 | UNITED STATES |  2164595 |
+|   1993 | ARGENTINA     |  6969531 |
+|   1993 | BRAZIL        |  1623521 |
+|   1993 | CANADA        |  9692103 |
+|   1993 | PERU          |   492715 |
+|   1993 | UNITED STATES |  8624808 |
+|   1994 | ARGENTINA     |  4612277 |
+|   1994 | BRAZIL        | 21652899 |
+|   1994 | CANADA        | 12123051 |
+|   1994 | PERU          | 10167110 |
+|   1995 | ARGENTINA     | 18514975 |
+|   1995 | BRAZIL        | 20418200 |
+|   1995 | CANADA        | 14290190 |
+|   1995 | PERU          | 25384989 |
+|   1995 | UNITED STATES | 10312664 |
+|   1996 | ARGENTINA     | 10858130 |
+|   1996 | BRAZIL        | 20126923 |
+|   1996 | PERU          |   220127 |
+|   1996 | UNITED STATES |  3332775 |
+|   1997 | ARGENTINA     |   487288 |
+|   1997 | BRAZIL        |  4260056 |
+|   1997 | CANADA        | 24950501 |
+|   1997 | PERU          |  1116704 |
+|   1997 | UNITED STATES |  8697167 |
+|   1998 | ARGENTINA     |  6376733 |
+|   1998 | BRAZIL        |   458463 |
+|   1998 | CANADA        |  6480820 |
+|   1998 | PERU          |  3731206 |
+|   1998 | UNITED STATES | 12032220 |
++--------+---------------+----------+
+(32 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q4_1_sortMerge
+#-------------------------------------------------------------------------
+SELECT t2.d_year,
+       s_nation,
+       p_category,
+       sum(lo_revenue - lo_supplycost) AS profit
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_date t2 ON lo_orderdate = t2.d_datekey
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_partkey = p_partkey
+  AND lo_orderdate = t2.d_datekey
+  AND c_region = 'AMERICA'
+  AND s_region = 'AMERICA'
+  AND (t2.d_year = 1997
+       OR t2.d_year = 1998)
+  AND (p_mfgr = 'MFGR#1'
+       OR p_mfgr = 'MFGR#2')
+GROUP BY t2.d_year,
+         s_nation,
+         p_category
+ORDER BY t2.d_year,
+         s_nation,
+         p_category;
++--------+---------------+------------+---------+
+| d_year | s_nation      | p_category | profit  |
++--------+---------------+------------+---------+
+|   1997 | ARGENTINA     | MFGR#12    | 4226996 |
+|   1997 | ARGENTINA     | MFGR#15    | 6305985 |
+|   1997 | BRAZIL        | MFGR#15    | 3960324 |
+|   1997 | CANADA        | MFGR#24    | 3752424 |
+|   1997 | CANADA        | MFGR#25    | 4390596 |
+|   1997 | UNITED STATES | MFGR#11    | 4944743 |
+|   1997 | UNITED STATES | MFGR#12    |  356748 |
+|   1997 | UNITED STATES | MFGR#21    | 1274115 |
+|   1997 | UNITED STATES | MFGR#22    | 5604136 |
+|   1997 | UNITED STATES | MFGR#23    | 4695649 |
+|   1998 | BRAZIL        | MFGR#25    | 3731206 |
+|   1998 | CANADA        | MFGR#12    | 6376733 |
+|   1998 | CANADA        | MFGR#13    | 9133459 |
+|   1998 | CANADA        | MFGR#24    |  458463 |
+|   1998 | UNITED STATES | MFGR#13    | 9379581 |
++--------+---------------+------------+---------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_norm TEST_ID: Q4_2_sortMerge
+#-------------------------------------------------------------------------
+SELECT t2.d_year,
+       s_city,
+       p_brand1,
+       sum(lo_revenue - lo_supplycost) AS profit
+FROM ssb_denorm t1
+INNER JOIN ssb_norm_date t2 ON lo_orderdate = t2.d_datekey
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_partkey = p_partkey
+  AND lo_orderdate = t2.d_datekey
+  AND c_region = 'AMERICA'
+  AND s_nation = 'UNITED STATES'
+  AND (t2.d_year = 1997
+       OR t2.d_year = 1998)
+  AND p_category = 'MFGR#14'
+GROUP BY t2.d_year,
+         s_city,
+         p_brand1
+ORDER BY t2.d_year,
+         s_city,
+         p_brand1;
++--------+--------+----------+--------+
+| d_year | s_city | p_brand1 | profit |
++--------+--------+----------+--------+
++--------+--------+----------+--------+
+(0 rows)
+
+!ok
+

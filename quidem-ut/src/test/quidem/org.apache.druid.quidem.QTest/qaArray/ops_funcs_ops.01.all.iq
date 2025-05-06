@@ -1,0 +1,410 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT (a_bool + a_bool) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BIGINT ARRAY> + <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C2_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[0]' RETURNING boolean array) + json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BOOLEAN ARRAY> + <BOOLEAN ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C3_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][0]' RETURNING boolean array) + json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BOOLEAN ARRAY> + <BOOLEAN ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C4_D1
+#-------------------------------------------------------------------------
+SELECT (a_int + a_int) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BIGINT ARRAY> + <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C5_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[1]' RETURNING bigint array) + json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BIGINT ARRAY> + <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C6_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][1]' RETURNING bigint array) + json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BIGINT ARRAY> + <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C7_D1
+#-------------------------------------------------------------------------
+SELECT (a_float + a_float) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<DOUBLE ARRAY> + <DOUBLE ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C8_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[2]' RETURNING decimal array) + json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<DECIMAL(19, 0) ARRAY> + <DECIMAL(19, 0) ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C9_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][2]' RETURNING decimal array) + json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<DECIMAL(19, 0) ARRAY> + <DECIMAL(19, 0) ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C10_D1
+#-------------------------------------------------------------------------
+SELECT (a_str + a_str) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C11_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[3]' RETURNING varchar array) + json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C12_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][3]' RETURNING varchar array) + json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C13_D1
+#-------------------------------------------------------------------------
+SELECT (a_null + a_null) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BIGINT ARRAY> + <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C14_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[4]' RETURNING varchar array) + json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C15_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][4]' RETURNING varchar array) + json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C16_D1
+#-------------------------------------------------------------------------
+SELECT (a_empty + a_empty) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<BIGINT ARRAY> + <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C17_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[5]' RETURNING varchar array) + json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C18_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][5]' RETURNING varchar array) + json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C19_D1
+#-------------------------------------------------------------------------
+SELECT (a_mixed + a_mixed) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C20_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[6]' RETURNING varchar array) + json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C21_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][6]' RETURNING varchar array) + json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C22_D1
+#-------------------------------------------------------------------------
+SELECT (a_nested + a_nested) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<COMPLEX<JSON>> + <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C23_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7]' RETURNING varchar array) + json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B1_C24_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][7]' RETURNING varchar array) + json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '+' to arguments of type '<VARCHAR ARRAY> + <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT (a_bool - a_bool) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BIGINT ARRAY> - <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C2_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[0]' RETURNING boolean array) - json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BOOLEAN ARRAY> - <BOOLEAN ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C3_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][0]' RETURNING boolean array) - json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BOOLEAN ARRAY> - <BOOLEAN ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C4_D1
+#-------------------------------------------------------------------------
+SELECT (a_int - a_int) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BIGINT ARRAY> - <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C5_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[1]' RETURNING bigint array) - json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BIGINT ARRAY> - <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C6_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][1]' RETURNING bigint array) - json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BIGINT ARRAY> - <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C7_D1
+#-------------------------------------------------------------------------
+SELECT (a_float - a_float) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<DOUBLE ARRAY> - <DOUBLE ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C8_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[2]' RETURNING decimal array) - json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<DECIMAL(19, 0) ARRAY> - <DECIMAL(19, 0) ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C9_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][2]' RETURNING decimal array) - json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<DECIMAL(19, 0) ARRAY> - <DECIMAL(19, 0) ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C10_D1
+#-------------------------------------------------------------------------
+SELECT (a_str - a_str) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C11_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[3]' RETURNING varchar array) - json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C12_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][3]' RETURNING varchar array) - json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C13_D1
+#-------------------------------------------------------------------------
+SELECT (a_null - a_null) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BIGINT ARRAY> - <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C14_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[4]' RETURNING varchar array) - json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C15_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][4]' RETURNING varchar array) - json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C16_D1
+#-------------------------------------------------------------------------
+SELECT (a_empty - a_empty) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<BIGINT ARRAY> - <BIGINT ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C17_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[5]' RETURNING varchar array) - json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C18_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][5]' RETURNING varchar array) - json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C19_D1
+#-------------------------------------------------------------------------
+SELECT (a_mixed - a_mixed) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C20_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[6]' RETURNING varchar array) - json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C21_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][6]' RETURNING varchar array) - json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C22_D1
+#-------------------------------------------------------------------------
+SELECT (a_nested - a_nested) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<COMPLEX<JSON>> - <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C23_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7]' RETURNING varchar array) - json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B2_C24_D1
+#-------------------------------------------------------------------------
+SELECT (json_value(a_nested, '$[7][7]' RETURNING varchar array) - json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply '-' to arguments of type '<VARCHAR ARRAY> - <VARCHAR ARRAY>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ops TEST_ID: A1_B3_C1_D1
+#-------------------------------------------------------------------------
+SELECT (a_bool * a_bool) AS col
+FROM test_array;
+Cannot apply '*' to arguments of type '<BIGINT ARRAY> * <BIGINT ARRAY>'
+!error
+

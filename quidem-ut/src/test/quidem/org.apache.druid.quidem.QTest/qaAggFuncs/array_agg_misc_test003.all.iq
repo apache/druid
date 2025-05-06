@@ -1,0 +1,126 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT array_length(array_agg(tab0s0||'1', 100000)) AS c1,
+       array_length(array_agg(tab0s0||'2', 100000)) AS c2,
+       array_length(array_agg(tab0s0||'3', 100000)) AS c3,
+       array_length(array_agg(tab0s0||'4', 100000)) AS c4,
+       array_length(array_agg(tab0s0||'5', 100000)) AS c5,
+       array_length(array_agg(tab0s0||'6', 100000)) AS c6,
+       array_length(array_agg(tab0s0||'7', 100000)) AS c7,
+       array_length(array_agg(tab0s0||'8', 100000)) AS c8,
+       array_length(array_agg(tab0s0||'9', 100000)) AS c9,
+       array_length(array_agg(tab0s0||'10', 100000)) AS c10,
+       array_length(array_agg(tab0s0||'11', 100000)) AS c11,
+       array_length(array_agg(tab0s0||'12', 100000)) AS c12,
+       array_length(array_agg(tab0s0||'13', 100000)) AS c13,
+       array_length(array_agg(tab0s0||'14', 100000)) AS c14,
+       array_length(array_agg(tab0s0||'15', 100000)) AS c15,
+       array_length(array_agg(tab0s0||'16', 100000)) AS c16,
+       array_length(array_agg(tab0s0||'17', 100000)) AS c17,
+       array_length(array_agg(tab0s0||'18', 100000)) AS c18,
+       array_length(array_agg(tab0s0||'19', 100000)) AS c19,
+       array_length(array_agg(tab0s0||'20', 100000)) AS c20,
+       array_length(array_agg(tab0s0||'21', 100000)) AS c21,
+       array_length(array_agg(tab0s0||'22', 100000)) AS c22,
+       array_length(array_agg(tab0s0||'23', 100000)) AS c23,
+       array_length(array_agg(tab0s0||'24', 100000)) AS c24,
+       array_length(array_agg(tab0s0||'25', 100000)) AS c25,
+       array_length(array_agg(tab0s0||'26', 100000)) AS c26,
+       array_length(array_agg(tab0s0||'27', 100000)) AS c27,
+       array_length(array_agg(tab0s0||'28', 100000)) AS c28,
+       array_length(array_agg(tab0s0||'29', 100000)) AS c29,
+       array_length(array_agg(tab0s0||'30', 100000)) AS c30,
+       array_length(array_agg(tab0s0||'31', 100000)) AS c31,
+       array_length(array_agg(tab0s0||'32', 100000)) AS c32,
+       array_length(array_agg(tab0s0||'33', 100000)) AS c33,
+       array_length(array_agg(tab0s0||'34', 100000)) AS c34,
+       array_length(array_agg(tab0s0||'35', 100000)) AS c35,
+       array_length(array_agg(tab0s0||'36', 100000)) AS c36,
+       array_length(array_agg(tab0s0||'37', 100000)) AS c37,
+       array_length(array_agg(tab0s0||'38', 100000)) AS c38,
+       array_length(array_agg(tab0s0||'39', 100000)) AS c39,
+       array_length(array_agg(tab0s0||'40', 100000)) AS c40,
+       array_length(array_agg(tab0s0||'41', 100000)) AS c41,
+       array_length(array_agg(tab0s0||'42', 100000)) AS c42,
+       array_length(array_agg(tab0s0||'43', 100000)) AS c43,
+       array_length(array_agg(tab0s0||'44', 100000)) AS c44,
+       array_length(array_agg(tab0s0||'45', 100000)) AS c45,
+       array_length(array_agg(tab0s0||'46', 100000)) AS c46,
+       array_length(array_agg(tab0s0||'47', 100000)) AS c47,
+       array_length(array_agg(tab0s0||'48', 100000)) AS c48,
+       array_length(array_agg(tab0s0||'49', 100000)) AS c49,
+       array_length(array_agg(tab0s0||'50', 100000)) AS c50,
+       array_length(array_agg(tab0s0||'51', 100000)) AS c51,
+       array_length(array_agg(tab0s0||'52', 100000)) AS c52,
+       array_length(array_agg(tab0s0||'53', 100000)) AS c53,
+       array_length(array_agg(tab0s0||'54', 100000)) AS c54,
+       array_length(array_agg(tab0s0||'55', 100000)) AS c55,
+       array_length(array_agg(tab0s0||'56', 100000)) AS c56,
+       array_length(array_agg(tab0s0||'57', 100000)) AS c57,
+       array_length(array_agg(tab0s0||'58', 100000)) AS c58,
+       array_length(array_agg(tab0s0||'59', 100000)) AS c59,
+       array_length(array_agg(tab0s0||'60', 100000)) AS c60,
+       array_length(array_agg(tab0s0||'61', 100000)) AS c61,
+       array_length(array_agg(tab0s0||'62', 100000)) AS c62,
+       array_length(array_agg(tab0s0||'63', 100000)) AS c63,
+       array_length(array_agg(tab0s0||'64', 100000)) AS c64,
+       array_length(array_agg(tab0s0||'65', 100000)) AS c65,
+       array_length(array_agg(tab0s0||'66', 100000)) AS c66,
+       array_length(array_agg(tab0s0||'67', 100000)) AS c67,
+       array_length(array_agg(tab0s0||'68', 100000)) AS c68,
+       array_length(array_agg(tab0s0||'69', 100000)) AS c69,
+       array_length(array_agg(tab0s0||'70', 100000)) AS c70,
+       array_length(array_agg(tab0s0||'71', 100000)) AS c71,
+       array_length(array_agg(tab0s0||'72', 100000)) AS c72,
+       array_length(array_agg(tab0s0||'73', 100000)) AS c73,
+       array_length(array_agg(tab0s0||'74', 100000)) AS c74,
+       array_length(array_agg(tab0s0||'75', 100000)) AS c75,
+       array_length(array_agg(tab0s0||'76', 100000)) AS c76,
+       array_length(array_agg(tab0s0||'77', 100000)) AS c77,
+       array_length(array_agg(tab0s0||'78', 100000)) AS c78,
+       array_length(array_agg(tab0s0||'79', 100000)) AS c79,
+       array_length(array_agg(tab0s0||'80', 100000)) AS c80,
+       array_length(array_agg(tab0s0||'81', 100000)) AS c81,
+       array_length(array_agg(tab0s0||'82', 100000)) AS c82,
+       array_length(array_agg(tab0s0||'83', 100000)) AS c83,
+       array_length(array_agg(tab0s0||'84', 100000)) AS c84,
+       array_length(array_agg(tab0s0||'85', 100000)) AS c85,
+       array_length(array_agg(tab0s0||'86', 100000)) AS c86,
+       array_length(array_agg(tab0s0||'87', 100000)) AS c87,
+       array_length(array_agg(tab0s0||'88', 100000)) AS c88,
+       array_length(array_agg(tab0s0||'89', 100000)) AS c89,
+       array_length(array_agg(tab0s0||'90', 100000)) AS c90,
+       array_length(array_agg(tab0s0||'91', 100000)) AS c91,
+       array_length(array_agg(tab0s0||'92', 100000)) AS c92,
+       array_length(array_agg(tab0s0||'93', 100000)) AS c93,
+       array_length(array_agg(tab0s0||'94', 100000)) AS c94,
+       array_length(array_agg(tab0s0||'95', 100000)) AS c95,
+       array_length(array_agg(tab0s0||'96', 100000)) AS c96,
+       array_length(array_agg(tab0s0||'97', 100000)) AS c97,
+       array_length(array_agg(tab0s0||'98', 100000)) AS c98,
+       array_length(array_agg(tab0s0||'99', 100000)) AS c99,
+       array_length(array_agg(tab0s0||'100', 100000)) AS c100
+FROM test_agg_funcs
+GROUP BY __time;
+Not enough
+!error
+

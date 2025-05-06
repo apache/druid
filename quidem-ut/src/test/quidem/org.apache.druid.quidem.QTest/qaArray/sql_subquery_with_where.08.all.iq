@@ -1,0 +1,950 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B7_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL]
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [null, 0, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C1
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    2,
+                    3];
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C2
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    2,
+                    3]
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C3
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>ARRAY[1,
+                       2,
+                       3]);
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C4
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>ARRAY[1,
+                       2,
+                       3])
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C5
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool<>ARRAY[1,
+                    2,
+                    3];
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C6
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool<>ARRAY[1,
+                    2,
+                    3]
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>ARRAY[1,
+                       2,
+                       3])
+SELECT a_bool
+FROM t1;
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>ARRAY[1,
+                       2,
+                       3])
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool
+FROM t1
+WHERE a_bool<>ARRAY[1,
+                    2,
+                    3];
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+WHERE a_bool<>ARRAY[1,
+                    2,
+                    3]
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
+| [null, 0, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C1
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM test_array
+WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array);
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C2
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM test_array
+WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array)
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C3
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array));
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C4
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array))
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C5
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array);
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C6
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array)
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array))
+SELECT a_bool
+FROM t1;
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array))
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool
+FROM t1
+WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array);
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+WHERE a_bool<>json_value(a_nested, '$[0]' RETURNING boolean array)
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C1
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM test_array
+WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array);
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C2
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM test_array
+WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array)
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C3
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array));
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C4
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array))
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C5
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array);
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C6
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array)
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array))
+SELECT a_bool
+FROM t1;
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array))
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool
+FROM t1
+WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array);
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+WHERE a_bool<>json_value(a_nested, '$[7][0]' RETURNING boolean array)
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C1
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM test_array
+WHERE a_bool>ARRAY[1,
+                   0];
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C2
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM test_array
+WHERE a_bool>ARRAY[1,
+                   0]
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C3
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0]);
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C4
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0])
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C5
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool>ARRAY[1,
+                   0];
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C6
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool>ARRAY[1,
+                   0]
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0])
+SELECT a_bool
+FROM t1;
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0])
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool
+FROM t1
+WHERE a_bool>ARRAY[1,
+                   0];
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B11_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+WHERE a_bool>ARRAY[1,
+                   0]
+GROUP BY a_bool;
++--------------+-----+
+| a_bool       | cnt |
++--------------+-----+
+| [1, 0, null] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C1
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM test_array
+WHERE a_bool>ARRAY[1,
+                   0,
+                   NULL];
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C2
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM test_array
+WHERE a_bool>ARRAY[1,
+                   0,
+                   NULL]
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C3
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0,
+                      NULL]);
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C4
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0,
+                      NULL])
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C5
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool>ARRAY[1,
+                   0,
+                   NULL];
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C6
+#-------------------------------------------------------------------------
+SELECT a_bool,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_bool>ARRAY[1,
+                   0,
+                   NULL]
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0,
+                      NULL])
+SELECT a_bool
+FROM t1;
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_bool>ARRAY[1,
+                      0,
+                      NULL])
+SELECT a_bool,
+       count(*) cnt
+FROM t1
+GROUP BY a_bool;
++--------+-----+
+| a_bool | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B12_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_bool
+FROM t1
+WHERE a_bool>ARRAY[1,
+                   0,
+                   NULL];
++--------+
+| a_bool |
++--------+
++--------+
+(0 rows)
+
+!ok
+

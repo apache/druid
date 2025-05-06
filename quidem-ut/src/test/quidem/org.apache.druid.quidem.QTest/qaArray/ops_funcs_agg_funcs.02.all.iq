@@ -1,0 +1,499 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C2_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C3_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING sum(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C4_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C5_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C6_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING sum(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C7_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C8_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C9_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING sum(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C10_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C11_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C12_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING sum(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C13_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C14_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C15_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING sum(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C16_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C17_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C18_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING sum(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C19_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C20_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C21_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING sum(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C22_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C23_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C24_D1
+#-------------------------------------------------------------------------
+SELECT sum(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING sum(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C1_D1
+#-------------------------------------------------------------------------
+SELECT min(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C2_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C3_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING min(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C4_D1
+#-------------------------------------------------------------------------
+SELECT min(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C5_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C6_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING min(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C7_D1
+#-------------------------------------------------------------------------
+SELECT min(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C8_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C9_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING min(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C10_D1
+#-------------------------------------------------------------------------
+SELECT min(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C11_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C12_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING min(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C14_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C15_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING min(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C17_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C18_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING min(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C19_D1
+#-------------------------------------------------------------------------
+SELECT min(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C20_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C21_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING min(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C22_D1
+#-------------------------------------------------------------------------
+SELECT min(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C23_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C24_D1
+#-------------------------------------------------------------------------
+SELECT min(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING min(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C1_D1
+#-------------------------------------------------------------------------
+SELECT max(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C2_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C3_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING max(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C4_D1
+#-------------------------------------------------------------------------
+SELECT max(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C5_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+does not support
+!error
+

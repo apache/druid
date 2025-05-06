@@ -1,0 +1,579 @@
+!set sqlJoinAlgorithm broadcast
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSsb/denorm
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM ssb_denorm;
++------+
+| cnt  |
++------+
+| 6001 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q1_0_broadcast
+#-------------------------------------------------------------------------
+SELECT sum(lo_extendedprice*lo_discount) AS revenue
+FROM ssb_denorm
+WHERE lo_orderdate = d_datekey
+  AND d_year = 1993
+  AND lo_discount BETWEEN 1 AND 3
+  AND lo_quantity < 25;
++-----------+
+| revenue   |
++-----------+
+| 496986424 |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q1_1_broadcast
+#-------------------------------------------------------------------------
+SELECT sum(lo_extendedprice*lo_discount) AS revenue
+FROM ssb_denorm
+WHERE lo_orderdate = d_datekey
+  AND d_yearmonthnum = 199401
+  AND lo_discount BETWEEN 4 AND 6
+  AND lo_quantity BETWEEN 26 AND 35;
++-----------+
+| revenue   |
++-----------+
+| 130440815 |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q1_2_broadcast
+#-------------------------------------------------------------------------
+SELECT sum(lo_extendedprice*lo_discount) AS revenue
+FROM ssb_denorm
+WHERE lo_orderdate = d_datekey
+  AND d_weeknuminyear = 6
+  AND d_year = 1994
+  AND lo_discount BETWEEN 5 AND 7
+  AND lo_quantity BETWEEN 26 AND 35;
++----------+
+| revenue  |
++----------+
+| 54026994 |
++----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q2_0_broadcast
+#-------------------------------------------------------------------------
+SELECT sum(lo_revenue),
+       d_year,
+       p_brand1
+FROM ssb_denorm
+WHERE lo_orderdate = d_datekey
+  AND lo_partkey = p_partkey
+  AND lo_suppkey = s_suppkey
+  AND p_category = 'MFGR#12'
+  AND s_region = 'AMERICA'
+GROUP BY d_year,
+         p_brand1
+ORDER BY d_year,
+         p_brand1;
++----------+--------+-----------+
+| EXPR$0   | d_year | p_brand1  |
++----------+--------+-----------+
+|  1198812 |   1992 | MFGR#1215 |
+|  4240431 |   1992 | MFGR#1219 |
+| 10171469 |   1992 | MFGR#1220 |
+|  4314679 |   1992 | MFGR#1225 |
+|  5650533 |   1992 | MFGR#1226 |
+|  6418813 |   1992 | MFGR#1234 |
+|  2408375 |   1992 | MFGR#1235 |
+|  1392171 |   1992 | MFGR#1240 |
+|  1910749 |   1993 | MFGR#1216 |
+|  1891501 |   1993 | MFGR#1217 |
+|   956763 |   1993 | MFGR#122  |
+|  8592202 |   1993 | MFGR#1224 |
+|  2455961 |   1993 | MFGR#1235 |
+|  7185744 |   1993 | MFGR#125  |
+|  7379080 |   1994 | MFGR#1213 |
+|  7237036 |   1994 | MFGR#1218 |
+|  2096340 |   1994 | MFGR#123  |
+|   281356 |   1994 | MFGR#1231 |
+|  4099922 |   1995 | MFGR#1212 |
+|  3660284 |   1995 | MFGR#1217 |
+|  6996944 |   1995 | MFGR#122  |
+|  1778895 |   1995 | MFGR#1226 |
+|  5417412 |   1995 | MFGR#123  |
+|  1250539 |   1995 | MFGR#1232 |
+|  1397772 |   1995 | MFGR#1233 |
+|  3934180 |   1995 | MFGR#1237 |
+|  2889162 |   1995 | MFGR#124  |
+|  3968076 |   1995 | MFGR#128  |
+|   575014 |   1996 | MFGR#1211 |
+|  1266018 |   1996 | MFGR#1213 |
+|  2681289 |   1996 | MFGR#122  |
+|  6616779 |   1996 | MFGR#1221 |
+|  8687289 |   1996 | MFGR#1228 |
+|  3447369 |   1996 | MFGR#1229 |
+|  3057601 |   1996 | MFGR#1235 |
+|  2668498 |   1996 | MFGR#127  |
+|  3725976 |   1997 | MFGR#1214 |
+|  2850000 |   1997 | MFGR#1226 |
+|  4347652 |   1997 | MFGR#1229 |
+|  2073004 |   1997 | MFGR#123  |
+|   455844 |   1997 | MFGR#129  |
+|  6482923 |   1998 | MFGR#129  |
++----------+--------+-----------+
+(42 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q2_1_broadcast
+#-------------------------------------------------------------------------
+SELECT sum(lo_revenue),
+       d_year,
+       p_brand1
+FROM ssb_denorm
+WHERE lo_orderdate = d_datekey
+  AND lo_partkey = p_partkey
+  AND lo_suppkey = s_suppkey
+  AND p_brand1 BETWEEN 'MFGR#2221' AND 'MFGR#2228'
+  AND s_region = 'ASIA'
+GROUP BY d_year,
+         p_brand1
+ORDER BY d_year,
+         p_brand1;
++---------+--------+-----------+
+| EXPR$0  | d_year | p_brand1  |
++---------+--------+-----------+
+| 6897772 |   1994 | MFGR#2221 |
+| 6618927 |   1994 | MFGR#2223 |
+| 5831985 |   1995 | MFGR#2222 |
+| 3783129 |   1995 | MFGR#2228 |
+| 5934309 |   1996 | MFGR#2222 |
+|  299449 |   1997 | MFGR#2224 |
+|   94275 |   1997 | MFGR#2228 |
+| 3558219 |   1998 | MFGR#2223 |
+| 4455177 |   1998 | MFGR#2226 |
+| 4649879 |   1998 | MFGR#2228 |
++---------+--------+-----------+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q2_2_broadcast
+#-------------------------------------------------------------------------
+SELECT sum(lo_revenue),
+       d_year,
+       p_brand1
+FROM ssb_denorm
+WHERE lo_orderdate = d_datekey
+  AND lo_partkey = p_partkey
+  AND lo_suppkey = s_suppkey
+  AND p_brand1 = 'MFGR#2221'
+  AND s_region = 'EUROPE'
+GROUP BY d_year,
+         p_brand1
+ORDER BY d_year,
+         p_brand1;
++--------+--------+----------+
+| EXPR$0 | d_year | p_brand1 |
++--------+--------+----------+
++--------+--------+----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q3_0_broadcast
+#-------------------------------------------------------------------------
+SELECT c_nation,
+       s_nation,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND c_region = 'ASIA'
+  AND s_region = 'ASIA'
+  AND d_year >= 1992
+  AND d_year <= 1997
+GROUP BY c_nation,
+         s_nation,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++-----------+-----------+--------+----------+
+| c_nation  | s_nation  | d_year | revenue  |
++-----------+-----------+--------+----------+
+| JAPAN     | INDONESIA |   1992 | 18672244 |
+| CHINA     | CHINA     |   1992 | 17085893 |
+| CHINA     | VIETNAM   |   1992 | 14515575 |
+| JAPAN     | INDIA     |   1992 | 12061092 |
+| VIETNAM   | INDONESIA |   1992 | 11219455 |
+| INDONESIA | CHINA     |   1992 | 10992133 |
+| CHINA     | INDONESIA |   1992 |  9333722 |
+| JAPAN     | VIETNAM   |   1992 |  8601292 |
+| VIETNAM   | VIETNAM   |   1992 |  8232244 |
+| INDIA     | JAPAN     |   1992 |  7861648 |
+| INDIA     | VIETNAM   |   1992 |  7135628 |
+| INDONESIA | JAPAN     |   1992 |  6306180 |
+| VIETNAM   | CHINA     |   1992 |  5410832 |
+| CHINA     | JAPAN     |   1992 |  5409547 |
+| VIETNAM   | JAPAN     |   1992 |  5385391 |
+| JAPAN     | CHINA     |   1992 |  5280047 |
+| INDIA     | INDONESIA |   1992 |  5123298 |
+| CHINA     | INDIA     |   1992 |  4679743 |
+| VIETNAM   | INDIA     |   1992 |  1841170 |
+| INDIA     | CHINA     |   1992 |  1527152 |
+| JAPAN     | JAPAN     |   1992 |  1283092 |
+| VIETNAM   | JAPAN     |   1993 | 18931483 |
+| CHINA     | CHINA     |   1993 | 18624533 |
+| INDONESIA | INDIA     |   1993 | 16216350 |
+| CHINA     | INDIA     |   1993 | 15536442 |
+| VIETNAM   | INDIA     |   1993 | 13472028 |
+| JAPAN     | JAPAN     |   1993 | 12246206 |
+| INDONESIA | CHINA     |   1993 | 12141653 |
+| VIETNAM   | VIETNAM   |   1993 | 10943519 |
+| INDIA     | JAPAN     |   1993 | 10649691 |
+| INDONESIA | VIETNAM   |   1993 |  9263227 |
+| VIETNAM   | INDONESIA |   1993 |  8317002 |
+| INDONESIA | JAPAN     |   1993 |  8176439 |
+| INDIA     | VIETNAM   |   1993 |  7629321 |
+| JAPAN     | CHINA     |   1993 |  6962389 |
+| CHINA     | VIETNAM   |   1993 |  6888400 |
+| CHINA     | JAPAN     |   1993 |  6707287 |
+| JAPAN     | VIETNAM   |   1993 |  4431914 |
+| VIETNAM   | CHINA     |   1993 |  4148376 |
+| INDONESIA | INDONESIA |   1993 |  3505624 |
+| JAPAN     | INDIA     |   1993 |  1428273 |
+| JAPAN     | INDONESIA |   1993 |   267607 |
+| JAPAN     | INDIA     |   1994 | 10355179 |
+| INDONESIA | INDIA     |   1994 |  9434573 |
+| INDIA     | VIETNAM   |   1994 |  7324202 |
+| INDIA     | INDONESIA |   1994 |  6618506 |
+| CHINA     | VIETNAM   |   1994 |  5660346 |
+| INDONESIA | INDONESIA |   1994 |  5064633 |
+| INDIA     | CHINA     |   1994 |  4678145 |
+| INDIA     | JAPAN     |   1994 |  3737377 |
+| CHINA     | INDIA     |   1994 |  3556551 |
+| VIETNAM   | INDONESIA |   1994 |  2526510 |
+| INDONESIA | CHINA     |   1994 |   632580 |
+| JAPAN     | CHINA     |   1994 |   285695 |
+| INDIA     | INDIA     |   1995 | 18859596 |
+| JAPAN     | CHINA     |   1995 | 13804584 |
+| INDONESIA | INDONESIA |   1995 | 11723517 |
+| INDONESIA | CHINA     |   1995 | 11608662 |
+| VIETNAM   | JAPAN     |   1995 | 10055516 |
+| INDONESIA | VIETNAM   |   1995 |  8352394 |
+| INDIA     | JAPAN     |   1995 |  5869027 |
+| JAPAN     | JAPAN     |   1995 |  5703844 |
+| INDONESIA | JAPAN     |   1995 |  5459948 |
+| VIETNAM   | CHINA     |   1995 |  5218074 |
+| VIETNAM   | INDONESIA |   1995 |  4720252 |
+| JAPAN     | INDIA     |   1995 |  4687814 |
+| CHINA     | JAPAN     |   1995 |  4518672 |
+| INDONESIA | INDIA     |   1995 |  4108598 |
+| INDIA     | CHINA     |   1995 |  3287459 |
+| VIETNAM   | VIETNAM   |   1995 |  2753298 |
+| INDIA     | VIETNAM   |   1995 |  1645057 |
+| JAPAN     | VIETNAM   |   1995 |  1602467 |
+| CHINA     | INDIA     |   1995 |  1000365 |
+| VIETNAM   | INDIA     |   1995 |   724757 |
+| CHINA     | INDONESIA |   1995 |   564528 |
+| CHINA     | CHINA     |   1995 |   506967 |
+| INDIA     | INDONESIA |   1995 |   158449 |
+| INDONESIA | INDIA     |   1996 | 16981833 |
+| CHINA     | CHINA     |   1996 | 15608100 |
+| JAPAN     | CHINA     |   1996 | 15465262 |
+| VIETNAM   | CHINA     |   1996 | 15311394 |
+| INDONESIA | INDONESIA |   1996 | 14624265 |
+| JAPAN     | INDIA     |   1996 | 11225930 |
+| INDONESIA | JAPAN     |   1996 | 11128503 |
+| INDONESIA | CHINA     |   1996 |  8547140 |
+| INDIA     | JAPAN     |   1996 |  8205005 |
+| INDONESIA | VIETNAM   |   1996 |  7819407 |
+| CHINA     | INDIA     |   1996 |  7805577 |
+| VIETNAM   | INDIA     |   1996 |  7592995 |
+| VIETNAM   | JAPAN     |   1996 |  7271188 |
+| INDIA     | INDIA     |   1996 |  7110759 |
+| JAPAN     | VIETNAM   |   1996 |  5914656 |
+| CHINA     | INDONESIA |   1996 |  5460362 |
+| JAPAN     | INDONESIA |   1996 |  1841927 |
+| JAPAN     | JAPAN     |   1996 |  1680924 |
+| CHINA     | VIETNAM   |   1996 |  1311068 |
+| CHINA     | JAPAN     |   1996 |  1131277 |
+| INDIA     | CHINA     |   1996 |   526603 |
+| INDIA     | INDONESIA |   1996 |   318574 |
+| JAPAN     | INDONESIA |   1997 | 15743121 |
+| VIETNAM   | JAPAN     |   1997 | 13907002 |
+| CHINA     | CHINA     |   1997 | 13690039 |
+| JAPAN     | INDIA     |   1997 | 12467709 |
+| INDONESIA | JAPAN     |   1997 | 12016881 |
+| INDIA     | CHINA     |   1997 | 11830496 |
+| INDONESIA | CHINA     |   1997 | 11496038 |
+| INDONESIA | INDONESIA |   1997 |  9585946 |
+| JAPAN     | VIETNAM   |   1997 |  9092622 |
+| INDIA     | JAPAN     |   1997 |  8354598 |
+| JAPAN     | CHINA     |   1997 |  7731680 |
+| CHINA     | INDONESIA |   1997 |  6140265 |
+| INDIA     | VIETNAM   |   1997 |  5963133 |
+| CHINA     | VIETNAM   |   1997 |  5621467 |
+| JAPAN     | JAPAN     |   1997 |  5450608 |
+| VIETNAM   | VIETNAM   |   1997 |  5115474 |
+| INDONESIA | INDIA     |   1997 |  4031772 |
+| VIETNAM   | INDIA     |   1997 |  1924470 |
+| INDIA     | INDIA     |   1997 |  1527451 |
+| CHINA     | INDIA     |   1997 |  1029961 |
+| INDONESIA | VIETNAM   |   1997 |   253859 |
++-----------+-----------+--------+----------+
+(120 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q3_1_broadcast
+#-------------------------------------------------------------------------
+SELECT c_city,
+       s_city,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND c_nation = 'UNITED STATES'
+  AND s_nation = 'UNITED STATES'
+  AND d_year >= 1992
+  AND d_year <= 1997
+GROUP BY c_city,
+         s_city,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++------------+------------+--------+---------+
+| c_city     | s_city     | d_year | revenue |
++------------+------------+--------+---------+
+| UNITED ST3 | UNITED ST1 |   1992 | 4021528 |
+| UNITED ST8 | UNITED ST7 |   1993 | 1101192 |
+| UNITED ST1 | UNITED ST6 |   1993 |  891477 |
+| UNITED ST5 | UNITED ST5 |   1996 | 5003208 |
+| UNITED ST6 | UNITED ST5 |   1996 | 3447369 |
+| UNITED ST3 | UNITED ST5 |   1996 | 3102489 |
+| UNITED ST5 | UNITED ST2 |   1996 | 1482103 |
+| UNITED ST9 | UNITED ST9 |   1997 | 5015130 |
+| UNITED ST8 | UNITED ST0 |   1997 | 2031404 |
+| UNITED ST9 | UNITED ST3 |   1997 |  471854 |
++------------+------------+--------+---------+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q3_2_broadcast
+#-------------------------------------------------------------------------
+SELECT c_city,
+       s_city,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND (c_city='UNITED KI1'
+       OR c_city='UNITED KI5')
+  AND (s_city='UNITED KI1'
+       OR s_city='UNITED KI5')
+  AND d_year >= 1992
+  AND d_year <= 1997
+GROUP BY c_city,
+         s_city,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++--------+--------+--------+---------+
+| c_city | s_city | d_year | revenue |
++--------+--------+--------+---------+
++--------+--------+--------+---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q3_3_broadcast
+#-------------------------------------------------------------------------
+SELECT c_city,
+       s_city,
+       d_year,
+       sum(lo_revenue) AS revenue
+FROM ssb_denorm
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_orderdate = d_datekey
+  AND (c_city='UNITED KI1'
+       OR c_city='UNITED KI5')
+  AND (s_city='UNITED KI1'
+       OR s_city='UNITED KI5')
+  AND d_yearmonth = 'Dec1997'
+GROUP BY c_city,
+         s_city,
+         d_year
+ORDER BY d_year ASC,
+         revenue DESC;
++--------+--------+--------+---------+
+| c_city | s_city | d_year | revenue |
++--------+--------+--------+---------+
++--------+--------+--------+---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q4_0_broadcast
+#-------------------------------------------------------------------------
+SELECT d_year,
+       c_nation,
+       sum(lo_revenue - lo_supplycost) AS profit
+FROM ssb_denorm
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_partkey = p_partkey
+  AND lo_orderdate = d_datekey
+  AND c_region = 'AMERICA'
+  AND s_region = 'AMERICA'
+  AND (p_mfgr = 'MFGR#1'
+       OR p_mfgr = 'MFGR#2')
+GROUP BY d_year,
+         c_nation
+ORDER BY d_year,
+         c_nation;
++--------+---------------+----------+
+| d_year | c_nation      | profit   |
++--------+---------------+----------+
+|   1992 | ARGENTINA     | 27310376 |
+|   1992 | CANADA        | 22833941 |
+|   1992 | PERU          | 30170370 |
+|   1992 | UNITED STATES |  2164595 |
+|   1993 | ARGENTINA     |  6969531 |
+|   1993 | BRAZIL        |  1623521 |
+|   1993 | CANADA        |  9692103 |
+|   1993 | PERU          |   492715 |
+|   1993 | UNITED STATES |  8624808 |
+|   1994 | ARGENTINA     |  4612277 |
+|   1994 | BRAZIL        | 21652899 |
+|   1994 | CANADA        | 12123051 |
+|   1994 | PERU          | 10167110 |
+|   1995 | ARGENTINA     | 18514975 |
+|   1995 | BRAZIL        | 20418200 |
+|   1995 | CANADA        | 14290190 |
+|   1995 | PERU          | 25384989 |
+|   1995 | UNITED STATES | 10312664 |
+|   1996 | ARGENTINA     | 10858130 |
+|   1996 | BRAZIL        | 20126923 |
+|   1996 | PERU          |   220127 |
+|   1996 | UNITED STATES |  3332775 |
+|   1997 | ARGENTINA     |   487288 |
+|   1997 | BRAZIL        |  4260056 |
+|   1997 | CANADA        | 24950501 |
+|   1997 | PERU          |  1116704 |
+|   1997 | UNITED STATES |  8697167 |
+|   1998 | ARGENTINA     |  6376733 |
+|   1998 | BRAZIL        |   458463 |
+|   1998 | CANADA        |  6480820 |
+|   1998 | PERU          |  3731206 |
+|   1998 | UNITED STATES | 12032220 |
++--------+---------------+----------+
+(32 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q4_1_broadcast
+#-------------------------------------------------------------------------
+SELECT d_year,
+       s_nation,
+       p_category,
+       sum(lo_revenue - lo_supplycost) AS profit
+FROM ssb_denorm
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_partkey = p_partkey
+  AND lo_orderdate = d_datekey
+  AND c_region = 'AMERICA'
+  AND s_region = 'AMERICA'
+  AND (d_year = 1997
+       OR d_year = 1998)
+  AND (p_mfgr = 'MFGR#1'
+       OR p_mfgr = 'MFGR#2')
+GROUP BY d_year,
+         s_nation,
+         p_category
+ORDER BY d_year,
+         s_nation,
+         p_category;
++--------+---------------+------------+---------+
+| d_year | s_nation      | p_category | profit  |
++--------+---------------+------------+---------+
+|   1997 | ARGENTINA     | MFGR#12    | 4226996 |
+|   1997 | ARGENTINA     | MFGR#15    | 6305985 |
+|   1997 | BRAZIL        | MFGR#15    | 3960324 |
+|   1997 | CANADA        | MFGR#24    | 3752424 |
+|   1997 | CANADA        | MFGR#25    | 4390596 |
+|   1997 | UNITED STATES | MFGR#11    | 4944743 |
+|   1997 | UNITED STATES | MFGR#12    |  356748 |
+|   1997 | UNITED STATES | MFGR#21    | 1274115 |
+|   1997 | UNITED STATES | MFGR#22    | 5604136 |
+|   1997 | UNITED STATES | MFGR#23    | 4695649 |
+|   1998 | BRAZIL        | MFGR#25    | 3731206 |
+|   1998 | CANADA        | MFGR#12    | 6376733 |
+|   1998 | CANADA        | MFGR#13    | 9133459 |
+|   1998 | CANADA        | MFGR#24    |  458463 |
+|   1998 | UNITED STATES | MFGR#13    | 9379581 |
++--------+---------------+------------+---------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ssb_denorm TEST_ID: Q4_2_broadcast
+#-------------------------------------------------------------------------
+SELECT d_year,
+       s_city,
+       p_brand1,
+       sum(lo_revenue - lo_supplycost) AS profit
+FROM ssb_denorm
+WHERE lo_custkey = c_custkey
+  AND lo_suppkey = s_suppkey
+  AND lo_partkey = p_partkey
+  AND lo_orderdate = d_datekey
+  AND c_region = 'AMERICA'
+  AND s_nation = 'UNITED STATES'
+  AND (d_year = 1997
+       OR d_year = 1998)
+  AND p_category = 'MFGR#14'
+GROUP BY d_year,
+         s_city,
+         p_brand1
+ORDER BY d_year,
+         s_city,
+         p_brand1;
++--------+--------+----------+--------+
+| d_year | s_city | p_brand1 | profit |
++--------+--------+----------+--------+
++--------+--------+----------+--------+
+(0 rows)
+
+!ok
+

@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C7_D1
+#-------------------------------------------------------------------------
+SELECT truncate(a_float) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C8_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C9_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C10_D1
+#-------------------------------------------------------------------------
+SELECT truncate(a_str) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C11_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C12_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C13_D1
+#-------------------------------------------------------------------------
+SELECT truncate(a_null) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C14_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C15_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C16_D1
+#-------------------------------------------------------------------------
+SELECT truncate(a_empty) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C17_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C18_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C19_D1
+#-------------------------------------------------------------------------
+SELECT truncate(a_mixed) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C20_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C21_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C22_D1
+#-------------------------------------------------------------------------
+SELECT truncate(a_nested) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C23_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B10_C24_D1
+#-------------------------------------------------------------------------
+SELECT truncate(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNCATE' to arguments of type 'TRUNCATE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C1_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_bool) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C2_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C3_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C4_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_int) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C5_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C6_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C7_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_float) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C8_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C9_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C10_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_str) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C11_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C12_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C13_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_null) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C14_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C15_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C16_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_empty) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C17_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C18_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C19_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_mixed) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C20_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C21_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C22_D1
+#-------------------------------------------------------------------------
+SELECT trunc(a_nested) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C23_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B11_C24_D1
+#-------------------------------------------------------------------------
+SELECT trunc(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRUNC' to arguments of type 'TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C1_D1
+#-------------------------------------------------------------------------
+SELECT round(a_bool) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C2_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C3_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C4_D1
+#-------------------------------------------------------------------------
+SELECT round(a_int) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C5_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C6_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C7_D1
+#-------------------------------------------------------------------------
+SELECT round(a_float) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C8_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+

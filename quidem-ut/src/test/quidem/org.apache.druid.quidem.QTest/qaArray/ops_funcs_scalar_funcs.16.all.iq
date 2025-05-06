@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C5_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C6_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C7_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C8_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C9_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C10_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C11_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C12_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C13_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C14_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C15_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C16_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C17_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C18_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C19_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C20_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C21_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C22_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C23_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C24_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C1_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C2_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C3_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C4_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C5_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C6_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C7_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C8_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C9_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C10_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C11_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C12_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C13_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C14_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C15_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C16_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C17_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C18_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C19_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C20_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C21_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C22_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C23_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B35_C24_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C1_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C2_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C3_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C4_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C5_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C6_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+

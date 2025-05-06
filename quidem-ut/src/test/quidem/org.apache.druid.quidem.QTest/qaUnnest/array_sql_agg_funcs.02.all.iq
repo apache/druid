@@ -1,0 +1,1085 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C10_D2
+#-------------------------------------------------------------------------
+SELECT sum(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING sum(s_int) IN (3,
+                      6);
++-----+
+| col |
++-----+
+|   3 |
+|   6 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C1_D1
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C1_D2
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C2_D1
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C2_D2
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C3_D1
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C3_D2
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C4_D1
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C4_D2
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C5_D1
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C5_D2
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C6_D1
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C6_D2
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C7_D1
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING min(c) IN (1,
+                  2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C7_D2
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING min(c) IN (1,
+                  2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C8_D1
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING min(c) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C8_D2
+#-------------------------------------------------------------------------
+SELECT min(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING min(c) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C9_D1
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING min(s_int) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C9_D2
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING min(s_int) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C10_D1
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING min(s_int) IN (1,
+                      2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B4_C10_D2
+#-------------------------------------------------------------------------
+SELECT min(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING min(s_int) IN (1,
+                      2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C1_D1
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C1_D2
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C2_D1
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C2_D2
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C3_D1
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C3_D2
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C4_D1
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C4_D2
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C5_D1
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C5_D2
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C6_D1
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C6_D2
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C7_D1
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING max(c) IN (1,
+                  2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C7_D2
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING max(c) IN (1,
+                  2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C8_D1
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING max(c) IN (2);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C8_D2
+#-------------------------------------------------------------------------
+SELECT max(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING max(c) IN (2);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C9_D1
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING max(s_int) IN (2);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C9_D2
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING max(s_int) IN (2);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C10_D1
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING max(s_int) IN (1,
+                      2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C10_D2
+#-------------------------------------------------------------------------
+SELECT max(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING max(s_int) IN (1,
+                      2);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C1_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C1_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C2_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C2_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C3_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C4_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C5_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
