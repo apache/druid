@@ -186,7 +186,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -337,7 +336,7 @@ public class ControllerImpl implements Controller
     stopExternalFetchers();
     addToKernelManipulationQueue(
         kernel -> {
-          throw new MSQException(CanceledFault.INSTANCE);
+          throw new MSQException(new CanceledFault(CanceledFault.Reason.UNKNOWN_REASON));
         }
     );
 

@@ -731,7 +731,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals("Canceled", e.get("errorCode"));
     Assertions.assertEquals("CANCELED", e.get("category"));
     Assertions.assertEquals(
-        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.instance()),
+        MSQFaultUtils.generateMessageWithErrorCode(new CanceledFault(CanceledFault.Reason.UNKNOWN_REASON)),
         e.get("errorMessage")
     );
   }

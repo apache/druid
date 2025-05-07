@@ -528,7 +528,7 @@ public class WorkerImpl implements Worker
       // run() hasn't been called yet. Set runFuture so awaitStop() still works.
       runFuture.set(null);
     } else {
-      doCancel();
+      doCancel(new CanceledFault(CanceledFault.Reason.UNKNOWN_REASON));
     }
   }
 
@@ -546,7 +546,7 @@ public class WorkerImpl implements Worker
         task != null ? task.getControllerTaskId() : null,
         id()
     );
-    doCancel();
+    doCancel(new CanceledFault(CanceledFault.Reason.UNKNOWN_REASON));
   }
 
   @Override
@@ -980,7 +980,7 @@ public class WorkerImpl implements Worker
    * Called by {@link #stop()} (task canceled, or containing process shut down) and
    * {@link #controllerFailed()}.
    */
-  private void doCancel()
+  private void doCancel(CanceledFault fault)
   {
     // Set controllerAlive = false so we don't try to contact the controller after being canceled. If it canceled us,
     // it doesn't need to know that we were canceled. If we were canceled by something else, the controller will
@@ -1001,7 +1001,7 @@ public class WorkerImpl implements Worker
     kernelManipulationQueue.clear();
     kernelManipulationQueue.add(
         kernel -> {
-          throw new MSQException(CanceledFault.INSTANCE);
+          throw new MSQException(fault);
         }
     );
   }

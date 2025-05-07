@@ -229,7 +229,7 @@ public class DartQueryMaker implements QueryMaker
         } else {
           // Controller was canceled before it ran.
           throw MSQErrorReport
-              .fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
+              .fromFault(controllerHolder.getController().queryId(), null, null, new CanceledFault(CanceledFault.Reason.UNKNOWN_REASON))
               .toDruidException();
         }
       }
@@ -324,8 +324,12 @@ public class DartQueryMaker implements QueryMaker
             // Controller was canceled before it ran. Push a cancellation error to the resultIterator, so the sequence
             // returned by "runWithoutReport" can resolve.
             resultIterator.pushError(
-                MSQErrorReport.fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
-                              .toDruidException()
+                MSQErrorReport.fromFault(
+                    controllerHolder.getController().queryId(),
+                    null,
+                    null,
+                    new CanceledFault(CanceledFault.Reason.UNKNOWN_REASON)
+                ).toDruidException()
             );
           }
         }

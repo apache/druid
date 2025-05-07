@@ -20,24 +20,29 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
+
+import java.util.Objects;
 
 @JsonTypeName(CanceledFault.CODE)
 public class CanceledFault extends BaseMSQFault
 {
-  public static final CanceledFault INSTANCE = new CanceledFault();
   public static final String CODE = "Canceled";
-
-  CanceledFault()
-  {
-    super(CODE, "Query canceled by user or by task shutdown.");
-  }
+  private final Reason reason;
 
   @JsonCreator
-  public static CanceledFault instance()
+  public CanceledFault(@JsonProperty("reason") Reason reason)
   {
-    return INSTANCE;
+    super(CODE, "Query canceled due to [%s].", reason);
+    this.reason = reason;
+  }
+
+  @JsonProperty
+  public Reason getReason()
+  {
+    return reason;
   }
 
   @Override
@@ -47,5 +52,53 @@ public class CanceledFault extends BaseMSQFault
                          .ofCategory(DruidException.Category.CANCELED)
                          .withErrorCode(getErrorCode())
                          .build(MSQFaultUtils.generateMessageWithErrorCode(this));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    CanceledFault that = (CanceledFault) o;
+    return reason == that.reason;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), reason);
+  }
+
+  /**
+   * Enum denoting the reason for query cancelation.
+   */
+  public enum Reason
+  {
+    /**
+     * TODO add java docs
+     */
+    TASK_SHUTDOWN("User cancelation or task shutdown"),
+    QUERY_TIMEOUT("Configured query timeout"),
+    UNKNOWN_REASON("Unknown reason");
+
+    private final String reason;
+
+    Reason(String reason)
+    {
+      this.reason = reason;
+    }
+
+    @Override
+    public String toString()
+    {
+      return reason;
+    }
   }
 }
