@@ -159,7 +159,7 @@ Query syntax:
     ],
     "aggregations": [
         {
-            "type": "compressedBigDecimal",
+            "type": "compressedBigDecimalSum",
             "name": "saleAmount",
             "fieldName": "saleAmount",
             "scale": 9,
@@ -185,7 +185,7 @@ Result:
 } ]
 ```
 
-Had you used *doubleSum* instead of compressedBigDecimal the result would be 
+Had you used *doubleSum* instead of compressedBigDecimalSum the result would be 
 
 ```json
 [ {
