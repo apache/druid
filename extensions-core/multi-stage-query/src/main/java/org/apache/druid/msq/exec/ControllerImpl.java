@@ -162,6 +162,7 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.IndexSpec;
@@ -204,6 +205,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -336,7 +338,7 @@ public class ControllerImpl implements Controller
     stopExternalFetchers();
     addToKernelManipulationQueue(
         kernel -> {
-          throw new MSQException(new CanceledFault(CanceledFault.Reason.UNKNOWN_REASON));
+          throw new MSQException(new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN));
         }
     );
 
@@ -2196,6 +2198,12 @@ public class ControllerImpl implements Controller
       startTaskLauncher();
 
       boolean runAgain;
+      final QueryContext queryContext = querySpec.getContext();
+
+      final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
+      final boolean hasTimeout = QueryContexts.NO_TIMEOUT == timeout;
+      final long queryFailDeadline = System.currentTimeMillis() + timeout;
+
       while (!queryKernel.isDone()) {
         startStages();
         fetchStatsFromWorkers();
@@ -2207,7 +2215,11 @@ public class ControllerImpl implements Controller
         checkForErrorsInSketchFetcher();
 
         if (!runAgain) {
-          runKernelCommands();
+          runKernelCommands(hasTimeout, queryFailDeadline);
+        }
+
+        if (hasTimeout && queryFailDeadline < System.currentTimeMillis()) {
+          throw new MSQException(new CanceledFault(CanceledFault.Reason.QUERY_TIMEOUT));
         }
       }
 
@@ -2303,11 +2315,20 @@ public class ControllerImpl implements Controller
     /**
      * Run at least one command from {@link #kernelManipulationQueue}, waiting for it if necessary.
      */
-    private void runKernelCommands() throws InterruptedException
+    private void runKernelCommands(boolean hasTimeout, long queryFailDeadline) throws InterruptedException
     {
       if (!queryKernel.isDone()) {
         // Run the next command, waiting for it if necessary.
-        Consumer<ControllerQueryKernel> command = kernelManipulationQueue.take();
+        Consumer<ControllerQueryKernel> command;
+        if (hasTimeout) {
+          // Wait till timeout for the next command.
+          command = kernelManipulationQueue.poll(queryFailDeadline - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+          if (command == null) {
+            return;
+          }
+        } else {
+          command = kernelManipulationQueue.take();
+        }
         command.accept(queryKernel);
 
         // Run all pending commands after that one. Helps avoid deep queues.

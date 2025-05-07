@@ -82,11 +82,14 @@ public class CanceledFault extends BaseMSQFault
   public enum Reason
   {
     /**
-     * TODO add java docs
+     * Query was shutdown due to the task shutting down, either due to the task being canceled by the user, or shutdown
+     * by the overlord.
      */
     TASK_SHUTDOWN("User cancelation or task shutdown"),
-    QUERY_TIMEOUT("Configured query timeout"),
-    UNKNOWN_REASON("Unknown reason");
+    /**
+     * Query was shutdown due to exceeding the configured query timeout.
+     */
+    QUERY_TIMEOUT("Configured query timeout");
 
     private final String reason;
 
