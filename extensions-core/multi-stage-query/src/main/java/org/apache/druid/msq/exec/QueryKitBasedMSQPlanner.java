@@ -113,14 +113,9 @@ public class QueryKitBasedMSQPlanner
   @SuppressWarnings("unchecked")
   public QueryDefinition makeQueryDefinition()
   {
-    boolean ingestion = MSQControllerTask.isIngestion(destination);
     final Query<?> queryToPlan;
-    final ShuffleSpecFactory resultShuffleSpecFactory;
 
-    if (ingestion) {
-      resultShuffleSpecFactory = destination
-          .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
-
+    if (MSQControllerTask.isIngestion(destination)) {
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
         // are unique for INSERT and REPLACE statements (i.e. anything where MSQControllerTask.isIngestion would
@@ -143,19 +138,21 @@ public class QueryKitBasedMSQPlanner
         queryToPlan = query;
       }
     } else {
-      resultShuffleSpecFactory =
-          destination
-                   .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(query.context()));
       queryToPlan = query;
     }
 
+    return makeQueryDefinitionInternal(queryToPlan).withOverriddenContext(queryToPlan.getContext());
+  }
+
+  private QueryDefinition makeQueryDefinitionInternal(final Query<?> queryToPlan)
+  {
     final QueryDefinition queryDef;
 
     try {
       queryDef = queryKitSpec.getQueryKit().makeQueryDefinition(
           queryKitSpec,
           queryToPlan,
-          resultShuffleSpecFactory,
+          makeResultShuffleSpecFacory(),
           0
       );
     }
@@ -167,7 +164,7 @@ public class QueryKitBasedMSQPlanner
       throw new MSQException(e, QueryNotSupportedFault.INSTANCE);
     }
 
-    if (ingestion) {
+    if (MSQControllerTask.isIngestion(destination)) {
       // Find the stage that provides shuffled input to the final segment-generation stage.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
 
@@ -248,6 +245,16 @@ public class QueryKitBasedMSQPlanner
       return builder.build();
     } else {
       throw new ISE("Unsupported destination [%s]", destination);
+    }
+  }
+
+  private ShuffleSpecFactory makeResultShuffleSpecFacory()
+  {
+    if (MSQControllerTask.isIngestion(destination)) {
+      return destination
+          .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
+    } else {
+      return destination.getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(query.context()));
     }
   }
 }

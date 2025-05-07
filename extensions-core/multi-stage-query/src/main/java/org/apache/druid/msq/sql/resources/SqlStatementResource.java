@@ -49,8 +49,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.guice.MultiStageQuery;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
@@ -108,6 +108,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -724,7 +725,7 @@ public class SqlStatementResource
     );
   }
 
-  private ResultFormat getPreferredResultFormat(String resultFormatParam, MSQSpec msqSpec)
+  private ResultFormat getPreferredResultFormat(String resultFormatParam, LegacyMSQSpec msqSpec)
   {
     if (resultFormatParam == null) {
       return QueryContexts.getAsEnum(

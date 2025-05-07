@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.NotYetSupported;
+import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -57,6 +59,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.SUPPORT_SORT)
   @Test
   public void testOrderBy()
   {
@@ -75,6 +78,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.RESTRICTED_DATASOURCE_SUPPORT)
   @Test
   public void testSelectFromRestricted()
   {
@@ -107,6 +111,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.SUPPORT_SORT)
   @Test
   public void testSelectFromFooLimit2()
   {
@@ -121,6 +126,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.SUPPORT_AGGREGATE)
   @Test
   public void testCount()
   {
@@ -205,6 +211,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.SUPPORT_AGGREGATE)
   @Test
   public void testGroupBy()
   {
@@ -221,6 +228,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.SUPPORT_AGGREGATE)
   @Test
   public void testSubQuery()
   {

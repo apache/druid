@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
@@ -79,7 +80,7 @@ public interface ControllerContext
 
   /**
    * Provide access to segment actions in the Overlord. Only called for ingestion queries, i.e., where
-   * {@link MSQSpec#getDestination()} is {@link org.apache.druid.msq.indexing.destination.DataSourceMSQDestination}.
+   * {@link LegacyMSQSpec#getDestination()} is {@link org.apache.druid.msq.indexing.destination.DataSourceMSQDestination}.
    */
   TaskActionClient taskActionClient();
 
@@ -93,7 +94,7 @@ public interface ControllerContext
    *
    * @param queryId               query ID
    * @param querySpec             query spec
-   * @param queryKernelConfig     config from {@link #queryKernelConfig(String, MSQSpec)}
+   * @param queryKernelConfig     config from {@link #queryKernelConfig(String, LegacyMSQSpec)}
    * @param workerFailureListener listener that receives callbacks when workers fail
    */
   WorkerManager newWorkerManager(
