@@ -193,7 +193,9 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
   {
     if (!(proposedSpec instanceof KafkaSupervisorSpec)) {
-      throw InvalidInput.exception("Cannot evolve to " + proposedSpec.getType() + " from " + getType());
+      throw InvalidInput.exception(
+          StringUtils.format("Cannot evolve to [%s] from [%s]", getClass().getName(), proposedSpec.getClass().getName())
+      );
     }
     KafkaSupervisorSpec other = (KafkaSupervisorSpec) proposedSpec;
     if (this.getSpec().getIOConfig().isMultiTopic() != other.getSpec().getIOConfig().isMultiTopic()) {

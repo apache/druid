@@ -217,9 +217,10 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   @Override
   public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
   {
-    if (!(proposedSpec instanceof SeekableStreamSupervisorSpec) ||
-        !proposedSpec.getType().equals(getType())) {
-      throw InvalidInput.exception("Cannot evolve to " + proposedSpec.getType() + " from " + getType());
+    if (!(proposedSpec instanceof SeekableStreamSupervisorSpec)) {
+      throw InvalidInput.exception(
+          StringUtils.format("Cannot evolve to [%s] from [%s]", getClass().getName(), proposedSpec.getClass().getName())
+      );
     }
     SeekableStreamSupervisorSpec other = (SeekableStreamSupervisorSpec) proposedSpec;
     if (this.getSource() == null || other.getSource() == null) {

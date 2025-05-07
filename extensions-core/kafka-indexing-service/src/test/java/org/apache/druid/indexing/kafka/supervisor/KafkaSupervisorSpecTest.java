@@ -29,6 +29,8 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -41,6 +43,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.junit.Assert.assertThrows;
 
@@ -644,6 +647,13 @@ public class KafkaSupervisorSpecTest
                   + "}";
     KafkaSupervisorSpec sourceSpec = mapper.readValue(sourceSpecJson, KafkaSupervisorSpec.class);
 
+    // Proposed spec being non-kafka is not allowed
+    OtherSupervisorSpec otherSpec = new OtherSupervisorSpec();
+    assertThrows(
+        DruidException.class,
+        () -> sourceSpec.validateSpecUpdateTo(otherSpec)
+    );
+
     // Change from topic to topicPattern is not allowed
     String invalidDestSpecJson = "{\n"
                   + "  \"type\": \"kafka\",\n"
@@ -707,69 +717,6 @@ public class KafkaSupervisorSpecTest
         DruidException.class,
         () -> sourceSpec.validateSpecUpdateTo(invalidDestSpec)
     );
-
-    // Change from topic to topicPattern is not allowed
-    String invalidDestSpecThreeJson = "{\n"
-                                 + "  \"type\": \"kafka\",\n"
-                                 + "  \"dataSchema\": {\n"
-                                 + "    \"dataSource\": \"metrics-kafka\",\n"
-                                 + "    \"parser\": {\n"
-                                 + "      \"type\": \"string\",\n"
-                                 + "      \"parseSpec\": {\n"
-                                 + "        \"format\": \"json\",\n"
-                                 + "        \"timestampSpec\": {\n"
-                                 + "          \"column\": \"timestamp\",\n"
-                                 + "          \"format\": \"auto\"\n"
-                                 + "        },\n"
-                                 + "        \"dimensionsSpec\": {\n"
-                                 + "          \"dimensions\": [],\n"
-                                 + "          \"dimensionExclusions\": [\n"
-                                 + "            \"timestamp\",\n"
-                                 + "            \"value\"\n"
-                                 + "          ]\n"
-                                 + "        }\n"
-                                 + "      }\n"
-                                 + "    },\n"
-                                 + "    \"metricsSpec\": [\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"count\",\n"
-                                 + "        \"type\": \"count\"\n"
-                                 + "      },\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"value_sum\",\n"
-                                 + "        \"fieldName\": \"value\",\n"
-                                 + "        \"type\": \"doubleSum\"\n"
-                                 + "      },\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"value_min\",\n"
-                                 + "        \"fieldName\": \"value\",\n"
-                                 + "        \"type\": \"doubleMin\"\n"
-                                 + "      },\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"value_max\",\n"
-                                 + "        \"fieldName\": \"value\",\n"
-                                 + "        \"type\": \"doubleMax\"\n"
-                                 + "      }\n"
-                                 + "    ],\n"
-                                 + "    \"granularitySpec\": {\n"
-                                 + "      \"type\": \"uniform\",\n"
-                                 + "      \"segmentGranularity\": \"HOUR\",\n"
-                                 + "      \"queryGranularity\": \"NONE\"\n"
-                                 + "    }\n"
-                                 + "  },\n"
-                                 + "  \"ioConfig\": {\n"
-                                 + "    \"topicPattern\": \"metrics\",\n"
-                                 + "    \"consumerProperties\": {\n"
-                                 + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                                 + "    },\n"
-                                 + "    \"taskCount\": 1\n"
-                                 + "  }\n"
-                                 + "}";
-    KafkaSupervisorSpec invalidDestSpecThree = mapper.readValue(invalidDestSpecThreeJson, KafkaSupervisorSpec.class);
-
-    assertThrows(
-        DruidException.class,
-        () -> sourceSpec.validateSpecUpdateTo(invalidDestSpecThree));
 
     // Changing topic name is not allowed
     String invalidDestSpecTwoJson = "{\n"
@@ -835,6 +782,73 @@ public class KafkaSupervisorSpecTest
         () -> sourceSpec.validateSpecUpdateTo(invalidDestSpecTwo)
     );
 
+    // Change from topic to topicPattern is not allowed
+    String invalidDestSpecThreeJson = "{\n"
+                                      + "  \"type\": \"kafka\",\n"
+                                      + "  \"dataSchema\": {\n"
+                                      + "    \"dataSource\": \"metrics-kafka\",\n"
+                                      + "    \"parser\": {\n"
+                                      + "      \"type\": \"string\",\n"
+                                      + "      \"parseSpec\": {\n"
+                                      + "        \"format\": \"json\",\n"
+                                      + "        \"timestampSpec\": {\n"
+                                      + "          \"column\": \"timestamp\",\n"
+                                      + "          \"format\": \"auto\"\n"
+                                      + "        },\n"
+                                      + "        \"dimensionsSpec\": {\n"
+                                      + "          \"dimensions\": [],\n"
+                                      + "          \"dimensionExclusions\": [\n"
+                                      + "            \"timestamp\",\n"
+                                      + "            \"value\"\n"
+                                      + "          ]\n"
+                                      + "        }\n"
+                                      + "      }\n"
+                                      + "    },\n"
+                                      + "    \"metricsSpec\": [\n"
+                                      + "      {\n"
+                                      + "        \"name\": \"count\",\n"
+                                      + "        \"type\": \"count\"\n"
+                                      + "      },\n"
+                                      + "      {\n"
+                                      + "        \"name\": \"value_sum\",\n"
+                                      + "        \"fieldName\": \"value\",\n"
+                                      + "        \"type\": \"doubleSum\"\n"
+                                      + "      },\n"
+                                      + "      {\n"
+                                      + "        \"name\": \"value_min\",\n"
+                                      + "        \"fieldName\": \"value\",\n"
+                                      + "        \"type\": \"doubleMin\"\n"
+                                      + "      },\n"
+                                      + "      {\n"
+                                      + "        \"name\": \"value_max\",\n"
+                                      + "        \"fieldName\": \"value\",\n"
+                                      + "        \"type\": \"doubleMax\"\n"
+                                      + "      }\n"
+                                      + "    ],\n"
+                                      + "    \"granularitySpec\": {\n"
+                                      + "      \"type\": \"uniform\",\n"
+                                      + "      \"segmentGranularity\": \"HOUR\",\n"
+                                      + "      \"queryGranularity\": \"NONE\"\n"
+                                      + "    }\n"
+                                      + "  },\n"
+                                      + "  \"ioConfig\": {\n"
+                                      + "    \"topicPattern\": \"metrics\",\n"
+                                      + "    \"consumerProperties\": {\n"
+                                      + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+                                      + "    },\n"
+                                      + "    \"taskCount\": 1\n"
+                                      + "  }\n"
+                                      + "}";
+    KafkaSupervisorSpec invalidDestSpecThree = mapper.readValue(invalidDestSpecThreeJson, KafkaSupervisorSpec.class);
+
+    assertThrows(
+        DruidException.class,
+        () -> sourceSpec.validateSpecUpdateTo(invalidDestSpecThree));
+    // test the inverse as well
+    assertThrows(
+        DruidException.class,
+        () -> invalidDestSpecThree.validateSpecUpdateTo(sourceSpec));
+
     // Changing non-source related field is allowed. We change taskCount to 3
     String validDestSpecJson = "{\n"
                                     + "  \"type\": \"kafka\",\n"
@@ -894,5 +908,39 @@ public class KafkaSupervisorSpecTest
                                     + "}";
     KafkaSupervisorSpec validDestSpec = mapper.readValue(validDestSpecJson, KafkaSupervisorSpec.class);
     sourceSpec.validateSpecUpdateTo(validDestSpec);
+  }
+
+  private static class OtherSupervisorSpec implements SupervisorSpec
+  {
+
+    @Override
+    public String getId()
+    {
+      return "";
+    }
+
+    @Override
+    public Supervisor createSupervisor()
+    {
+      return null;
+    }
+
+    @Override
+    public List<String> getDataSources()
+    {
+      return List.of();
+    }
+
+    @Override
+    public String getType()
+    {
+      return "";
+    }
+
+    @Override
+    public String getSource()
+    {
+      return "";
+    }
   }
 }

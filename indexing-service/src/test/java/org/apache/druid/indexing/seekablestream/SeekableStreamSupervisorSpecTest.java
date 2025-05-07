@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -35,6 +36,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -83,6 +85,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ScheduledExecutorService;
+
+import static org.junit.Assert.assertThrows;
 
 public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 {
@@ -1298,6 +1302,135 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals("value", spec.getContextValue("key"));
   }
 
+  @Test
+  public void testValidateSpecUpdateToShortCircuits()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec originalSpec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
+    TestSeekableStreamSupervisorSpec proposedSpec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
+    assertThrows(
+        DruidException.class,
+        () -> originalSpec.validateSpecUpdateTo(proposedSpec)
+    );
+
+    OtherSupervisorSpec otherSpec = new OtherSupervisorSpec();
+    assertThrows(
+        DruidException.class,
+        () -> originalSpec.validateSpecUpdateTo(otherSpec)
+    );
+  }
+
+  @Test
+  public void testValidateSpecUpdateToSourceComparisons()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec originalSpec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    )
+    {
+      @Override
+      public String getSource()
+      {
+        return "source1";
+      }
+    };
+    TestSeekableStreamSupervisorSpec proposedSpecDiffSource = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    )
+    {
+      @Override
+      public String getSource()
+      {
+        return "source2";
+      }
+    };
+    TestSeekableStreamSupervisorSpec proposedSpecSameSource = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    )
+    {
+      @Override
+      public String getSource()
+      {
+        return "source1";
+      }
+    };
+
+    assertThrows(
+        DruidException.class,
+        () -> originalSpec.validateSpecUpdateTo(proposedSpecDiffSource)
+    );
+    originalSpec.validateSpecUpdateTo(proposedSpecSameSource);
+  }
+
   private void mockIngestionSchema()
   {
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -1410,6 +1543,40 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
     return autoScalerConfig;
+  }
+
+  private static class OtherSupervisorSpec implements SupervisorSpec
+  {
+
+    @Override
+    public String getId()
+    {
+      return "";
+    }
+
+    @Override
+    public Supervisor createSupervisor()
+    {
+      return null;
+    }
+
+    @Override
+    public List<String> getDataSources()
+    {
+      return List.of();
+    }
+
+    @Override
+    public String getType()
+    {
+      return "";
+    }
+
+    @Override
+    public String getSource()
+    {
+      return "";
+    }
   }
 
 }
