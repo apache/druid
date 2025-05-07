@@ -24,7 +24,7 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.logical.QueryDefinitionTranslator;
+import org.apache.druid.msq.logical.DruidLogicalToQueryDefinitionTranslator;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.QueryResponse;
@@ -61,7 +61,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
     if (!plannerContext.getAuthorizationResult().allowAccessWithNoRestriction()) {
       throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
     }
-    QueryDefinitionTranslator qdt = new QueryDefinitionTranslator(plannerContext);
+    DruidLogicalToQueryDefinitionTranslator qdt = new DruidLogicalToQueryDefinitionTranslator(plannerContext);
     QueryDefinition queryDef = qdt.translate(rootRel);
     QueryContext context = plannerContext.queryContext();
     QueryDefMSQSpec querySpec = MSQTaskQueryMaker.makeQueryDefMSQSpec(

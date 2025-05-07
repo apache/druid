@@ -40,12 +40,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class QueryDefinitionTranslator
+public class DruidLogicalToQueryDefinitionTranslator
 {
   private PlannerContext plannerContext;
   private LogicalStageBuilder stageBuilder;
 
-  public QueryDefinitionTranslator(PlannerContext plannerContext)
+  public DruidLogicalToQueryDefinitionTranslator(PlannerContext plannerContext)
   {
     this.plannerContext = plannerContext;
     this.stageBuilder = new LogicalStageBuilder(plannerContext);
