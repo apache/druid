@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class SegmentGenerationMetrics
 {
@@ -75,9 +75,19 @@ public class SegmentGenerationMetrics
     {
       return numMessageGap;
     }
+
+    public MessageGapStats copyOf() {
+      final MessageGapStats copy = new MessageGapStats();
+      copy.minMessageGap = minMessageGap;
+      copy.maxMessageGap = maxMessageGap;
+      copy.numMessageGap = numMessageGap;
+      copy.totalMessageGap = totalMessageGap;
+      return copy;
+    }
   }
 
-  private final AtomicReference<MessageGapStats> messageGapStats = new AtomicReference<>(new MessageGapStats());
+  private final MessageGapStats messageGapStats = new MessageGapStats();
+  private final ReentrantLock lock = new ReentrantLock();
 
   public void incrementRowOutputCount(long numRows)
   {
@@ -131,18 +141,19 @@ public class SegmentGenerationMetrics
 
   public void reportMessageGap(final long messageGap)
   {
-    final MessageGapStats newStats = new MessageGapStats();
-    messageGapStats.getAndUpdate(stats -> {
-      newStats.totalMessageGap = stats.totalMessageGap + messageGap;
-      newStats.numMessageGap = stats.numMessageGap + 1;
-      if (stats.minMessageGap > messageGap) {
-        newStats.minMessageGap = messageGap;
+    lock.lock();
+    try {
+      messageGapStats.totalMessageGap += messageGap;
+      ++messageGapStats.numMessageGap;
+      if (messageGapStats.minMessageGap > messageGap) {
+        messageGapStats.minMessageGap = messageGap;
       }
-      if (stats.maxMessageGap < messageGap) {
-        newStats.maxMessageGap = messageGap;
+      if (messageGapStats.maxMessageGap < messageGap) {
+        messageGapStats.maxMessageGap = messageGap;
       }
-      return newStats;
-    });
+    } finally {
+      lock.unlock();
+    }
   }
 
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
@@ -238,7 +249,12 @@ public class SegmentGenerationMetrics
 
   public MessageGapStats getMessageGapStats()
   {
-    return messageGapStats.get();
+    lock.lock();
+    try {
+      return messageGapStats.copyOf();
+    } finally {
+      lock.unlock();
+    }
   }
 
   public long messageGap()
@@ -280,13 +296,20 @@ public class SegmentGenerationMetrics
     }
     retVal.messageGap.set(messageGapSnapshot);
 
-    final MessageGapStats currentStats = messageGapStats.get();
-    final MessageGapStats newStats = new MessageGapStats();
-    newStats.totalMessageGap = currentStats.totalMessageGap;
-    newStats.numMessageGap = currentStats.numMessageGap;
-    newStats.minMessageGap = currentStats.minMessageGap;
-    newStats.maxMessageGap = currentStats.maxMessageGap;
-    retVal.messageGapStats.set(newStats);
+    lock.lock();
+    try {
+      retVal.messageGapStats.totalMessageGap = messageGapStats.totalMessageGap;
+      retVal.messageGapStats.numMessageGap = messageGapStats.numMessageGap;
+      retVal.messageGapStats.minMessageGap = messageGapStats.minMessageGap;
+      retVal.messageGapStats.maxMessageGap = messageGapStats.maxMessageGap;
+
+      messageGapStats.totalMessageGap = 0;
+      messageGapStats.numMessageGap = 0;
+      messageGapStats.minMessageGap = Long.MAX_VALUE;
+      messageGapStats.maxMessageGap = Long.MIN_VALUE;
+    } finally {
+      lock.unlock();
+    }
 
     reset();
 
@@ -296,6 +319,5 @@ public class SegmentGenerationMetrics
   private void reset()
   {
     maxSegmentHandoffTime.set(NO_EMIT_SEGMENT_HANDOFF_TIME);
-    messageGapStats.set(new MessageGapStats());
   }
 }
