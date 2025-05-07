@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.SegmentId;
@@ -172,4 +173,12 @@ public class ReferenceCountingSegmentTest
     Assert.assertNull(segment.as(String.class));
   }
 
+  @Test
+  public void testThrowWithDoubleWrap()
+  {
+    Assert.assertThrows(
+        DruidException.class,
+        () -> ReferenceCountingSegment.wrapRootGenerationSegment(segment)
+    );
+  }
 }
