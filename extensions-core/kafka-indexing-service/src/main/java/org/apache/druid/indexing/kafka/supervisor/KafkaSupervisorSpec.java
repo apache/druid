@@ -180,6 +180,15 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
     );
   }
 
+  /**
+   * Extends {@link SeekableStreamSupervisorSpec#validateSpecUpdateTo} to ensure that the proposed spec and current spec are either both multi-topic or both single-topic.
+   * <p>
+   * getSource() returns the same string (exampleTopic) for "topicPattern=exampleTopic" and "topic=exampleTopic".
+   * This override prevents this case from being considered a valid update.
+   * </p>
+   * @param proposedSpec the proposed supervisor spec
+   * @throws DruidException if the proposed spec is not a Kafka spec or if the proposed spec changes from multi-topic to single-topic or vice versa
+   */
   @Override
   public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
   {
@@ -187,25 +196,27 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
       throw InvalidInput.exception("Cannot evolve to " + proposedSpec.getType() + " from " + getType());
     }
     KafkaSupervisorSpec other = (KafkaSupervisorSpec) proposedSpec;
-    if (this.getSource() == null || other.getSource() == null) {
-      // Not likely to happen, but covering just in case.
-      throw InvalidInput.exception("Cannot consider KafkaSupervisorSpec evolution when one or both of the specs "
-                                   + "have not provided either a topic OR topicPattern");
+    if (this.getSpec().getIOConfig().isMultiTopic() != other.getSpec().getIOConfig().isMultiTopic()) {
+      throw InvalidInput.exception(getIllegalInputSourceUpdateErrorMessage("(%s) %s", "(%s) %s"),
+                                   this.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic",
+                                   this.getSource(),
+                                   other.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic",
+                                   other.getSource());
     }
 
-    // Future enhancements could allow for topicPattern to be changed in a way where the new source is additive to the
-    // old source. If we did that now, there would be metadata issues due to {@link KafkaDataSourceMetadata}
-    // implementation details that aren't set up to handle evolution of metadata in this way.
-    if (!this.getSource().equals(other.getSource())) {
-      throw InvalidInput.exception(
-          StringUtils.format(
-          "Update of topic/topicPattern from [%s] to [%s] is not supported for a running Kafka supervisor."
-          + "%nTo perform the update safely, follow these steps:"
-          + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-          + "%n(2) Create a new supervisor with the new topic or topicPattern."
-          + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.",
-          this.getSource(), other.getSource()));
-    }
+    super.validateSpecUpdateTo(proposedSpec);
+  }
+
+  @Override
+  protected String getIllegalInputSourceUpdateErrorMessage(String existingSource, String proposedSource)
+  {
+    return StringUtils.format(
+        "Update of topic/topicPattern from [%s] to [%s] is not supported for a running Kafka supervisor."
+        + "%nTo perform the update safely, follow these steps:"
+        + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+        + "%n(2) Create a new supervisor with the new topic or topicPattern."
+        + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.",
+        existingSource, proposedSource);
   }
 
   @Override

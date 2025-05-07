@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -34,6 +36,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -202,6 +205,54 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return suspended;
   }
 
+  /**
+   * Default implementation that prevents unsupported evolution of the supervisor spec
+   * <ul>
+   * <li>You cannot migrate between types of supervisors.</li>
+   * <li>You cannot change the input source stream of a running supervisor.</li>
+   * </ul>
+   * @param proposedSpec the proposed supervisor spec
+   * @throws DruidException if the proposed spec update is not allowed
+   */
+  @Override
+  public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+  {
+    if (!(proposedSpec instanceof SeekableStreamSupervisorSpec) ||
+        !proposedSpec.getType().equals(getType())) {
+      throw InvalidInput.exception("Cannot evolve to " + proposedSpec.getType() + " from " + getType());
+    }
+    SeekableStreamSupervisorSpec other = (SeekableStreamSupervisorSpec) proposedSpec;
+    if (this.getSource() == null || other.getSource() == null) {
+      // Not likely to happen, but covering just in case.
+      throw InvalidInput.exception("Cannot consider SeekableStreamSupervisorSpec evolution when one or both of "
+                                   + "the specs have not provided an input source stream in the IOConfig.");
+    }
+
+    if (!this.getSource().equals(other.getSource())) {
+      throw InvalidInput.exception(getIllegalInputSourceUpdateErrorMessage(this.getSource(), other.getSource()));
+    }
+  }
+
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
+
+  /**
+   * Returns an error message for illegal update of the input source stream.
+   * <p>
+   * This is a reasonable default message, but subclasses may override it to provide more domain specific terminology.
+   * </p>
+   * @param existingSource The existing input source stream
+   * @param proposedSource The proposed input source stream
+   * @return A formatted error message
+   */
+  protected String getIllegalInputSourceUpdateErrorMessage(String existingSource, String proposedSource)
+  {
+    return StringUtils.format(
+        "Update of the input source stream from [%s] to [%s] is not supported for a running supervisror."
+        + "%nTo perform the update safely, follow these steps:"
+        + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+        + "%n(2) Create a new supervisor with the new input source stream."
+        + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.",
+        existingSource, proposedSource);
+  }
 
 }

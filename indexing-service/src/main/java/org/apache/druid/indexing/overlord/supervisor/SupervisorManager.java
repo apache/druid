@@ -201,6 +201,7 @@ public class SupervisorManager
           return true;
         } else {
           if (!Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
+            // The spec bytes are different, so we need to check if the replacement is allowed
             currentSupervisor.rhs.validateSpecUpdateTo(spec);
             return true;
           } else {
