@@ -3235,6 +3235,7 @@ Returns the following:
 ## JSON_MERGE
 
 Merges two or more JSON `STRING` or `COMPLEX<json>` expressions into one, preserving the rightmost value when there are key overlaps.
+Returns `NULL` if any argument is `NULL`.
 The function always returns a `COMPLEX<json>` object.
 
 * **Syntax:** `JSON_MERGE(expr1, expr2[, expr3 ...])`
