@@ -128,13 +128,13 @@ public class PlannerContext
   private final PlannerToolbox plannerToolbox;
   private final ExpressionParser expressionParser;
   private final String sql;
-  private final PlannerConfig plannerConfig;
   private final SqlEngine engine;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
 
+  private PlannerConfig plannerConfig;
   private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
@@ -163,7 +163,6 @@ public class PlannerContext
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
       final String sql,
-      final PlannerConfig plannerConfig,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -172,11 +171,10 @@ public class PlannerContext
     this.plannerToolbox = plannerToolbox;
     this.expressionParser = new ExpressionParserImpl(plannerToolbox.exprMacroTable());
     this.sql = sql;
-    this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.engine = engine;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
-    initializeContextFields();
+    initializeContextFieldsAndPlannerConfig();
   }
 
   public static PlannerContext create(
@@ -190,7 +188,6 @@ public class PlannerContext
     return new PlannerContext(
         plannerToolbox,
         sql,
-        plannerToolbox.plannerConfig().withOverrides(queryContext),
         engine,
         queryContext,
         hook
@@ -556,7 +553,7 @@ public class PlannerContext
   public void addAllToQueryContext(Map<String, Object> toAdd)
   {
     this.queryContext.putAll(toAdd);
-    initializeContextFields();
+    initializeContextFieldsAndPlannerConfig();
   }
 
   public SqlEngine getEngine()
@@ -635,7 +632,7 @@ public class PlannerContext
 
 
 
-  private void initializeContextFields()
+  private void initializeContextFieldsAndPlannerConfig()
   {
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final DateTime utcNow;
@@ -694,6 +691,12 @@ public class PlannerContext
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
       this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+    }
+
+    if (plannerConfig != null) {
+      plannerConfig = plannerConfig.withOverrides(queryContext);
+    } else {
+      plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
     }
   }
 }

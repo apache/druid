@@ -186,4 +186,14 @@ public class Stats
     public static final CoordinatorStat COMPUTE_THREADS = CoordinatorStat.toDebugOnly("balancerComputeThreads");
     public static final CoordinatorStat MAX_TO_MOVE = CoordinatorStat.toDebugOnly("maxToMove");
   }
+
+  public static class Configuration
+  {
+    public static final CoordinatorStat BROKER_SYNC_TIME
+        = CoordinatorStat.toDebugAndEmit("brokerSyncTime", "config/brokerSync/time");
+    public static final CoordinatorStat TOTAL_SYNC_TIME
+        = CoordinatorStat.toDebugAndEmit("totalBrokerSyncTime", "config/brokerSync/total/time");
+    public static final CoordinatorStat BROKER_SYNC_ERROR
+        = CoordinatorStat.toDebugAndEmit("configSyncFailure", "config/brokerSync/error");
+  }
 }

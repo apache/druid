@@ -103,7 +103,7 @@ public class TaskRealtimeMetricsMonitorTest
     target.doMonitor(emitter);
     Assert.assertFalse(emittedEvents.containsKey("ingest/events/minMessageGap"));
     Assert.assertFalse(emittedEvents.containsKey("ingest/events/maxMessageGap"));
-    Assert.assertTrue(emittedEvents.containsKey("ingest/events/avgMessageGap"));
+    Assert.assertFalse(emittedEvents.containsKey("ingest/events/avgMessageGap"));
 
     emittedEvents.clear();
     segmentGenerationMetrics.reportMessageGap(1);

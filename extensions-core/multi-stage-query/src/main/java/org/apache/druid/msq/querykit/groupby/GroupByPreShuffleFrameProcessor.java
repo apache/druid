@@ -55,14 +55,15 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CompleteSegment;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -158,7 +159,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
               query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              mappedSegment.asCursorFactory(),
+              Objects.requireNonNull(mappedSegment.as(CursorFactory.class)),
               mappedSegment.as(TimeBoundaryInspector.class),
               bufferPool,
               null
@@ -187,13 +188,13 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
 
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("x"));
+        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
         final SegmentReference mappedSegment = mapSegment(frameSegment);
 
         final Sequence<ResultRow> rowSequence =
             groupingEngine.process(
                 query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
-                mappedSegment.asCursorFactory(),
+                Objects.requireNonNull(mappedSegment.as(CursorFactory.class)),
                 mappedSegment.as(TimeBoundaryInspector.class),
                 bufferPool,
                 null

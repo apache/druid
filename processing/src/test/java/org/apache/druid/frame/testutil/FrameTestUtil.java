@@ -31,7 +31,6 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.OrderBy;
@@ -51,7 +50,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
-import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
@@ -198,21 +196,7 @@ public class FrameTestUtil
   {
     return new FrameSegment(
         cursorFactoryToFrame(adapter, frameType),
-        FrameReader.create(adapter.getRowSignature()),
-        SegmentId.of("TestFrame", Intervals.ETERNITY, "0", 0)
-    );
-  }
-
-  public static FrameSegment cursorFactoryToFrameSegment(
-      final CursorFactory cursorFactory,
-      final FrameType frameType,
-      final SegmentId segmentId
-  )
-  {
-    return new FrameSegment(
-        cursorFactoryToFrame(cursorFactory, frameType),
-        FrameReader.create(cursorFactory.getRowSignature()),
-        segmentId
+        FrameReader.create(adapter.getRowSignature())
     );
   }
 

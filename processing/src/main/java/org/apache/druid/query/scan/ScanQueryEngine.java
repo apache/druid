@@ -48,7 +48,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -81,7 +80,7 @@ public class ScanQueryEngine
 
     final boolean hasTimeout = query.context().hasTimeout();
     final Long timeoutAt = responseContext.getTimeoutTime();
-    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
 
     if (cursorFactory == null) {
       throw new ISE(
@@ -112,8 +111,6 @@ public class ScanQueryEngine
 
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
-
-    final SegmentId segmentId = segment.getId();
 
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
@@ -186,7 +183,12 @@ public class ScanQueryEngine
                   throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                 }
                 responseContext.addRowScanCount(offset - lastOffset);
-                return new ScanResultValue(segmentId.toString(), allColumns, events, rowSignatureBuilder.build());
+                return new ScanResultValue(
+                    segment.getId() == null ? segment.asString() : segment.getId().toString(),
+                    allColumns,
+                    events,
+                    rowSignatureBuilder.build()
+                );
               }
 
               @Override

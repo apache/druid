@@ -45,7 +45,6 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -406,7 +405,6 @@ public class IndexBuilder
   public RowBasedSegment<InputRow> buildRowBasedSegmentWithoutTypeSignature()
   {
     return new RowBasedSegment<>(
-        SegmentId.dummy("IndexBuilder"),
         Sequences.simple(rows),
         RowAdapters.standardRow(),
         RowSignature.empty()
@@ -420,7 +418,6 @@ public class IndexBuilder
       final RowSignature signature = new QueryableIndexCursorFactory(index).getRowSignature();
 
       return new RowBasedSegment<>(
-          SegmentId.dummy("IndexBuilder"),
           Sequences.simple(rows),
           RowAdapters.standardRow(),
           signature
@@ -434,8 +431,7 @@ public class IndexBuilder
     try (final QueryableIndex index = buildMMappedIndex()) {
       return FrameTestUtil.cursorFactoryToFrameSegment(
           new QueryableIndexCursorFactory(index),
-          frameType,
-          SegmentId.dummy("IndexBuilder")
+          frameType
       );
     }
   }

@@ -32,6 +32,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -58,6 +59,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
 {
@@ -348,7 +350,9 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
-    final CursorHolder cursorHolder = closer.register(segment.asCursorFactory().makeCursorHolder(buildSpec));
+    final CursorHolder cursorHolder = closer.register(
+        Objects.requireNonNull(segment.as(CursorFactory.class)).makeCursorHolder(buildSpec)
+    );
     final Cursor cursor = cursorHolder.asCursor();
     return cursor.getColumnSelectorFactory();
   }
@@ -371,7 +375,9 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, segments.size());
     Segment segment = segments.get(0);
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build();
-    VectorCursor cursor = closer.register(segment.asCursorFactory().makeCursorHolder(buildSpec)).asVectorCursor();
+    VectorCursor cursor = closer.register(
+        Objects.requireNonNull(segment.as(CursorFactory.class)).makeCursorHolder(buildSpec)
+    ).asVectorCursor();
     return cursor.getColumnSelectorFactory();
   }
 }

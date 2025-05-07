@@ -1251,7 +1251,7 @@ public class SegmentLocalCacheManagerTest
     Assert.assertEquals(tombstone.getId(), segment.getId());
     Assert.assertEquals(interval, segment.getDataInterval());
 
-    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
     Assert.assertNotNull(cursorFactory);
     Assert.assertTrue(segment.isTombstone());
 

@@ -23,7 +23,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
@@ -45,8 +44,7 @@ public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
         .<Segment>map(
             frameSignaturePair -> new FrameSegment(
                 frameSignaturePair.getFrame(),
-                FrameReader.create(frameSignaturePair.getRowSignature()),
-                SegmentId.dummy(SEGMENT_ID)
+                FrameReader.create(frameSignaturePair.getRowSignature())
             )
         )
         .iterator();

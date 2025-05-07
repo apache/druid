@@ -166,7 +166,7 @@ public class BrokerViewOfCoordinatorConfig implements HistoricalFilter
         // Don't remove either.
         return Set.of();
       default:
-        throw DruidException.defensive("Unexpected value: [%s]", cloneQueryMode);
+        throw DruidException.defensive("Unexpected value of cloneQueryMode[%s]", cloneQueryMode);
     }
   }
 }

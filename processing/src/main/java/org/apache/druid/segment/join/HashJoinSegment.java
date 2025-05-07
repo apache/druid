@@ -27,7 +27,6 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.CursorFactoryRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleTopNOptimizationInspector;
 import org.apache.druid.segment.TimeBoundaryInspector;
@@ -96,32 +95,19 @@ public class HashJoinSegment implements SegmentReference
     return baseSegment.getDataInterval();
   }
 
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    // Even if baseSegment is a QueryableIndex, we don't want to expose it, since we've modified its behavior
-    // too much while wrapping it.
-    return null;
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new HashJoinSegmentCursorFactory(
-        baseSegment.asCursorFactory(),
-        baseFilter,
-        clauses,
-        joinFilterPreAnalysis
-    );
-  }
-
   @SuppressWarnings("unchecked")
   @Override
   public <T> T as(Class<T> clazz)
   {
-    if (CloseableShapeshifter.class.equals(clazz)) {
-      return (T) new CursorFactoryRowsAndColumns(asCursorFactory());
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) new HashJoinSegmentCursorFactory(
+          baseSegment.as(CursorFactory.class),
+          baseFilter,
+          clauses,
+          joinFilterPreAnalysis
+      );
+    } else if (CloseableShapeshifter.class.equals(clazz)) {
+      return (T) new CursorFactoryRowsAndColumns(as(CursorFactory.class));
     } else if (TimeBoundaryInspector.class.equals(clazz)) {
       return (T) WrappedTimeBoundaryInspector.create(baseSegment.as(TimeBoundaryInspector.class));
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
@@ -132,9 +118,8 @@ public class HashJoinSegment implements SegmentReference
               clause -> clause.getJoinType().isLefty() || clause.getCondition().isAlwaysTrue()
           )
       );
-    } else {
-      return SegmentReference.super.as(clazz);
     }
+    return null;
   }
 
   @Override

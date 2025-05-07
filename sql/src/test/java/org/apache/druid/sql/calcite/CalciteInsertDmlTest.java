@@ -902,6 +902,50 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testSetStatementWithExplainPlanInsertJoinQuery()
+  {
+    skipVectorize();
+
+    final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
+
+    final String sql = "SET plannerStrategy = 'DECOUPLED';\n"
+            + " SET timeout = 9000;\n"
+            + "EXPLAIN PLAN FOR \n"
+            + "INSERT INTO druid.dst \n"
+            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo \n"
+            + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1, CEIL(m2)";
+
+    // Test correctness of the query when only the CLUSTERED BY clause is present
+    final String explanation =
+            "DruidSort(sort0=[$1], sort1=[$2], sort2=[$3], dir0=[ASC], dir1=[ASC], dir2=[ASC], druid=[logical])\n" +
+                    "  DruidProject(__time=[$0], floor_m1=[FLOOR($5)], dim1=[$1], ceil_m2=[CEIL($6)], druid=[logical])\n" +
+                    "    DruidTableScan(table=[[druid, foo]], druid=[logical])\n";
+
+    testQuery(
+            PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+            ImmutableMap.of("sqlQueryId", "dummy"),
+            Collections.emptyList(),
+            sql,
+            CalciteTests.SUPER_USER_AUTH_RESULT,
+            ImmutableList.of(),
+            new DefaultResultsVerifier(
+                    ImmutableList.of(
+                        new Object[]{
+                            explanation,
+                            resources,
+                            attributes
+                        }
+                    ),
+                    null
+            )
+    );
+
+    // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
+    didTest = true;
+  }
+
+  @Test
   public void testExplainPlanInsertWithClusteredByDescThrowsException()
   {
     skipVectorize();

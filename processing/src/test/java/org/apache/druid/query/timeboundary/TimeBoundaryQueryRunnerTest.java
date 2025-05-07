@@ -274,7 +274,6 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     final QueryRunner<Result<TimeBoundaryResultValue>> theRunner =
         new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER).createRunner(
             new RowBasedSegment<>(
-                SegmentId.dummy("dummy"),
                 Sequences.simple(inlineDataSource.getRows()),
                 inlineDataSource.rowAdapter(),
                 inlineDataSource.getRowSignature()

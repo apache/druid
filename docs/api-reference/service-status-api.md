@@ -782,7 +782,7 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
     {
       "host": "localhost",
       "port": 8082,
-      "syncTimeInMs": 1745756337472
+      "lastSyncTimestampMillis": 1745756337472
     }
   ]
 }

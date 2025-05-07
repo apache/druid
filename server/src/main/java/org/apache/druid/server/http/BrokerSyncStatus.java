@@ -32,25 +32,25 @@ public class BrokerSyncStatus
 {
   private final String host;
   private final int port;
-  private final long syncTimeInMs;
+  private final long lastSyncTimestampMillis;
 
   @JsonCreator
   public BrokerSyncStatus(
       @JsonProperty("host") String host,
       @JsonProperty("port") int port,
-      @JsonProperty("syncTimeInMs") long syncTimeInMs
+      @JsonProperty("lastSyncTimestampMillis") long lastSyncTimestampMillis
   )
   {
     this.host = host;
     this.port = port;
-    this.syncTimeInMs = syncTimeInMs;
+    this.lastSyncTimestampMillis = lastSyncTimestampMillis;
   }
 
-  public BrokerSyncStatus(ServiceLocation broker, long syncTimeInMs)
+  public BrokerSyncStatus(ServiceLocation broker, long lastSyncTimestampMillis)
   {
     this.host = broker.getHost();
     this.port = broker.getTlsPort() > 0 ? broker.getTlsPort() : broker.getPlaintextPort();
-    this.syncTimeInMs = syncTimeInMs;
+    this.lastSyncTimestampMillis = lastSyncTimestampMillis;
   }
 
   @JsonProperty
@@ -66,9 +66,9 @@ public class BrokerSyncStatus
   }
 
   @JsonProperty
-  public long getSyncTimeInMs()
+  public long getLastSyncTimestampMillis()
   {
-    return syncTimeInMs;
+    return lastSyncTimestampMillis;
   }
 
   @Override
@@ -96,7 +96,7 @@ public class BrokerSyncStatus
     return "BrokerSyncStatus{" +
            "host='" + host + '\'' +
            ", port=" + port +
-           ", syncTimeInMs=" + syncTimeInMs +
+           ", lastSyncTimestampMillis=" + lastSyncTimestampMillis +
            '}';
   }
 }

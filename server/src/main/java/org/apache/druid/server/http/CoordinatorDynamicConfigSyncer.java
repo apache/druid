@@ -20,6 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
@@ -29,8 +30,12 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
@@ -38,15 +43,19 @@ import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * Updates all brokers with the latest coordinator dynamic config.
@@ -61,6 +70,7 @@ public class CoordinatorDynamicConfigSyncer
 
   private final ServiceClientFactory clientFactory;
   private final ScheduledExecutorService exec;
+  private final ServiceEmitter emitter;
   private @Nullable Future<?> syncFuture = null;
 
   @GuardedBy("this")
@@ -72,7 +82,8 @@ public class CoordinatorDynamicConfigSyncer
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       final CoordinatorConfigManager configManager,
       @Json final ObjectMapper jsonMapper,
-      final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
+      final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      final ServiceEmitter emitter
   )
   {
     this.clientFactory = clientFactory;
@@ -81,6 +92,7 @@ public class CoordinatorDynamicConfigSyncer
     this.druidNodeDiscovery = druidNodeDiscoveryProvider;
     this.exec = Execs.scheduledSingleThreaded("CoordinatorDynamicConfigSyncer-%d");
     this.inSyncBrokers = ConcurrentHashMap.newKeySet();
+    this.emitter = emitter;
   }
 
   /**
@@ -95,12 +107,19 @@ public class CoordinatorDynamicConfigSyncer
    * Push the latest coordinator dynamic config, provided by the configManager to all currently known Brokers. Also
    * invalidates the set of inSyncBrokers if the config has changed.
    */
-  private void broadcastConfigToBrokers()
+  @VisibleForTesting
+  void broadcastConfigToBrokers()
   {
     invalidateInSyncBrokersIfNeeded();
-    for (ServiceLocation broker : getKnownBrokers()) {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    for (DiscoveryDruidNode broker : getKnownBrokers()) {
       pushConfigToBroker(broker);
     }
+    emitStat(
+        Stats.Configuration.TOTAL_SYNC_TIME,
+        RowKey.empty(),
+        stopwatch.millisElapsed()
+    );
   }
 
   /**
@@ -136,12 +155,20 @@ public class CoordinatorDynamicConfigSyncer
     }
   }
 
+  @LifecycleStop
+  public void stop()
+  {
+    exec.shutdownNow();
+  }
+
   /**
    * Push the latest coordinator dynamic config, provided by the configManager to the Broker at the brokerLocation
    * param.
    */
-  private void pushConfigToBroker(ServiceLocation brokerLocation)
+  private void pushConfigToBroker(DiscoveryDruidNode broker)
   {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    final ServiceLocation brokerLocation = CoordinatorDynamicConfigSyncer.convertDiscoveryNodeToServiceLocation(broker);
     final BrokerClient brokerClient = new BrokerClientImpl(
         clientFactory.makeClient(
             NodeRole.BROKER.getJsonName(),
@@ -161,19 +188,26 @@ public class CoordinatorDynamicConfigSyncer
     catch (Exception e) {
       // Catch and ignore the exception, wait for the next sync.
       log.error(e, "Exception while syncing dynamic configuration to broker[%s]", brokerLocation);
+      emitStat(
+          Stats.Configuration.BROKER_SYNC_ERROR,
+          RowKey.with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
+          1
+      );
     }
+    emitStat(
+        Stats.Configuration.BROKER_SYNC_TIME,
+        RowKey.with(Dimension.SERVER, broker.getDruidNode().getHostAndPortToUse()).build(),
+        stopwatch.millisElapsed()
+    );
   }
 
   /**
-   * Returns a list of {@link ServiceLocation} for all brokers currently known to the druidNodeDiscovery.
+   * Returns a collection of {@link DiscoveryDruidNode} for all brokers currently known to the druidNodeDiscovery.
    */
-  private Set<ServiceLocation> getKnownBrokers()
+  private Collection<DiscoveryDruidNode> getKnownBrokers()
   {
     return druidNodeDiscovery.getForNodeRole(NodeRole.BROKER)
-                             .getAllNodes()
-                             .stream()
-                             .map(CoordinatorDynamicConfigSyncer::convertDiscoveryNodeToServiceLocation)
-                             .collect(Collectors.toSet());
+                             .getAllNodes();
   }
 
   /**
@@ -217,5 +251,14 @@ public class CoordinatorDynamicConfigSyncer
         druidNode.getTlsPort(),
         ""
     );
+  }
+
+  private void emitStat(CoordinatorStat stat, RowKey rowKey, long value)
+  {
+    ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder();
+    rowKey.getValues().forEach(
+        (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
+    );
+    emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
   }
 }

@@ -76,7 +76,8 @@ public class SegmentGenerationMetrics
       return numMessageGap;
     }
 
-    public MessageGapStats copyOf() {
+    public MessageGapStats copyOf()
+    {
       final MessageGapStats copy = new MessageGapStats();
       copy.minMessageGap = minMessageGap;
       copy.maxMessageGap = maxMessageGap;
@@ -151,7 +152,8 @@ public class SegmentGenerationMetrics
       if (messageGapStats.maxMessageGap < messageGap) {
         messageGapStats.maxMessageGap = messageGap;
       }
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -252,7 +254,8 @@ public class SegmentGenerationMetrics
     lock.lock();
     try {
       return messageGapStats.copyOf();
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -307,7 +310,8 @@ public class SegmentGenerationMetrics
       messageGapStats.numMessageGap = 0;
       messageGapStats.minMessageGap = Long.MAX_VALUE;
       messageGapStats.maxMessageGap = Long.MIN_VALUE;
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
 
