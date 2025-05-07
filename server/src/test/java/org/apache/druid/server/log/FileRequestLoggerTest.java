@@ -64,7 +64,8 @@ public class FileRequestLoggerTest
         scheduler,
         logDir,
         "yyyy-MM-dd'.log'",
-        null
+        null,
+        Duration.standardDays(1)
     );
     fileRequestLogger.start();
 
@@ -101,6 +102,7 @@ public class FileRequestLoggerTest
         scheduler,
         logDir,
         "yyyy-MM-dd'.log'",
+        Duration.standardDays(1),
         Duration.standardDays(1)
     );
     fileRequestLogger.start();
@@ -119,7 +121,7 @@ public class FileRequestLoggerTest
   public void testLogRemoveWithInvalidDuration() throws Exception
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("request logs retention period must be atleast P1D");
+    expectedException.expectMessage("request logs retention period must be atleast as long as roll period");
     ObjectMapper objectMapper = new ObjectMapper();
     File logDir = temporaryFolder.newFolder();
     FileRequestLogger fileRequestLogger = new FileRequestLogger(
@@ -127,7 +129,54 @@ public class FileRequestLoggerTest
         scheduler,
         logDir,
         "yyyy-MM-dd'.log'",
-        Duration.standardHours(12)
+        Duration.standardMinutes(30),
+        Duration.standardDays(1)
     );
+  }
+
+  @Test
+  public void testRollPeriodForLog() throws Exception
+  {
+    ObjectMapper objectMapper = new ObjectMapper();
+    DateTime dateTime = DateTimes.nowUtc();
+    File logDir = temporaryFolder.newFolder();
+    String sqlQueryLogString = dateTime + "\t" + HOST + "\t" + "sql";
+
+    FileRequestLogger hourlyLogger = new FileRequestLogger(
+        objectMapper,
+        scheduler,
+        logDir,
+        "yyyy-MM-dd-HH'.log'",
+        null,
+        Duration.standardHours(1)
+    );
+    FileRequestLogger dailyLoggerWithHourPattern = new FileRequestLogger(
+        objectMapper,
+        scheduler,
+        logDir,
+        "yyyy-MM-dd-HH'.log'",
+        null,
+        Duration.standardHours(26)
+    );
+    hourlyLogger.start();
+    dailyLoggerWithHourPattern.start();
+
+    RequestLogLine sqlRequestLogLine = EasyMock.createMock(RequestLogLine.class);
+    EasyMock.expect(sqlRequestLogLine.getSqlQueryLine(EasyMock.anyObject())).andReturn(sqlQueryLogString).anyTimes();
+    EasyMock.replay(sqlRequestLogLine);
+
+    hourlyLogger.logSqlQuery(sqlRequestLogLine);
+    dailyLoggerWithHourPattern.logSqlQuery(sqlRequestLogLine);
+
+    File hourlyLogFile = new File(logDir, dateTime.toString("yyyy-MM-dd-HH'.log'"));
+    // The hour is zeroed out since the roll period is more than 1 day
+    File dailyLogFile = new File(logDir, dateTime.toString("yyyy-MM-dd-00'.log'"));
+    String hourlyLogString = CharStreams.toString(Files.newBufferedReader(hourlyLogFile.toPath(), StandardCharsets.UTF_8));
+    String dailyLogString = CharStreams.toString(Files.newBufferedReader(dailyLogFile.toPath(), StandardCharsets.UTF_8));
+    Assert.assertTrue(hourlyLogString.contains(sqlQueryLogString + "\n"));
+    Assert.assertTrue(dailyLogString.contains(sqlQueryLogString + "\n"));
+
+    hourlyLogger.stop();
+    dailyLoggerWithHourPattern.stop();
   }
 }
