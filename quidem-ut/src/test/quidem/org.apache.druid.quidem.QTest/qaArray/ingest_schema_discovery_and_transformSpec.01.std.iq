@@ -1,0 +1,733 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ingest/schmdisc_and_transform
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A00
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_bool';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B00
+#-------------------------------------------------------------------------
+SELECT count(a_bool) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_int';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B01
+#-------------------------------------------------------------------------
+SELECT count(a_int) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_float';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B02
+#-------------------------------------------------------------------------
+SELECT count(a_float) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_str';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B03
+#-------------------------------------------------------------------------
+SELECT count(a_str) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A04
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_null';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B04
+#-------------------------------------------------------------------------
+SELECT count(a_null) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A05
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_empty';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B05
+#-------------------------------------------------------------------------
+SELECT count(a_empty) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A06
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_mixed';
++-----------+
+| DATA_TYPE |
++-----------+
+| ARRAY     |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B06
+#-------------------------------------------------------------------------
+SELECT count(a_mixed) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A07
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='a_nested';
++---------------+
+| DATA_TYPE     |
++---------------+
+| COMPLEX<json> |
++---------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B07
+#-------------------------------------------------------------------------
+SELECT count(a_nested) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: A08
+#-------------------------------------------------------------------------
+SELECT DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='test_array'
+  AND COLUMN_NAME='cnt';
++-----------+
+| DATA_TYPE |
++-----------+
+| BIGINT    |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: B08
+#-------------------------------------------------------------------------
+SELECT count(cnt) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: C00
+#-------------------------------------------------------------------------
+SELECT count(t_str_scalar1) c
+FROM test_array;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: C01
+#-------------------------------------------------------------------------
+SELECT count(t_str_scalar2) c
+FROM test_array;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: C02
+#-------------------------------------------------------------------------
+SELECT count(t_null_scalar1) c
+FROM test_array;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: C03
+#-------------------------------------------------------------------------
+SELECT count(t_null_scalar2) c
+FROM test_array;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: C04
+#-------------------------------------------------------------------------
+SELECT count(t_empty_scalar1) c
+FROM test_array;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: C05
+#-------------------------------------------------------------------------
+SELECT count(t_empty_scalar2) c
+FROM test_array;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: D01
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: D02
+#-------------------------------------------------------------------------
+SELECT sum(cnt) s
+FROM test_array;
++---+
+| s |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT __time
+   FROM test_array
+   GROUP BY __time);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = json_value(a_nested, '$[0]' RETURNING boolean array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = json_value(a_nested, '$[7][0]' RETURNING boolean array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[0]' RETURNING boolean array) = json_value(a_nested, '$[7][0]' RETURNING boolean array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = ARRAY[1,
+                     0,
+                     NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[0]' RETURNING boolean array) = ARRAY[1,
+                                                                   0,
+                                                                   NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][0]' RETURNING boolean array) = ARRAY[1,
+                                                                      0,
+                                                                      NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_bool = ARRAY[NULL,
+                     0,
+                     1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[0]' RETURNING boolean array) = ARRAY[NULL,
+                                                                   0,
+                                                                   1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][0]' RETURNING boolean array) = ARRAY[NULL,
+                                                                      0,
+                                                                      1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = json_value(a_nested, '$[1]' RETURNING bigint array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = json_value(a_nested, '$[7][1]' RETURNING bigint array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[1]' RETURNING bigint array) = json_value(a_nested, '$[7][1]' RETURNING bigint array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = ARRAY[1,
+                    2,
+                    NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[1]' RETURNING bigint array) = ARRAY[1,
+                                                                  2,
+                                                                  NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][1]' RETURNING bigint array) = ARRAY[1,
+                                                                     2,
+                                                                     NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_int = ARRAY[NULL,
+                    2,
+                    1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[1]' RETURNING bigint array) = ARRAY[NULL,
+                                                                  2,
+                                                                  1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][1]' RETURNING bigint array) = ARRAY[NULL,
+                                                                     2,
+                                                                     1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = json_value(a_nested, '$[2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = json_value(a_nested, '$[7][2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = json_value(a_nested, '$[7][2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+

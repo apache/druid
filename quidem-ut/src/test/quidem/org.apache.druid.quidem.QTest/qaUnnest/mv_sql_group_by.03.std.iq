@@ -1,0 +1,136 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv&numMergeBuffers=3
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B10
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY rollup(c_str);
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   5 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |  25 |
+|       |   5 |
++-------+-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B11
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY cube(c);
++---+-----+
+| c | cnt |
++---+-----+
+|   |  10 |
+|   |  15 |
+|   |  25 |
++---+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B12
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY cube(c_str, c);
++-------+---+-----+
+| c_str | c | cnt |
++-------+---+-----+
+|       |   |   2 |
+|       |   |   3 |
+|       |   |   5 |
+| str2  |   |   2 |
+| str2  |   |   3 |
+| str2  |   |   5 |
+| str3  |   |   2 |
+| str3  |   |   3 |
+| str3  |   |   5 |
+| str4  |   |   2 |
+| str4  |   |   3 |
+| str4  |   |   5 |
+|       |   |  10 |
+|       |   |   2 |
+|       |   |  15 |
+|       |   |  25 |
+|       |   |   3 |
+|       |   |   5 |
++-------+---+-----+
+(18 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B13
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY cube(c_str);
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   5 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |  25 |
+|       |   5 |
++-------+-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B14
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY c
+HAVING c='1';
++---+-----+
+| c | cnt |
++---+-----+
++---+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B15
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY c_str
+HAVING c_str='str2';
++-------+-----+
+| c_str | cnt |
++-------+-----+
+| str2  |   5 |
++-------+-----+
+(1 row)
+
+!ok
+

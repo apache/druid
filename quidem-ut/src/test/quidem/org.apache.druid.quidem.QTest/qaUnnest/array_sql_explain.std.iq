@@ -1,0 +1,188 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| __time                  | s_int | s_null | a_bool       | a_int        | a_float          | a_str          | a_null             | a_empty | a_mixed                  | a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B1
+#-------------------------------------------------------------------------
+
+SELECT c
+FROM test_unnest,
+     unnest(a_int) AS u(c);
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 2 |
+| 2 |
+| 2 |
+|   |
+|   |
+|   |
++---+
+(9 rows)
+
+!ok
+
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "table",
+      "name" : "test_unnest"
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "\"a_int\"",
+      "outputType" : "ARRAY<LONG>"
+    },
+    "unnestFilter" : null
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "j0.unnest" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B2
+#-------------------------------------------------------------------------
+
+SELECT *
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c));
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---+
+| __time                  | s_int | s_null | a_bool       | a_int        | a_float          | a_str          | a_null             | a_empty | a_mixed                  | a_nested                                                                                                                                                                                                                                                                                                                      | c |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---+
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] | 1 |
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] | 2 |
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] | 1 |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] | 2 |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] |   |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] | 1 |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] | 2 |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] |   |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---+
+(9 rows)
+
+!ok
+
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "table",
+      "name" : "test_unnest"
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "\"a_int\"",
+      "outputType" : "ARRAY<LONG>"
+    },
+    "unnestFilter" : null
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "__time", "s_int", "s_null", "a_bool", "a_int", "a_float", "a_str", "a_null", "a_empty", "a_mixed", "a_nested", "j0.unnest" ],
+  "columnTypes" : [ "LONG", "LONG", "STRING", "ARRAY<LONG>", "ARRAY<LONG>", "ARRAY<DOUBLE>", "ARRAY<STRING>", "ARRAY<LONG>", "ARRAY<LONG>", "ARRAY<STRING>", "COMPLEX<json>", "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B3
+#-------------------------------------------------------------------------
+
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+GROUP BY c;
++---+-----+
+| c | cnt |
++---+-----+
+| 1 |   3 |
+| 2 |   3 |
+|   |   3 |
++---+-----+
+(3 rows)
+
+!ok
+
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "table",
+      "name" : "test_unnest"
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "\"a_int\"",
+      "outputType" : "ARRAY<LONG>"
+    },
+    "unnestFilter" : null
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.unnest",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan
+

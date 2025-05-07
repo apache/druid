@@ -1,0 +1,49 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaTpch/data",
+        "filter" : "lineitem.tbl.gz"
+      },
+      "inputFormat": { "type": "tsv", "columns": ["l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"], "findColumnsFromHeader": false, "delimiter": "|" },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 100,
+        "maxTotalRows": 100
+      },
+      "maxNumConcurrentSubTasks": 2,
+      "indexSpec": {
+        "stringDictionaryEncoding": {
+          "type": "frontCoded",
+          "bucketSize": 4,
+          "formatVersion": 1
+        }
+      }
+    },
+    "dataSchema": {
+      "dataSource": "lineitem",
+      "granularitySpec": {
+        "segmentGranularity": "year",
+        "queryGranularity": null,
+        "rollup": false
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto",
+	"missingValue": "2025-01-01T00:00:00.000"
+      },
+      "dimensionsSpec": {
+        "dimensions": [{"name": "l_orderkey", "type": "long"}, {"name": "l_partkey", "type": "long"}, {"name": "l_suppkey", "type": "long"}, {"name": "l_linenumber", "type": "long"}, {"name": "l_quantity", "type": "double"}, {"name": "l_extendedprice", "type": "double"}, {"name": "l_discount", "type": "double"}, {"name": "l_tax", "type": "double"}, {"name": "l_returnflag", "type": "string"}, {"name": "l_linestatus", "type": "string"}, {"name": "l_shipdate", "type": "string"}, {"name": "l_commitdate", "type": "string"}, {"name": "l_receiptdate", "type": "string"}, {"name": "l_shipinstruct", "type": "string"}, {"name": "l_shipmode", "type": "string"}, {"name": "l_comment", "type": "string"}]
+      }
+    }
+  }
+}
+
+

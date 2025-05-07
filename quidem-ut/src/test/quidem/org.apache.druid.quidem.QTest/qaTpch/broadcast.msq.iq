@@ -1,0 +1,493 @@
+!set sqlJoinAlgorithm broadcast
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaTpch&numMergeBuffers=3
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM customer;
++-----+
+| cnt |
++-----+
+| 150 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM lineitem;
++------+
+| cnt  |
++------+
+| 6001 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM nation;
++-----+
+| cnt |
++-----+
+|  25 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A04
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM orders;
++------+
+| cnt  |
++------+
+| 1500 |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A05
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM part;
++-----+
+| cnt |
++-----+
+| 200 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A06
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM partsupp;
++-----+
+| cnt |
++-----+
+| 800 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A07
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM region;
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: A08
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM supplier;
++-----+
+| cnt |
++-----+
+|  10 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q01_broadcast
+#-------------------------------------------------------------------------
+
+SELECT l_returnflag,
+       l_linestatus,
+       cast(sum(l_quantity) AS bigint) AS sum_qty,
+       cast(sum(l_extendedprice) AS bigint) AS sum_base_price,
+       cast(sum(l_extendedprice * (1 - l_discount)) AS bigint) AS sum_disc_price,
+       cast(sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS bigint) AS sum_charge,
+       cast(avg(l_quantity) AS bigint) AS avg_qty,
+       cast(avg(l_extendedprice) AS bigint) AS avg_price,
+       cast(avg(l_discount) AS bigint) AS avg_disc,
+       count(*) AS count_order
+FROM lineitem
+WHERE l_shipdate <= date '1998-12-01' - interval '63' DAY (3)
+GROUP BY l_returnflag,
+         l_linestatus
+ORDER BY l_returnflag,
+         l_linestatus;
++--------------+--------------+---------+----------------+----------------+------------+---------+-----------+----------+-------------+
+| l_returnflag | l_linestatus | sum_qty | sum_base_price | sum_disc_price | sum_charge | avg_qty | avg_price | avg_disc | count_order |
++--------------+--------------+---------+----------------+----------------+------------+---------+-----------+----------+-------------+
+| A            | F            |   37474 |       56250004 |       53399385 |   55528109 |      25 |     38058 |        0 |        1478 |
+| N            | F            |    1041 |        1614635 |        1549641 |    1608284 |      27 |     42490 |        0 |          38 |
+| N            | O            |   76040 |      114294563 |      108642691 |  112966878 |      25 |     38405 |        0 |        2976 |
+| R            | F            |   36470 |       54082045 |       51384368 |   53497960 |      25 |     37144 |        0 |        1456 |
++--------------+--------------+---------+----------------+----------------+------------+---------+-----------+----------+-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q02_broadcast
+#-------------------------------------------------------------------------
+
+SELECT s_acctbal,
+       s_name,
+       n_name,
+       p_partkey,
+       p_mfgr,
+       s_address,
+       s_phone,
+       s_comment
+FROM part,
+     supplier,
+     partsupp,
+     nation,
+     region
+WHERE p_partkey = ps_partkey
+  AND s_suppkey = ps_suppkey
+  AND p_size = 47
+  AND p_type like '%TIN'
+  AND s_nationkey = n_nationkey
+  AND n_regionkey = r_regionkey
+  AND r_name = 'EUROPE'
+  AND ps_supplycost =
+    (SELECT min(ps_supplycost)
+     FROM partsupp,
+          supplier,
+          nation,
+          region
+     WHERE p_partkey = ps_partkey
+       AND s_suppkey = ps_suppkey
+       AND s_nationkey = n_nationkey
+       AND n_regionkey = r_regionkey
+       AND r_name = 'EUROPE')
+ORDER BY s_acctbal DESC,
+         n_name,
+         s_name,
+         p_partkey;
++-----------+--------+--------+-----------+--------+-----------+---------+-----------+
+| s_acctbal | s_name | n_name | p_partkey | p_mfgr | s_address | s_phone | s_comment |
++-----------+--------+--------+-----------+--------+-----------+---------+-----------+
++-----------+--------+--------+-----------+--------+-----------+---------+-----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q04_broadcast
+#-------------------------------------------------------------------------
+
+SELECT o_orderpriority,
+       count(*) AS order_count
+FROM orders
+WHERE o_orderdate >= date '1996-04-01'
+  AND o_orderdate < date '1996-04-01' + interval '3' MONTH
+  AND
+    (SELECT count(*)
+     FROM lineitem
+     WHERE l_orderkey = o_orderkey
+       AND l_commitdate < l_receiptdate) > 0
+GROUP BY o_orderpriority
+ORDER BY o_orderpriority;
++-----------------+-------------+
+| o_orderpriority | order_count |
++-----------------+-------------+
+| 1-URGENT        |           9 |
+| 2-HIGH          |           8 |
+| 3-MEDIUM        |           6 |
+| 4-NOT SPECIFIED |          14 |
+| 5-LOW           |           5 |
++-----------------+-------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q06_broadcast
+#-------------------------------------------------------------------------
+
+SELECT cast(sum(l_extendedprice * l_discount) AS bigint) AS revenue
+FROM lineitem
+WHERE l_shipdate >= date '1995-01-01'
+  AND l_shipdate < date '1995-01-01' + interval '1' YEAR
+  AND l_discount BETWEEN 0.03 - 0.01 AND 0.03 + 0.01
+  AND l_quantity < 24;
++---------+
+| revenue |
++---------+
+|   57268 |
++---------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q11_broadcast
+#-------------------------------------------------------------------------
+
+SELECT ps_partkey,
+       cast(sum(ps_supplycost * ps_availqty) AS bigint) AS druid_value
+FROM partsupp,
+     supplier,
+     nation
+WHERE ps_suppkey = s_suppkey
+  AND s_nationkey = n_nationkey
+  AND n_name = 'IRAQ'
+GROUP BY ps_partkey
+HAVING sum(ps_supplycost * ps_availqty) >
+  (SELECT sum(ps_supplycost * ps_availqty) * 0.0001000000
+   FROM partsupp,
+        supplier,
+        nation
+   WHERE ps_suppkey = s_suppkey
+     AND s_nationkey = n_nationkey
+     AND n_name = 'IRAQ')
+ORDER BY druid_value DESC;
++------------+-------------+
+| ps_partkey | druid_value |
++------------+-------------+
+|          4 |      152605 |
++------------+-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q14_broadcast
+#-------------------------------------------------------------------------
+
+SELECT cast(100.00 * sum(CASE
+                             WHEN p_type like 'PROMO%' THEN l_extendedprice * (1 - l_discount)
+                             ELSE 0
+                         END) / sum(l_extendedprice * (1 - l_discount)) AS bigint) AS promo_revenue
+FROM lineitem,
+     part
+WHERE l_partkey = p_partkey
+  AND l_shipdate >= date '1997-03-01'
+  AND l_shipdate < date '1997-03-01' + interval '1' MONTH;
++---------------+
+| promo_revenue |
++---------------+
+|               |
++---------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q15_broadcast
+#-------------------------------------------------------------------------
+
+SELECT s_suppkey,
+       s_name,
+       s_address,
+       s_phone,
+       cast(total_revenue AS bigint) AS total_revenue
+FROM supplier,
+  (SELECT l_suppkey AS supplier_no,
+          sum(l_extendedprice * (1 - l_discount)) AS total_revenue
+   FROM lineitem
+   WHERE l_shipdate >= date '1993-02-01'
+     AND l_shipdate < date '1993-02-01' + interval '3' MONTH
+   GROUP BY l_suppkey)
+WHERE s_suppkey = supplier_no
+  AND total_revenue =
+    (SELECT max(total_revenue)
+     FROM
+       (SELECT l_suppkey AS supplier_no,
+               sum(l_extendedprice * (1 - l_discount)) AS total_revenue
+        FROM lineitem
+        WHERE l_shipdate >= date '1993-02-01'
+          AND l_shipdate < date '1993-02-01' + interval '3' MONTH
+        GROUP BY l_suppkey))
+ORDER BY s_suppkey;
++-----------+--------+-----------+---------+---------------+
+| s_suppkey | s_name | s_address | s_phone | total_revenue |
++-----------+--------+-----------+---------+---------------+
++-----------+--------+-----------+---------+---------------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q17_broadcast
+#-------------------------------------------------------------------------
+
+SELECT cast(sum(l_extendedprice) / 7.0 AS bigint) AS avg_yearly
+FROM lineitem,
+     part
+WHERE p_partkey = l_partkey
+  AND p_brand = 'Brand#52'
+  AND p_container = 'MED BOX'
+  AND l_quantity <
+    (SELECT 0.2 * avg(l_quantity)
+     FROM lineitem
+     WHERE l_partkey = p_partkey);
++------------+
+| avg_yearly |
++------------+
+|            |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q19_broadcast
+#-------------------------------------------------------------------------
+
+SELECT cast(sum(l_extendedprice* (1 - l_discount)) AS bigint) AS revenue
+FROM lineitem,
+     part
+WHERE (p_partkey = l_partkey
+       AND p_brand = 'Brand#35'
+       AND p_container IN ('SM CASE',
+                           'SM BOX',
+                           'SM PACK',
+                           'SM PKG')
+       AND l_quantity >= 5
+       AND l_quantity <= 5 + 10
+       AND p_size BETWEEN 1 AND 5
+       AND l_shipmode IN ('AIR',
+                          'AIR REG')
+       AND l_shipinstruct = 'DELIVER IN PERSON')
+  OR (p_partkey = l_partkey
+      AND p_brand = 'Brand#12'
+      AND p_container IN ('MED BAG',
+                          'MED BOX',
+                          'MED PKG',
+                          'MED PACK')
+      AND l_quantity >= 20
+      AND l_quantity <= 20 + 10
+      AND p_size BETWEEN 1 AND 10
+      AND l_shipmode IN ('AIR',
+                         'AIR REG')
+      AND l_shipinstruct = 'DELIVER IN PERSON')
+  OR (p_partkey = l_partkey
+      AND p_brand = 'Brand#53'
+      AND p_container IN ('LG CASE',
+                          'LG BOX',
+                          'LG PACK',
+                          'LG PKG')
+      AND l_quantity >= 23
+      AND l_quantity <= 23 + 10
+      AND p_size BETWEEN 1 AND 15
+      AND l_shipmode IN ('AIR',
+                         'AIR REG')
+      AND l_shipinstruct = 'DELIVER IN PERSON');
++---------+
+| revenue |
++---------+
+|         |
++---------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q20_broadcast
+#-------------------------------------------------------------------------
+
+SELECT s_name,
+       s_address
+FROM supplier,
+     nation
+WHERE s_suppkey IN
+    (SELECT ps_suppkey
+     FROM partsupp
+     WHERE ps_partkey IN
+         (SELECT p_partkey
+          FROM part
+          WHERE p_name like 'steel%')
+       AND ps_availqty >
+         (SELECT 0.5 * sum(l_quantity)
+          FROM lineitem
+          WHERE l_partkey = ps_partkey
+            AND l_suppkey = ps_suppkey
+            AND l_shipdate >= date '1993-01-01'
+            AND l_shipdate < date '1993-01-01' + interval '1' YEAR))
+  AND s_nationkey = n_nationkey
+  AND n_name = 'FRANCE'
+ORDER BY s_name;
++--------+-----------+
+| s_name | s_address |
++--------+-----------+
++--------+-----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_tpch TEST_ID: Q22_broadcast
+#-------------------------------------------------------------------------
+
+SELECT cntrycode,
+       count(*) AS numcust,
+       cast(sum(c_acctbal) AS bigint) AS totacctbal
+FROM
+  (SELECT substring(c_phone
+                    FROM 1
+                    FOR 2) AS cntrycode,
+          c_acctbal
+   FROM customer
+   WHERE substring(c_phone
+                   FROM 1
+                   FOR 2) IN ('26',
+                              '43',
+                              '31',
+                              '22',
+                              '44',
+                              '30',
+                              '27')
+     AND c_acctbal >
+       (SELECT avg(c_acctbal)
+        FROM customer
+        WHERE c_acctbal > 0.00
+          AND substring(c_phone
+                        FROM 1
+                        FOR 2) IN ('26',
+                                   '43',
+                                   '31',
+                                   '22',
+                                   '44',
+                                   '30',
+                                   '27'))
+     AND
+       (SELECT count(*)
+        FROM orders
+        WHERE o_custkey = c_custkey) = 0) AS custsale
+GROUP BY cntrycode
+ORDER BY cntrycode;
++-----------+---------+------------+
+| cntrycode | numcust | totacctbal |
++-----------+---------+------------+
+| 22        |       3 |      20332 |
+| 26        |       5 |      38943 |
+| 27        |       2 |      13248 |
+| 30        |       2 |      17528 |
+| 31        |       2 |      18611 |
++-----------+---------+------------+
+(5 rows)
+
+!ok
+

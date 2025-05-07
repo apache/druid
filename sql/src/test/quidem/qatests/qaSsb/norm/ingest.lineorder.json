@@ -1,0 +1,135 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaSsb/norm/data",
+        "filter" : "lineorder.tbl.gz"
+      },
+      "inputFormat": {
+        "type": "tsv",
+        "columns": [
+          "lo_orderkey",
+          "lo_linenumber",
+          "lo_custkey",
+          "lo_partkey",
+          "lo_suppkey",
+          "lo_orderdate",
+          "lo_orderpriority",
+          "lo_shippriority",
+          "lo_quantity",
+          "lo_extendedprice",
+          "lo_ordtotalprice",
+          "lo_discount",
+          "lo_revenue",
+          "lo_supplycost",
+          "lo_tax",
+          "lo_commitdate",
+          "lo_shipmode"
+        ],
+        "findColumnsFromHeader": false,
+        "delimiter": "|"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 1000000,
+        "maxTotalRows": 500000000
+      },
+      "maxNumConcurrentSubTasks": 4
+    },
+    "dataSchema": {
+      "dataSource": "ssb_norm_lineorder",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "!!!_no_such_column_!!!",
+        "format": "auto",
+        "missingValue": "2010-01-01T00:00:00Z"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "lo_orderkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_linenumber"
+          },
+          {
+            "type": "long",
+            "name": "lo_custkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_partkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_suppkey"
+          },
+          {
+            "type": "long",
+            "name": "lo_orderdate"
+          },
+          {
+            "type": "string",
+            "name": "lo_orderpriority",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "lo_shippriority",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "lo_quantity"
+          },
+          {
+            "type": "long",
+            "name": "lo_extendedprice"
+          },
+          {
+            "type": "long",
+            "name": "lo_ordtotalprice"
+          },
+          {
+            "type": "long",
+            "name": "lo_discount"
+          },
+          {
+            "type": "long",
+            "name": "lo_revenue"
+          },
+          {
+            "type": "long",
+            "name": "lo_supplycost"
+          },
+          {
+            "type": "long",
+            "name": "lo_tax"
+          },
+          {
+            "type": "long",
+            "name": "lo_commitdate"
+          },
+          {
+            "type": "string",
+            "name": "lo_shipmode",
+            "createBitmapIndex": true
+          }
+        ]
+      } 
+    }
+  }
+}

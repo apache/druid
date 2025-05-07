@@ -1,0 +1,471 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ingest/schmdisc_and_transform
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = ARRAY[0.1,
+                      0.2,
+                      NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = ARRAY[0.1,
+                                                                   0.2,
+                                                                   NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][2]' RETURNING decimal array) = ARRAY[0.1,
+                                                                      0.2,
+                                                                      NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = ARRAY[NULL,
+                      0.2,
+                      0.1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = ARRAY[NULL,
+                                                                   0.2,
+                                                                   0.1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][2]' RETURNING decimal array) = ARRAY[NULL,
+                                                                      0.2,
+                                                                      0.1];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = json_value(a_nested, '$[3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = json_value(a_nested, '$[7][3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = json_value(a_nested, '$[7][3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = ARRAY['S1',
+                    'S2',
+                    NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = ARRAY['S1',
+                                                                   'S2',
+                                                                   NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][3]' RETURNING varchar array) = ARRAY['S1',
+                                                                      'S2',
+                                                                      NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = ARRAY[NULL,
+                    'S2',
+                    'S1'];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = ARRAY[NULL,
+                                                                   'S2',
+                                                                   'S1'];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][3]' RETURNING varchar array) = ARRAY[NULL,
+                                                                      'S2',
+                                                                      'S1'];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[4]' RETURNING varchar array) = json_value(a_nested, '$[7][4]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[5]' RETURNING varchar array) = json_value(a_nested, '$[7][5]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[5]' RETURNING varchar array) = ARRAY['FILLER'];
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][5]' RETURNING varchar array) = ARRAY['FILLER'];
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = json_value(a_nested, '$[6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = ARRAY['true',
+                      '1',
+                      '0.1',
+                      'S1',
+                      NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = ARRAY['true',
+                                                                   '1',
+                                                                   '0.1',
+                                                                   'S1',
+                                                                   NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][6]' RETURNING varchar array) = ARRAY['true',
+                                                                      '1',
+                                                                      '0.1',
+                                                                      'S1',
+                                                                      NULL];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = ARRAY[NULL,
+                      'S1',
+                      '0.1',
+                      '1',
+                      'true'];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = ARRAY[NULL,
+                                                                   'S1',
+                                                                   '0.1',
+                                                                   '1',
+                                                                   'true'];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][6]' RETURNING varchar array) = ARRAY[NULL,
+                                                                      'S1',
+                                                                      '0.1',
+                                                                      '1',
+                                                                      'true'];
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+

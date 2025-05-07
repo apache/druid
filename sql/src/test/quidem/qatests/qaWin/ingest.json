@@ -1,0 +1,73 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaWin/data",
+        "filter" : "windata.json.gz"
+      },
+      "inputFormat": {
+        "type": "json"
+      }
+    },
+    "dataSchema": {
+      "dataSource": "test_win",
+      "granularitySpec": {
+        "segmentGranularity": "day",
+        "queryGranularity": "none",
+        "rollup": false
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "session",
+          "number",
+          {
+            "type": "json",
+            "name": "event"
+          },
+          {
+            "type": "json",
+            "name": "agent"
+          },
+          "client_ip",
+          {
+            "type": "json",
+            "name": "geo_ip"
+          },
+          {
+            "type": "auto",
+            "name": "language",
+            "castToType": "ARRAY<STRING>"
+          },
+          "adblock_list",
+          "app_version",
+          "path",
+          "loaded_image",
+          "referrer",
+          "referrer_host",
+          "server_ip",
+          "screen",
+          "window",
+          {
+            "type": "long",
+            "name": "session_length"
+          },
+          "timezone",
+          "timezone_offset"
+        ]
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      }
+    }
+  }
+}
