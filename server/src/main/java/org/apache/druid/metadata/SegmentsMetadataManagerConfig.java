@@ -37,21 +37,24 @@ public class SegmentsMetadataManagerConfig
   private final Period pollDuration;
 
   @JsonProperty
-  private final SegmentMetadataCache.UsageMode useCache;
+  private final SegmentMetadataCache.UsageMode useIncrementalCache;
 
   @JsonCreator
   public SegmentsMetadataManagerConfig(
       @JsonProperty("pollDuration") Period pollDuration,
-      @JsonProperty("useCache") SegmentMetadataCache.UsageMode useCache
+      @JsonProperty("useIncrementalCache") SegmentMetadataCache.UsageMode useIncrementalCache
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.useCache = Configs.valueOrDefault(useCache, SegmentMetadataCache.UsageMode.NEVER);
+    this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.NEVER);
   }
 
-  public SegmentMetadataCache.UsageMode getCacheMode()
+  /**
+   * Usage mode of the incremental cache.
+   */
+  public SegmentMetadataCache.UsageMode getCacheUsageMode()
   {
-    return useCache;
+    return useIncrementalCache;
   }
 
   public Period getPollDuration()

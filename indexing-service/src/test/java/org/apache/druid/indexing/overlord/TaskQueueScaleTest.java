@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -69,6 +70,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -111,6 +113,7 @@ public class TaskQueueScaleTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnectorRule.getConnector(),
             new TestDruidLeaderSelector(),
+            Set.of(NodeRole.OVERLORD),
             NoopSegmentMetadataCache.instance(),
             NoopServiceEmitter.instance()
         ),

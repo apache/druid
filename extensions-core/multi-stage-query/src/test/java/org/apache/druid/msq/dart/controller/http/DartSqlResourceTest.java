@@ -41,11 +41,13 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -89,6 +91,7 @@ import org.mockito.MockitoAnnotations;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -168,7 +171,7 @@ public class DartSqlResourceTest extends MSQTestBase
     mockCloser = MockitoAnnotations.openMocks(this);
 
     final DartSqlEngine engine = new DartSqlEngine(
-        queryId -> new MSQTestControllerContext(
+        new MSQTestControllerContext(
             objectMapper,
             injector,
             null /* not used in this test */,
@@ -176,7 +179,14 @@ public class DartSqlResourceTest extends MSQTestBase
             loadedSegmentsMetadata,
             TaskLockType.APPEND,
             QueryContext.empty()
-        ),
+        ) {
+          @Override
+          public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
+          {
+            return super.queryKernelConfig(queryId, querySpec).toBuilder()
+                .workerIds(ImmutableList.of("some")).build();
+          }
+        },
         controllerRegistry = new DartControllerRegistry()
         {
           @Override
@@ -224,8 +234,8 @@ public class DartSqlResourceTest extends MSQTestBase
     final SqlToolbox toolbox = new SqlToolbox(
         engine,
         plannerFactory,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new DefaultQueryConfig(ImmutableMap.of()),
         lifecycleManager
@@ -805,7 +815,6 @@ public class DartSqlResourceTest extends MSQTestBase
     final AuthenticationResult authenticationResult = makeAuthenticationResult(identity);
     final ControllerHolder holder = new ControllerHolder(
         controller,
-        null,
         "sid",
         "SELECT 1",
         "localhost:1001",

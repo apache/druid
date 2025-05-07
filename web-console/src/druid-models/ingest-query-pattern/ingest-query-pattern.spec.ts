@@ -23,6 +23,9 @@ import { fitIngestQueryPattern, ingestQueryPatternToQuery } from './ingest-query
 describe('ingest-query-pattern', () => {
   it('works with no group by', () => {
     const query = SqlQuery.parse(sane`
+      SET arrayIngestMode = 'array';
+      SET finalizeAggregations = FALSE;
+      SET groupByEnableMultiValueUnnesting = FALSE;
       INSERT INTO "kttm-2019"
       WITH "ext" AS (
         SELECT *
@@ -48,6 +51,7 @@ describe('ingest-query-pattern', () => {
 
     expect(insertQueryPattern).toMatchInlineSnapshot(`
       {
+        "arrayIngestMode": "array",
         "clusteredBy": [
           3,
         ],
@@ -60,6 +64,7 @@ describe('ingest-query-pattern', () => {
           "browser_version",
         ],
         "filters": [],
+        "forceSegmentSortByTime": true,
         "mainExternalConfig": {
           "inputFormat": {
             "type": "json",
@@ -117,6 +122,9 @@ describe('ingest-query-pattern', () => {
 
   it('works with group by', () => {
     const query = SqlQuery.parse(sane`
+      SET arrayIngestMode = 'array';
+      SET finalizeAggregations = FALSE;
+      SET groupByEnableMultiValueUnnesting = FALSE;
       REPLACE INTO "inline_data" OVERWRITE ALL
       WITH "ext" AS (
         SELECT *
@@ -143,6 +151,7 @@ describe('ingest-query-pattern', () => {
 
     expect(insertQueryPattern).toMatchInlineSnapshot(`
       {
+        "arrayIngestMode": "array",
         "clusteredBy": [],
         "destinationTableName": "inline_data",
         "dimensions": [
@@ -153,6 +162,7 @@ describe('ingest-query-pattern', () => {
           ""floats"",
         ],
         "filters": [],
+        "forceSegmentSortByTime": true,
         "mainExternalConfig": {
           "inputFormat": {
             "type": "json",

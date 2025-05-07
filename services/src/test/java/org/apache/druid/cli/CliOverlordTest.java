@@ -21,6 +21,8 @@ package org.apache.druid.cli;
 
 import com.google.inject.Injector;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.junit.Assert;
@@ -40,5 +42,9 @@ public class CliOverlordTest
     final SegmentMetadataCache segmentMetadataCache
         = overlordInjector.getInstance(SegmentMetadataCache.class);
     Assert.assertTrue(segmentMetadataCache instanceof HeapMemorySegmentMetadataCache);
+
+    final SegmentsMetadataManager segmentsMetadataManager
+        = overlordInjector.getInstance(SegmentsMetadataManager.class);
+    Assert.assertTrue(segmentsMetadataManager instanceof SqlSegmentsMetadataManagerV2);
   }
 }

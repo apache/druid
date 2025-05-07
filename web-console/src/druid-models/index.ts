@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+export * from './array-ingest-mode/array-ingest-mode';
 export * from './async-query/async-query';
 export * from './compaction-config/compaction-config';
 export * from './compaction-dynamic-config/compaction-dynamic-config';

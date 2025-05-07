@@ -33,6 +33,6 @@ public class NoopRequestLoggerProvider implements RequestLoggerProvider
   public RequestLogger get()
   {
     log.debug(new Exception("Stack trace"), "Creating NoopRequestLogger at");
-    return new NoopRequestLogger();
+    return NoopRequestLogger.instance();
   }
 }

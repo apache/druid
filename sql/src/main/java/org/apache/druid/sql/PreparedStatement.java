@@ -65,13 +65,7 @@ public class PreparedStatement extends AbstractStatement
    */
   public PrepareResult prepare()
   {
-    try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
-            sqlToolbox.engine,
-            queryPlus.sql(),
-            queryContext,
-            hook
-        )
-    ) {
+    try (DruidPlanner planner = getPlanner()) {
       validate(planner);
       authorize(planner, authorizer());
 
@@ -99,6 +93,17 @@ public class PreparedStatement extends AbstractStatement
     return new DirectStatement(
         sqlToolbox,
         originalRequest.withParameters(parameters)
-        );
+    );
+  }
+
+  protected DruidPlanner getPlanner()
+  {
+    return sqlToolbox.plannerFactory.createPlanner(
+        sqlToolbox.engine,
+        queryPlus.sql(),
+        queryContext,
+        hook,
+        false
+    );
   }
 }

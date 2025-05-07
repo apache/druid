@@ -50,8 +50,7 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 
 The request body takes the following properties:
 
-* `query`: SQL query string.
-
+* `query`: SQL query string. HTTP requests are permitted to include multiple `SET` statements to assign [SQL query context parameter](../querying/sql-query-context.md) values to apply to the query statement, see [SET statements](../querying/sql.md#set-statements) for details. Context parameters set by `SET` statements take priority over values set in `context`.
 * `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
   * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.  
      Object field names match the columns returned by the SQL query in the same order as the SQL query.

@@ -48,6 +48,7 @@ import org.eclipse.jetty.server.Server;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -151,7 +152,7 @@ public class DruidAvaticaTestDriver implements Driver
     AvaticaJettyServer(final DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras) throws Exception
     {
       this.druidMeta = druidMeta;
-      server = new Server(0);
+      server = new Server(new InetSocketAddress("localhost", 0));
       server.setHandler(getAvaticaHandler(druidMeta));
       server.start();
       url = StringUtils.format(

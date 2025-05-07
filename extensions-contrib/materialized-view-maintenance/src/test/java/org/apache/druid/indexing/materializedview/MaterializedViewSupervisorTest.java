@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import junit.framework.AssertionFailedError;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
@@ -44,7 +45,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
@@ -86,7 +86,6 @@ public class MaterializedViewSupervisorTest
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private MetadataSupervisorManager metadataSupervisorManager;
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
   private String derivativeDatasourceName;
@@ -114,6 +113,7 @@ public class MaterializedViewSupervisorTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
+            Set.of(NodeRole.OVERLORD),
             NoopSegmentMetadataCache.instance(),
             NoopServiceEmitter.instance()
         ),
@@ -124,7 +124,6 @@ public class MaterializedViewSupervisorTest
         CentralizedDatasourceSchemaConfig.create()
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
-    sqlSegmentsMetadataManager = EasyMock.createMock(SqlSegmentsMetadataManager.class);
     taskQueue = EasyMock.createMock(TaskQueue.class);
 
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
@@ -143,7 +142,6 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),
@@ -325,7 +323,6 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),

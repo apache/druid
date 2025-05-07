@@ -51,6 +51,18 @@ public class StageDefinitionBuilder
     this.stageNumber = stageNumber;
   }
 
+  StageDefinitionBuilder(StageDefinitionBuilder other)
+  {
+    this.stageNumber = other.stageNumber;
+    inputs(other.inputSpecs);
+    broadcastInputs(other.broadcastInputNumbers);
+    processorFactory(other.processorFactory);
+    signature(other.signature);
+    maxWorkerCount(other.maxWorkerCount);
+    shuffleSpec(other.shuffleSpec);
+    shuffleCheckHasMultipleValues(other.shuffleCheckHasMultipleValues);
+  }
+
   public StageDefinitionBuilder inputs(final List<InputSpec> inputSpecs)
   {
     this.inputSpecs.clear();
@@ -127,5 +139,10 @@ public class StageDefinitionBuilder
         maxWorkerCount,
         shuffleCheckHasMultipleValues
     );
+  }
+
+  public StageDefinitionBuilder copy()
+  {
+    return new StageDefinitionBuilder(this);
   }
 }

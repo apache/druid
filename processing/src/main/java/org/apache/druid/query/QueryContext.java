@@ -19,6 +19,10 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,8 +60,11 @@ public class QueryContext
 {
   private static final QueryContext EMPTY = new QueryContext(null);
 
+  @JsonInclude(value = Include.NON_NULL)
+  @JsonValue
   private final Map<String, Object> context;
 
+  @JsonCreator
   public QueryContext(Map<String, Object> context)
   {
     // There is no semantic difference between an empty and a null context.
@@ -688,5 +695,21 @@ public class QueryContext
         QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED
     );
     return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equals(value);
+  }
+
+  public QueryContext override(Map<String, Object> contextOverride)
+  {
+    if (contextOverride == null || contextOverride.isEmpty()) {
+      return this;
+    }
+    return QueryContext.of(QueryContexts.override(asMap(), contextOverride));
+  }
+
+  public QueryContext override(QueryContext queryContext)
+  {
+    if (queryContext == null || queryContext.isEmpty()) {
+      return this;
+    }
+    return override(queryContext.asMap());
   }
 }
