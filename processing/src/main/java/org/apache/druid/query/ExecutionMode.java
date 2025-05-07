@@ -28,7 +28,7 @@ public enum ExecutionMode
   SYNC,
 
   /**
-   * This mode executes the query in a non-blocking way. The results are returned as part of subsequent get results  call. Currently, the msq engine uses this mode of execution.
+   * This mode executes the query in a non-blocking way. The results are returned as part of subsequent get results call. Currently, the msq engine uses this mode of execution.
    */
   ASYNC
 
