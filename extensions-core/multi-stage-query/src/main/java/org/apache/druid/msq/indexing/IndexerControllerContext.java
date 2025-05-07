@@ -237,7 +237,7 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   /**
-   * Helper method for {@link #queryKernelConfig(String, LegacyMSQSpec)}. Also used in tests.
+   * Helper method for {@link #queryKernelConfig(String, MSQSpec)}. Also used in tests.
    */
   public static ControllerQueryKernelConfig makeQueryKernelConfig(
       final MSQSpec querySpec,

@@ -544,19 +544,4 @@ public class DartQueryMaker implements QueryMaker
       rowBuffer.put(Either.error(e));
     }
   }
-
-  // ugly hack
-  public ControllerContext newControllerContext(String dartQueryId)
-  {
-    return controllerContextFactory.newContext(dartQueryId);
-  }
-
-  public ResultsContext makeDefaultResultContext()
-  {
-    final ResultsContext resultsContext = new ResultsContext(
-        null,     // not mandatory
-        SqlResults.Context.fromPlannerContext(plannerContext)
-    );
-    return resultsContext;
-  }
 }

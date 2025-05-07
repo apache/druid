@@ -198,6 +198,11 @@ public class QueryDefinition
         '}';
   }
 
+  /**
+   * Returns the final stage's output signature.
+   *
+   * This signature should align with the plan's output signature - and it should be free from helper columns.
+   */
   public RowSignature getOutputRowSignature()
   {
     RowSignature signature = stageDefinitions.get(finalStage).getSignature();

@@ -34,7 +34,6 @@ import java.util.Objects;
 
 public class QueryDefMSQSpec extends MSQSpec
 {
-
   protected final QueryDefinition queryDef;
 
   // jackson defaults

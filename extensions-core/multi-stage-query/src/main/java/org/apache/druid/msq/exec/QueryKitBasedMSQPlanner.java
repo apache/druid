@@ -251,8 +251,7 @@ public class QueryKitBasedMSQPlanner
   private ShuffleSpecFactory makeResultShuffleSpecFacory()
   {
     if (MSQControllerTask.isIngestion(destination)) {
-      return destination
-          .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
+      return destination.getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
     } else {
       return destination.getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(query.context()));
     }
