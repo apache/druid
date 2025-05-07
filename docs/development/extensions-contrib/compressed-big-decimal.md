@@ -208,7 +208,7 @@ Query syntax:
     "granularity": "ALL",
     "aggregations": [
         {
-            "type": "compressedBigDecimal",
+            "type": "compressedBigDecimalSum",
             "name": "revenue",
             "fieldName": "revenue",
             "scale": 9,
@@ -239,3 +239,17 @@ Result:
   }
 } ]
 ```
+
+### Supported Query Functions 
+
+Native aggregation functions:
+
+ * compressedBigDecimalSum
+ * compressedBigDecimalMin
+ * compressedBigDecimalMax
+
+SQL aggregation functions:
+ * big_sum()
+ * big_min()
+ * big_max()
+
