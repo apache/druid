@@ -2776,7 +2776,7 @@ public class MSQSelectTest extends MSQTestBase
                          .build()
         )
         .setExpectedRowSignature(resultSignature)
-        .setQueryContext(context)
+        .setQueryContext(timeoutContext)
         .setExpectedMSQFault(CanceledFault.timeout())
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),

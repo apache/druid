@@ -54,8 +54,8 @@ public class MSQFaultSerdeTest
   {
     assertFaultSerde(new BroadcastTablesTooLargeFault(10, null));
     assertFaultSerde(new BroadcastTablesTooLargeFault(10, JoinAlgorithm.SORT_MERGE));
-    assertFaultSerde(new CanceledFault(CanceledFault.Reason.QUERY_TIMEOUT));
-    assertFaultSerde(new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN));
+    assertFaultSerde(CanceledFault.shutdown());
+    assertFaultSerde(CanceledFault.timeout());
     assertFaultSerde(new CannotParseExternalDataFault("the message"));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", null));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", ColumnType.STRING_ARRAY));

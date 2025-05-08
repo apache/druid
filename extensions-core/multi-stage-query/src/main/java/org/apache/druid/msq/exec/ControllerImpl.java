@@ -2200,8 +2200,10 @@ public class ControllerImpl implements Controller
       boolean runAgain;
       final QueryContext queryContext = querySpec.getContext();
 
+      // Fetch the timeout, but don't use default server configured timeout if the user has not specified one.
       final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
-      final boolean hasTimeout = QueryContexts.NO_TIMEOUT == timeout;
+      // Not using QueryContexts.hasTimeout(), as this considers the default timeout as timeout being set.
+      final boolean hasTimeout = QueryContexts.NO_TIMEOUT != timeout;
       final long queryFailDeadline = System.currentTimeMillis() + timeout;
 
       while (!queryKernel.isDone()) {
@@ -2218,7 +2220,7 @@ public class ControllerImpl implements Controller
           runKernelCommands(hasTimeout, queryFailDeadline);
         }
 
-        if (hasTimeout && queryFailDeadline < System.currentTimeMillis()) {
+        if (hasTimeout && (queryFailDeadline < System.currentTimeMillis())) {
           throw new MSQException(CanceledFault.timeout());
         }
       }

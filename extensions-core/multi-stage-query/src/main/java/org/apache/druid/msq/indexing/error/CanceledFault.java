@@ -99,7 +99,7 @@ public class CanceledFault extends BaseMSQFault
     /**
      * Query was shutdown due to exceeding the configured query timeout.
      */
-    QUERY_TIMEOUT("Configured query timeout");
+    QUERY_TIMEOUT("Query timeout");
 
     private final String reason;
 
