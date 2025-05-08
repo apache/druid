@@ -34,11 +34,9 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
 import org.apache.druid.testing.cluster.overlord.FaultyLagAggregator;
-import org.apache.druid.testing.cluster.overlord.FaultyMetadataStorageCoordinator;
 import org.apache.druid.testing.cluster.overlord.FaultyTaskLockbox;
 import org.apache.druid.testing.cluster.task.FaultyCoordinatorClient;
 import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
@@ -76,7 +74,14 @@ public class ClusterTestingModule implements DruidModule
   public void configure(Binder binder)
   {
     if (isClusterTestingEnabled) {
+      log.warn(
+          "Running service in cluster testing mode. This is an unsafe test-only"
+          + " mode and must never be used in a production cluster."
+          + " Set property[druid.unsafe.cluster.testing=false] to disable testing mode."
+      );
       bindDependenciesForClusterTestingMode(binder);
+    } else {
+      log.warn("Cluster testing is disabled. Set property[druid.unsafe.cluster.testing=true] to enable it.");
     }
   }
 
@@ -100,10 +105,7 @@ public class ClusterTestingModule implements DruidModule
             .in(LazySingleton.class);
     } else if (roles.contains(NodeRole.OVERLORD)) {
       // If this is the Overlord, bind a faulty storage coordinator
-      log.info("Running Overlord in cluster testing mode.");
-      binder.bind(IndexerSQLMetadataStorageCoordinator.class)
-            .to(FaultyMetadataStorageCoordinator.class)
-            .in(ManageLifecycle.class);
+      log.warn("Running Overlord in cluster testing mode.");
       binder.bind(TaskLockbox.class)
             .to(FaultyTaskLockbox.class)
             .in(LazySingleton.class);
@@ -136,7 +138,7 @@ public class ClusterTestingModule implements DruidModule
     {
       try {
         final ClusterTestingTaskConfig testingConfig = ClusterTestingTaskConfig.forTask(task, mapper);
-        log.info("Running task in cluster testing mode with config[%s].", testingConfig);
+        log.warn("Running task in cluster testing mode with config[%s].", testingConfig);
 
         return testingConfig;
       }

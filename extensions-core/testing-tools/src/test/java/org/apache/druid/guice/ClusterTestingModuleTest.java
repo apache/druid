@@ -40,7 +40,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.filter.TrueDimFilter;
@@ -51,7 +50,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
-import org.apache.druid.testing.cluster.overlord.FaultyMetadataStorageCoordinator;
 import org.apache.druid.testing.cluster.overlord.FaultyTaskLockbox;
 import org.apache.druid.testing.cluster.task.FaultyCoordinatorClient;
 import org.apache.druid.testing.cluster.task.FaultyOverlordClient;
@@ -245,10 +243,6 @@ public class ClusterTestingModuleTest
       baseInjector.injectMembers(overlord);
 
       final Injector overlordInjector = overlord.makeInjector(Set.of(NodeRole.OVERLORD));
-
-      IndexerMetadataStorageCoordinator storageCoordinator =
-          overlordInjector.getInstance(IndexerMetadataStorageCoordinator.class);
-      Assert.assertTrue(storageCoordinator instanceof FaultyMetadataStorageCoordinator);
 
       TaskLockbox taskLockbox = overlordInjector.getInstance(TaskLockbox.class);
       Assert.assertTrue(taskLockbox instanceof FaultyTaskLockbox);
