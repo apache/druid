@@ -1,0 +1,2169 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A17_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||contains_string(loaded_image, 'a') IS NULL
+       OR '1'||contains_string(loaded_image, 'a') IN
+         (SELECT '1'||contains_string(loaded_image, 'a')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||contains_string(loaded_image, 'a') IS NULL
+                 OR ('1'||contains_string(loaded_image, 'a') = 1||contains_string(loaded_image, 'a')
+                     AND '1'||contains_string(loaded_image, 'a') IS NOT DISTINCT
+                     FROM 1||contains_string(loaded_image, 'a')
+                     AND '1'||contains_string(loaded_image, 'a') <> '0'||contains_string(loaded_image, 'a')
+                     AND ('1'||contains_string(loaded_image, 'a') IS DISTINCT
+                          FROM '0'||contains_string(loaded_image, 'a'))
+                     AND '1'||contains_string(loaded_image, 'a') > '0'||contains_string(loaded_image, 'a')
+                     AND '1'||contains_string(loaded_image, 'a') >= '0'||contains_string(loaded_image, 'a')
+                     AND '1'||contains_string(loaded_image, 'a') < 2||contains_string(loaded_image, 'a')
+                     AND '1'||contains_string(loaded_image, 'a') <= 2||contains_string(loaded_image, 'a')
+                     AND ('1'||contains_string(loaded_image, 'a') <> '0'||contains_string(loaded_image, 'a')) IS TRUE
+                     AND ('1'||contains_string(loaded_image, 'a') = '0'||contains_string(loaded_image, 'a')) IS NOT TRUE
+                     AND ('1'||contains_string(loaded_image, 'a') = '0'||contains_string(loaded_image, 'a')) IS FALSE
+                     AND ('1'||contains_string(loaded_image, 'a') <> '0'||contains_string(loaded_image, 'a')) IS NOT FALSE
+                     AND '1'||contains_string(loaded_image, 'a') BETWEEN '0'||contains_string(loaded_image, 'a') AND 2||contains_string(loaded_image, 'a')
+                     AND '1'||contains_string(loaded_image, 'a') NOT BETWEEN '1'||contains_string(loaded_image, 'a') AND '0'||contains_string(loaded_image, 'a')
+                     AND '1'||contains_string(loaded_image, 'a') like '%'
+                     AND '1'||contains_string(loaded_image, 'a') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||contains_string(loaded_image, 'a') IN ('0'||contains_string(loaded_image, 'a'),
+                                                                     1||contains_string(loaded_image, 'a'),
+                                                                     2||contains_string(loaded_image, 'a'))
+                     AND '1'||contains_string(loaded_image, 'a') NOT IN ('0'||contains_string(loaded_image, 'a'),
+                                                                         2||contains_string(loaded_image, 'a'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A17_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||contains_string(loaded_image, 'a'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||contains_string(loaded_image, 'a') IS NULL
+          OR ('1'||contains_string(loaded_image, 'a') = 1||contains_string(loaded_image, 'a')
+              AND '1'||contains_string(loaded_image, 'a') IS NOT DISTINCT
+              FROM 1||contains_string(loaded_image, 'a')
+              AND '1'||contains_string(loaded_image, 'a') <> '0'||contains_string(loaded_image, 'a')
+              AND ('1'||contains_string(loaded_image, 'a') IS DISTINCT
+                   FROM '0'||contains_string(loaded_image, 'a'))
+              AND '1'||contains_string(loaded_image, 'a') > '0'||contains_string(loaded_image, 'a')
+              AND '1'||contains_string(loaded_image, 'a') >= '0'||contains_string(loaded_image, 'a')
+              AND '1'||contains_string(loaded_image, 'a') < 2||contains_string(loaded_image, 'a')
+              AND '1'||contains_string(loaded_image, 'a') <= 2||contains_string(loaded_image, 'a')
+              AND ('1'||contains_string(loaded_image, 'a') <> '0'||contains_string(loaded_image, 'a')) IS TRUE
+              AND ('1'||contains_string(loaded_image, 'a') = '0'||contains_string(loaded_image, 'a')) IS NOT TRUE
+              AND ('1'||contains_string(loaded_image, 'a') = '0'||contains_string(loaded_image, 'a')) IS FALSE
+              AND ('1'||contains_string(loaded_image, 'a') <> '0'||contains_string(loaded_image, 'a')) IS NOT FALSE
+              AND '1'||contains_string(loaded_image, 'a') BETWEEN '0'||contains_string(loaded_image, 'a') AND 2||contains_string(loaded_image, 'a')
+              AND '1'||contains_string(loaded_image, 'a') NOT BETWEEN '1'||contains_string(loaded_image, 'a') AND '0'||contains_string(loaded_image, 'a')
+              AND '1'||contains_string(loaded_image, 'a') like '%'
+              AND '1'||contains_string(loaded_image, 'a') not like '__DOES_NOT_EXIST__%'
+              AND '1'||contains_string(loaded_image, 'a') IN ('0'||contains_string(loaded_image, 'a'),
+                                                              1||contains_string(loaded_image, 'a'),
+                                                              2||contains_string(loaded_image, 'a'))
+              AND '1'||contains_string(loaded_image, 'a') NOT IN ('0'||contains_string(loaded_image, 'a'),
+                                                                  2||contains_string(loaded_image, 'a'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A18_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||icontains_string(loaded_image, 'a') IS NULL
+       OR ('1'||icontains_string(loaded_image, 'a') = 1||icontains_string(loaded_image, 'a')
+           AND '1'||icontains_string(loaded_image, 'a') IS NOT DISTINCT
+           FROM 1||icontains_string(loaded_image, 'a')
+           AND '1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')
+           AND ('1'||icontains_string(loaded_image, 'a') IS DISTINCT
+                FROM '0'||icontains_string(loaded_image, 'a'))
+           AND '1'||icontains_string(loaded_image, 'a') > '0'||icontains_string(loaded_image, 'a')
+           AND '1'||icontains_string(loaded_image, 'a') >= '0'||icontains_string(loaded_image, 'a')
+           AND '1'||icontains_string(loaded_image, 'a') < 2||icontains_string(loaded_image, 'a')
+           AND '1'||icontains_string(loaded_image, 'a') <= 2||icontains_string(loaded_image, 'a')
+           AND ('1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')) IS TRUE
+           AND ('1'||icontains_string(loaded_image, 'a') = '0'||icontains_string(loaded_image, 'a')) IS NOT TRUE
+           AND ('1'||icontains_string(loaded_image, 'a') = '0'||icontains_string(loaded_image, 'a')) IS FALSE
+           AND ('1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')) IS NOT FALSE
+           AND '1'||icontains_string(loaded_image, 'a') BETWEEN '0'||icontains_string(loaded_image, 'a') AND 2||icontains_string(loaded_image, 'a')
+           AND '1'||icontains_string(loaded_image, 'a') NOT BETWEEN '1'||icontains_string(loaded_image, 'a') AND '0'||icontains_string(loaded_image, 'a')
+           AND '1'||icontains_string(loaded_image, 'a') like '%'
+           AND '1'||icontains_string(loaded_image, 'a') not like '__DOES_NOT_EXIST__%'
+           AND '1'||icontains_string(loaded_image, 'a') IN ('0'||icontains_string(loaded_image, 'a'),
+                                                            1||icontains_string(loaded_image, 'a'),
+                                                            2||icontains_string(loaded_image, 'a'))
+           AND '1'||icontains_string(loaded_image, 'a') NOT IN ('0'||icontains_string(loaded_image, 'a'),
+                                                                2||icontains_string(loaded_image, 'a')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A18_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||icontains_string(loaded_image, 'a') IS NULL
+       OR '1'||icontains_string(loaded_image, 'a') IN
+         (SELECT '1'||icontains_string(loaded_image, 'a')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||icontains_string(loaded_image, 'a') IS NULL
+                 OR ('1'||icontains_string(loaded_image, 'a') = 1||icontains_string(loaded_image, 'a')
+                     AND '1'||icontains_string(loaded_image, 'a') IS NOT DISTINCT
+                     FROM 1||icontains_string(loaded_image, 'a')
+                     AND '1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')
+                     AND ('1'||icontains_string(loaded_image, 'a') IS DISTINCT
+                          FROM '0'||icontains_string(loaded_image, 'a'))
+                     AND '1'||icontains_string(loaded_image, 'a') > '0'||icontains_string(loaded_image, 'a')
+                     AND '1'||icontains_string(loaded_image, 'a') >= '0'||icontains_string(loaded_image, 'a')
+                     AND '1'||icontains_string(loaded_image, 'a') < 2||icontains_string(loaded_image, 'a')
+                     AND '1'||icontains_string(loaded_image, 'a') <= 2||icontains_string(loaded_image, 'a')
+                     AND ('1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')) IS TRUE
+                     AND ('1'||icontains_string(loaded_image, 'a') = '0'||icontains_string(loaded_image, 'a')) IS NOT TRUE
+                     AND ('1'||icontains_string(loaded_image, 'a') = '0'||icontains_string(loaded_image, 'a')) IS FALSE
+                     AND ('1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')) IS NOT FALSE
+                     AND '1'||icontains_string(loaded_image, 'a') BETWEEN '0'||icontains_string(loaded_image, 'a') AND 2||icontains_string(loaded_image, 'a')
+                     AND '1'||icontains_string(loaded_image, 'a') NOT BETWEEN '1'||icontains_string(loaded_image, 'a') AND '0'||icontains_string(loaded_image, 'a')
+                     AND '1'||icontains_string(loaded_image, 'a') like '%'
+                     AND '1'||icontains_string(loaded_image, 'a') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||icontains_string(loaded_image, 'a') IN ('0'||icontains_string(loaded_image, 'a'),
+                                                                      1||icontains_string(loaded_image, 'a'),
+                                                                      2||icontains_string(loaded_image, 'a'))
+                     AND '1'||icontains_string(loaded_image, 'a') NOT IN ('0'||icontains_string(loaded_image, 'a'),
+                                                                          2||icontains_string(loaded_image, 'a'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A18_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||icontains_string(loaded_image, 'a'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||icontains_string(loaded_image, 'a') IS NULL
+          OR ('1'||icontains_string(loaded_image, 'a') = 1||icontains_string(loaded_image, 'a')
+              AND '1'||icontains_string(loaded_image, 'a') IS NOT DISTINCT
+              FROM 1||icontains_string(loaded_image, 'a')
+              AND '1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')
+              AND ('1'||icontains_string(loaded_image, 'a') IS DISTINCT
+                   FROM '0'||icontains_string(loaded_image, 'a'))
+              AND '1'||icontains_string(loaded_image, 'a') > '0'||icontains_string(loaded_image, 'a')
+              AND '1'||icontains_string(loaded_image, 'a') >= '0'||icontains_string(loaded_image, 'a')
+              AND '1'||icontains_string(loaded_image, 'a') < 2||icontains_string(loaded_image, 'a')
+              AND '1'||icontains_string(loaded_image, 'a') <= 2||icontains_string(loaded_image, 'a')
+              AND ('1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')) IS TRUE
+              AND ('1'||icontains_string(loaded_image, 'a') = '0'||icontains_string(loaded_image, 'a')) IS NOT TRUE
+              AND ('1'||icontains_string(loaded_image, 'a') = '0'||icontains_string(loaded_image, 'a')) IS FALSE
+              AND ('1'||icontains_string(loaded_image, 'a') <> '0'||icontains_string(loaded_image, 'a')) IS NOT FALSE
+              AND '1'||icontains_string(loaded_image, 'a') BETWEEN '0'||icontains_string(loaded_image, 'a') AND 2||icontains_string(loaded_image, 'a')
+              AND '1'||icontains_string(loaded_image, 'a') NOT BETWEEN '1'||icontains_string(loaded_image, 'a') AND '0'||icontains_string(loaded_image, 'a')
+              AND '1'||icontains_string(loaded_image, 'a') like '%'
+              AND '1'||icontains_string(loaded_image, 'a') not like '__DOES_NOT_EXIST__%'
+              AND '1'||icontains_string(loaded_image, 'a') IN ('0'||icontains_string(loaded_image, 'a'),
+                                                               1||icontains_string(loaded_image, 'a'),
+                                                               2||icontains_string(loaded_image, 'a'))
+              AND '1'||icontains_string(loaded_image, 'a') NOT IN ('0'||icontains_string(loaded_image, 'a'),
+                                                                   2||icontains_string(loaded_image, 'a'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A19_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||replace(loaded_image, 'a', 'z') IS NULL
+       OR ('1'||replace(loaded_image, 'a', 'z') = 1||replace(loaded_image, 'a', 'z')
+           AND '1'||replace(loaded_image, 'a', 'z') IS NOT DISTINCT
+           FROM 1||replace(loaded_image, 'a', 'z')
+           AND '1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')
+           AND ('1'||replace(loaded_image, 'a', 'z') IS DISTINCT
+                FROM '0'||replace(loaded_image, 'a', 'z'))
+           AND '1'||replace(loaded_image, 'a', 'z') > '0'||replace(loaded_image, 'a', 'z')
+           AND '1'||replace(loaded_image, 'a', 'z') >= '0'||replace(loaded_image, 'a', 'z')
+           AND '1'||replace(loaded_image, 'a', 'z') < 2||replace(loaded_image, 'a', 'z')
+           AND '1'||replace(loaded_image, 'a', 'z') <= 2||replace(loaded_image, 'a', 'z')
+           AND ('1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')) IS TRUE
+           AND ('1'||replace(loaded_image, 'a', 'z') = '0'||replace(loaded_image, 'a', 'z')) IS NOT TRUE
+           AND ('1'||replace(loaded_image, 'a', 'z') = '0'||replace(loaded_image, 'a', 'z')) IS FALSE
+           AND ('1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')) IS NOT FALSE
+           AND '1'||replace(loaded_image, 'a', 'z') BETWEEN '0'||replace(loaded_image, 'a', 'z') AND 2||replace(loaded_image, 'a', 'z')
+           AND '1'||replace(loaded_image, 'a', 'z') NOT BETWEEN '1'||replace(loaded_image, 'a', 'z') AND '0'||replace(loaded_image, 'a', 'z')
+           AND '1'||replace(loaded_image, 'a', 'z') like '%'
+           AND '1'||replace(loaded_image, 'a', 'z') not like '__DOES_NOT_EXIST__%'
+           AND '1'||replace(loaded_image, 'a', 'z') IN ('0'||replace(loaded_image, 'a', 'z'),
+                                                        1||replace(loaded_image, 'a', 'z'),
+                                                        2||replace(loaded_image, 'a', 'z'))
+           AND '1'||replace(loaded_image, 'a', 'z') NOT IN ('0'||replace(loaded_image, 'a', 'z'),
+                                                            2||replace(loaded_image, 'a', 'z')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A19_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||replace(loaded_image, 'a', 'z') IS NULL
+       OR '1'||replace(loaded_image, 'a', 'z') IN
+         (SELECT '1'||replace(loaded_image, 'a', 'z')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||replace(loaded_image, 'a', 'z') IS NULL
+                 OR ('1'||replace(loaded_image, 'a', 'z') = 1||replace(loaded_image, 'a', 'z')
+                     AND '1'||replace(loaded_image, 'a', 'z') IS NOT DISTINCT
+                     FROM 1||replace(loaded_image, 'a', 'z')
+                     AND '1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')
+                     AND ('1'||replace(loaded_image, 'a', 'z') IS DISTINCT
+                          FROM '0'||replace(loaded_image, 'a', 'z'))
+                     AND '1'||replace(loaded_image, 'a', 'z') > '0'||replace(loaded_image, 'a', 'z')
+                     AND '1'||replace(loaded_image, 'a', 'z') >= '0'||replace(loaded_image, 'a', 'z')
+                     AND '1'||replace(loaded_image, 'a', 'z') < 2||replace(loaded_image, 'a', 'z')
+                     AND '1'||replace(loaded_image, 'a', 'z') <= 2||replace(loaded_image, 'a', 'z')
+                     AND ('1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')) IS TRUE
+                     AND ('1'||replace(loaded_image, 'a', 'z') = '0'||replace(loaded_image, 'a', 'z')) IS NOT TRUE
+                     AND ('1'||replace(loaded_image, 'a', 'z') = '0'||replace(loaded_image, 'a', 'z')) IS FALSE
+                     AND ('1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')) IS NOT FALSE
+                     AND '1'||replace(loaded_image, 'a', 'z') BETWEEN '0'||replace(loaded_image, 'a', 'z') AND 2||replace(loaded_image, 'a', 'z')
+                     AND '1'||replace(loaded_image, 'a', 'z') NOT BETWEEN '1'||replace(loaded_image, 'a', 'z') AND '0'||replace(loaded_image, 'a', 'z')
+                     AND '1'||replace(loaded_image, 'a', 'z') like '%'
+                     AND '1'||replace(loaded_image, 'a', 'z') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||replace(loaded_image, 'a', 'z') IN ('0'||replace(loaded_image, 'a', 'z'),
+                                                                  1||replace(loaded_image, 'a', 'z'),
+                                                                  2||replace(loaded_image, 'a', 'z'))
+                     AND '1'||replace(loaded_image, 'a', 'z') NOT IN ('0'||replace(loaded_image, 'a', 'z'),
+                                                                      2||replace(loaded_image, 'a', 'z'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A19_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||replace(loaded_image, 'a', 'z'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||replace(loaded_image, 'a', 'z') IS NULL
+          OR ('1'||replace(loaded_image, 'a', 'z') = 1||replace(loaded_image, 'a', 'z')
+              AND '1'||replace(loaded_image, 'a', 'z') IS NOT DISTINCT
+              FROM 1||replace(loaded_image, 'a', 'z')
+              AND '1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')
+              AND ('1'||replace(loaded_image, 'a', 'z') IS DISTINCT
+                   FROM '0'||replace(loaded_image, 'a', 'z'))
+              AND '1'||replace(loaded_image, 'a', 'z') > '0'||replace(loaded_image, 'a', 'z')
+              AND '1'||replace(loaded_image, 'a', 'z') >= '0'||replace(loaded_image, 'a', 'z')
+              AND '1'||replace(loaded_image, 'a', 'z') < 2||replace(loaded_image, 'a', 'z')
+              AND '1'||replace(loaded_image, 'a', 'z') <= 2||replace(loaded_image, 'a', 'z')
+              AND ('1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')) IS TRUE
+              AND ('1'||replace(loaded_image, 'a', 'z') = '0'||replace(loaded_image, 'a', 'z')) IS NOT TRUE
+              AND ('1'||replace(loaded_image, 'a', 'z') = '0'||replace(loaded_image, 'a', 'z')) IS FALSE
+              AND ('1'||replace(loaded_image, 'a', 'z') <> '0'||replace(loaded_image, 'a', 'z')) IS NOT FALSE
+              AND '1'||replace(loaded_image, 'a', 'z') BETWEEN '0'||replace(loaded_image, 'a', 'z') AND 2||replace(loaded_image, 'a', 'z')
+              AND '1'||replace(loaded_image, 'a', 'z') NOT BETWEEN '1'||replace(loaded_image, 'a', 'z') AND '0'||replace(loaded_image, 'a', 'z')
+              AND '1'||replace(loaded_image, 'a', 'z') like '%'
+              AND '1'||replace(loaded_image, 'a', 'z') not like '__DOES_NOT_EXIST__%'
+              AND '1'||replace(loaded_image, 'a', 'z') IN ('0'||replace(loaded_image, 'a', 'z'),
+                                                           1||replace(loaded_image, 'a', 'z'),
+                                                           2||replace(loaded_image, 'a', 'z'))
+              AND '1'||replace(loaded_image, 'a', 'z') NOT IN ('0'||replace(loaded_image, 'a', 'z'),
+                                                               2||replace(loaded_image, 'a', 'z'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A20_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (strpos(loaded_image, 'a')+1 IS NULL
+       OR (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')+1
+           AND strpos(loaded_image, 'a')+1 IS NOT DISTINCT
+           FROM strpos(loaded_image, 'a')+1
+           AND strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')
+           AND (strpos(loaded_image, 'a')+1 IS DISTINCT
+                FROM strpos(loaded_image, 'a'))
+           AND strpos(loaded_image, 'a')+1 > strpos(loaded_image, 'a')
+           AND strpos(loaded_image, 'a')+1 >= strpos(loaded_image, 'a')
+           AND strpos(loaded_image, 'a')+1 < strpos(loaded_image, 'a')+2
+           AND strpos(loaded_image, 'a')+1 <= strpos(loaded_image, 'a')+2
+           AND (strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')) IS TRUE
+           AND (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')) IS NOT TRUE
+           AND (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')) IS FALSE
+           AND (strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')) IS NOT FALSE
+           AND strpos(loaded_image, 'a')+1 BETWEEN strpos(loaded_image, 'a') AND strpos(loaded_image, 'a')+2
+           AND strpos(loaded_image, 'a')+1 NOT BETWEEN strpos(loaded_image, 'a')+1 AND strpos(loaded_image, 'a')
+           AND strpos(loaded_image, 'a')+1 like '%'
+           AND strpos(loaded_image, 'a')+1 not like '__DOES_NOT_EXIST__%'
+           AND strpos(loaded_image, 'a')+1 IN (strpos(loaded_image, 'a'),
+                                               strpos(loaded_image, 'a')+1,
+                                               strpos(loaded_image, 'a')+2)
+           AND strpos(loaded_image, 'a')+1 NOT IN (strpos(loaded_image, 'a'),
+                                                   strpos(loaded_image, 'a')+2))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A20_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (strpos(loaded_image, 'a')+1 IS NULL
+       OR strpos(loaded_image, 'a')+1 IN
+         (SELECT strpos(loaded_image, 'a')+1
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (strpos(loaded_image, 'a')+1 IS NULL
+                 OR (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')+1
+                     AND strpos(loaded_image, 'a')+1 IS NOT DISTINCT
+                     FROM strpos(loaded_image, 'a')+1
+                     AND strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')
+                     AND (strpos(loaded_image, 'a')+1 IS DISTINCT
+                          FROM strpos(loaded_image, 'a'))
+                     AND strpos(loaded_image, 'a')+1 > strpos(loaded_image, 'a')
+                     AND strpos(loaded_image, 'a')+1 >= strpos(loaded_image, 'a')
+                     AND strpos(loaded_image, 'a')+1 < strpos(loaded_image, 'a')+2
+                     AND strpos(loaded_image, 'a')+1 <= strpos(loaded_image, 'a')+2
+                     AND (strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')) IS TRUE
+                     AND (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')) IS NOT TRUE
+                     AND (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')) IS FALSE
+                     AND (strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')) IS NOT FALSE
+                     AND strpos(loaded_image, 'a')+1 BETWEEN strpos(loaded_image, 'a') AND strpos(loaded_image, 'a')+2
+                     AND strpos(loaded_image, 'a')+1 NOT BETWEEN strpos(loaded_image, 'a')+1 AND strpos(loaded_image, 'a')
+                     AND strpos(loaded_image, 'a')+1 like '%'
+                     AND strpos(loaded_image, 'a')+1 not like '__DOES_NOT_EXIST__%'
+                     AND strpos(loaded_image, 'a')+1 IN (strpos(loaded_image, 'a'),
+                                                         strpos(loaded_image, 'a')+1,
+                                                         strpos(loaded_image, 'a')+2)
+                     AND strpos(loaded_image, 'a')+1 NOT IN (strpos(loaded_image, 'a'),
+                                                             strpos(loaded_image, 'a')+2)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A20_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          strpos(loaded_image, 'a')+1,
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (strpos(loaded_image, 'a')+1 IS NULL
+          OR (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')+1
+              AND strpos(loaded_image, 'a')+1 IS NOT DISTINCT
+              FROM strpos(loaded_image, 'a')+1
+              AND strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')
+              AND (strpos(loaded_image, 'a')+1 IS DISTINCT
+                   FROM strpos(loaded_image, 'a'))
+              AND strpos(loaded_image, 'a')+1 > strpos(loaded_image, 'a')
+              AND strpos(loaded_image, 'a')+1 >= strpos(loaded_image, 'a')
+              AND strpos(loaded_image, 'a')+1 < strpos(loaded_image, 'a')+2
+              AND strpos(loaded_image, 'a')+1 <= strpos(loaded_image, 'a')+2
+              AND (strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')) IS TRUE
+              AND (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')) IS NOT TRUE
+              AND (strpos(loaded_image, 'a')+1 = strpos(loaded_image, 'a')) IS FALSE
+              AND (strpos(loaded_image, 'a')+1 <> strpos(loaded_image, 'a')) IS NOT FALSE
+              AND strpos(loaded_image, 'a')+1 BETWEEN strpos(loaded_image, 'a') AND strpos(loaded_image, 'a')+2
+              AND strpos(loaded_image, 'a')+1 NOT BETWEEN strpos(loaded_image, 'a')+1 AND strpos(loaded_image, 'a')
+              AND strpos(loaded_image, 'a')+1 like '%'
+              AND strpos(loaded_image, 'a')+1 not like '__DOES_NOT_EXIST__%'
+              AND strpos(loaded_image, 'a')+1 IN (strpos(loaded_image, 'a'),
+                                                  strpos(loaded_image, 'a')+1,
+                                                  strpos(loaded_image, 'a')+2)
+              AND strpos(loaded_image, 'a')+1 NOT IN (strpos(loaded_image, 'a'),
+                                                      strpos(loaded_image, 'a')+2)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A21_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||substring(loaded_image, 1, length(loaded_image)) IS NULL
+       OR ('1'||substring(loaded_image, 1, length(loaded_image)) = 1||substring(loaded_image, 1, length(loaded_image))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) IS NOT DISTINCT
+           FROM 1||substring(loaded_image, 1, length(loaded_image))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))
+           AND ('1'||substring(loaded_image, 1, length(loaded_image)) IS DISTINCT
+                FROM '0'||substring(loaded_image, 1, length(loaded_image)))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) > '0'||substring(loaded_image, 1, length(loaded_image))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) >= '0'||substring(loaded_image, 1, length(loaded_image))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) < 2||substring(loaded_image, 1, length(loaded_image))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) <= 2||substring(loaded_image, 1, length(loaded_image))
+           AND ('1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))) IS TRUE
+           AND ('1'||substring(loaded_image, 1, length(loaded_image)) = '0'||substring(loaded_image, 1, length(loaded_image))) IS NOT TRUE
+           AND ('1'||substring(loaded_image, 1, length(loaded_image)) = '0'||substring(loaded_image, 1, length(loaded_image))) IS FALSE
+           AND ('1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))) IS NOT FALSE
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) BETWEEN '0'||substring(loaded_image, 1, length(loaded_image)) AND 2||substring(loaded_image, 1, length(loaded_image))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) NOT BETWEEN '1'||substring(loaded_image, 1, length(loaded_image)) AND '0'||substring(loaded_image, 1, length(loaded_image))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) like '%'
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) not like '__DOES_NOT_EXIST__%'
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) IN ('0'||substring(loaded_image, 1, length(loaded_image)),
+                                                                         1||substring(loaded_image, 1, length(loaded_image)),
+                                                                         2||substring(loaded_image, 1, length(loaded_image)))
+           AND '1'||substring(loaded_image, 1, length(loaded_image)) NOT IN ('0'||substring(loaded_image, 1, length(loaded_image)),
+                                                                             2||substring(loaded_image, 1, length(loaded_image))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A21_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||substring(loaded_image, 1, length(loaded_image)) IS NULL
+       OR '1'||substring(loaded_image, 1, length(loaded_image)) IN
+         (SELECT '1'||substring(loaded_image, 1, length(loaded_image))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||substring(loaded_image, 1, length(loaded_image)) IS NULL
+                 OR ('1'||substring(loaded_image, 1, length(loaded_image)) = 1||substring(loaded_image, 1, length(loaded_image))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) IS NOT DISTINCT
+                     FROM 1||substring(loaded_image, 1, length(loaded_image))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))
+                     AND ('1'||substring(loaded_image, 1, length(loaded_image)) IS DISTINCT
+                          FROM '0'||substring(loaded_image, 1, length(loaded_image)))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) > '0'||substring(loaded_image, 1, length(loaded_image))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) >= '0'||substring(loaded_image, 1, length(loaded_image))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) < 2||substring(loaded_image, 1, length(loaded_image))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) <= 2||substring(loaded_image, 1, length(loaded_image))
+                     AND ('1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))) IS TRUE
+                     AND ('1'||substring(loaded_image, 1, length(loaded_image)) = '0'||substring(loaded_image, 1, length(loaded_image))) IS NOT TRUE
+                     AND ('1'||substring(loaded_image, 1, length(loaded_image)) = '0'||substring(loaded_image, 1, length(loaded_image))) IS FALSE
+                     AND ('1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))) IS NOT FALSE
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) BETWEEN '0'||substring(loaded_image, 1, length(loaded_image)) AND 2||substring(loaded_image, 1, length(loaded_image))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) NOT BETWEEN '1'||substring(loaded_image, 1, length(loaded_image)) AND '0'||substring(loaded_image, 1, length(loaded_image))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) like '%'
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) IN ('0'||substring(loaded_image, 1, length(loaded_image)),
+                                                                                   1||substring(loaded_image, 1, length(loaded_image)),
+                                                                                   2||substring(loaded_image, 1, length(loaded_image)))
+                     AND '1'||substring(loaded_image, 1, length(loaded_image)) NOT IN ('0'||substring(loaded_image, 1, length(loaded_image)),
+                                                                                       2||substring(loaded_image, 1, length(loaded_image)))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A21_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||substring(loaded_image, 1, length(loaded_image)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||substring(loaded_image, 1, length(loaded_image)) IS NULL
+          OR ('1'||substring(loaded_image, 1, length(loaded_image)) = 1||substring(loaded_image, 1, length(loaded_image))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) IS NOT DISTINCT
+              FROM 1||substring(loaded_image, 1, length(loaded_image))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))
+              AND ('1'||substring(loaded_image, 1, length(loaded_image)) IS DISTINCT
+                   FROM '0'||substring(loaded_image, 1, length(loaded_image)))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) > '0'||substring(loaded_image, 1, length(loaded_image))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) >= '0'||substring(loaded_image, 1, length(loaded_image))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) < 2||substring(loaded_image, 1, length(loaded_image))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) <= 2||substring(loaded_image, 1, length(loaded_image))
+              AND ('1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))) IS TRUE
+              AND ('1'||substring(loaded_image, 1, length(loaded_image)) = '0'||substring(loaded_image, 1, length(loaded_image))) IS NOT TRUE
+              AND ('1'||substring(loaded_image, 1, length(loaded_image)) = '0'||substring(loaded_image, 1, length(loaded_image))) IS FALSE
+              AND ('1'||substring(loaded_image, 1, length(loaded_image)) <> '0'||substring(loaded_image, 1, length(loaded_image))) IS NOT FALSE
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) BETWEEN '0'||substring(loaded_image, 1, length(loaded_image)) AND 2||substring(loaded_image, 1, length(loaded_image))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) NOT BETWEEN '1'||substring(loaded_image, 1, length(loaded_image)) AND '0'||substring(loaded_image, 1, length(loaded_image))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) like '%'
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) not like '__DOES_NOT_EXIST__%'
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) IN ('0'||substring(loaded_image, 1, length(loaded_image)),
+                                                                            1||substring(loaded_image, 1, length(loaded_image)),
+                                                                            2||substring(loaded_image, 1, length(loaded_image)))
+              AND '1'||substring(loaded_image, 1, length(loaded_image)) NOT IN ('0'||substring(loaded_image, 1, length(loaded_image)),
+                                                                                2||substring(loaded_image, 1, length(loaded_image)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A22_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||right(loaded_image, 2) IS NULL
+       OR ('1'||right(loaded_image, 2) = 1||right(loaded_image, 2)
+           AND '1'||right(loaded_image, 2) IS NOT DISTINCT
+           FROM 1||right(loaded_image, 2)
+           AND '1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)
+           AND ('1'||right(loaded_image, 2) IS DISTINCT
+                FROM '0'||right(loaded_image, 2))
+           AND '1'||right(loaded_image, 2) > '0'||right(loaded_image, 2)
+           AND '1'||right(loaded_image, 2) >= '0'||right(loaded_image, 2)
+           AND '1'||right(loaded_image, 2) < 2||right(loaded_image, 2)
+           AND '1'||right(loaded_image, 2) <= 2||right(loaded_image, 2)
+           AND ('1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)) IS TRUE
+           AND ('1'||right(loaded_image, 2) = '0'||right(loaded_image, 2)) IS NOT TRUE
+           AND ('1'||right(loaded_image, 2) = '0'||right(loaded_image, 2)) IS FALSE
+           AND ('1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)) IS NOT FALSE
+           AND '1'||right(loaded_image, 2) BETWEEN '0'||right(loaded_image, 2) AND 2||right(loaded_image, 2)
+           AND '1'||right(loaded_image, 2) NOT BETWEEN '1'||right(loaded_image, 2) AND '0'||right(loaded_image, 2)
+           AND '1'||right(loaded_image, 2) like '%'
+           AND '1'||right(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+           AND '1'||right(loaded_image, 2) IN ('0'||right(loaded_image, 2),
+                                               1||right(loaded_image, 2),
+                                               2||right(loaded_image, 2))
+           AND '1'||right(loaded_image, 2) NOT IN ('0'||right(loaded_image, 2),
+                                                   2||right(loaded_image, 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A22_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||right(loaded_image, 2) IS NULL
+       OR '1'||right(loaded_image, 2) IN
+         (SELECT '1'||right(loaded_image, 2)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||right(loaded_image, 2) IS NULL
+                 OR ('1'||right(loaded_image, 2) = 1||right(loaded_image, 2)
+                     AND '1'||right(loaded_image, 2) IS NOT DISTINCT
+                     FROM 1||right(loaded_image, 2)
+                     AND '1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)
+                     AND ('1'||right(loaded_image, 2) IS DISTINCT
+                          FROM '0'||right(loaded_image, 2))
+                     AND '1'||right(loaded_image, 2) > '0'||right(loaded_image, 2)
+                     AND '1'||right(loaded_image, 2) >= '0'||right(loaded_image, 2)
+                     AND '1'||right(loaded_image, 2) < 2||right(loaded_image, 2)
+                     AND '1'||right(loaded_image, 2) <= 2||right(loaded_image, 2)
+                     AND ('1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)) IS TRUE
+                     AND ('1'||right(loaded_image, 2) = '0'||right(loaded_image, 2)) IS NOT TRUE
+                     AND ('1'||right(loaded_image, 2) = '0'||right(loaded_image, 2)) IS FALSE
+                     AND ('1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)) IS NOT FALSE
+                     AND '1'||right(loaded_image, 2) BETWEEN '0'||right(loaded_image, 2) AND 2||right(loaded_image, 2)
+                     AND '1'||right(loaded_image, 2) NOT BETWEEN '1'||right(loaded_image, 2) AND '0'||right(loaded_image, 2)
+                     AND '1'||right(loaded_image, 2) like '%'
+                     AND '1'||right(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||right(loaded_image, 2) IN ('0'||right(loaded_image, 2),
+                                                         1||right(loaded_image, 2),
+                                                         2||right(loaded_image, 2))
+                     AND '1'||right(loaded_image, 2) NOT IN ('0'||right(loaded_image, 2),
+                                                             2||right(loaded_image, 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A22_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||right(loaded_image, 2),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||right(loaded_image, 2) IS NULL
+          OR ('1'||right(loaded_image, 2) = 1||right(loaded_image, 2)
+              AND '1'||right(loaded_image, 2) IS NOT DISTINCT
+              FROM 1||right(loaded_image, 2)
+              AND '1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)
+              AND ('1'||right(loaded_image, 2) IS DISTINCT
+                   FROM '0'||right(loaded_image, 2))
+              AND '1'||right(loaded_image, 2) > '0'||right(loaded_image, 2)
+              AND '1'||right(loaded_image, 2) >= '0'||right(loaded_image, 2)
+              AND '1'||right(loaded_image, 2) < 2||right(loaded_image, 2)
+              AND '1'||right(loaded_image, 2) <= 2||right(loaded_image, 2)
+              AND ('1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)) IS TRUE
+              AND ('1'||right(loaded_image, 2) = '0'||right(loaded_image, 2)) IS NOT TRUE
+              AND ('1'||right(loaded_image, 2) = '0'||right(loaded_image, 2)) IS FALSE
+              AND ('1'||right(loaded_image, 2) <> '0'||right(loaded_image, 2)) IS NOT FALSE
+              AND '1'||right(loaded_image, 2) BETWEEN '0'||right(loaded_image, 2) AND 2||right(loaded_image, 2)
+              AND '1'||right(loaded_image, 2) NOT BETWEEN '1'||right(loaded_image, 2) AND '0'||right(loaded_image, 2)
+              AND '1'||right(loaded_image, 2) like '%'
+              AND '1'||right(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+              AND '1'||right(loaded_image, 2) IN ('0'||right(loaded_image, 2),
+                                                  1||right(loaded_image, 2),
+                                                  2||right(loaded_image, 2))
+              AND '1'||right(loaded_image, 2) NOT IN ('0'||right(loaded_image, 2),
+                                                      2||right(loaded_image, 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A23_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||left(loaded_image, 2) IS NULL
+       OR ('1'||left(loaded_image, 2) = 1||left(loaded_image, 2)
+           AND '1'||left(loaded_image, 2) IS NOT DISTINCT
+           FROM 1||left(loaded_image, 2)
+           AND '1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)
+           AND ('1'||left(loaded_image, 2) IS DISTINCT
+                FROM '0'||left(loaded_image, 2))
+           AND '1'||left(loaded_image, 2) > '0'||left(loaded_image, 2)
+           AND '1'||left(loaded_image, 2) >= '0'||left(loaded_image, 2)
+           AND '1'||left(loaded_image, 2) < 2||left(loaded_image, 2)
+           AND '1'||left(loaded_image, 2) <= 2||left(loaded_image, 2)
+           AND ('1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)) IS TRUE
+           AND ('1'||left(loaded_image, 2) = '0'||left(loaded_image, 2)) IS NOT TRUE
+           AND ('1'||left(loaded_image, 2) = '0'||left(loaded_image, 2)) IS FALSE
+           AND ('1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)) IS NOT FALSE
+           AND '1'||left(loaded_image, 2) BETWEEN '0'||left(loaded_image, 2) AND 2||left(loaded_image, 2)
+           AND '1'||left(loaded_image, 2) NOT BETWEEN '1'||left(loaded_image, 2) AND '0'||left(loaded_image, 2)
+           AND '1'||left(loaded_image, 2) like '%'
+           AND '1'||left(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+           AND '1'||left(loaded_image, 2) IN ('0'||left(loaded_image, 2),
+                                              1||left(loaded_image, 2),
+                                              2||left(loaded_image, 2))
+           AND '1'||left(loaded_image, 2) NOT IN ('0'||left(loaded_image, 2),
+                                                  2||left(loaded_image, 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A23_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||left(loaded_image, 2) IS NULL
+       OR '1'||left(loaded_image, 2) IN
+         (SELECT '1'||left(loaded_image, 2)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||left(loaded_image, 2) IS NULL
+                 OR ('1'||left(loaded_image, 2) = 1||left(loaded_image, 2)
+                     AND '1'||left(loaded_image, 2) IS NOT DISTINCT
+                     FROM 1||left(loaded_image, 2)
+                     AND '1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)
+                     AND ('1'||left(loaded_image, 2) IS DISTINCT
+                          FROM '0'||left(loaded_image, 2))
+                     AND '1'||left(loaded_image, 2) > '0'||left(loaded_image, 2)
+                     AND '1'||left(loaded_image, 2) >= '0'||left(loaded_image, 2)
+                     AND '1'||left(loaded_image, 2) < 2||left(loaded_image, 2)
+                     AND '1'||left(loaded_image, 2) <= 2||left(loaded_image, 2)
+                     AND ('1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)) IS TRUE
+                     AND ('1'||left(loaded_image, 2) = '0'||left(loaded_image, 2)) IS NOT TRUE
+                     AND ('1'||left(loaded_image, 2) = '0'||left(loaded_image, 2)) IS FALSE
+                     AND ('1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)) IS NOT FALSE
+                     AND '1'||left(loaded_image, 2) BETWEEN '0'||left(loaded_image, 2) AND 2||left(loaded_image, 2)
+                     AND '1'||left(loaded_image, 2) NOT BETWEEN '1'||left(loaded_image, 2) AND '0'||left(loaded_image, 2)
+                     AND '1'||left(loaded_image, 2) like '%'
+                     AND '1'||left(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||left(loaded_image, 2) IN ('0'||left(loaded_image, 2),
+                                                        1||left(loaded_image, 2),
+                                                        2||left(loaded_image, 2))
+                     AND '1'||left(loaded_image, 2) NOT IN ('0'||left(loaded_image, 2),
+                                                            2||left(loaded_image, 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A23_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||left(loaded_image, 2),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||left(loaded_image, 2) IS NULL
+          OR ('1'||left(loaded_image, 2) = 1||left(loaded_image, 2)
+              AND '1'||left(loaded_image, 2) IS NOT DISTINCT
+              FROM 1||left(loaded_image, 2)
+              AND '1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)
+              AND ('1'||left(loaded_image, 2) IS DISTINCT
+                   FROM '0'||left(loaded_image, 2))
+              AND '1'||left(loaded_image, 2) > '0'||left(loaded_image, 2)
+              AND '1'||left(loaded_image, 2) >= '0'||left(loaded_image, 2)
+              AND '1'||left(loaded_image, 2) < 2||left(loaded_image, 2)
+              AND '1'||left(loaded_image, 2) <= 2||left(loaded_image, 2)
+              AND ('1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)) IS TRUE
+              AND ('1'||left(loaded_image, 2) = '0'||left(loaded_image, 2)) IS NOT TRUE
+              AND ('1'||left(loaded_image, 2) = '0'||left(loaded_image, 2)) IS FALSE
+              AND ('1'||left(loaded_image, 2) <> '0'||left(loaded_image, 2)) IS NOT FALSE
+              AND '1'||left(loaded_image, 2) BETWEEN '0'||left(loaded_image, 2) AND 2||left(loaded_image, 2)
+              AND '1'||left(loaded_image, 2) NOT BETWEEN '1'||left(loaded_image, 2) AND '0'||left(loaded_image, 2)
+              AND '1'||left(loaded_image, 2) like '%'
+              AND '1'||left(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+              AND '1'||left(loaded_image, 2) IN ('0'||left(loaded_image, 2),
+                                                 1||left(loaded_image, 2),
+                                                 2||left(loaded_image, 2))
+              AND '1'||left(loaded_image, 2) NOT IN ('0'||left(loaded_image, 2),
+                                                     2||left(loaded_image, 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A24_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||substr(loaded_image, 1, length(loaded_image)) IS NULL
+       OR ('1'||substr(loaded_image, 1, length(loaded_image)) = 1||substr(loaded_image, 1, length(loaded_image))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) IS NOT DISTINCT
+           FROM 1||substr(loaded_image, 1, length(loaded_image))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))
+           AND ('1'||substr(loaded_image, 1, length(loaded_image)) IS DISTINCT
+                FROM '0'||substr(loaded_image, 1, length(loaded_image)))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) > '0'||substr(loaded_image, 1, length(loaded_image))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) >= '0'||substr(loaded_image, 1, length(loaded_image))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) < 2||substr(loaded_image, 1, length(loaded_image))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) <= 2||substr(loaded_image, 1, length(loaded_image))
+           AND ('1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))) IS TRUE
+           AND ('1'||substr(loaded_image, 1, length(loaded_image)) = '0'||substr(loaded_image, 1, length(loaded_image))) IS NOT TRUE
+           AND ('1'||substr(loaded_image, 1, length(loaded_image)) = '0'||substr(loaded_image, 1, length(loaded_image))) IS FALSE
+           AND ('1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))) IS NOT FALSE
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) BETWEEN '0'||substr(loaded_image, 1, length(loaded_image)) AND 2||substr(loaded_image, 1, length(loaded_image))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) NOT BETWEEN '1'||substr(loaded_image, 1, length(loaded_image)) AND '0'||substr(loaded_image, 1, length(loaded_image))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) like '%'
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) not like '__DOES_NOT_EXIST__%'
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) IN ('0'||substr(loaded_image, 1, length(loaded_image)),
+                                                                      1||substr(loaded_image, 1, length(loaded_image)),
+                                                                      2||substr(loaded_image, 1, length(loaded_image)))
+           AND '1'||substr(loaded_image, 1, length(loaded_image)) NOT IN ('0'||substr(loaded_image, 1, length(loaded_image)),
+                                                                          2||substr(loaded_image, 1, length(loaded_image))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A24_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||substr(loaded_image, 1, length(loaded_image)) IS NULL
+       OR '1'||substr(loaded_image, 1, length(loaded_image)) IN
+         (SELECT '1'||substr(loaded_image, 1, length(loaded_image))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||substr(loaded_image, 1, length(loaded_image)) IS NULL
+                 OR ('1'||substr(loaded_image, 1, length(loaded_image)) = 1||substr(loaded_image, 1, length(loaded_image))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) IS NOT DISTINCT
+                     FROM 1||substr(loaded_image, 1, length(loaded_image))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))
+                     AND ('1'||substr(loaded_image, 1, length(loaded_image)) IS DISTINCT
+                          FROM '0'||substr(loaded_image, 1, length(loaded_image)))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) > '0'||substr(loaded_image, 1, length(loaded_image))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) >= '0'||substr(loaded_image, 1, length(loaded_image))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) < 2||substr(loaded_image, 1, length(loaded_image))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) <= 2||substr(loaded_image, 1, length(loaded_image))
+                     AND ('1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))) IS TRUE
+                     AND ('1'||substr(loaded_image, 1, length(loaded_image)) = '0'||substr(loaded_image, 1, length(loaded_image))) IS NOT TRUE
+                     AND ('1'||substr(loaded_image, 1, length(loaded_image)) = '0'||substr(loaded_image, 1, length(loaded_image))) IS FALSE
+                     AND ('1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))) IS NOT FALSE
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) BETWEEN '0'||substr(loaded_image, 1, length(loaded_image)) AND 2||substr(loaded_image, 1, length(loaded_image))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) NOT BETWEEN '1'||substr(loaded_image, 1, length(loaded_image)) AND '0'||substr(loaded_image, 1, length(loaded_image))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) like '%'
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) IN ('0'||substr(loaded_image, 1, length(loaded_image)),
+                                                                                1||substr(loaded_image, 1, length(loaded_image)),
+                                                                                2||substr(loaded_image, 1, length(loaded_image)))
+                     AND '1'||substr(loaded_image, 1, length(loaded_image)) NOT IN ('0'||substr(loaded_image, 1, length(loaded_image)),
+                                                                                    2||substr(loaded_image, 1, length(loaded_image)))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A24_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||substr(loaded_image, 1, length(loaded_image)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||substr(loaded_image, 1, length(loaded_image)) IS NULL
+          OR ('1'||substr(loaded_image, 1, length(loaded_image)) = 1||substr(loaded_image, 1, length(loaded_image))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) IS NOT DISTINCT
+              FROM 1||substr(loaded_image, 1, length(loaded_image))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))
+              AND ('1'||substr(loaded_image, 1, length(loaded_image)) IS DISTINCT
+                   FROM '0'||substr(loaded_image, 1, length(loaded_image)))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) > '0'||substr(loaded_image, 1, length(loaded_image))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) >= '0'||substr(loaded_image, 1, length(loaded_image))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) < 2||substr(loaded_image, 1, length(loaded_image))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) <= 2||substr(loaded_image, 1, length(loaded_image))
+              AND ('1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))) IS TRUE
+              AND ('1'||substr(loaded_image, 1, length(loaded_image)) = '0'||substr(loaded_image, 1, length(loaded_image))) IS NOT TRUE
+              AND ('1'||substr(loaded_image, 1, length(loaded_image)) = '0'||substr(loaded_image, 1, length(loaded_image))) IS FALSE
+              AND ('1'||substr(loaded_image, 1, length(loaded_image)) <> '0'||substr(loaded_image, 1, length(loaded_image))) IS NOT FALSE
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) BETWEEN '0'||substr(loaded_image, 1, length(loaded_image)) AND 2||substr(loaded_image, 1, length(loaded_image))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) NOT BETWEEN '1'||substr(loaded_image, 1, length(loaded_image)) AND '0'||substr(loaded_image, 1, length(loaded_image))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) like '%'
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) not like '__DOES_NOT_EXIST__%'
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) IN ('0'||substr(loaded_image, 1, length(loaded_image)),
+                                                                         1||substr(loaded_image, 1, length(loaded_image)),
+                                                                         2||substr(loaded_image, 1, length(loaded_image)))
+              AND '1'||substr(loaded_image, 1, length(loaded_image)) NOT IN ('0'||substr(loaded_image, 1, length(loaded_image)),
+                                                                             2||substr(loaded_image, 1, length(loaded_image)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A25_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||trim(BOTH 'A'
+                 FROM loaded_image) IS NULL
+       OR ('1'||trim(BOTH 'A'
+                     FROM loaded_image) = 1||trim(BOTH 'A'
+                                                  FROM loaded_image)
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) IS NOT DISTINCT
+           FROM 1||trim(BOTH 'A'
+                        FROM loaded_image)
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                         FROM loaded_image)
+           AND ('1'||trim(BOTH 'A'
+                          FROM loaded_image) IS DISTINCT
+                FROM '0'||trim(BOTH 'A'
+                               FROM loaded_image))
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) > '0'||trim(BOTH 'A'
+                                                        FROM loaded_image)
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) >= '0'||trim(BOTH 'A'
+                                                         FROM loaded_image)
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) < 2||trim(BOTH 'A'
+                                                      FROM loaded_image)
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) <= 2||trim(BOTH 'A'
+                                                       FROM loaded_image)
+           AND ('1'||trim(BOTH 'A'
+                          FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                          FROM loaded_image)) IS TRUE
+           AND ('1'||trim(BOTH 'A'
+                          FROM loaded_image) = '0'||trim(BOTH 'A'
+                                                         FROM loaded_image)) IS NOT TRUE
+           AND ('1'||trim(BOTH 'A'
+                          FROM loaded_image) = '0'||trim(BOTH 'A'
+                                                         FROM loaded_image)) IS FALSE
+           AND ('1'||trim(BOTH 'A'
+                          FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                          FROM loaded_image)) IS NOT FALSE
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) BETWEEN '0'||trim(BOTH 'A'
+                                                              FROM loaded_image) AND 2||trim(BOTH 'A'
+                                                                                             FROM loaded_image)
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) NOT BETWEEN '1'||trim(BOTH 'A'
+                                                                  FROM loaded_image) AND '0'||trim(BOTH 'A'
+                                                                                                   FROM loaded_image)
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) like '%'
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) not like '__DOES_NOT_EXIST__%'
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) IN ('0'||trim(BOTH 'A'
+                                                          FROM loaded_image),
+                                                1||trim(BOTH 'A'
+                                                        FROM loaded_image),
+                                                2||trim(BOTH 'A'
+                                                        FROM loaded_image))
+           AND '1'||trim(BOTH 'A'
+                         FROM loaded_image) NOT IN ('0'||trim(BOTH 'A'
+                                                              FROM loaded_image),
+                                                    2||trim(BOTH 'A'
+                                                            FROM loaded_image)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A25_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||trim(BOTH 'A'
+                 FROM loaded_image) IS NULL
+       OR '1'||trim(BOTH 'A'
+                    FROM loaded_image) IN
+         (SELECT '1'||trim(BOTH 'A'
+                           FROM loaded_image)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||trim(BOTH 'A'
+                           FROM loaded_image) IS NULL
+                 OR ('1'||trim(BOTH 'A'
+                               FROM loaded_image) = 1||trim(BOTH 'A'
+                                                            FROM loaded_image)
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) IS NOT DISTINCT
+                     FROM 1||trim(BOTH 'A'
+                                  FROM loaded_image)
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                                   FROM loaded_image)
+                     AND ('1'||trim(BOTH 'A'
+                                    FROM loaded_image) IS DISTINCT
+                          FROM '0'||trim(BOTH 'A'
+                                         FROM loaded_image))
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) > '0'||trim(BOTH 'A'
+                                                                  FROM loaded_image)
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) >= '0'||trim(BOTH 'A'
+                                                                   FROM loaded_image)
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) < 2||trim(BOTH 'A'
+                                                                FROM loaded_image)
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) <= 2||trim(BOTH 'A'
+                                                                 FROM loaded_image)
+                     AND ('1'||trim(BOTH 'A'
+                                    FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                                    FROM loaded_image)) IS TRUE
+                     AND ('1'||trim(BOTH 'A'
+                                    FROM loaded_image) = '0'||trim(BOTH 'A'
+                                                                   FROM loaded_image)) IS NOT TRUE
+                     AND ('1'||trim(BOTH 'A'
+                                    FROM loaded_image) = '0'||trim(BOTH 'A'
+                                                                   FROM loaded_image)) IS FALSE
+                     AND ('1'||trim(BOTH 'A'
+                                    FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                                    FROM loaded_image)) IS NOT FALSE
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) BETWEEN '0'||trim(BOTH 'A'
+                                                                        FROM loaded_image) AND 2||trim(BOTH 'A'
+                                                                                                       FROM loaded_image)
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) NOT BETWEEN '1'||trim(BOTH 'A'
+                                                                            FROM loaded_image) AND '0'||trim(BOTH 'A'
+                                                                                                             FROM loaded_image)
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) like '%'
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) IN ('0'||trim(BOTH 'A'
+                                                                    FROM loaded_image),
+                                                          1||trim(BOTH 'A'
+                                                                  FROM loaded_image),
+                                                          2||trim(BOTH 'A'
+                                                                  FROM loaded_image))
+                     AND '1'||trim(BOTH 'A'
+                                   FROM loaded_image) NOT IN ('0'||trim(BOTH 'A'
+                                                                        FROM loaded_image),
+                                                              2||trim(BOTH 'A'
+                                                                      FROM loaded_image))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A25_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||trim(BOTH 'A'
+                                    FROM loaded_image),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||trim(BOTH 'A'
+                    FROM loaded_image) IS NULL
+          OR ('1'||trim(BOTH 'A'
+                        FROM loaded_image) = 1||trim(BOTH 'A'
+                                                     FROM loaded_image)
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) IS NOT DISTINCT
+              FROM 1||trim(BOTH 'A'
+                           FROM loaded_image)
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                            FROM loaded_image)
+              AND ('1'||trim(BOTH 'A'
+                             FROM loaded_image) IS DISTINCT
+                   FROM '0'||trim(BOTH 'A'
+                                  FROM loaded_image))
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) > '0'||trim(BOTH 'A'
+                                                           FROM loaded_image)
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) >= '0'||trim(BOTH 'A'
+                                                            FROM loaded_image)
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) < 2||trim(BOTH 'A'
+                                                         FROM loaded_image)
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) <= 2||trim(BOTH 'A'
+                                                          FROM loaded_image)
+              AND ('1'||trim(BOTH 'A'
+                             FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                             FROM loaded_image)) IS TRUE
+              AND ('1'||trim(BOTH 'A'
+                             FROM loaded_image) = '0'||trim(BOTH 'A'
+                                                            FROM loaded_image)) IS NOT TRUE
+              AND ('1'||trim(BOTH 'A'
+                             FROM loaded_image) = '0'||trim(BOTH 'A'
+                                                            FROM loaded_image)) IS FALSE
+              AND ('1'||trim(BOTH 'A'
+                             FROM loaded_image) <> '0'||trim(BOTH 'A'
+                                                             FROM loaded_image)) IS NOT FALSE
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) BETWEEN '0'||trim(BOTH 'A'
+                                                                 FROM loaded_image) AND 2||trim(BOTH 'A'
+                                                                                                FROM loaded_image)
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) NOT BETWEEN '1'||trim(BOTH 'A'
+                                                                     FROM loaded_image) AND '0'||trim(BOTH 'A'
+                                                                                                      FROM loaded_image)
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) like '%'
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) not like '__DOES_NOT_EXIST__%'
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) IN ('0'||trim(BOTH 'A'
+                                                             FROM loaded_image),
+                                                   1||trim(BOTH 'A'
+                                                           FROM loaded_image),
+                                                   2||trim(BOTH 'A'
+                                                           FROM loaded_image))
+              AND '1'||trim(BOTH 'A'
+                            FROM loaded_image) NOT IN ('0'||trim(BOTH 'A'
+                                                                 FROM loaded_image),
+                                                       2||trim(BOTH 'A'
+                                                               FROM loaded_image))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A26_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||btrim(loaded_image, 'A') IS NULL
+       OR ('1'||btrim(loaded_image, 'A') = 1||btrim(loaded_image, 'A')
+           AND '1'||btrim(loaded_image, 'A') IS NOT DISTINCT
+           FROM 1||btrim(loaded_image, 'A')
+           AND '1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')
+           AND ('1'||btrim(loaded_image, 'A') IS DISTINCT
+                FROM '0'||btrim(loaded_image, 'A'))
+           AND '1'||btrim(loaded_image, 'A') > '0'||btrim(loaded_image, 'A')
+           AND '1'||btrim(loaded_image, 'A') >= '0'||btrim(loaded_image, 'A')
+           AND '1'||btrim(loaded_image, 'A') < 2||btrim(loaded_image, 'A')
+           AND '1'||btrim(loaded_image, 'A') <= 2||btrim(loaded_image, 'A')
+           AND ('1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')) IS TRUE
+           AND ('1'||btrim(loaded_image, 'A') = '0'||btrim(loaded_image, 'A')) IS NOT TRUE
+           AND ('1'||btrim(loaded_image, 'A') = '0'||btrim(loaded_image, 'A')) IS FALSE
+           AND ('1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')) IS NOT FALSE
+           AND '1'||btrim(loaded_image, 'A') BETWEEN '0'||btrim(loaded_image, 'A') AND 2||btrim(loaded_image, 'A')
+           AND '1'||btrim(loaded_image, 'A') NOT BETWEEN '1'||btrim(loaded_image, 'A') AND '0'||btrim(loaded_image, 'A')
+           AND '1'||btrim(loaded_image, 'A') like '%'
+           AND '1'||btrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+           AND '1'||btrim(loaded_image, 'A') IN ('0'||btrim(loaded_image, 'A'),
+                                                 1||btrim(loaded_image, 'A'),
+                                                 2||btrim(loaded_image, 'A'))
+           AND '1'||btrim(loaded_image, 'A') NOT IN ('0'||btrim(loaded_image, 'A'),
+                                                     2||btrim(loaded_image, 'A')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A26_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||btrim(loaded_image, 'A') IS NULL
+       OR '1'||btrim(loaded_image, 'A') IN
+         (SELECT '1'||btrim(loaded_image, 'A')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||btrim(loaded_image, 'A') IS NULL
+                 OR ('1'||btrim(loaded_image, 'A') = 1||btrim(loaded_image, 'A')
+                     AND '1'||btrim(loaded_image, 'A') IS NOT DISTINCT
+                     FROM 1||btrim(loaded_image, 'A')
+                     AND '1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')
+                     AND ('1'||btrim(loaded_image, 'A') IS DISTINCT
+                          FROM '0'||btrim(loaded_image, 'A'))
+                     AND '1'||btrim(loaded_image, 'A') > '0'||btrim(loaded_image, 'A')
+                     AND '1'||btrim(loaded_image, 'A') >= '0'||btrim(loaded_image, 'A')
+                     AND '1'||btrim(loaded_image, 'A') < 2||btrim(loaded_image, 'A')
+                     AND '1'||btrim(loaded_image, 'A') <= 2||btrim(loaded_image, 'A')
+                     AND ('1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')) IS TRUE
+                     AND ('1'||btrim(loaded_image, 'A') = '0'||btrim(loaded_image, 'A')) IS NOT TRUE
+                     AND ('1'||btrim(loaded_image, 'A') = '0'||btrim(loaded_image, 'A')) IS FALSE
+                     AND ('1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')) IS NOT FALSE
+                     AND '1'||btrim(loaded_image, 'A') BETWEEN '0'||btrim(loaded_image, 'A') AND 2||btrim(loaded_image, 'A')
+                     AND '1'||btrim(loaded_image, 'A') NOT BETWEEN '1'||btrim(loaded_image, 'A') AND '0'||btrim(loaded_image, 'A')
+                     AND '1'||btrim(loaded_image, 'A') like '%'
+                     AND '1'||btrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||btrim(loaded_image, 'A') IN ('0'||btrim(loaded_image, 'A'),
+                                                           1||btrim(loaded_image, 'A'),
+                                                           2||btrim(loaded_image, 'A'))
+                     AND '1'||btrim(loaded_image, 'A') NOT IN ('0'||btrim(loaded_image, 'A'),
+                                                               2||btrim(loaded_image, 'A'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A26_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||btrim(loaded_image, 'A'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||btrim(loaded_image, 'A') IS NULL
+          OR ('1'||btrim(loaded_image, 'A') = 1||btrim(loaded_image, 'A')
+              AND '1'||btrim(loaded_image, 'A') IS NOT DISTINCT
+              FROM 1||btrim(loaded_image, 'A')
+              AND '1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')
+              AND ('1'||btrim(loaded_image, 'A') IS DISTINCT
+                   FROM '0'||btrim(loaded_image, 'A'))
+              AND '1'||btrim(loaded_image, 'A') > '0'||btrim(loaded_image, 'A')
+              AND '1'||btrim(loaded_image, 'A') >= '0'||btrim(loaded_image, 'A')
+              AND '1'||btrim(loaded_image, 'A') < 2||btrim(loaded_image, 'A')
+              AND '1'||btrim(loaded_image, 'A') <= 2||btrim(loaded_image, 'A')
+              AND ('1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')) IS TRUE
+              AND ('1'||btrim(loaded_image, 'A') = '0'||btrim(loaded_image, 'A')) IS NOT TRUE
+              AND ('1'||btrim(loaded_image, 'A') = '0'||btrim(loaded_image, 'A')) IS FALSE
+              AND ('1'||btrim(loaded_image, 'A') <> '0'||btrim(loaded_image, 'A')) IS NOT FALSE
+              AND '1'||btrim(loaded_image, 'A') BETWEEN '0'||btrim(loaded_image, 'A') AND 2||btrim(loaded_image, 'A')
+              AND '1'||btrim(loaded_image, 'A') NOT BETWEEN '1'||btrim(loaded_image, 'A') AND '0'||btrim(loaded_image, 'A')
+              AND '1'||btrim(loaded_image, 'A') like '%'
+              AND '1'||btrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+              AND '1'||btrim(loaded_image, 'A') IN ('0'||btrim(loaded_image, 'A'),
+                                                    1||btrim(loaded_image, 'A'),
+                                                    2||btrim(loaded_image, 'A'))
+              AND '1'||btrim(loaded_image, 'A') NOT IN ('0'||btrim(loaded_image, 'A'),
+                                                        2||btrim(loaded_image, 'A'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A27_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||ltrim(loaded_image, 'A') IS NULL
+       OR ('1'||ltrim(loaded_image, 'A') = 1||ltrim(loaded_image, 'A')
+           AND '1'||ltrim(loaded_image, 'A') IS NOT DISTINCT
+           FROM 1||ltrim(loaded_image, 'A')
+           AND '1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')
+           AND ('1'||ltrim(loaded_image, 'A') IS DISTINCT
+                FROM '0'||ltrim(loaded_image, 'A'))
+           AND '1'||ltrim(loaded_image, 'A') > '0'||ltrim(loaded_image, 'A')
+           AND '1'||ltrim(loaded_image, 'A') >= '0'||ltrim(loaded_image, 'A')
+           AND '1'||ltrim(loaded_image, 'A') < 2||ltrim(loaded_image, 'A')
+           AND '1'||ltrim(loaded_image, 'A') <= 2||ltrim(loaded_image, 'A')
+           AND ('1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')) IS TRUE
+           AND ('1'||ltrim(loaded_image, 'A') = '0'||ltrim(loaded_image, 'A')) IS NOT TRUE
+           AND ('1'||ltrim(loaded_image, 'A') = '0'||ltrim(loaded_image, 'A')) IS FALSE
+           AND ('1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')) IS NOT FALSE
+           AND '1'||ltrim(loaded_image, 'A') BETWEEN '0'||ltrim(loaded_image, 'A') AND 2||ltrim(loaded_image, 'A')
+           AND '1'||ltrim(loaded_image, 'A') NOT BETWEEN '1'||ltrim(loaded_image, 'A') AND '0'||ltrim(loaded_image, 'A')
+           AND '1'||ltrim(loaded_image, 'A') like '%'
+           AND '1'||ltrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+           AND '1'||ltrim(loaded_image, 'A') IN ('0'||ltrim(loaded_image, 'A'),
+                                                 1||ltrim(loaded_image, 'A'),
+                                                 2||ltrim(loaded_image, 'A'))
+           AND '1'||ltrim(loaded_image, 'A') NOT IN ('0'||ltrim(loaded_image, 'A'),
+                                                     2||ltrim(loaded_image, 'A')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A27_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||ltrim(loaded_image, 'A') IS NULL
+       OR '1'||ltrim(loaded_image, 'A') IN
+         (SELECT '1'||ltrim(loaded_image, 'A')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||ltrim(loaded_image, 'A') IS NULL
+                 OR ('1'||ltrim(loaded_image, 'A') = 1||ltrim(loaded_image, 'A')
+                     AND '1'||ltrim(loaded_image, 'A') IS NOT DISTINCT
+                     FROM 1||ltrim(loaded_image, 'A')
+                     AND '1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')
+                     AND ('1'||ltrim(loaded_image, 'A') IS DISTINCT
+                          FROM '0'||ltrim(loaded_image, 'A'))
+                     AND '1'||ltrim(loaded_image, 'A') > '0'||ltrim(loaded_image, 'A')
+                     AND '1'||ltrim(loaded_image, 'A') >= '0'||ltrim(loaded_image, 'A')
+                     AND '1'||ltrim(loaded_image, 'A') < 2||ltrim(loaded_image, 'A')
+                     AND '1'||ltrim(loaded_image, 'A') <= 2||ltrim(loaded_image, 'A')
+                     AND ('1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')) IS TRUE
+                     AND ('1'||ltrim(loaded_image, 'A') = '0'||ltrim(loaded_image, 'A')) IS NOT TRUE
+                     AND ('1'||ltrim(loaded_image, 'A') = '0'||ltrim(loaded_image, 'A')) IS FALSE
+                     AND ('1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')) IS NOT FALSE
+                     AND '1'||ltrim(loaded_image, 'A') BETWEEN '0'||ltrim(loaded_image, 'A') AND 2||ltrim(loaded_image, 'A')
+                     AND '1'||ltrim(loaded_image, 'A') NOT BETWEEN '1'||ltrim(loaded_image, 'A') AND '0'||ltrim(loaded_image, 'A')
+                     AND '1'||ltrim(loaded_image, 'A') like '%'
+                     AND '1'||ltrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||ltrim(loaded_image, 'A') IN ('0'||ltrim(loaded_image, 'A'),
+                                                           1||ltrim(loaded_image, 'A'),
+                                                           2||ltrim(loaded_image, 'A'))
+                     AND '1'||ltrim(loaded_image, 'A') NOT IN ('0'||ltrim(loaded_image, 'A'),
+                                                               2||ltrim(loaded_image, 'A'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A27_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||ltrim(loaded_image, 'A'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||ltrim(loaded_image, 'A') IS NULL
+          OR ('1'||ltrim(loaded_image, 'A') = 1||ltrim(loaded_image, 'A')
+              AND '1'||ltrim(loaded_image, 'A') IS NOT DISTINCT
+              FROM 1||ltrim(loaded_image, 'A')
+              AND '1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')
+              AND ('1'||ltrim(loaded_image, 'A') IS DISTINCT
+                   FROM '0'||ltrim(loaded_image, 'A'))
+              AND '1'||ltrim(loaded_image, 'A') > '0'||ltrim(loaded_image, 'A')
+              AND '1'||ltrim(loaded_image, 'A') >= '0'||ltrim(loaded_image, 'A')
+              AND '1'||ltrim(loaded_image, 'A') < 2||ltrim(loaded_image, 'A')
+              AND '1'||ltrim(loaded_image, 'A') <= 2||ltrim(loaded_image, 'A')
+              AND ('1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')) IS TRUE
+              AND ('1'||ltrim(loaded_image, 'A') = '0'||ltrim(loaded_image, 'A')) IS NOT TRUE
+              AND ('1'||ltrim(loaded_image, 'A') = '0'||ltrim(loaded_image, 'A')) IS FALSE
+              AND ('1'||ltrim(loaded_image, 'A') <> '0'||ltrim(loaded_image, 'A')) IS NOT FALSE
+              AND '1'||ltrim(loaded_image, 'A') BETWEEN '0'||ltrim(loaded_image, 'A') AND 2||ltrim(loaded_image, 'A')
+              AND '1'||ltrim(loaded_image, 'A') NOT BETWEEN '1'||ltrim(loaded_image, 'A') AND '0'||ltrim(loaded_image, 'A')
+              AND '1'||ltrim(loaded_image, 'A') like '%'
+              AND '1'||ltrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+              AND '1'||ltrim(loaded_image, 'A') IN ('0'||ltrim(loaded_image, 'A'),
+                                                    1||ltrim(loaded_image, 'A'),
+                                                    2||ltrim(loaded_image, 'A'))
+              AND '1'||ltrim(loaded_image, 'A') NOT IN ('0'||ltrim(loaded_image, 'A'),
+                                                        2||ltrim(loaded_image, 'A'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A28_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||rtrim(loaded_image, 'A') IS NULL
+       OR ('1'||rtrim(loaded_image, 'A') = 1||rtrim(loaded_image, 'A')
+           AND '1'||rtrim(loaded_image, 'A') IS NOT DISTINCT
+           FROM 1||rtrim(loaded_image, 'A')
+           AND '1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')
+           AND ('1'||rtrim(loaded_image, 'A') IS DISTINCT
+                FROM '0'||rtrim(loaded_image, 'A'))
+           AND '1'||rtrim(loaded_image, 'A') > '0'||rtrim(loaded_image, 'A')
+           AND '1'||rtrim(loaded_image, 'A') >= '0'||rtrim(loaded_image, 'A')
+           AND '1'||rtrim(loaded_image, 'A') < 2||rtrim(loaded_image, 'A')
+           AND '1'||rtrim(loaded_image, 'A') <= 2||rtrim(loaded_image, 'A')
+           AND ('1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')) IS TRUE
+           AND ('1'||rtrim(loaded_image, 'A') = '0'||rtrim(loaded_image, 'A')) IS NOT TRUE
+           AND ('1'||rtrim(loaded_image, 'A') = '0'||rtrim(loaded_image, 'A')) IS FALSE
+           AND ('1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')) IS NOT FALSE
+           AND '1'||rtrim(loaded_image, 'A') BETWEEN '0'||rtrim(loaded_image, 'A') AND 2||rtrim(loaded_image, 'A')
+           AND '1'||rtrim(loaded_image, 'A') NOT BETWEEN '1'||rtrim(loaded_image, 'A') AND '0'||rtrim(loaded_image, 'A')
+           AND '1'||rtrim(loaded_image, 'A') like '%'
+           AND '1'||rtrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+           AND '1'||rtrim(loaded_image, 'A') IN ('0'||rtrim(loaded_image, 'A'),
+                                                 1||rtrim(loaded_image, 'A'),
+                                                 2||rtrim(loaded_image, 'A'))
+           AND '1'||rtrim(loaded_image, 'A') NOT IN ('0'||rtrim(loaded_image, 'A'),
+                                                     2||rtrim(loaded_image, 'A')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A28_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||rtrim(loaded_image, 'A') IS NULL
+       OR '1'||rtrim(loaded_image, 'A') IN
+         (SELECT '1'||rtrim(loaded_image, 'A')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||rtrim(loaded_image, 'A') IS NULL
+                 OR ('1'||rtrim(loaded_image, 'A') = 1||rtrim(loaded_image, 'A')
+                     AND '1'||rtrim(loaded_image, 'A') IS NOT DISTINCT
+                     FROM 1||rtrim(loaded_image, 'A')
+                     AND '1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')
+                     AND ('1'||rtrim(loaded_image, 'A') IS DISTINCT
+                          FROM '0'||rtrim(loaded_image, 'A'))
+                     AND '1'||rtrim(loaded_image, 'A') > '0'||rtrim(loaded_image, 'A')
+                     AND '1'||rtrim(loaded_image, 'A') >= '0'||rtrim(loaded_image, 'A')
+                     AND '1'||rtrim(loaded_image, 'A') < 2||rtrim(loaded_image, 'A')
+                     AND '1'||rtrim(loaded_image, 'A') <= 2||rtrim(loaded_image, 'A')
+                     AND ('1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')) IS TRUE
+                     AND ('1'||rtrim(loaded_image, 'A') = '0'||rtrim(loaded_image, 'A')) IS NOT TRUE
+                     AND ('1'||rtrim(loaded_image, 'A') = '0'||rtrim(loaded_image, 'A')) IS FALSE
+                     AND ('1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')) IS NOT FALSE
+                     AND '1'||rtrim(loaded_image, 'A') BETWEEN '0'||rtrim(loaded_image, 'A') AND 2||rtrim(loaded_image, 'A')
+                     AND '1'||rtrim(loaded_image, 'A') NOT BETWEEN '1'||rtrim(loaded_image, 'A') AND '0'||rtrim(loaded_image, 'A')
+                     AND '1'||rtrim(loaded_image, 'A') like '%'
+                     AND '1'||rtrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||rtrim(loaded_image, 'A') IN ('0'||rtrim(loaded_image, 'A'),
+                                                           1||rtrim(loaded_image, 'A'),
+                                                           2||rtrim(loaded_image, 'A'))
+                     AND '1'||rtrim(loaded_image, 'A') NOT IN ('0'||rtrim(loaded_image, 'A'),
+                                                               2||rtrim(loaded_image, 'A'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A28_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||rtrim(loaded_image, 'A'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||rtrim(loaded_image, 'A') IS NULL
+          OR ('1'||rtrim(loaded_image, 'A') = 1||rtrim(loaded_image, 'A')
+              AND '1'||rtrim(loaded_image, 'A') IS NOT DISTINCT
+              FROM 1||rtrim(loaded_image, 'A')
+              AND '1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')
+              AND ('1'||rtrim(loaded_image, 'A') IS DISTINCT
+                   FROM '0'||rtrim(loaded_image, 'A'))
+              AND '1'||rtrim(loaded_image, 'A') > '0'||rtrim(loaded_image, 'A')
+              AND '1'||rtrim(loaded_image, 'A') >= '0'||rtrim(loaded_image, 'A')
+              AND '1'||rtrim(loaded_image, 'A') < 2||rtrim(loaded_image, 'A')
+              AND '1'||rtrim(loaded_image, 'A') <= 2||rtrim(loaded_image, 'A')
+              AND ('1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')) IS TRUE
+              AND ('1'||rtrim(loaded_image, 'A') = '0'||rtrim(loaded_image, 'A')) IS NOT TRUE
+              AND ('1'||rtrim(loaded_image, 'A') = '0'||rtrim(loaded_image, 'A')) IS FALSE
+              AND ('1'||rtrim(loaded_image, 'A') <> '0'||rtrim(loaded_image, 'A')) IS NOT FALSE
+              AND '1'||rtrim(loaded_image, 'A') BETWEEN '0'||rtrim(loaded_image, 'A') AND 2||rtrim(loaded_image, 'A')
+              AND '1'||rtrim(loaded_image, 'A') NOT BETWEEN '1'||rtrim(loaded_image, 'A') AND '0'||rtrim(loaded_image, 'A')
+              AND '1'||rtrim(loaded_image, 'A') like '%'
+              AND '1'||rtrim(loaded_image, 'A') not like '__DOES_NOT_EXIST__%'
+              AND '1'||rtrim(loaded_image, 'A') IN ('0'||rtrim(loaded_image, 'A'),
+                                                    1||rtrim(loaded_image, 'A'),
+                                                    2||rtrim(loaded_image, 'A'))
+              AND '1'||rtrim(loaded_image, 'A') NOT IN ('0'||rtrim(loaded_image, 'A'),
+                                                        2||rtrim(loaded_image, 'A'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A29_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||reverse(loaded_image) IS NULL
+       OR ('1'||reverse(loaded_image) = 1||reverse(loaded_image)
+           AND '1'||reverse(loaded_image) IS NOT DISTINCT
+           FROM 1||reverse(loaded_image)
+           AND '1'||reverse(loaded_image) <> '0'||reverse(loaded_image)
+           AND ('1'||reverse(loaded_image) IS DISTINCT
+                FROM '0'||reverse(loaded_image))
+           AND '1'||reverse(loaded_image) > '0'||reverse(loaded_image)
+           AND '1'||reverse(loaded_image) >= '0'||reverse(loaded_image)
+           AND '1'||reverse(loaded_image) < 2||reverse(loaded_image)
+           AND '1'||reverse(loaded_image) <= 2||reverse(loaded_image)
+           AND ('1'||reverse(loaded_image) <> '0'||reverse(loaded_image)) IS TRUE
+           AND ('1'||reverse(loaded_image) = '0'||reverse(loaded_image)) IS NOT TRUE
+           AND ('1'||reverse(loaded_image) = '0'||reverse(loaded_image)) IS FALSE
+           AND ('1'||reverse(loaded_image) <> '0'||reverse(loaded_image)) IS NOT FALSE
+           AND '1'||reverse(loaded_image) BETWEEN '0'||reverse(loaded_image) AND 2||reverse(loaded_image)
+           AND '1'||reverse(loaded_image) NOT BETWEEN '1'||reverse(loaded_image) AND '0'||reverse(loaded_image)
+           AND '1'||reverse(loaded_image) like '%'
+           AND '1'||reverse(loaded_image) not like '__DOES_NOT_EXIST__%'
+           AND '1'||reverse(loaded_image) IN ('0'||reverse(loaded_image),
+                                              1||reverse(loaded_image),
+                                              2||reverse(loaded_image))
+           AND '1'||reverse(loaded_image) NOT IN ('0'||reverse(loaded_image),
+                                                  2||reverse(loaded_image)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A29_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||reverse(loaded_image) IS NULL
+       OR '1'||reverse(loaded_image) IN
+         (SELECT '1'||reverse(loaded_image)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||reverse(loaded_image) IS NULL
+                 OR ('1'||reverse(loaded_image) = 1||reverse(loaded_image)
+                     AND '1'||reverse(loaded_image) IS NOT DISTINCT
+                     FROM 1||reverse(loaded_image)
+                     AND '1'||reverse(loaded_image) <> '0'||reverse(loaded_image)
+                     AND ('1'||reverse(loaded_image) IS DISTINCT
+                          FROM '0'||reverse(loaded_image))
+                     AND '1'||reverse(loaded_image) > '0'||reverse(loaded_image)
+                     AND '1'||reverse(loaded_image) >= '0'||reverse(loaded_image)
+                     AND '1'||reverse(loaded_image) < 2||reverse(loaded_image)
+                     AND '1'||reverse(loaded_image) <= 2||reverse(loaded_image)
+                     AND ('1'||reverse(loaded_image) <> '0'||reverse(loaded_image)) IS TRUE
+                     AND ('1'||reverse(loaded_image) = '0'||reverse(loaded_image)) IS NOT TRUE
+                     AND ('1'||reverse(loaded_image) = '0'||reverse(loaded_image)) IS FALSE
+                     AND ('1'||reverse(loaded_image) <> '0'||reverse(loaded_image)) IS NOT FALSE
+                     AND '1'||reverse(loaded_image) BETWEEN '0'||reverse(loaded_image) AND 2||reverse(loaded_image)
+                     AND '1'||reverse(loaded_image) NOT BETWEEN '1'||reverse(loaded_image) AND '0'||reverse(loaded_image)
+                     AND '1'||reverse(loaded_image) like '%'
+                     AND '1'||reverse(loaded_image) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||reverse(loaded_image) IN ('0'||reverse(loaded_image),
+                                                        1||reverse(loaded_image),
+                                                        2||reverse(loaded_image))
+                     AND '1'||reverse(loaded_image) NOT IN ('0'||reverse(loaded_image),
+                                                            2||reverse(loaded_image))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A29_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||reverse(loaded_image),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||reverse(loaded_image) IS NULL
+          OR ('1'||reverse(loaded_image) = 1||reverse(loaded_image)
+              AND '1'||reverse(loaded_image) IS NOT DISTINCT
+              FROM 1||reverse(loaded_image)
+              AND '1'||reverse(loaded_image) <> '0'||reverse(loaded_image)
+              AND ('1'||reverse(loaded_image) IS DISTINCT
+                   FROM '0'||reverse(loaded_image))
+              AND '1'||reverse(loaded_image) > '0'||reverse(loaded_image)
+              AND '1'||reverse(loaded_image) >= '0'||reverse(loaded_image)
+              AND '1'||reverse(loaded_image) < 2||reverse(loaded_image)
+              AND '1'||reverse(loaded_image) <= 2||reverse(loaded_image)
+              AND ('1'||reverse(loaded_image) <> '0'||reverse(loaded_image)) IS TRUE
+              AND ('1'||reverse(loaded_image) = '0'||reverse(loaded_image)) IS NOT TRUE
+              AND ('1'||reverse(loaded_image) = '0'||reverse(loaded_image)) IS FALSE
+              AND ('1'||reverse(loaded_image) <> '0'||reverse(loaded_image)) IS NOT FALSE
+              AND '1'||reverse(loaded_image) BETWEEN '0'||reverse(loaded_image) AND 2||reverse(loaded_image)
+              AND '1'||reverse(loaded_image) NOT BETWEEN '1'||reverse(loaded_image) AND '0'||reverse(loaded_image)
+              AND '1'||reverse(loaded_image) like '%'
+              AND '1'||reverse(loaded_image) not like '__DOES_NOT_EXIST__%'
+              AND '1'||reverse(loaded_image) IN ('0'||reverse(loaded_image),
+                                                 1||reverse(loaded_image),
+                                                 2||reverse(loaded_image))
+              AND '1'||reverse(loaded_image) NOT IN ('0'||reverse(loaded_image),
+                                                     2||reverse(loaded_image))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A30_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||repeat(loaded_image, 2) IS NULL
+       OR ('1'||repeat(loaded_image, 2) = 1||repeat(loaded_image, 2)
+           AND '1'||repeat(loaded_image, 2) IS NOT DISTINCT
+           FROM 1||repeat(loaded_image, 2)
+           AND '1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)
+           AND ('1'||repeat(loaded_image, 2) IS DISTINCT
+                FROM '0'||repeat(loaded_image, 2))
+           AND '1'||repeat(loaded_image, 2) > '0'||repeat(loaded_image, 2)
+           AND '1'||repeat(loaded_image, 2) >= '0'||repeat(loaded_image, 2)
+           AND '1'||repeat(loaded_image, 2) < 2||repeat(loaded_image, 2)
+           AND '1'||repeat(loaded_image, 2) <= 2||repeat(loaded_image, 2)
+           AND ('1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)) IS TRUE
+           AND ('1'||repeat(loaded_image, 2) = '0'||repeat(loaded_image, 2)) IS NOT TRUE
+           AND ('1'||repeat(loaded_image, 2) = '0'||repeat(loaded_image, 2)) IS FALSE
+           AND ('1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)) IS NOT FALSE
+           AND '1'||repeat(loaded_image, 2) BETWEEN '0'||repeat(loaded_image, 2) AND 2||repeat(loaded_image, 2)
+           AND '1'||repeat(loaded_image, 2) NOT BETWEEN '1'||repeat(loaded_image, 2) AND '0'||repeat(loaded_image, 2)
+           AND '1'||repeat(loaded_image, 2) like '%'
+           AND '1'||repeat(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+           AND '1'||repeat(loaded_image, 2) IN ('0'||repeat(loaded_image, 2),
+                                                1||repeat(loaded_image, 2),
+                                                2||repeat(loaded_image, 2))
+           AND '1'||repeat(loaded_image, 2) NOT IN ('0'||repeat(loaded_image, 2),
+                                                    2||repeat(loaded_image, 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A30_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||repeat(loaded_image, 2) IS NULL
+       OR '1'||repeat(loaded_image, 2) IN
+         (SELECT '1'||repeat(loaded_image, 2)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||repeat(loaded_image, 2) IS NULL
+                 OR ('1'||repeat(loaded_image, 2) = 1||repeat(loaded_image, 2)
+                     AND '1'||repeat(loaded_image, 2) IS NOT DISTINCT
+                     FROM 1||repeat(loaded_image, 2)
+                     AND '1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)
+                     AND ('1'||repeat(loaded_image, 2) IS DISTINCT
+                          FROM '0'||repeat(loaded_image, 2))
+                     AND '1'||repeat(loaded_image, 2) > '0'||repeat(loaded_image, 2)
+                     AND '1'||repeat(loaded_image, 2) >= '0'||repeat(loaded_image, 2)
+                     AND '1'||repeat(loaded_image, 2) < 2||repeat(loaded_image, 2)
+                     AND '1'||repeat(loaded_image, 2) <= 2||repeat(loaded_image, 2)
+                     AND ('1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)) IS TRUE
+                     AND ('1'||repeat(loaded_image, 2) = '0'||repeat(loaded_image, 2)) IS NOT TRUE
+                     AND ('1'||repeat(loaded_image, 2) = '0'||repeat(loaded_image, 2)) IS FALSE
+                     AND ('1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)) IS NOT FALSE
+                     AND '1'||repeat(loaded_image, 2) BETWEEN '0'||repeat(loaded_image, 2) AND 2||repeat(loaded_image, 2)
+                     AND '1'||repeat(loaded_image, 2) NOT BETWEEN '1'||repeat(loaded_image, 2) AND '0'||repeat(loaded_image, 2)
+                     AND '1'||repeat(loaded_image, 2) like '%'
+                     AND '1'||repeat(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||repeat(loaded_image, 2) IN ('0'||repeat(loaded_image, 2),
+                                                          1||repeat(loaded_image, 2),
+                                                          2||repeat(loaded_image, 2))
+                     AND '1'||repeat(loaded_image, 2) NOT IN ('0'||repeat(loaded_image, 2),
+                                                              2||repeat(loaded_image, 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A30_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||repeat(loaded_image, 2),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||repeat(loaded_image, 2) IS NULL
+          OR ('1'||repeat(loaded_image, 2) = 1||repeat(loaded_image, 2)
+              AND '1'||repeat(loaded_image, 2) IS NOT DISTINCT
+              FROM 1||repeat(loaded_image, 2)
+              AND '1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)
+              AND ('1'||repeat(loaded_image, 2) IS DISTINCT
+                   FROM '0'||repeat(loaded_image, 2))
+              AND '1'||repeat(loaded_image, 2) > '0'||repeat(loaded_image, 2)
+              AND '1'||repeat(loaded_image, 2) >= '0'||repeat(loaded_image, 2)
+              AND '1'||repeat(loaded_image, 2) < 2||repeat(loaded_image, 2)
+              AND '1'||repeat(loaded_image, 2) <= 2||repeat(loaded_image, 2)
+              AND ('1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)) IS TRUE
+              AND ('1'||repeat(loaded_image, 2) = '0'||repeat(loaded_image, 2)) IS NOT TRUE
+              AND ('1'||repeat(loaded_image, 2) = '0'||repeat(loaded_image, 2)) IS FALSE
+              AND ('1'||repeat(loaded_image, 2) <> '0'||repeat(loaded_image, 2)) IS NOT FALSE
+              AND '1'||repeat(loaded_image, 2) BETWEEN '0'||repeat(loaded_image, 2) AND 2||repeat(loaded_image, 2)
+              AND '1'||repeat(loaded_image, 2) NOT BETWEEN '1'||repeat(loaded_image, 2) AND '0'||repeat(loaded_image, 2)
+              AND '1'||repeat(loaded_image, 2) like '%'
+              AND '1'||repeat(loaded_image, 2) not like '__DOES_NOT_EXIST__%'
+              AND '1'||repeat(loaded_image, 2) IN ('0'||repeat(loaded_image, 2),
+                                                   1||repeat(loaded_image, 2),
+                                                   2||repeat(loaded_image, 2))
+              AND '1'||repeat(loaded_image, 2) NOT IN ('0'||repeat(loaded_image, 2),
+                                                       2||repeat(loaded_image, 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A31_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||lpad(loaded_image, 10, 'z') IS NULL
+       OR ('1'||lpad(loaded_image, 10, 'z') = 1||lpad(loaded_image, 10, 'z')
+           AND '1'||lpad(loaded_image, 10, 'z') IS NOT DISTINCT
+           FROM 1||lpad(loaded_image, 10, 'z')
+           AND '1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')
+           AND ('1'||lpad(loaded_image, 10, 'z') IS DISTINCT
+                FROM '0'||lpad(loaded_image, 10, 'z'))
+           AND '1'||lpad(loaded_image, 10, 'z') > '0'||lpad(loaded_image, 10, 'z')
+           AND '1'||lpad(loaded_image, 10, 'z') >= '0'||lpad(loaded_image, 10, 'z')
+           AND '1'||lpad(loaded_image, 10, 'z') < 2||lpad(loaded_image, 10, 'z')
+           AND '1'||lpad(loaded_image, 10, 'z') <= 2||lpad(loaded_image, 10, 'z')
+           AND ('1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')) IS TRUE
+           AND ('1'||lpad(loaded_image, 10, 'z') = '0'||lpad(loaded_image, 10, 'z')) IS NOT TRUE
+           AND ('1'||lpad(loaded_image, 10, 'z') = '0'||lpad(loaded_image, 10, 'z')) IS FALSE
+           AND ('1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')) IS NOT FALSE
+           AND '1'||lpad(loaded_image, 10, 'z') BETWEEN '0'||lpad(loaded_image, 10, 'z') AND 2||lpad(loaded_image, 10, 'z')
+           AND '1'||lpad(loaded_image, 10, 'z') NOT BETWEEN '1'||lpad(loaded_image, 10, 'z') AND '0'||lpad(loaded_image, 10, 'z')
+           AND '1'||lpad(loaded_image, 10, 'z') like '%'
+           AND '1'||lpad(loaded_image, 10, 'z') not like '__DOES_NOT_EXIST__%'
+           AND '1'||lpad(loaded_image, 10, 'z') IN ('0'||lpad(loaded_image, 10, 'z'),
+                                                    1||lpad(loaded_image, 10, 'z'),
+                                                    2||lpad(loaded_image, 10, 'z'))
+           AND '1'||lpad(loaded_image, 10, 'z') NOT IN ('0'||lpad(loaded_image, 10, 'z'),
+                                                        2||lpad(loaded_image, 10, 'z')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A31_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||lpad(loaded_image, 10, 'z') IS NULL
+       OR '1'||lpad(loaded_image, 10, 'z') IN
+         (SELECT '1'||lpad(loaded_image, 10, 'z')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||lpad(loaded_image, 10, 'z') IS NULL
+                 OR ('1'||lpad(loaded_image, 10, 'z') = 1||lpad(loaded_image, 10, 'z')
+                     AND '1'||lpad(loaded_image, 10, 'z') IS NOT DISTINCT
+                     FROM 1||lpad(loaded_image, 10, 'z')
+                     AND '1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')
+                     AND ('1'||lpad(loaded_image, 10, 'z') IS DISTINCT
+                          FROM '0'||lpad(loaded_image, 10, 'z'))
+                     AND '1'||lpad(loaded_image, 10, 'z') > '0'||lpad(loaded_image, 10, 'z')
+                     AND '1'||lpad(loaded_image, 10, 'z') >= '0'||lpad(loaded_image, 10, 'z')
+                     AND '1'||lpad(loaded_image, 10, 'z') < 2||lpad(loaded_image, 10, 'z')
+                     AND '1'||lpad(loaded_image, 10, 'z') <= 2||lpad(loaded_image, 10, 'z')
+                     AND ('1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')) IS TRUE
+                     AND ('1'||lpad(loaded_image, 10, 'z') = '0'||lpad(loaded_image, 10, 'z')) IS NOT TRUE
+                     AND ('1'||lpad(loaded_image, 10, 'z') = '0'||lpad(loaded_image, 10, 'z')) IS FALSE
+                     AND ('1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')) IS NOT FALSE
+                     AND '1'||lpad(loaded_image, 10, 'z') BETWEEN '0'||lpad(loaded_image, 10, 'z') AND 2||lpad(loaded_image, 10, 'z')
+                     AND '1'||lpad(loaded_image, 10, 'z') NOT BETWEEN '1'||lpad(loaded_image, 10, 'z') AND '0'||lpad(loaded_image, 10, 'z')
+                     AND '1'||lpad(loaded_image, 10, 'z') like '%'
+                     AND '1'||lpad(loaded_image, 10, 'z') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||lpad(loaded_image, 10, 'z') IN ('0'||lpad(loaded_image, 10, 'z'),
+                                                              1||lpad(loaded_image, 10, 'z'),
+                                                              2||lpad(loaded_image, 10, 'z'))
+                     AND '1'||lpad(loaded_image, 10, 'z') NOT IN ('0'||lpad(loaded_image, 10, 'z'),
+                                                                  2||lpad(loaded_image, 10, 'z'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A31_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||lpad(loaded_image, 10, 'z'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||lpad(loaded_image, 10, 'z') IS NULL
+          OR ('1'||lpad(loaded_image, 10, 'z') = 1||lpad(loaded_image, 10, 'z')
+              AND '1'||lpad(loaded_image, 10, 'z') IS NOT DISTINCT
+              FROM 1||lpad(loaded_image, 10, 'z')
+              AND '1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')
+              AND ('1'||lpad(loaded_image, 10, 'z') IS DISTINCT
+                   FROM '0'||lpad(loaded_image, 10, 'z'))
+              AND '1'||lpad(loaded_image, 10, 'z') > '0'||lpad(loaded_image, 10, 'z')
+              AND '1'||lpad(loaded_image, 10, 'z') >= '0'||lpad(loaded_image, 10, 'z')
+              AND '1'||lpad(loaded_image, 10, 'z') < 2||lpad(loaded_image, 10, 'z')
+              AND '1'||lpad(loaded_image, 10, 'z') <= 2||lpad(loaded_image, 10, 'z')
+              AND ('1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')) IS TRUE
+              AND ('1'||lpad(loaded_image, 10, 'z') = '0'||lpad(loaded_image, 10, 'z')) IS NOT TRUE
+              AND ('1'||lpad(loaded_image, 10, 'z') = '0'||lpad(loaded_image, 10, 'z')) IS FALSE
+              AND ('1'||lpad(loaded_image, 10, 'z') <> '0'||lpad(loaded_image, 10, 'z')) IS NOT FALSE
+              AND '1'||lpad(loaded_image, 10, 'z') BETWEEN '0'||lpad(loaded_image, 10, 'z') AND 2||lpad(loaded_image, 10, 'z')
+              AND '1'||lpad(loaded_image, 10, 'z') NOT BETWEEN '1'||lpad(loaded_image, 10, 'z') AND '0'||lpad(loaded_image, 10, 'z')
+              AND '1'||lpad(loaded_image, 10, 'z') like '%'
+              AND '1'||lpad(loaded_image, 10, 'z') not like '__DOES_NOT_EXIST__%'
+              AND '1'||lpad(loaded_image, 10, 'z') IN ('0'||lpad(loaded_image, 10, 'z'),
+                                                       1||lpad(loaded_image, 10, 'z'),
+                                                       2||lpad(loaded_image, 10, 'z'))
+              AND '1'||lpad(loaded_image, 10, 'z') NOT IN ('0'||lpad(loaded_image, 10, 'z'),
+                                                           2||lpad(loaded_image, 10, 'z'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A32_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||rpad(loaded_image, 10, 'z') IS NULL
+       OR ('1'||rpad(loaded_image, 10, 'z') = 1||rpad(loaded_image, 10, 'z')
+           AND '1'||rpad(loaded_image, 10, 'z') IS NOT DISTINCT
+           FROM 1||rpad(loaded_image, 10, 'z')
+           AND '1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')
+           AND ('1'||rpad(loaded_image, 10, 'z') IS DISTINCT
+                FROM '0'||rpad(loaded_image, 10, 'z'))
+           AND '1'||rpad(loaded_image, 10, 'z') > '0'||rpad(loaded_image, 10, 'z')
+           AND '1'||rpad(loaded_image, 10, 'z') >= '0'||rpad(loaded_image, 10, 'z')
+           AND '1'||rpad(loaded_image, 10, 'z') < 2||rpad(loaded_image, 10, 'z')
+           AND '1'||rpad(loaded_image, 10, 'z') <= 2||rpad(loaded_image, 10, 'z')
+           AND ('1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')) IS TRUE
+           AND ('1'||rpad(loaded_image, 10, 'z') = '0'||rpad(loaded_image, 10, 'z')) IS NOT TRUE
+           AND ('1'||rpad(loaded_image, 10, 'z') = '0'||rpad(loaded_image, 10, 'z')) IS FALSE
+           AND ('1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')) IS NOT FALSE
+           AND '1'||rpad(loaded_image, 10, 'z') BETWEEN '0'||rpad(loaded_image, 10, 'z') AND 2||rpad(loaded_image, 10, 'z')
+           AND '1'||rpad(loaded_image, 10, 'z') NOT BETWEEN '1'||rpad(loaded_image, 10, 'z') AND '0'||rpad(loaded_image, 10, 'z')
+           AND '1'||rpad(loaded_image, 10, 'z') like '%'
+           AND '1'||rpad(loaded_image, 10, 'z') not like '__DOES_NOT_EXIST__%'
+           AND '1'||rpad(loaded_image, 10, 'z') IN ('0'||rpad(loaded_image, 10, 'z'),
+                                                    1||rpad(loaded_image, 10, 'z'),
+                                                    2||rpad(loaded_image, 10, 'z'))
+           AND '1'||rpad(loaded_image, 10, 'z') NOT IN ('0'||rpad(loaded_image, 10, 'z'),
+                                                        2||rpad(loaded_image, 10, 'z')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A32_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||rpad(loaded_image, 10, 'z') IS NULL
+       OR '1'||rpad(loaded_image, 10, 'z') IN
+         (SELECT '1'||rpad(loaded_image, 10, 'z')
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||rpad(loaded_image, 10, 'z') IS NULL
+                 OR ('1'||rpad(loaded_image, 10, 'z') = 1||rpad(loaded_image, 10, 'z')
+                     AND '1'||rpad(loaded_image, 10, 'z') IS NOT DISTINCT
+                     FROM 1||rpad(loaded_image, 10, 'z')
+                     AND '1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')
+                     AND ('1'||rpad(loaded_image, 10, 'z') IS DISTINCT
+                          FROM '0'||rpad(loaded_image, 10, 'z'))
+                     AND '1'||rpad(loaded_image, 10, 'z') > '0'||rpad(loaded_image, 10, 'z')
+                     AND '1'||rpad(loaded_image, 10, 'z') >= '0'||rpad(loaded_image, 10, 'z')
+                     AND '1'||rpad(loaded_image, 10, 'z') < 2||rpad(loaded_image, 10, 'z')
+                     AND '1'||rpad(loaded_image, 10, 'z') <= 2||rpad(loaded_image, 10, 'z')
+                     AND ('1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')) IS TRUE
+                     AND ('1'||rpad(loaded_image, 10, 'z') = '0'||rpad(loaded_image, 10, 'z')) IS NOT TRUE
+                     AND ('1'||rpad(loaded_image, 10, 'z') = '0'||rpad(loaded_image, 10, 'z')) IS FALSE
+                     AND ('1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')) IS NOT FALSE
+                     AND '1'||rpad(loaded_image, 10, 'z') BETWEEN '0'||rpad(loaded_image, 10, 'z') AND 2||rpad(loaded_image, 10, 'z')
+                     AND '1'||rpad(loaded_image, 10, 'z') NOT BETWEEN '1'||rpad(loaded_image, 10, 'z') AND '0'||rpad(loaded_image, 10, 'z')
+                     AND '1'||rpad(loaded_image, 10, 'z') like '%'
+                     AND '1'||rpad(loaded_image, 10, 'z') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||rpad(loaded_image, 10, 'z') IN ('0'||rpad(loaded_image, 10, 'z'),
+                                                              1||rpad(loaded_image, 10, 'z'),
+                                                              2||rpad(loaded_image, 10, 'z'))
+                     AND '1'||rpad(loaded_image, 10, 'z') NOT IN ('0'||rpad(loaded_image, 10, 'z'),
+                                                                  2||rpad(loaded_image, 10, 'z'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_string TEST_ID: A32_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||rpad(loaded_image, 10, 'z'),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||rpad(loaded_image, 10, 'z') IS NULL
+          OR ('1'||rpad(loaded_image, 10, 'z') = 1||rpad(loaded_image, 10, 'z')
+              AND '1'||rpad(loaded_image, 10, 'z') IS NOT DISTINCT
+              FROM 1||rpad(loaded_image, 10, 'z')
+              AND '1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')
+              AND ('1'||rpad(loaded_image, 10, 'z') IS DISTINCT
+                   FROM '0'||rpad(loaded_image, 10, 'z'))
+              AND '1'||rpad(loaded_image, 10, 'z') > '0'||rpad(loaded_image, 10, 'z')
+              AND '1'||rpad(loaded_image, 10, 'z') >= '0'||rpad(loaded_image, 10, 'z')
+              AND '1'||rpad(loaded_image, 10, 'z') < 2||rpad(loaded_image, 10, 'z')
+              AND '1'||rpad(loaded_image, 10, 'z') <= 2||rpad(loaded_image, 10, 'z')
+              AND ('1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')) IS TRUE
+              AND ('1'||rpad(loaded_image, 10, 'z') = '0'||rpad(loaded_image, 10, 'z')) IS NOT TRUE
+              AND ('1'||rpad(loaded_image, 10, 'z') = '0'||rpad(loaded_image, 10, 'z')) IS FALSE
+              AND ('1'||rpad(loaded_image, 10, 'z') <> '0'||rpad(loaded_image, 10, 'z')) IS NOT FALSE
+              AND '1'||rpad(loaded_image, 10, 'z') BETWEEN '0'||rpad(loaded_image, 10, 'z') AND 2||rpad(loaded_image, 10, 'z')
+              AND '1'||rpad(loaded_image, 10, 'z') NOT BETWEEN '1'||rpad(loaded_image, 10, 'z') AND '0'||rpad(loaded_image, 10, 'z')
+              AND '1'||rpad(loaded_image, 10, 'z') like '%'
+              AND '1'||rpad(loaded_image, 10, 'z') not like '__DOES_NOT_EXIST__%'
+              AND '1'||rpad(loaded_image, 10, 'z') IN ('0'||rpad(loaded_image, 10, 'z'),
+                                                       1||rpad(loaded_image, 10, 'z'),
+                                                       2||rpad(loaded_image, 10, 'z'))
+              AND '1'||rpad(loaded_image, 10, 'z') NOT IN ('0'||rpad(loaded_image, 10, 'z'),
+                                                           2||rpad(loaded_image, 10, 'z'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+

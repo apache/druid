@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C9_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][2]' RETURNING decimal array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C10_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_str, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C11_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[3]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C12_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][3]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C13_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_null, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C14_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[4]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C15_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][4]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C16_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_empty, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C17_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[5]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C18_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][5]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C19_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_mixed, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C20_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[6]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C21_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][6]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C22_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_nested, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C23_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C24_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][7]' RETURNING varchar array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C1_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_bool, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C2_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[0]' RETURNING boolean array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C3_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][0]' RETURNING boolean array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C4_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_int, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C5_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[1]' RETURNING bigint array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C6_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][1]' RETURNING bigint array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C7_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_float, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C8_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[2]' RETURNING decimal array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C9_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][2]' RETURNING decimal array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C10_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_str, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C11_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[3]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C12_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][3]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C13_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_null, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C14_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[4]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C15_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][4]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C16_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_empty, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C17_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[5]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C18_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][5]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C19_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_mixed, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C20_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[6]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C21_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][6]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C22_D1
+#-------------------------------------------------------------------------
+SELECT lpad(a_nested, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C23_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B28_C24_D1
+#-------------------------------------------------------------------------
+SELECT lpad(json_value(a_nested, '$[7][7]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'LPAD' to arguments of type 'LPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C1_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_bool, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C2_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[0]' RETURNING boolean array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C3_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][0]' RETURNING boolean array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C4_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_int, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C5_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[1]' RETURNING bigint array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C6_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][1]' RETURNING bigint array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C7_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_float, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C8_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[2]' RETURNING decimal array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C9_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][2]' RETURNING decimal array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C10_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_str, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+

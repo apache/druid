@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C17_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C18_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C19_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_mixed) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C20_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C21_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C22_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_nested) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C23_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C24_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C1_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_bool) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C2_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C3_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C4_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_int) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C5_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C6_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C7_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_float) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C8_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C9_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C10_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_str) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C11_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C12_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C13_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_null) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C14_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C15_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C16_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_empty) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C17_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C18_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C19_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_mixed) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C20_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C21_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C22_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN a_nested) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C23_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B11_C24_D1
+#-------------------------------------------------------------------------
+SELECT position('ABCD' IN json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C1_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_bool, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C2_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[0]' RETURNING boolean array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C3_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][0]' RETURNING boolean array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C4_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_int, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C5_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[1]' RETURNING bigint array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C6_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][1]' RETURNING bigint array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C7_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_float, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C8_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[2]' RETURNING decimal array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C9_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][2]' RETURNING decimal array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C10_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_str, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C11_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[3]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C12_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][3]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C13_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_null, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C14_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[4]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C15_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][4]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C16_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_empty, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C17_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[5]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C18_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][5]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+

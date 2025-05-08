@@ -1,0 +1,801 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C2_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C3_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING count(*) IS NOT NULL;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C4_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C5_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING count(*) IS NOT NULL;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING count(*) IS NOT NULL;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C11_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C12_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING count(*) IS NOT NULL;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C13_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C14_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C15_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING count(*) IS NOT NULL;
++-----+
+| col |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C16_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
++-----+
+| col |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C17_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C18_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING count(*) IS NOT NULL;
++-----+
+| col |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C19_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
++-----+
+| col |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C20_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C21_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING count(*)IS NOT NULL;
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C22_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C23_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B1_C24_D1
+#-------------------------------------------------------------------------
+SELECT count(*) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING count(*) IN (4);
++-----+
+| col |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C2_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C3_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C4_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C5_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C11_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C12_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C13_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C14_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C15_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C16_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C17_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C18_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C19_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C20_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C21_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C22_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C23_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B2_C24_D1
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING count(DISTINCT json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B3_C1_D1
+#-------------------------------------------------------------------------
+SELECT sum(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply 'SUM' to arguments of type 'SUM(
+!error
+
