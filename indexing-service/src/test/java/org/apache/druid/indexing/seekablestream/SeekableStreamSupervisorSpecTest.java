@@ -627,6 +627,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
     EasyMock.expect(supervisor4.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(supervisor4.getPartitionCount()).andReturn(1).anyTimes();
     EasyMock.replay(supervisor4);
 
     TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
@@ -702,6 +703,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     EasyMock.expect(supervisor4.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(supervisor4.getActiveTaskGroupsCount()).andReturn(0).anyTimes();
+    EasyMock.expect(supervisor4.getPartitionCount()).andReturn(1).anyTimes();
     EasyMock.replay(supervisor4);
 
     TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(

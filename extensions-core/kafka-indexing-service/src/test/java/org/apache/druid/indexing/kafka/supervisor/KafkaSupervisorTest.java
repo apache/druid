@@ -5810,6 +5810,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
+    public int getPartitionCount()
+    {
+      return recordSupplier != null ? super.getPartitionCount() : 1;
+    }
+
+    @Override
     protected RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> setupRecordSupplier()
     {
       final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
