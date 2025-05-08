@@ -53,6 +53,7 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -195,25 +196,13 @@ public class DartQueryMaker implements QueryMaker
   public QueryResponse<Object[]> runLegacyMSQSpec(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
   {
     final ControllerImpl controller = makeLegacyController(querySpec, context, resultsContext);
-
-    final boolean fullReport = context.getBoolean(
-        DartSqlEngine.CTX_FULL_REPORT,
-        DartSqlEngine.CTX_FULL_REPORT_DEFAULT
-    );
-
-    return runController(controller, fullReport);
+    return runController(controller, context.getFullReport());
   }
 
   public QueryResponse<Object[]> runQueryDefMSQSpec(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
   {
     final ControllerImpl controller = makeQueryDefController(querySpec, context, resultsContext);
-
-    final boolean fullReport = context.getBoolean(
-        DartSqlEngine.CTX_FULL_REPORT,
-        DartSqlEngine.CTX_FULL_REPORT_DEFAULT
-    );
-
-    return runController(controller, fullReport);
+    return runController(controller, context.getFullReport());
   }
 
   private QueryResponse<Object[]> runController(final ControllerImpl controller, final boolean fullReport)
@@ -273,7 +262,7 @@ public class DartQueryMaker implements QueryMaker
                     "maxQueryReportSize[%,d] exceeded. "
                     + "Try limiting the result set for your query, or run it with %s[false]",
                     limit,
-                    DartSqlEngine.CTX_FULL_REPORT
+                    QueryContexts.CTX_FULL_REPORT
                 )
             ),
             plannerContext.getJsonMapper(),

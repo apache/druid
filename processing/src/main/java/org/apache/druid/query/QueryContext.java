@@ -650,6 +650,17 @@ public class QueryContext
     );
   }
 
+  /**
+   * Returns true if {@link QueryContexts#CTX_FULL_REPORT} is set to true, false if it is set to false or not set.
+   */
+  public boolean getFullReport()
+  {
+    return getBoolean(
+        QueryContexts.CTX_FULL_REPORT,
+        QueryContexts.DEFAULT_CTX_FULL_REPORT
+    );
+  }
+
 
   public QueryResourceId getQueryResourceId()
   {
