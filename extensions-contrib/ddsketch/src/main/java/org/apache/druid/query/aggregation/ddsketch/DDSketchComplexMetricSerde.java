@@ -60,18 +60,23 @@ public class DDSketchComplexMetricSerde extends ComplexMetricSerde
           if (objString.isEmpty()) {
             return null;
           }
-
           try {
-            Double doubleValue = Double.parseDouble(objString);
-            return doubleValue;
+            return DDSketchUtils.deserialize(obj);
           }
-          catch (NumberFormatException e) {
-            throw new IAE("Expected string with a number, received value: " + objString);
+          catch (IAE e) {
+            try {
+              return Double.parseDouble(objString);
+            }
+            catch (NumberFormatException nfe) {
+              throw new IAE("Expected string with a number, received value: " + objString);
+            }
           }
-
         }
-
-        return DDSketchUtils.deserialize(obj);
+        throw new IAE(
+            "Expected a number or an instance of DDSketch(b64), but received [%s] of type [%s]",
+            obj,
+            obj.getClass()
+        );
       }
     };
   }
