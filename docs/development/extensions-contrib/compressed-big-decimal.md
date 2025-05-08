@@ -244,12 +244,12 @@ Result:
 
 Native aggregation functions:
 
- * compressedBigDecimalSum
- * compressedBigDecimalMin
- * compressedBigDecimalMax
+ * `compressedBigDecimalSum`
+ * `compressedBigDecimalMin`
+ * `compressedBigDecimalMax`
 
 SQL aggregation functions:
- * big_sum()
- * big_min()
- * big_max()
+ * `big_sum()`
+ * `big_min()`
+ * `big_max()`
 
