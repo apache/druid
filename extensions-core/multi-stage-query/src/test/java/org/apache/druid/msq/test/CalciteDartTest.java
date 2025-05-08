@@ -21,7 +21,6 @@ package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.NotYetSupported;
@@ -42,7 +41,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .queryContext(
             ImmutableMap.<String, Object>builder()
-                .put(DartSqlEngine.CTX_DART_QUERY_ID, UUID.randomUUID().toString())
+                .put(QueryContexts.CTX_DART_QUERY_ID, UUID.randomUUID().toString())
                 .put(QueryContexts.ENABLE_DEBUG, true)
                 .build()
         )

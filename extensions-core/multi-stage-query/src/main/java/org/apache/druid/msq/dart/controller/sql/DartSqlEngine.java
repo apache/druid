@@ -53,9 +53,6 @@ public class DartSqlEngine implements SqlEngine
 {
   private static final String NAME = "msq-dart";
 
-  // FIXME
-  public static final String CTX_DART_QUERY_ID = QueryContexts.CTX_DART_QUERY_ID;
-
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;

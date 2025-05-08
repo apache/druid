@@ -20,7 +20,6 @@
 package org.apache.druid.msq.logical;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -28,6 +27,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -84,7 +84,7 @@ public class LogicalStageBuilder
 
     private String getIdForBuilder()
     {
-      String dartQueryId = plannerContext.queryContext().getString(DartSqlEngine.CTX_DART_QUERY_ID);
+      String dartQueryId = plannerContext.queryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
       if (dartQueryId != null) {
         return dartQueryId;
       }

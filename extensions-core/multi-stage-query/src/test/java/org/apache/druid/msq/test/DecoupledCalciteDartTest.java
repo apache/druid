@@ -20,7 +20,6 @@
 package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.DecoupledExtension;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
@@ -42,7 +41,7 @@ public class DecoupledCalciteDartTest extends CalciteDartTest
     return decoupledExtension.testBuilder()
         .queryContext(
             ImmutableMap.<String, Object>builder()
-                .put(DartSqlEngine.CTX_DART_QUERY_ID, UUID.randomUUID().toString())
+                .put(QueryContexts.CTX_DART_QUERY_ID, UUID.randomUUID().toString())
                 .put(QueryContexts.CTX_PREPLANNED, true)
                 .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
                 .put(QueryContexts.ENABLE_DEBUG, true)

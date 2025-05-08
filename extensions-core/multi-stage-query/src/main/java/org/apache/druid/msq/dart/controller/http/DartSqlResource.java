@@ -31,8 +31,8 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -218,7 +218,7 @@ public class DartSqlResource extends SqlResource
 
     // Dart queryId must be globally unique; cannot use user-provided sqlQueryId or queryId.
     final String dartQueryId = UUID.randomUUID().toString();
-    context.put(DartSqlEngine.CTX_DART_QUERY_ID, dartQueryId);
+    context.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
 
     return super.doPost(sqlQuery.withOverridenContext(context), req);
   }
@@ -254,7 +254,7 @@ public class DartSqlResource extends SqlResource
       // get the controller and stop it.
       for (SqlLifecycleManager.Cancelable cancelable : cancelables) {
         final HttpStatement stmt = (HttpStatement) cancelable;
-        final Object dartQueryId = stmt.context().get(DartSqlEngine.CTX_DART_QUERY_ID);
+        final Object dartQueryId = stmt.context().get(QueryContexts.CTX_DART_QUERY_ID);
         if (dartQueryId instanceof String) {
           final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
           if (holder != null) {
@@ -263,7 +263,7 @@ public class DartSqlResource extends SqlResource
         } else {
           log.warn(
               "%s[%s] for query[%s] is not a string, cannot cancel.",
-              DartSqlEngine.CTX_DART_QUERY_ID,
+              QueryContexts.CTX_DART_QUERY_ID,
               dartQueryId,
               sqlQueryId
           );

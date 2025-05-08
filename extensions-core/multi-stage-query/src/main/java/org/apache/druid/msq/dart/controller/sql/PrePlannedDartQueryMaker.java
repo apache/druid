@@ -27,6 +27,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.logical.DruidLogicalToQueryDefinitionTranslator;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -105,7 +106,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
         null
     );
 
-    String dartQueryId = queryContext.getString(DartSqlEngine.CTX_DART_QUERY_ID);
+    String dartQueryId = queryContext.getString(QueryContexts.CTX_DART_QUERY_ID);
 
     QueryDefinition queryDef = new QueryKitBasedMSQPlanner(
         querySpec,
