@@ -83,17 +83,14 @@ public class FaultyCoordinatorClient extends CoordinatorClientImpl
           d -> Stopwatch.createStarted()
       );
 
-      if (sinceHandoffCheckStarted.isRunning()
-          && sinceHandoffCheckStarted.hasElapsed(minHandoffDelay)) {
-        // Wait period is over, check with Coordinator now
+      if (sinceHandoffCheckStarted.hasElapsed(minHandoffDelay)) {
+        // Wait period is over, check with Coordinator now, but do not remove
+        // the stopwatch from the map. This ensures that we do not create a new
+        // Stopwatch causing further delays.
         log.info(
             "Min handoff delay[%s] has elapsed for segment[%s]. Checking with Coordinator for actual handoff status.",
             minHandoffDelay, descriptor
         );
-
-        // Stop the Stopwatch but do not remove it from the map. This ensures
-        // that we do not create a new Stopwatch causing further delays.
-        sinceHandoffCheckStarted.stop();
       } else {
         // Until the min handoff delay has elapsed, keep returning false
         return Futures.immediateFuture(false);
