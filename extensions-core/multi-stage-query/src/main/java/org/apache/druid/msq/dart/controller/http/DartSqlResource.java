@@ -61,6 +61,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -216,7 +217,16 @@ public class DartSqlResource extends SqlResource
       context.putIfAbsent(entry.getKey(), entry.getValue());
     }
 
-    // Dart queryId must be globally unique; cannot use user-provided sqlQueryId or queryId.
+    /**
+     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
+     * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
+     * the user may have provided. This becomes the {@link Controller#queryId()}.
+     *
+     * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
+     * for purposes of query cancellation.
+     *
+     * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
+     */
     final String dartQueryId = UUID.randomUUID().toString();
     context.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
 

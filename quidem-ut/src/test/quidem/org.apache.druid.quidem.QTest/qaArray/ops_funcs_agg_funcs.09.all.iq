@@ -1,0 +1,517 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C21_D1
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING array_concat_agg(DISTINCT json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, 0.1, 1, S1, true] |
+| [null, 0.1, 1, S1, true] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C22_D1
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C23_D1
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C24_D1
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING array_concat_agg(DISTINCT json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C1_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C2_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C3_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING bit_and(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C4_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C5_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C6_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING bit_and(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C7_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C8_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C9_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING bit_and(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C10_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C11_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C12_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING bit_and(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C13_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C14_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C15_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING bit_and(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C16_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C17_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C18_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING bit_and(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C19_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C20_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C21_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING bit_and(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C22_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C23_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C24_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING bit_and(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_AND' to arguments of type 'BIT_AND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C1_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C2_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C3_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING bit_or(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C4_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C5_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C6_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING bit_or(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C7_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C8_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C9_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING bit_or(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C10_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C11_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C12_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING bit_or(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C13_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C14_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C15_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING bit_or(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C16_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C17_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C18_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING bit_or(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C19_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C20_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C21_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING bit_or(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C22_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+

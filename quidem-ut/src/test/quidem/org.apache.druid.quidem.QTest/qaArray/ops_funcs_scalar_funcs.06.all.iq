@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C9_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C10_D1
+#-------------------------------------------------------------------------
+SELECT round(a_str) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C11_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C12_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C13_D1
+#-------------------------------------------------------------------------
+SELECT round(a_null) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C14_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C15_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C16_D1
+#-------------------------------------------------------------------------
+SELECT round(a_empty) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C17_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C18_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C19_D1
+#-------------------------------------------------------------------------
+SELECT round(a_mixed) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C20_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C21_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C22_D1
+#-------------------------------------------------------------------------
+SELECT round(a_nested) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C23_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B12_C24_D1
+#-------------------------------------------------------------------------
+SELECT round(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ROUND' to arguments of type 'ROUND(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C1_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C2_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C3_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C4_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C5_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C6_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C7_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C8_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C9_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C10_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C11_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C12_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C13_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C14_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C15_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C16_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C17_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C18_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C19_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C20_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C21_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C22_D1
+#-------------------------------------------------------------------------
+SELECT mod(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C23_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B13_C24_D1
+#-------------------------------------------------------------------------
+SELECT mod(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'MOD' to arguments of type 'MOD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C1_D1
+#-------------------------------------------------------------------------
+SELECT sin(a_bool) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C2_D1
+#-------------------------------------------------------------------------
+SELECT sin(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C3_D1
+#-------------------------------------------------------------------------
+SELECT sin(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C4_D1
+#-------------------------------------------------------------------------
+SELECT sin(a_int) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C5_D1
+#-------------------------------------------------------------------------
+SELECT sin(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C6_D1
+#-------------------------------------------------------------------------
+SELECT sin(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C7_D1
+#-------------------------------------------------------------------------
+SELECT sin(a_float) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C8_D1
+#-------------------------------------------------------------------------
+SELECT sin(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C9_D1
+#-------------------------------------------------------------------------
+SELECT sin(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B14_C10_D1
+#-------------------------------------------------------------------------
+SELECT sin(a_str) AS col
+FROM test_array;
+Cannot apply 'SIN' to arguments of type 'SIN(
+!error
+

@@ -1,0 +1,1068 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B26_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int IS NOT NULL
+  AND c IS NOT NULL;
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S2 |
+| S2 |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B27_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int IN (1,
+                996) IS TRUE
+  AND s_int IN (0,
+                997) IS NOT TRUE
+  AND c IN ('S2',
+            '998') IS TRUE
+  AND c IN ('S1',
+            '999') IS NOT TRUE;
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B27_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int IN (1,
+                   996) IS TRUE
+     AND s_int IN (0,
+                   997) IS NOT TRUE
+     AND c IN ('S2',
+               '998') IS TRUE
+     AND c IN ('S1',
+               '999') IS NOT TRUE);
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B27_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN (1,
+                   996) IS TRUE
+     AND s_int IN (0,
+                   997) IS NOT TRUE
+     AND c IN ('S2',
+               '998') IS TRUE
+     AND c IN ('S1',
+               '999') IS NOT TRUE), unnest(a_str) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B27_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int IN (1,
+                996) IS TRUE
+  AND s_int IN (0,
+                997) IS NOT TRUE
+  AND c IN ('S2',
+            '998') IS TRUE
+  AND c IN ('S1',
+            '999') IS NOT TRUE;
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B27_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int IN (1,
+                996) IS TRUE
+  AND s_int IN (0,
+                997) IS NOT TRUE
+  AND c IN ('S2',
+            '998') IS TRUE
+  AND c IN ('S1',
+            '999') IS NOT TRUE;
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B28_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int IN (1,
+                996) IS FALSE
+  AND s_int IN (0,
+                997) IS NOT FALSE
+  AND c IN ('S2',
+            '998') IS FALSE
+  AND c IN ('S1',
+            '999') IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B28_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int IN (1,
+                   996) IS FALSE
+     AND s_int IN (0,
+                   997) IS NOT FALSE
+     AND c IN ('S2',
+               '998') IS FALSE
+     AND c IN ('S1',
+               '999') IS NOT FALSE);
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B28_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN (1,
+                   996) IS FALSE
+     AND s_int IN (0,
+                   997) IS NOT FALSE
+     AND c IN ('S2',
+               '998') IS FALSE
+     AND c IN ('S1',
+               '999') IS NOT FALSE), unnest(a_str) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B28_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int IN (1,
+                996) IS FALSE
+  AND s_int IN (0,
+                997) IS NOT FALSE
+  AND c IN ('S2',
+            '998') IS FALSE
+  AND c IN ('S1',
+            '999') IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B28_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int IN (1,
+                996) IS FALSE
+  AND s_int IN (0,
+                997) IS NOT FALSE
+  AND c IN ('S2',
+            '998') IS FALSE
+  AND c IN ('S1',
+            '999') IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B29_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE (s_int BETWEEN 1 AND 2)
+  AND (s_int NOT BETWEEN 3 AND 4)
+  AND (c BETWEEN 'S2' AND 'S3')
+  AND (c NOT BETWEEN 'S4' AND 'S5');
++----+
+| c  |
++----+
+| S2 |
+| S2 |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B29_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE (s_int BETWEEN 1 AND 2)
+     AND (s_int NOT BETWEEN 3 AND 4)
+     AND (c BETWEEN 'S2' AND 'S3')
+     AND (c NOT BETWEEN 'S4' AND 'S5'));
++----+
+| c  |
++----+
+| S2 |
+| S2 |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B29_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (s_int BETWEEN 1 AND 2)
+     AND (s_int NOT BETWEEN 3 AND 4)
+     AND (c BETWEEN 'S2' AND 'S3')
+     AND (c NOT BETWEEN 'S4' AND 'S5')), unnest(a_str) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B29_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE (s_int BETWEEN 1 AND 2)
+  AND (s_int NOT BETWEEN 3 AND 4)
+  AND (c BETWEEN 'S2' AND 'S3')
+  AND (c NOT BETWEEN 'S4' AND 'S5');
++----+
+| c  |
++----+
+| S2 |
+| S2 |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B29_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE (s_int BETWEEN 1 AND 2)
+  AND (s_int NOT BETWEEN 3 AND 4)
+  AND (c BETWEEN 'S2' AND 'S3')
+  AND (c NOT BETWEEN 'S4' AND 'S5');
++----+
+| c  |
++----+
+| S2 |
+| S2 |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B30_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE (cast(s_int AS varchar) like '%1%')
+  AND (cast(s_int AS varchar) not like '%3%')
+  AND (cast(c AS varchar) like '%2%')
+  AND (cast(c AS varchar) not like '%3%');
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B30_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE (cast(s_int AS varchar) like '%1%')
+     AND (cast(s_int AS varchar) not like '%3%')
+     AND (cast(c AS varchar) like '%2%')
+     AND (cast(c AS varchar) not like '%3%'));
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B30_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (cast(s_int AS varchar) like '%1%')
+     AND (cast(s_int AS varchar) not like '%3%')
+     AND (cast(c AS varchar) like '%2%')
+     AND (cast(c AS varchar) not like '%3%')), unnest(a_str) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B30_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE (cast(s_int AS varchar) like '%1%')
+  AND (cast(s_int AS varchar) not like '%3%')
+  AND (cast(c AS varchar) like '%2%')
+  AND (cast(c AS varchar) not like '%3%');
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B30_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE (cast(s_int AS varchar) like '%1%')
+  AND (cast(s_int AS varchar) not like '%3%')
+  AND (cast(c AS varchar) like '%2%')
+  AND (cast(c AS varchar) not like '%3%');
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B31_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int IN (1,
+                996)
+  AND s_int NOT IN (0,
+                    997)
+  AND c IN ('S2',
+            '998')
+  AND c NOT IN ('S1',
+                '999');
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B31_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int IN (1,
+                   996)
+     AND s_int NOT IN (0,
+                       997)
+     AND c IN ('S2',
+               '998')
+     AND c NOT IN ('S1',
+                   '999'));
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B31_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN (1,
+                   996)
+     AND s_int NOT IN (0,
+                       997)
+     AND c IN ('S2',
+               '998')
+     AND c NOT IN ('S1',
+                   '999')), unnest(a_str) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B31_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int IN (1,
+                996)
+  AND s_int NOT IN (0,
+                    997)
+  AND c IN ('S2',
+            '998')
+  AND c NOT IN ('S1',
+                '999');
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B31_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int IN (1,
+                996)
+  AND s_int NOT IN (0,
+                    997)
+  AND c IN ('S2',
+            '998')
+  AND c NOT IN ('S1',
+                '999');
++----+
+| c  |
++----+
+| S2 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B32_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int IN
+    (SELECT col
+     FROM (
+           VALUES(1),(996)) AS t(col))
+  AND s_int NOT IN
+    (SELECT col
+     FROM (
+           VALUES(1),(997)) AS t(col))
+  AND c IN
+    (SELECT col
+     FROM (
+           VALUES('S2'),('998')) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES('S1'),('999')) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B32_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int IN
+       (SELECT col
+        FROM (
+              VALUES(1),(996)) AS t(col))
+     AND s_int NOT IN
+       (SELECT col
+        FROM (
+              VALUES(1),(997)) AS t(col))
+     AND c IN
+       (SELECT col
+        FROM (
+              VALUES('S2'),('998')) AS t(col))
+     AND c NOT IN
+       (SELECT col
+        FROM (
+              VALUES('S1'),('999')) AS t(col)));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B32_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN
+       (SELECT col
+        FROM (
+              VALUES(1),(996)) AS t(col))
+     AND s_int NOT IN
+       (SELECT col
+        FROM (
+              VALUES(1),(997)) AS t(col))
+     AND c IN
+       (SELECT col
+        FROM (
+              VALUES('S2'),('998')) AS t(col))
+     AND c NOT IN
+       (SELECT col
+        FROM (
+              VALUES('S1'),('999')) AS t(col))), unnest(a_str) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B32_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int IN
+    (SELECT col
+     FROM (
+           VALUES(1),(996)) AS t(col))
+  AND s_int NOT IN
+    (SELECT col
+     FROM (
+           VALUES(1),(997)) AS t(col))
+  AND c IN
+    (SELECT col
+     FROM (
+           VALUES('S2'),('998')) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES('S1'),('999')) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B32_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int IN
+    (SELECT col
+     FROM (
+           VALUES(1),(996)) AS t(col))
+  AND s_int NOT IN
+    (SELECT col
+     FROM (
+           VALUES(1),(997)) AS t(col))
+  AND c IN
+    (SELECT col
+     FROM (
+           VALUES('S2'),('998')) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES('S1'),('999')) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B33_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int=1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B33_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int=1);
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B33_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int=1), unnest(a_str) AS u(c);
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B33_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int=1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B33_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int=1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B34_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int<>1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B34_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int<>1);
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B34_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int<>1), unnest(a_str) AS u(c);
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B34_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int<>1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B34_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int<>1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int>1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int>1);
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int>1), unnest(a_str) AS u(c);
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int>1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_str) AS u(c)
+WHERE s_int>1;
++----+
+| c  |
++----+
+| S1 |
+| S2 |
+|    |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+WHERE s_int>=1;
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S2 |
+| S2 |
+|    |
+|    |
++----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   WHERE s_int>=1);
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S2 |
+| S2 |
+|    |
+|    |
++----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int>=1), unnest(a_str) AS u(c);
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S2 |
+| S2 |
+|    |
+|    |
++----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c))
+WHERE s_int>=1;
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S2 |
+| S2 |
+|    |
+|    |
++----+
+(6 rows)
+
+!ok
+

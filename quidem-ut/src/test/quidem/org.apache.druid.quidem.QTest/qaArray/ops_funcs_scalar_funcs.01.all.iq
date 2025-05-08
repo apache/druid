@@ -1,0 +1,418 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT pi AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_bool) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C2_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C3_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C4_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_int) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C5_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C6_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C7_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_float) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C8_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C9_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C10_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_str) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C11_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C12_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C13_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_null) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C14_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C15_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C16_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_empty) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C17_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C18_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C19_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_mixed) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C20_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C21_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C22_D1
+#-------------------------------------------------------------------------
+SELECT abs(a_nested) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C23_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B2_C24_D1
+#-------------------------------------------------------------------------
+SELECT abs(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ABS' to arguments of type 'ABS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C1_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_bool) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C2_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C3_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C4_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_int) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C5_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C6_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C7_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_float) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C8_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C9_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C10_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_str) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C11_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C12_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C13_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_null) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C14_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C15_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C16_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_empty) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C17_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C18_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C19_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_mixed) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C20_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C21_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C22_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_nested) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C23_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B3_C24_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+

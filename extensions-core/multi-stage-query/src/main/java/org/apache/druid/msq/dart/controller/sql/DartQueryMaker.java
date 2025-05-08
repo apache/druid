@@ -62,6 +62,7 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 
 import javax.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.util.Collections;
 import java.util.Iterator;

@@ -1,0 +1,944 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B34_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+WHERE a_str IS NOT NULL
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C1
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C2
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE);
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C4
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE)
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C5
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C6
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE)
+SELECT a_str
+FROM t1;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B35_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS TRUE
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C1
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C2
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE);
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C4
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE)
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C5
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C6
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE)
+SELECT a_str
+FROM t1;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B36_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT TRUE
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C1
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C2
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE);
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C4
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE)
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C5
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C6
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE)
+SELECT a_str
+FROM t1;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B37_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS FALSE
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C1
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C2
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM test_array
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE);
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C4
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE)
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C5
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C6
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE)
+SELECT a_str
+FROM t1;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE;
++-------+
+| a_str |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B38_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str,
+       count(*) cnt
+FROM t1
+WHERE (a_str<json_value(a_nested, '$[3]' RETURNING varchar array)) IS NOT FALSE
+GROUP BY a_str;
++-------+-----+
+| a_str | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C1
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM test_array
+WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array);
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C2
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM test_array
+WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array)
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array));
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C4
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array))
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C5
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array);
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C6
+#-------------------------------------------------------------------------
+SELECT a_str,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array)
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array))
+SELECT a_str
+FROM t1;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array))
+SELECT a_str,
+       count(*) cnt
+FROM t1
+GROUP BY a_str;
++----------------+-----+
+| a_str          | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A4_B39_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_str
+FROM t1
+WHERE a_str BETWEEN json_value(a_nested, '$[3]' RETURNING varchar array) AND json_value(a_nested, '$[7][3]' RETURNING varchar array);
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+

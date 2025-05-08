@@ -1,0 +1,1850 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C23
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       t1.c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t1
+RIGHT JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2 ON t1.c=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C24
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2 ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(18 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C25
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2 ON t1.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C26
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2 ON t1.s_int=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C27
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2 ON t1.c=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C28
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN t1 t2 ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(18 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C29
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN t1 t2 ON t1.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C30
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN t1 t2 ON t1.s_int=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A4_B2_C31
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+RIGHT JOIN t1 t2 ON t1.c=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C1
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN unnest(a_int) AS u(c)
+CROSS JOIN test_unnest t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C2
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN test_unnest t2,
+           unnest(t2.a_int) AS u(c)
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C3
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t1
+CROSS JOIN test_unnest t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C4
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       c
+FROM t1
+CROSS JOIN test_unnest t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C6
+#-------------------------------------------------------------------------
+WITH t2 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C7
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c1
+FROM test_unnest t1
+CROSS JOIN unnest(t1.a_int) AS u1(c1)
+CROSS JOIN test_unnest t2
+CROSS JOIN unnest(t2.a_int) AS u2(c2)
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+----+
+| s_int | c1 |
++-------+----+
+|     1 |  1 |
+|     1 |  1 |
+|     1 |  1 |
+|     1 |  1 |
+|     1 |  1 |
+|     1 |  1 |
+|     1 |  2 |
+|     1 |  2 |
+|     1 |  2 |
+|     1 |  2 |
+|     1 |  2 |
+|     1 |  2 |
+|     1 |    |
+|     1 |    |
+|     1 |    |
+|     1 |    |
+|     1 |    |
+|     1 |    |
+|     2 |  1 |
+|     2 |  1 |
+|     2 |  1 |
+|     2 |  1 |
+|     2 |  1 |
+|     2 |  1 |
+|     2 |  2 |
+|     2 |  2 |
+|     2 |  2 |
+|     2 |  2 |
+|     2 |  2 |
+|     2 |  2 |
+|     2 |    |
+|     2 |    |
+|     2 |    |
+|     2 |    |
+|     2 |    |
+|     2 |    |
++-------+----+
+(36 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C8
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       t1.c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t1
+CROSS JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(36 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+CROSS JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(36 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B1_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+CROSS JOIN t1 t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(36 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C1
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+CROSS JOIN test_unnest t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C2
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN test_unnest t2,
+           unnest(t2.json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C3
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t1
+CROSS JOIN test_unnest t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C4
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       c
+FROM t1
+CROSS JOIN test_unnest t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C6
+#-------------------------------------------------------------------------
+WITH t2 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
++-------+---+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C7
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c1
+FROM test_unnest t1
+CROSS JOIN unnest(t1.json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1)
+CROSS JOIN test_unnest t2
+CROSS JOIN unnest(t2.json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2)
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C8
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       t1.c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t1
+CROSS JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(36 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+CROSS JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)) t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(36 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A6_B2_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c))
+SELECT t1.s_int,
+       t1.c
+FROM t1
+CROSS JOIN t1 t2
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(36 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C1
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN unnest(a_int) AS u(c)
+FULL JOIN test_unnest t2 ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     1 |   |
+|     2 | 1 |
+|     2 | 2 |
+|     2 |   |
++-------+---+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C2
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+CROSS JOIN unnest(a_int) AS u(c)
+FULL JOIN test_unnest t2 ON u.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 2 |
++-------+---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C3
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+FULL JOIN test_unnest t2,
+          unnest(t2.a_int) AS u(c) ON t2.s_int=u.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C4
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t1
+FULL JOIN test_unnest t2 ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     1 |   |
+|     2 | 1 |
+|     2 | 2 |
+|     2 |   |
++-------+---+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C5
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t1
+FULL JOIN test_unnest t2 ON t1.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 2 |
++-------+---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C6
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+FULL JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t2 ON t2.s_int=t1.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     1 |   |
+|     2 | 1 |
+|     2 | 2 |
+|     2 |   |
++-------+---+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C7
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+FULL JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t2 ON t2.c=t1.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       c
+FROM t1
+FULL JOIN test_unnest t2 ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     1 |   |
+|     2 | 1 |
+|     2 | 2 |
+|     2 |   |
++-------+---+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       c
+FROM t1
+FULL JOIN test_unnest t2 ON t1.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 2 |
++-------+---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C10
+#-------------------------------------------------------------------------
+WITH t2 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+FULL JOIN t2 ON t2.s_int=t1.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 2 |
+|     1 |   |
+|     2 | 1 |
+|     2 | 2 |
+|     2 |   |
++-------+---+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C11
+#-------------------------------------------------------------------------
+WITH t2 AS
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c))
+SELECT t1.s_int,
+       c
+FROM test_unnest t1
+FULL JOIN t2 ON t2.c=t1.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C12
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest t2,
+          unnest(a_int) AS u(c) ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C13
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest t2,
+          unnest(a_int) AS u(c) ON t1.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C14
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest t2,
+          unnest(a_int) AS u(c) ON t1.s_int=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C15
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest t2,
+          unnest(a_int) AS u(c) ON t1.c=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C16
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest,
+          unnest(a_int) t2 AS u(c) ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C17
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest,
+          unnest(a_int) t2 AS u(c) ON t1.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C18
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest,
+          unnest(a_int) t2 AS u(c) ON t1.s_int=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C19
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       c
+FROM test_unnest t1,
+     unnest(a_int) AS u(c)
+FULL JOIN test_unnest,
+          unnest(a_int) t2 AS u(c) ON t1.c=t2.c
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C20
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       t1.c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t1
+FULL JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t2 ON t1.s_int=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 |   |
+|     1 |   |
+|     1 |   |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 |   |
+|     2 |   |
+|     2 |   |
++-------+---+
+(18 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A5_B1_C21
+#-------------------------------------------------------------------------
+SELECT t1.s_int,
+       t1.c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t1
+FULL JOIN
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)) t2 ON t1.c=t2.s_int
+WHERE t1.s_int IN (0,
+                   1,
+                   2,
+                   999)
+  AND t2.s_int IN (0,
+                   1,
+                   2,
+                   999);
++-------+---+
+| s_int | c |
++-------+---+
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 1 |
+|     1 | 2 |
+|     1 | 2 |
+|     1 | 2 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 1 |
+|     2 | 2 |
+|     2 | 2 |
+|     2 | 2 |
++-------+---+
+(12 rows)
+
+!ok
+
