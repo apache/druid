@@ -691,6 +691,8 @@
                                         <argument>org.apache.druid.extensions:druid-pac4j</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kubernetes-overlord-extensions</argument>
                                         <argument>--clean</argument>
                                     </arguments>
                                 </configuration>
