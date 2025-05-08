@@ -136,7 +136,7 @@ public class DartWorkerRunnerTest
 
     // "worker.stop()" sets "workerRun" to a cancellation error.
     Mockito.doAnswer(invocation -> {
-      workerRun.setException(new MSQException(new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN)));
+      workerRun.setException(new MSQException(CanceledFault.shutdown()));
       return null;
     }).when(worker).stop();
 

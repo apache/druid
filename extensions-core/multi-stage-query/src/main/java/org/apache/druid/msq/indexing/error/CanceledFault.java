@@ -33,10 +33,20 @@ public class CanceledFault extends BaseMSQFault
   private final Reason reason;
 
   @JsonCreator
-  public CanceledFault(@JsonProperty("reason") Reason reason)
+  CanceledFault(@JsonProperty("reason") Reason reason)
   {
     super(CODE, "Query canceled due to [%s].", reason);
     this.reason = reason;
+  }
+
+  public static CanceledFault shutdown()
+  {
+    return new CanceledFault(Reason.TASK_SHUTDOWN);
+  }
+
+  public static CanceledFault timeout()
+  {
+    return new CanceledFault(Reason.QUERY_TIMEOUT);
   }
 
   @JsonProperty

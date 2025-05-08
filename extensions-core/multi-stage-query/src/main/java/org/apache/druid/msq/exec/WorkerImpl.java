@@ -1001,7 +1001,7 @@ public class WorkerImpl implements Worker
     kernelManipulationQueue.clear();
     kernelManipulationQueue.add(
         kernel -> {
-          throw new MSQException(new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN));
+          throw new MSQException(CanceledFault.shutdown());
         }
     );
   }

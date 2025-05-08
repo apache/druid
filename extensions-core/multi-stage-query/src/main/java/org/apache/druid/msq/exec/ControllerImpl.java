@@ -338,7 +338,7 @@ public class ControllerImpl implements Controller
     stopExternalFetchers();
     addToKernelManipulationQueue(
         kernel -> {
-          throw new MSQException(new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN));
+          throw new MSQException(CanceledFault.shutdown());
         }
     );
 
@@ -2219,7 +2219,7 @@ public class ControllerImpl implements Controller
         }
 
         if (hasTimeout && queryFailDeadline < System.currentTimeMillis()) {
-          throw new MSQException(new CanceledFault(CanceledFault.Reason.QUERY_TIMEOUT));
+          throw new MSQException(CanceledFault.timeout());
         }
       }
 

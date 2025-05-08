@@ -43,6 +43,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
@@ -52,6 +53,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -2733,6 +2735,56 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{""}
             ))
         .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testQueryTimeout(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("m1", ColumnType.LONG)
+                                               .add("dim2", ColumnType.STRING)
+                                               .build();
+
+    ImmutableMap<String, Object> timeoutContext = ImmutableMap.<String, Object>builder()
+                                                              .putAll(context)
+                                                              .put(QueryContexts.TIMEOUT_KEY, 1) // Trigger timeout
+                                                              .build();
+
+    testSelectQuery()
+        .setSql("select m1,dim2 from foo2")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                         .query(newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE2)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .columns("m1", "dim2")
+                                    .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                                    .context(defaultScanQueryContext(
+                                        timeoutContext,
+                                        RowSignature.builder()
+                                                    .add("m1", ColumnType.LONG)
+                                                    .add("dim2", ColumnType.STRING)
+                                                    .build()
+                                    ))
+                                    .build())
+                         .columnMappings(ColumnMappings.identity(resultSignature))
+                         .tuningConfig(MSQTuningConfig.defaultConfig())
+                         .destination(isDurableStorageDestination(contextName, context)
+                                      ? DurableStorageMSQDestination.INSTANCE
+                                      : TaskReportMSQDestination.INSTANCE)
+                         .build()
+        )
+        .setExpectedRowSignature(resultSignature)
+        .setQueryContext(context)
+        .setExpectedMSQFault(CanceledFault.timeout())
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(ISE.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                " Query canceled due to [Configured query timeout].")
+            )
+        ))
+        .verifyExecutionError();
   }
 
   @MethodSource("data")

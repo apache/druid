@@ -91,7 +91,6 @@ import org.mockito.MockitoAnnotations;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -731,7 +730,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals("Canceled", e.get("errorCode"));
     Assertions.assertEquals("CANCELED", e.get("category"));
     Assertions.assertEquals(
-        MSQFaultUtils.generateMessageWithErrorCode(new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN)),
+        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.shutdown()),
         e.get("errorMessage")
     );
   }

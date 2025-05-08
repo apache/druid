@@ -233,7 +233,7 @@ public class DartQueryMaker implements QueryMaker
                   controllerHolder.getController().queryId(),
                   null,
                   null,
-                  new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN)
+                  CanceledFault.shutdown()
               )
               .toDruidException();
         }
@@ -333,7 +333,7 @@ public class DartQueryMaker implements QueryMaker
                     controllerHolder.getController().queryId(),
                     null,
                     null,
-                    new CanceledFault(CanceledFault.Reason.TASK_SHUTDOWN)
+                    CanceledFault.shutdown()
                 ).toDruidException()
             );
           }
