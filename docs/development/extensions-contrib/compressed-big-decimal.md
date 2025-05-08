@@ -185,7 +185,7 @@ Result:
 } ]
 ```
 
-Had you used *doubleSum* instead of compressedBigDecimalSum the result would be 
+Had you used *doubleSum* instead of *compressedBigDecimalSum* the result would be 
 
 ```json
 [ {
