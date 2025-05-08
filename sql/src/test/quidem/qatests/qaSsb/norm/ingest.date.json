@@ -1,0 +1,137 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaSsb/norm/data",
+        "filter" : "date.tbl.gz"
+      },
+      "inputFormat": {
+        "type": "tsv",
+        "columns": [
+          "d_datekey",
+          "d_date",
+          "d_dayofweek",
+          "d_month",
+          "d_year",
+          "d_yearmonthnum",
+          "d_yearmonth",
+          "d_daynuminweek",
+          "d_daynuminmonth",
+          "d_daynuminyear",
+          "d_monthnuminyear",
+          "d_weeknuminyear",
+          "d_sellingseason",
+          "d_lastdayinweekfl",
+          "d_lastdayinmonthfl",
+          "d_holidayfl",
+          "d_weekdayfl"
+        ],
+        "findColumnsFromHeader": false,
+        "delimiter": "|"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 1000000,
+        "maxTotalRows": 500000000
+      },
+      "maxNumConcurrentSubTasks": 4
+    },
+    "dataSchema": {
+      "dataSource": "ssb_norm_date",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "!!!_no_such_column_!!!",
+        "format": "auto",
+        "missingValue": "2010-01-01T00:00:00Z"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "d_datekey"
+          },
+          {
+            "type": "string",
+            "name": "d_date",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "d_dayofweek",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "d_month",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "d_year"
+          },
+          {
+            "type": "long",
+            "name": "d_yearmonthnum"
+          },
+          {
+            "type": "string",
+            "name": "d_yearmonth",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "d_daynuminweek"
+          },
+          {
+            "type": "long",
+            "name": "d_daynuminmonth"
+          },
+          {
+            "type": "long",
+            "name": "d_daynuminyear"
+          },
+          {
+            "type": "long",
+            "name": "d_monthnuminyear"
+          },
+          {
+            "type": "long",
+            "name": "d_weeknuminyear"
+          },
+          {
+            "type": "string",
+            "name": "d_sellingseason",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "long",
+            "name": "d_lastdayinweekfl"
+          },
+          {
+            "type": "long",
+            "name": "d_lastdayinmonthfl"
+          },
+          {
+            "type": "long",
+            "name": "d_holidayfl"
+          },
+          {
+            "type": "long",
+            "name": "d_weekdayfl"
+          }
+        ]
+      } 
+    }
+  }
+}

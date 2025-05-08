@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
@@ -68,6 +69,7 @@ import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.assertj.core.api.Assertions;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -90,6 +92,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -195,7 +198,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     )
     {
       @Override
-      protected SegmentPublishResult updateDataSourceMetadataWithHandle(
+      protected SegmentPublishResult updateDataSourceMetadataInTransaction(
           SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
@@ -204,7 +207,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       {
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
-        return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
+        return super.updateDataSourceMetadataInTransaction(transaction, dataSource, startMetadata, endMetadata);
       }
     };
   }
@@ -788,7 +791,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     )
     {
       @Override
-      protected SegmentPublishResult updateDataSourceMetadataWithHandle(
+      protected SegmentPublishResult updateDataSourceMetadataInTransaction(
           SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
@@ -799,7 +802,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         if (attemptCounter.getAndIncrement() == 0) {
           return SegmentPublishResult.retryableFailure("this failure can be retried");
         } else {
-          return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
+          return super.updateDataSourceMetadataInTransaction(transaction, dataSource, startMetadata, endMetadata);
         }
       }
     };
@@ -919,6 +922,65 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
+  }
+
+  @Test
+  public void test_commitSegmentsAndMetadata_isAtomic()
+  {
+    final String dataSource = defaultSegment.getDataSource();
+    Assert.assertNull(coordinator.retrieveDataSourceMetadata(dataSource));
+
+    // Create an instance which fails to insert segments but updates metadata successfully
+    final AtomicBoolean isMetadataUpdated = new AtomicBoolean(false);
+    final IndexerSQLMetadataStorageCoordinator storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        transactionFactory,
+        mapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
+    )
+    {
+      @Override
+      protected Set<DataSegment> insertSegments(
+          SegmentMetadataTransaction transaction,
+          Set<DataSegment> segments,
+          SegmentSchemaMapping segmentSchemaMapping
+      )
+      {
+        throw new RuntimeException("Fail segment insert");
+      }
+
+      @Override
+      protected SegmentPublishResult updateDataSourceMetadataInTransaction(
+          SegmentMetadataTransaction transaction,
+          String dataSource,
+          DataSourceMetadata startMetadata,
+          DataSourceMetadata endMetadata
+      ) throws IOException
+      {
+        isMetadataUpdated.set(true);
+        return super.updateDataSourceMetadataInTransaction(transaction, dataSource, startMetadata, endMetadata);
+      }
+    };
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            RuntimeException.class,
+            () -> storageCoordinator.commitSegmentsAndMetadata(
+                Set.of(defaultSegment),
+                new ObjectMetadata(null),
+                new ObjectMetadata(Map.of("foo", "baz")),
+                null
+            )
+        ),
+        ExceptionMatcher.of(RuntimeException.class)
+                        .expectMessageIs("java.lang.RuntimeException: Fail segment insert")
+    );
+
+    // Verify that the datasource metadata update succeeded but was rolled back
+    Assert.assertTrue(isMetadataUpdated.get());
+    Assert.assertNull(coordinator.retrieveDataSourceMetadata(dataSource));
   }
 
   @Test

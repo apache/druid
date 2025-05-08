@@ -20,7 +20,12 @@ import { Classes, Dialog } from '@blueprintjs/core';
 import type { SqlExpression } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
-import type { ArrayMode, ExternalConfig, InputFormat, InputSource } from '../../../druid-models';
+import type {
+  ArrayIngestMode,
+  ExternalConfig,
+  InputFormat,
+  InputSource,
+} from '../../../druid-models';
 import { InputFormatStep } from '../input-format-step/input-format-step';
 import { InputSourceStep } from '../input-source-step/input-source-step';
 
@@ -32,7 +37,7 @@ export interface ConnectExternalDataDialogProps {
     config: ExternalConfig,
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
-    arrayMode: ArrayMode,
+    arrayMode: ArrayIngestMode,
   ): void;
   onClose(): void;
 }

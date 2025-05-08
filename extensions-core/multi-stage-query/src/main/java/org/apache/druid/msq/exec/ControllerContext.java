@@ -30,9 +30,6 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
-import org.apache.druid.msq.querykit.QueryKit;
-import org.apache.druid.msq.querykit.QueryKitSpec;
-import org.apache.druid.query.Query;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -118,15 +115,4 @@ public interface ControllerContext
    * Client for communicating with workers.
    */
   WorkerClient newWorkerClient();
-
-  /**
-   * Create a {@link QueryKitSpec}. This method provides controller contexts a way to customize parameters around the
-   * number of workers and partitions.
-   */
-  QueryKitSpec makeQueryKitSpec(
-      QueryKit<Query<?>> queryKit,
-      String queryId,
-      MSQSpec querySpec,
-      ControllerQueryKernelConfig queryKernelConfig
-  );
 }

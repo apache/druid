@@ -78,7 +78,6 @@ import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -256,7 +255,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Segment mappedSegment = mapSegment(segmentHolder.get().getSegment());
-      final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+      final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
       if (cursorFactory == null) {
         throw new ISE(
             "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
@@ -313,10 +312,10 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null || cursor.isDone()) {
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("scan"));
+        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
 
         final Segment mappedSegment = mapSegment(frameSegment);
-        final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+        final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
         if (cursorFactory == null) {
           throw new ISE(
               "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."

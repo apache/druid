@@ -1367,6 +1367,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "org.apache.druid.java.util.common.ISE",
         supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
     );
+    AlertEvent alert = serviceEmitter.getAlerts().get(0);
+    Assert.assertEquals(
+        "Exception in supervisor run loop for dataSource [testDS]",
+        alert.getDescription()
+    );
   }
 
   @Test
@@ -3581,6 +3586,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
+
+    AlertEvent alert = serviceEmitter.getAlerts().get(0);
+    Assert.assertEquals(
+        "Exception in supervisor run loop for dataSource [testDS]",
+        alert.getDescription()
+    );
   }
 
   @Test

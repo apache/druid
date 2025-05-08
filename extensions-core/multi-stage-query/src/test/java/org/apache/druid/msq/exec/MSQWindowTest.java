@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
@@ -120,7 +120,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER(PARTITION BY m1) cc from foo group by m1")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -224,7 +224,7 @@ public class MSQWindowTest extends MSQTestBase
                 + ",SUM(m1) OVER() as summ1\n"
                 + "from foo\n"
                 + "GROUP BY m1,m2")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -334,7 +334,7 @@ public class MSQWindowTest extends MSQTestBase
         /**
          *
          */
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -443,7 +443,7 @@ public class MSQWindowTest extends MSQTestBase
         /**
          *
          */
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -526,7 +526,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER() cc from foo group by m1")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -606,7 +606,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER(PARTITION BY m1) cc from foo")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -677,7 +677,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER(PARTITION BY m1,m2) cc from foo")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -745,7 +745,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER(PARTITION BY m2) cc from foo")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -820,7 +820,7 @@ public class MSQWindowTest extends MSQTestBase
                 + ")\n"
                 + "select m1,SUM(m2) OVER() cc from t\n"
                 + "GROUP BY m1,m2")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -893,7 +893,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select STRLEN(dim1) as ld, m1, SUM(m1) OVER(PARTITION BY m1) cc from foo")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -960,7 +960,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER() cc from foo")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1064,7 +1064,7 @@ public class MSQWindowTest extends MSQTestBase
     testSelectQuery()
         .setSql(
             "select foo.m1,SUM(foo.m1) OVER(PARTITION BY foo.m1 ORDER BY foo.m1) cc, t.m2 from foo JOIN (select * from foo) as t ON foo.m1=t.m2")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1168,7 +1168,7 @@ public class MSQWindowTest extends MSQTestBase
     testSelectQuery()
         .setSql(
             "select foo.m1,SUM(foo.m1) OVER() cc, t.m2 from foo JOIN (select * from foo) as t ON foo.m1=t.m2")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1237,7 +1237,7 @@ public class MSQWindowTest extends MSQTestBase
     );
     testSelectQuery()
         .setSql("select dim2, SUM(m1) OVER (PARTITION BY dim2) cc from foo")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1318,7 +1318,7 @@ public class MSQWindowTest extends MSQTestBase
     testSelectQuery()
         .setSql(
             "select m1,SUM(m1) OVER() cc, u.d3 from foo CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) as u(d3)")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1402,7 +1402,7 @@ public class MSQWindowTest extends MSQTestBase
     testSelectQuery()
         .setSql(
             "select m1,SUM(m1) OVER(PARTITION BY m1) cc, u.d3 from foo CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) as u(d3)")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1772,7 +1772,7 @@ public class MSQWindowTest extends MSQTestBase
     testSelectQuery()
         .setSql(
             "select cityName, added, SUM(added) OVER (PARTITION BY cityName) cc from wikipedia where cityName IN ('Ahmedabad', 'Albuquerque')")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1883,7 +1883,7 @@ public class MSQWindowTest extends MSQTestBase
             "select cityName, added, SUM(added) OVER (PARTITION BY countryIsoCode) cc from wikipedia \n"
             + "where cityName is NOT NULL\n"
             + "LIMIT 5")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(scanQuery)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1961,7 +1961,7 @@ public class MSQWindowTest extends MSQTestBase
             "select cityName, added, SUM(added) OVER (PARTITION BY cityName) cc from wikipedia \n"
             + "where cityName IN ('Ahmedabad', 'Albuquerque')\n"
             + "GROUP BY cityName,added")
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -2118,7 +2118,7 @@ public class MSQWindowTest extends MSQTestBase
 
     testSelectQuery()
         .setSql(sql)
-        .setExpectedMSQSpec(MSQSpec.builder()
+        .setExpectedMSQSpec(LegacyMSQSpec.builder()
                                    .query(scanQuery)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(

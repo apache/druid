@@ -226,7 +226,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
-            binder.bind(CoordinatorDynamicConfigSyncer.class).in(LazySingleton.class);
+            binder.bind(CoordinatorDynamicConfigSyncer.class).in(ManageLifecycle.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {

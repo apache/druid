@@ -91,7 +91,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private ServiceEmitter emitter;
+  private StubServiceEmitter emitter;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private DataSchema dataSchema;
   private SeekableStreamSupervisorTuningConfig seekableStreamSupervisorTuningConfig;
@@ -117,7 +117,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     taskStorage = EasyMock.mock(TaskStorage.class);
     taskMaster = EasyMock.mock(TaskMaster.class);
     indexerMetadataStorageCoordinator = EasyMock.mock(IndexerMetadataStorageCoordinator.class);
-    emitter = EasyMock.mock(ServiceEmitter.class);
+    emitter = new StubServiceEmitter();
     rowIngestionMetersFactory = EasyMock.mock(RowIngestionMetersFactory.class);
     dataSchema = EasyMock.mock(DataSchema.class);
     seekableStreamSupervisorTuningConfig = EasyMock.mock(SeekableStreamSupervisorTuningConfig.class);
@@ -789,6 +789,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
     autoScaler.reset();
     autoScaler.stop();
   }
@@ -847,6 +848,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("Already at max task count"::equals));
+    emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -941,6 +943,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -989,6 +992,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1041,6 +1045,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
     Thread.sleep(2000);
     Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
+
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1100,6 +1106,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("Already at min task count"::equals));
+    emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
 
     autoScaler.reset();
     autoScaler.stop();

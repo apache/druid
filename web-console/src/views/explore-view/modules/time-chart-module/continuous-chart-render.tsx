@@ -758,6 +758,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
                 select(node).call(
                   axisLeft(measureScale)
                     .ticks(3)
+                    .tickSizeOuter(0)
                     .tickFormat(e => formatNumber(e.valueOf())),
                 )
               }

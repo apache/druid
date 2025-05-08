@@ -40,9 +40,11 @@ import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -173,10 +175,14 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
       cursorFactory = new InfiniteCursorFactory(new QueryableIndexCursorFactory(index), countDownLatch);
     }
 
+    @Nullable
     @Override
-    public CursorFactory asCursorFactory()
+    public <T> T as(@Nonnull Class<T> clazz)
     {
-      return cursorFactory;
+      if (CursorFactory.class.equals(clazz)) {
+        return (T) cursorFactory;
+      }
+      return super.as(clazz);
     }
   }
 
@@ -265,7 +271,8 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
         joinFilterPreAnalysis
     );
 
-    try (final CursorHolder cursorHolder = hashJoinSegment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (final CursorHolder cursorHolder = Objects.requireNonNull(hashJoinSegment.as(CursorFactory.class))
+                                                  .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
 
       ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()

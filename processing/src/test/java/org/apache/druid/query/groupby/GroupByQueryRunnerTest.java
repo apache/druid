@@ -130,6 +130,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
@@ -13661,7 +13662,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private void assumeTimeOrdered()
   {
     try (final CursorHolder cursorHolder =
-             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             originalRunner.getSegment().as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

@@ -44,8 +44,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
@@ -233,7 +233,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    MSQSpec msqSpec = new MSQSpec(
+    LegacyMSQSpec msqSpec = new LegacyMSQSpec(
         GroupByQuery.builder()
                     .setDataSource("foo")
                     .setInterval(Intervals.ONLY_ETERNITY)

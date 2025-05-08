@@ -79,6 +79,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -169,6 +170,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisorConfig = new SupervisorStateManagerConfig();
 
     emitter = new StubServiceEmitter("test-supervisor-state", "localhost");
+    EmittingLogger.registerEmitter(emitter);
 
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 

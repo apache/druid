@@ -38,7 +38,7 @@ public class HttpUtil
   private static final Logger LOG = new Logger(HttpUtil.class);
   private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
 
-  static final int NUM_RETRIES = 30;
+  static final int NUM_RETRIES = 0;
   static final long DELAY_FOR_RETRIES_MS = 10000;
 
   public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)

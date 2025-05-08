@@ -82,4 +82,9 @@ druid_audit_manager_type=log
 # Testing the legacy config from https://github.com/apache/druid/pull/10267
 # Can remove this when the flag is no longer needed
 druid_indexer_task_ignoreTimestampSpecForDruidInputSource=true
+
+# Cluster testing
 druid_unsafe_cluster_testing=true
+
+# Dart
+druid_msq_dart_enabled = true

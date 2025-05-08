@@ -178,7 +178,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
                   querySource.addColumnAfter(
                     nestedColumn.getOutputName() || '',
                     ...selectedPaths.map(path =>
-                      F('JSON_VALUE', nestedColumn, path).as(
+                      SqlFunction.jsonValue(nestedColumn, path).as(
                         querySource.getAvailableName(getOutputName(path)),
                       ),
                     ),

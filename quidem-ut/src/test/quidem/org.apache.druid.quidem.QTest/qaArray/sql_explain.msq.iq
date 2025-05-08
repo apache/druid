@@ -1,0 +1,2128 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B1
+#-------------------------------------------------------------------------
+
+SELECT a_bool
+FROM test_array;
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_bool" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_bool\",\"type\":\"ARRAY<LONG>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<LONG>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_bool",
+      "type" : "ARRAY<LONG>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A4_B1
+#-------------------------------------------------------------------------
+
+SELECT a_int
+FROM test_array;
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_int" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_int\",\"type\":\"ARRAY<LONG>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<LONG>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_int",
+      "type" : "ARRAY<LONG>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A5_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array)
+FROM test_array;
++--------------+
+| EXPR$0       |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<LONG>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 1
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<LONG>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<LONG>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<LONG>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A6_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array)
+FROM test_array;
++--------------+
+| EXPR$0       |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<LONG>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          }, {
+            "type" : "arrayElement",
+            "index" : 1
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<LONG>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<LONG>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<LONG>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A7_B1
+#-------------------------------------------------------------------------
+
+SELECT a_float
+FROM test_array;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_float" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_float\",\"type\":\"ARRAY<DOUBLE>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<DOUBLE>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_float",
+      "type" : "ARRAY<DOUBLE>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A8_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array)
+FROM test_array;
++------------------+
+| EXPR$0           |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<DOUBLE>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 2
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<DOUBLE>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<DOUBLE>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<DOUBLE>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A9_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array)
+FROM test_array;
++------------------+
+| EXPR$0           |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<DOUBLE>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          }, {
+            "type" : "arrayElement",
+            "index" : 2
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<DOUBLE>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<DOUBLE>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<DOUBLE>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A10_B1
+#-------------------------------------------------------------------------
+
+SELECT a_str
+FROM test_array;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_str" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_str\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_str",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A11_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array)
+FROM test_array;
++----------------+
+| EXPR$0         |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 3
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A12_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array)
+FROM test_array;
++----------------+
+| EXPR$0         |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          }, {
+            "type" : "arrayElement",
+            "index" : 3
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A13_B1
+#-------------------------------------------------------------------------
+
+SELECT a_null
+FROM test_array;
++--------------------+
+| a_null             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_null" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_null\",\"type\":\"ARRAY<LONG>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<LONG>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_null",
+      "type" : "ARRAY<LONG>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A14_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array)
+FROM test_array;
++--------------------+
+| EXPR$0             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 4
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A15_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array)
+FROM test_array;
++--------------------+
+| EXPR$0             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          }, {
+            "type" : "arrayElement",
+            "index" : 4
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A16_B1
+#-------------------------------------------------------------------------
+
+SELECT a_empty
+FROM test_array;
++---------+
+| a_empty |
++---------+
+| []      |
+| []      |
+| []      |
+| []      |
++---------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_empty" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_empty\",\"type\":\"ARRAY<LONG>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<LONG>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_empty",
+      "type" : "ARRAY<LONG>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A17_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+| []     |
+| []     |
+| []     |
+| []     |
++--------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 5
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A18_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+| []     |
+| []     |
+| []     |
+| []     |
++--------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          }, {
+            "type" : "arrayElement",
+            "index" : 5
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A19_B1
+#-------------------------------------------------------------------------
+
+SELECT a_mixed
+FROM test_array;
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_mixed" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_mixed\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_mixed",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A20_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[6]' RETURNING varchar array)
+FROM test_array;
++--------------------------+
+| EXPR$0                   |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 6
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A21_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array)
+FROM test_array;
++--------------------------+
+| EXPR$0                   |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          }, {
+            "type" : "arrayElement",
+            "index" : 6
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A22_B1
+#-------------------------------------------------------------------------
+
+SELECT a_nested
+FROM test_array;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "a_nested" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"a_nested\",\"type\":\"COMPLEX<json>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "COMPLEX<json>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "a_nested",
+      "type" : "COMPLEX<json>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A23_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+|        |
+|        |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A24_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][7]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+|        |
+|        |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_array",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "nested-field",
+          "columnName" : "a_nested",
+          "outputName" : "v0",
+          "expectedType" : "ARRAY<STRING>",
+          "pathParts" : [ {
+            "type" : "arrayElement",
+            "index" : 7
+          }, {
+            "type" : "arrayElement",
+            "index" : 7
+          } ],
+          "processFromRaw" : false
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "ARRAY<STRING>"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+

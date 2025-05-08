@@ -52,23 +52,13 @@ public class IncrementalIndexSegment implements Segment
     return index.getInterval();
   }
 
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return null;
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new IncrementalIndexCursorFactory(index);
-  }
-
   @Nullable
   @Override
   public <T> T as(final Class<T> clazz)
   {
-    if (TimeBoundaryInspector.class.equals(clazz)) {
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) new IncrementalIndexCursorFactory(index);
+    } else if (TimeBoundaryInspector.class.equals(clazz)) {
       return (T) new IncrementalIndexTimeBoundaryInspector(index);
     } else if (MaxIngestedEventTimeInspector.class.equals(clazz)) {
       return (T) new IncrementalIndexMaxIngestedEventTimeInspector(index);
@@ -78,9 +68,8 @@ public class IncrementalIndexSegment implements Segment
       return (T) new IncrementalIndexPhysicalSegmentInspector(index);
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
       return (T) new SimpleTopNOptimizationInspector(true);
-    } else {
-      return Segment.super.as(clazz);
     }
+    return null;
   }
 
   @Override

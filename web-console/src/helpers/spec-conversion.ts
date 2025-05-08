@@ -38,7 +38,8 @@ import type {
   Transform,
 } from '../druid-models';
 import {
-  getArrayMode,
+  DEFAULT_ARRAY_INGEST_MODE,
+  getArrayIngestMode,
   inflateDimensionSpec,
   NO_SUCH_COLUMN,
   TIME_COLUMN,
@@ -82,24 +83,32 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
   const context: QueryContext = {};
 
-  if (getArrayMode(spec, 'multi-values') === 'arrays') {
-    context.arrayIngestMode = 'array';
+  const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');
+  if (indexSpec) {
+    context.indexSpec = indexSpec;
   }
+
+  const lines: string[] = [`-- This SQL query was auto generated from an ingestion spec`];
+
+  lines.push(`SET arrayIngestMode = ${L(getArrayIngestMode(spec, DEFAULT_ARRAY_INGEST_MODE))};`);
 
   const forceSegmentSortByTime = deepGet(
     spec,
     'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime',
   );
   if (typeof forceSegmentSortByTime !== 'undefined') {
-    context.forceSegmentSortByTime = forceSegmentSortByTime;
+    lines.push(`SET forceSegmentSortByTime = ${L(forceSegmentSortByTime)};`);
   }
 
-  const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');
-  if (indexSpec) {
-    context.indexSpec = indexSpec;
+  const maxNumConcurrentSubTasks = deepGet(spec, 'spec.tuningConfig.maxNumConcurrentSubTasks');
+  if (maxNumConcurrentSubTasks > 1) {
+    lines.push(`SET maxNumTasks = ${maxNumConcurrentSubTasks + 1};`);
   }
 
-  const lines: string[] = [];
+  const maxParseExceptions = deepGet(spec, 'spec.tuningConfig.maxParseExceptions');
+  if (typeof maxParseExceptions === 'number') {
+    lines.push(`SET maxParseExceptions = ${maxParseExceptions};`);
+  }
 
   const rollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup') ?? true;
 
@@ -212,17 +221,7 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     );
   }
 
-  lines.push(`-- This SQL query was auto generated from an ingestion spec`);
-
-  const maxNumConcurrentSubTasks = deepGet(spec, 'spec.tuningConfig.maxNumConcurrentSubTasks');
-  if (maxNumConcurrentSubTasks > 1) {
-    context.maxNumTasks = maxNumConcurrentSubTasks + 1;
-  }
-
-  const maxParseExceptions = deepGet(spec, 'spec.tuningConfig.maxParseExceptions');
-  if (typeof maxParseExceptions === 'number') {
-    context.maxParseExceptions = maxParseExceptions;
-  }
+  lines.push(`SET finalizeAggregations = FALSE;`, `SET groupByEnableMultiValueUnnesting = FALSE;`);
 
   const dataSource = deepGet(spec, 'spec.dataSchema.dataSource');
   if (typeof dataSource !== 'string') throw new Error(`spec.dataSchema.dataSource is not a string`);

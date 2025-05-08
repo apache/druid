@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataResultValue;
 import org.apache.druid.segment.join.table.IndexedTable;
@@ -38,33 +37,23 @@ import java.io.Closeable;
 @PublicApi
 public interface Segment extends Closeable
 {
+  /**
+   * Returns the {@link SegmentId} of this segment, if it is backed by a real table, otherwise returns null.
+   */
+  @Nullable
   SegmentId getId();
 
   Interval getDataInterval();
 
-  @Nullable
-  QueryableIndex asQueryableIndex();
-
-  @Deprecated
-  default StorageAdapter asStorageAdapter()
-  {
-    throw DruidException.defensive(
-        "asStorageAdapter is no longer supported, use Segment.asCursorFactory to build cursors, or Segment.as(..) to get various metadata information instead"
-    );
-  }
-
-  CursorFactory asCursorFactory();
-
   /**
    * Request an implementation of a particular interface.
    * <p>
-   * If the passed-in interface is {@link QueryableIndex} or {@link CursorFactory}, then this method behaves
-   * identically to {@link #asQueryableIndex()} or {@link #asCursorFactory()}. Other interfaces are only
+   * All implementations of this method should be able to provide a {@link CursorFactory}. Other interfaces are only
    * expected to be requested by callers that have specific knowledge of extra features provided by specific
    * segment types. For example, an extension might provide a custom Segment type that can offer both
-   * StorageAdapter and some new interface. That extension can also offer a Query that uses that new interface.
+   * CursorFactory and some new interface. That extension can also offer a Query that uses that new interface.
    * <p>
-   * Implementations which accept classes other than {@link QueryableIndex} or {@link CursorFactory} are limited
+   * Implementations which accept classes other than known built-in interfaces such as {@link CursorFactory} are limited
    * to using those classes within the extension. This means that one extension cannot rely on the `Segment.as`
    * behavior of another extension.
    *
@@ -85,17 +74,7 @@ public interface Segment extends Closeable
    */
   @SuppressWarnings({"unused", "unchecked"})
   @Nullable
-  default <T> T as(@Nonnull Class<T> clazz)
-  {
-    if (clazz.equals(CursorFactory.class)) {
-      return (T) asCursorFactory();
-    } else if (clazz.equals(QueryableIndex.class)) {
-      return (T) asQueryableIndex();
-    } else if (clazz.equals(StorageAdapter.class)) {
-      return (T) asStorageAdapter();
-    }
-    return null;
-  }
+  <T> T as(@Nonnull Class<T> clazz);
 
   default boolean isTombstone()
   {

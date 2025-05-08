@@ -1,0 +1,611 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(doesnt_exist) AS u(c);
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B2
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(doesnt_exist) AS u(c)
+GROUP BY c;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B3
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(doesnt_exist)) AS u(c);
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B4
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(doesnt_exist)) AS u(c)
+GROUP BY c;
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B5
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c_mv_complex);
+is ambiguous
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B6
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c_mv_complex)
+GROUP BY c;
+is ambiguous
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B7
+#-------------------------------------------------------------------------
+SELECT c_str0
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c_str);
+not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B8
+#-------------------------------------------------------------------------
+SELECT u.c_str
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c_str);
++-------------+
+| c_str       |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B9
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c_str));
++--------+
+| EXPR$0 |
++--------+
+|     25 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B10
+#-------------------------------------------------------------------------
+SELECT c_str0
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c_str));
++-------------+
+| c_str0      |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B11
+#-------------------------------------------------------------------------
+SELECT u.c_str
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c_str));
+not found
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B12
+#-------------------------------------------------------------------------
+SELECT c_str0,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c_str)
+GROUP BY c_str0;
+not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B13
+#-------------------------------------------------------------------------
+SELECT u.c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c_str)
+GROUP BY u.c_str;
++-------------+-----+
+| c_str       | cnt |
++-------------+-----+
+| 1           |   5 |
+| [2]         |   5 |
+| [3, [4, 5]] |   5 |
+| my_empty    |   5 |
+| my_null     |   5 |
++-------------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B14
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     strlen(unnest(mv_to_array(c_mv_complex))) AS u(c);
+ParseException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B15
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     strlen(unnest(mv_to_array(c_mv_complex))) AS u(c)
+GROUP BY c;
+ParseException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B16
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex || 'STR')) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B17
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex || 'STR')) AS u(c)
+GROUP BY c;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B18
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(mv_concat(c_mv_complex, c_mv_complex))) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B19
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(mv_concat(c_mv_complex, c_mv_complex))) AS u(c)
+GROUP BY c;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B20
+#-------------------------------------------------------------------------
+SELECT (c || 'STR') col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c);
++----------------+
+| col            |
++----------------+
+| 1STR           |
+| 1STR           |
+| 1STR           |
+| 1STR           |
+| 1STR           |
+| [2]STR         |
+| [2]STR         |
+| [2]STR         |
+| [2]STR         |
+| [2]STR         |
+| [3, [4, 5]]STR |
+| [3, [4, 5]]STR |
+| [3, [4, 5]]STR |
+| [3, [4, 5]]STR |
+| [3, [4, 5]]STR |
+| my_emptySTR    |
+| my_emptySTR    |
+| my_emptySTR    |
+| my_emptySTR    |
+| my_emptySTR    |
+| my_nullSTR     |
+| my_nullSTR     |
+| my_nullSTR     |
+| my_nullSTR     |
+| my_nullSTR     |
++----------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B21
+#-------------------------------------------------------------------------
+SELECT (c || 'STR') col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+GROUP BY c;
++----------------+
+| col            |
++----------------+
+| 1STR           |
+| [2]STR         |
+| [3, [4, 5]]STR |
+| my_emptySTR    |
+| my_nullSTR     |
++----------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B22
+#-------------------------------------------------------------------------
+SELECT length(c) col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|  11 |
+|  11 |
+|  11 |
+|  11 |
+|  11 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
+|   7 |
+|   7 |
+|   7 |
+|   7 |
+|   7 |
+|   8 |
+|   8 |
+|   8 |
+|   8 |
+|   8 |
++-----+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B23
+#-------------------------------------------------------------------------
+SELECT length(c) col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|  11 |
+|   3 |
+|   7 |
+|   8 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B24
+#-------------------------------------------------------------------------
+SELECT length(c || 'STR') col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c);
++-----+
+| col |
++-----+
+|  10 |
+|  10 |
+|  10 |
+|  10 |
+|  10 |
+|  11 |
+|  11 |
+|  11 |
+|  11 |
+|  11 |
+|  14 |
+|  14 |
+|  14 |
+|  14 |
+|  14 |
+|   4 |
+|   4 |
+|   4 |
+|   4 |
+|   4 |
+|   6 |
+|   6 |
+|   6 |
+|   6 |
+|   6 |
++-----+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B25
+#-------------------------------------------------------------------------
+SELECT length(c || 'STR') col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+GROUP BY c;
++-----+
+| col |
++-----+
+|  10 |
+|  11 |
+|  14 |
+|   4 |
+|   6 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B26
+#-------------------------------------------------------------------------
+SELECT length(c || c) col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c);
++-----+
+| col |
++-----+
+|  14 |
+|  14 |
+|  14 |
+|  14 |
+|  14 |
+|  16 |
+|  16 |
+|  16 |
+|  16 |
+|  16 |
+|   2 |
+|   2 |
+|   2 |
+|   2 |
+|   2 |
+|  22 |
+|  22 |
+|  22 |
+|  22 |
+|  22 |
+|   6 |
+|   6 |
+|   6 |
+|   6 |
+|   6 |
++-----+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B27
+#-------------------------------------------------------------------------
+SELECT length(c || c) col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+GROUP BY c;
++-----+
+| col |
++-----+
+|  14 |
+|  16 |
+|   2 |
+|  22 |
+|   6 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B28
+#-------------------------------------------------------------------------
+SELECT c,
+       c_mv_complex AS new_col
+FROM test_unnest,
+     unnest(mv_to_array(new_col)) AS u(c);
+not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B29
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT c_mv_complex AS new_col
+   FROM test_unnest) t1,
+     unnest(mv_to_array(new_col)) AS u(c);
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_col_general TEST_ID: A1_B30
+#-------------------------------------------------------------------------
+SELECT c AS new_col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c);
++-------------+
+| new_col     |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
