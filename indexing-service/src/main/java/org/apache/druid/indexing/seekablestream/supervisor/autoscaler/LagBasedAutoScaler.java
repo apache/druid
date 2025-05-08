@@ -19,6 +19,9 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
@@ -34,6 +37,7 @@ import org.apache.druid.query.DruidMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +55,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   private final LagBasedAutoScalerConfig lagBasedAutoScalerConfig;
   private final ServiceEmitter emitter;
   private final ServiceMetricEvent.Builder metricBuilder;
+  private ImmutableList<Integer> partitionFactors;
 
   private static final ReentrantLock LOCK = new ReentrantLock(true);
 
@@ -69,13 +74,15 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         .getLagCollectionIntervalMillis()) + 1;
     this.lagMetricsQueue = new CircularFifoQueue<>(slots);
     this.allocationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Allocation-%d");
-    this.lagComputationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Computation-%d");
+    this.lagComputationExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId)
+                                                            + "-Computation-%d");
     this.spec = spec;
     this.supervisor = supervisor;
     this.emitter = emitter;
     metricBuilder = ServiceMetricEvent.builder()
                                       .setDimension(DruidMetrics.DATASOURCE, dataSource)
                                       .setDimension(DruidMetrics.STREAM, this.supervisor.getIoConfig().getStream());
+    this.partitionFactors = ImmutableList.of();
   }
 
   @Override
@@ -124,8 +131,10 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     );
     log.info(
         "LagBasedAutoScaler will collect lag every [%d] millis and will keep up to [%d] data points for the last [%d] millis for dataSource [%s]",
-        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), lagMetricsQueue.maxSize(),
-        lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), dataSource
+        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(),
+        lagMetricsQueue.maxSize(),
+        lagBasedAutoScalerConfig.getLagCollectionRangeMillis(),
+        dataSource
     );
   }
 
@@ -157,7 +166,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   /**
    * This method computes current consumer lag. Gets the total lag of all partitions and fill in the lagMetricsQueue
    *
-   * @return a Runnbale object to compute and collect lag.
+   * @return a Runnable object to compute and collect lag.
    */
   private Runnable computeAndCollectLag()
   {
@@ -200,15 +209,35 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
    * @param lags the lag metrics of Stream(Kafka/Kinesis)
    * @return Integer. target number of tasksCount, -1 means skip scale action.
    */
-  private int computeDesiredTaskCount(List<Long> lags)
+  @VisibleForTesting
+  int computeDesiredTaskCount(List<Long> lags)
   {
-    // if supervisor is not suspended, ensure required tasks are running
-    // if suspended, ensure tasks have been requested to gracefully stop
     log.debug("Computing desired task count for [%s], based on following lags : [%s]", dataSource, lags);
+    final int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
+    final int partitionCount = supervisor.getPartitionCount();
+    if (partitionCount <= 0) {
+      log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
+      return -1;
+    }
+
+    // Cache the factorization in an immutable list for quick lookup later
+    // Partition counts *can* change externally without a new instance of this class being created
+    if (partitionFactors.isEmpty() || partitionCount != partitionFactors.get(partitionFactors.size() - 1)) {
+      partitionFactors = factorize(partitionCount);
+    }
+
+    Preconditions.checkState(!partitionFactors.isEmpty(), "partitionFactors should not be empty");
+
+    final int desiredActiveTaskCount = computeDesiredTaskCountHelper(lags, currentActiveTaskCount);
+    return applyMinMaxChecks(desiredActiveTaskCount, currentActiveTaskCount, partitionCount);
+  }
+
+  private int computeDesiredTaskCountHelper(List<Long> lags, int currentActiveTaskCount)
+  {
     int beyond = 0;
     int within = 0;
-    int metricsCount = lags.size();
-    for (Long lag : lags) {
+    final int metricsCount = lags.size();
+    for (final Long lag : lags) {
       if (lag >= lagBasedAutoScalerConfig.getScaleOutThreshold()) {
         beyond++;
       }
@@ -216,68 +245,96 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         within++;
       }
     }
-    double beyondProportion = beyond * 1.0 / metricsCount;
-    double withinProportion = within * 1.0 / metricsCount;
+    final double beyondProportion = beyond * 1.0 / metricsCount;
+    final double withinProportion = within * 1.0 / metricsCount;
 
-    log.debug("Calculated beyondProportion is [%s] and withinProportion is [%s] for dataSource [%s].", beyondProportion,
+    log.debug(
+        "Calculated beyondProportion is [%s] and withinProportion is [%s] for dataSource [%s].", beyondProportion,
         withinProportion, dataSource
     );
 
-    int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
-    int desiredActiveTaskCount;
-    int partitionCount = supervisor.getPartitionCount();
-    if (partitionCount <= 0) {
-      log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
+    if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
+      return currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
+    } else if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
+      return currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
+    }
+
+    return currentActiveTaskCount;
+  }
+
+
+  private int applyMinMaxChecks(int desiredActiveTaskCount, int currentActiveTaskCount, int partitionCount)
+  {
+    // for now, only attempt to scale to nearest factor for scale up
+    if (lagBasedAutoScalerConfig.getUseNearestFactorScaling() && desiredActiveTaskCount > currentActiveTaskCount) {
+      desiredActiveTaskCount = nearestFactor(desiredActiveTaskCount).orElse(desiredActiveTaskCount);
+    }
+
+    if (desiredActiveTaskCount == currentActiveTaskCount) {
+      log.debug("No change in task count for dataSource [%s].", dataSource);
       return -1;
     }
 
-    if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
-      // Do Scale out
-      int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
+    final int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
+    final int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
 
-      int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
-      if (currentActiveTaskCount == actualTaskCountMax) {
-        log.debug("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
-            dataSource
-        );
-        emitter.emit(metricBuilder
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at max task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
-        return -1;
-      } else {
-        desiredActiveTaskCount = Math.min(taskCount, actualTaskCountMax);
-      }
-      return desiredActiveTaskCount;
+    if (currentActiveTaskCount == actualTaskCountMax && currentActiveTaskCount < desiredActiveTaskCount) {
+      emitSkipMetric("Already at max task count", desiredActiveTaskCount);
+      return -1;
+    } else if (currentActiveTaskCount == actualTaskCountMin && currentActiveTaskCount > desiredActiveTaskCount) {
+      emitSkipMetric("Already at min task count", desiredActiveTaskCount);
+      return -1;
     }
 
-    if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
-      // Do Scale in
-      int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
-      int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
-      if (currentActiveTaskCount == actualTaskCountMin) {
-        log.debug("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource[%s].",
-            dataSource
-        );
-        emitter.emit(metricBuilder
-                         .setDimension(
-                             SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION,
-                             "Already at min task count"
-                         )
-                         .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
-        return -1;
+    desiredActiveTaskCount = Math.min(desiredActiveTaskCount, actualTaskCountMax);
+    desiredActiveTaskCount = Math.max(desiredActiveTaskCount, actualTaskCountMin);
+    return desiredActiveTaskCount;
+  }
+
+  private void emitSkipMetric(final String reason, int taskCount)
+  {
+    emitter.emit(metricBuilder
+                     .setDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION, reason)
+                     .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
+  }
+
+  /*
+    Finds the nearest divisor of the topic's partition count that is ≥ `desiredTaskCount`.
+    If no such divisor exists, we return an empty optional.
+  */
+  private Optional<Integer> nearestFactor(int desiredTaskCount)
+  {
+    int lo = 0;
+    int hi = partitionFactors.size();
+    while (lo < hi) {
+      final int mid = lo + (hi - lo) / 2;
+      if (partitionFactors.get(mid) >= desiredTaskCount) {
+        hi = mid;
       } else {
-        desiredActiveTaskCount = Math.max(taskCount, actualTaskCountMin);
+        lo = mid + 1;
       }
-      return desiredActiveTaskCount;
     }
-    return -1;
+
+    final Optional<Integer> factor = lo < partitionFactors.size()
+                                     ? Optional.of(partitionFactors.get(lo))
+                                     : Optional.empty();
+    log.debug("Given desiredTaskCount=[%d], found nearest task count=[%s]", desiredTaskCount, factor);
+    return factor;
   }
 
   public LagBasedAutoScalerConfig getAutoScalerConfig()
   {
     return lagBasedAutoScalerConfig;
+  }
+
+  private static ImmutableList<Integer> factorize(int partitionCount)
+  {
+    final ImmutableList.Builder<Integer> factors = new ImmutableList.Builder<>();
+    for (int i = 1; i <= partitionCount; ++i) {
+      if (partitionCount % i == 0) {
+        factors.add(i);
+      }
+    }
+    return factors.build();
   }
 }
