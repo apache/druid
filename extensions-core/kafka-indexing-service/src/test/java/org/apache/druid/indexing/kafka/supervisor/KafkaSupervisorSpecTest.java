@@ -19,31 +19,38 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.supervisor.Supervisor;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.metadata.TestSupervisorSpec;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertThrows;
 
@@ -587,360 +594,173 @@ public class KafkaSupervisorSpecTest
   }
 
   @Test
-  public void testValidateSpecUpdateTo() throws JsonProcessingException
+  public void test_validateSpecUpdateTo()
   {
-    String sourceSpecJson = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"parser\": {\n"
-                  + "      \"type\": \"string\",\n"
-                  + "      \"parseSpec\": {\n"
-                  + "        \"format\": \"json\",\n"
-                  + "        \"timestampSpec\": {\n"
-                  + "          \"column\": \"timestamp\",\n"
-                  + "          \"format\": \"auto\"\n"
-                  + "        },\n"
-                  + "        \"dimensionsSpec\": {\n"
-                  + "          \"dimensions\": [],\n"
-                  + "          \"dimensionExclusions\": [\n"
-                  + "            \"timestamp\",\n"
-                  + "            \"value\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      }\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topic\": \"metrics\",\n"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "}";
-    KafkaSupervisorSpec sourceSpec = mapper.readValue(sourceSpecJson, KafkaSupervisorSpec.class);
+    KafkaSupervisorSpec sourceSpec = getSpec("metrics", null);
 
     // Proposed spec being non-kafka is not allowed
-    OtherSupervisorSpec otherSpec = new OtherSupervisorSpec();
-    assertThrows(
-        DruidException.class,
-        () -> sourceSpec.validateSpecUpdateTo(otherSpec)
+    TestSupervisorSpec otherSpec = new TestSupervisorSpec("test", new Object());
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(otherSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            StringUtils.format("Cannot change spec from type[%s] to type[%s]", sourceSpec.getClass().getSimpleName(), otherSpec.getClass().getSimpleName())
+        )
     );
 
-    // Change from topic to topicPattern is not allowed
-    String invalidDestSpecJson = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"parser\": {\n"
-                  + "      \"type\": \"string\",\n"
-                  + "      \"parseSpec\": {\n"
-                  + "        \"format\": \"json\",\n"
-                  + "        \"timestampSpec\": {\n"
-                  + "          \"column\": \"timestamp\",\n"
-                  + "          \"format\": \"auto\"\n"
-                  + "        },\n"
-                  + "        \"dimensionsSpec\": {\n"
-                  + "          \"dimensions\": [],\n"
-                  + "          \"dimensionExclusions\": [\n"
-                  + "            \"timestamp\",\n"
-                  + "            \"value\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      }\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topicPattern\": \"metrics-.*\",\n"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "}";
-    KafkaSupervisorSpec invalidDestSpec = mapper.readValue(invalidDestSpecJson, KafkaSupervisorSpec.class);
-
-    assertThrows(
-        DruidException.class,
-        () -> sourceSpec.validateSpecUpdateTo(invalidDestSpec)
+    KafkaSupervisorSpec multiTopicProposedSpec = getSpec(null, "metrics-.*");
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(multiTopicProposedSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+             "Update of the input source stream from [(single-topic) metrics] to [(multi-topic) metrics-.*] is not supported for a running supervisor."
+             + "\nTo perform the update safely, follow these steps:"
+             + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+             + "\n(2) Create a new supervisor with the new input source stream."
+             + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
+         )
     );
 
-    // Changing topic name is not allowed
-    String invalidDestSpecTwoJson = "{\n"
-                                 + "  \"type\": \"kafka\",\n"
-                                 + "  \"dataSchema\": {\n"
-                                 + "    \"dataSource\": \"metrics-kafka\",\n"
-                                 + "    \"parser\": {\n"
-                                 + "      \"type\": \"string\",\n"
-                                 + "      \"parseSpec\": {\n"
-                                 + "        \"format\": \"json\",\n"
-                                 + "        \"timestampSpec\": {\n"
-                                 + "          \"column\": \"timestamp\",\n"
-                                 + "          \"format\": \"auto\"\n"
-                                 + "        },\n"
-                                 + "        \"dimensionsSpec\": {\n"
-                                 + "          \"dimensions\": [],\n"
-                                 + "          \"dimensionExclusions\": [\n"
-                                 + "            \"timestamp\",\n"
-                                 + "            \"value\"\n"
-                                 + "          ]\n"
-                                 + "        }\n"
-                                 + "      }\n"
-                                 + "    },\n"
-                                 + "    \"metricsSpec\": [\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"count\",\n"
-                                 + "        \"type\": \"count\"\n"
-                                 + "      },\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"value_sum\",\n"
-                                 + "        \"fieldName\": \"value\",\n"
-                                 + "        \"type\": \"doubleSum\"\n"
-                                 + "      },\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"value_min\",\n"
-                                 + "        \"fieldName\": \"value\",\n"
-                                 + "        \"type\": \"doubleMin\"\n"
-                                 + "      },\n"
-                                 + "      {\n"
-                                 + "        \"name\": \"value_max\",\n"
-                                 + "        \"fieldName\": \"value\",\n"
-                                 + "        \"type\": \"doubleMax\"\n"
-                                 + "      }\n"
-                                 + "    ],\n"
-                                 + "    \"granularitySpec\": {\n"
-                                 + "      \"type\": \"uniform\",\n"
-                                 + "      \"segmentGranularity\": \"HOUR\",\n"
-                                 + "      \"queryGranularity\": \"NONE\"\n"
-                                 + "    }\n"
-                                 + "  },\n"
-                                 + "  \"ioConfig\": {\n"
-                                 + "    \"topic\": \"metrics-new\",\n"
-                                 + "    \"consumerProperties\": {\n"
-                                 + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                                 + "    },\n"
-                                 + "    \"taskCount\": 1\n"
-                                 + "  }\n"
-                                 + "}";
-    KafkaSupervisorSpec invalidDestSpecTwo = mapper.readValue(invalidDestSpecTwoJson, KafkaSupervisorSpec.class);
-
-    assertThrows(
-        DruidException.class,
-        () -> sourceSpec.validateSpecUpdateTo(invalidDestSpecTwo)
+    KafkaSupervisorSpec singleTopicNewStreamProposedSpec = getSpec("metricsNew", null);
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(singleTopicNewStreamProposedSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            "Update of the input source stream from [metrics] to [metricsNew] is not supported for a running supervisor."
+            + "\nTo perform the update safely, follow these steps:"
+            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+            + "\n(2) Create a new supervisor with the new input source stream."
+            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
+        )
     );
 
-    // Change from topic to topicPattern is not allowed
-    String invalidDestSpecThreeJson = "{\n"
-                                      + "  \"type\": \"kafka\",\n"
-                                      + "  \"dataSchema\": {\n"
-                                      + "    \"dataSource\": \"metrics-kafka\",\n"
-                                      + "    \"parser\": {\n"
-                                      + "      \"type\": \"string\",\n"
-                                      + "      \"parseSpec\": {\n"
-                                      + "        \"format\": \"json\",\n"
-                                      + "        \"timestampSpec\": {\n"
-                                      + "          \"column\": \"timestamp\",\n"
-                                      + "          \"format\": \"auto\"\n"
-                                      + "        },\n"
-                                      + "        \"dimensionsSpec\": {\n"
-                                      + "          \"dimensions\": [],\n"
-                                      + "          \"dimensionExclusions\": [\n"
-                                      + "            \"timestamp\",\n"
-                                      + "            \"value\"\n"
-                                      + "          ]\n"
-                                      + "        }\n"
-                                      + "      }\n"
-                                      + "    },\n"
-                                      + "    \"metricsSpec\": [\n"
-                                      + "      {\n"
-                                      + "        \"name\": \"count\",\n"
-                                      + "        \"type\": \"count\"\n"
-                                      + "      },\n"
-                                      + "      {\n"
-                                      + "        \"name\": \"value_sum\",\n"
-                                      + "        \"fieldName\": \"value\",\n"
-                                      + "        \"type\": \"doubleSum\"\n"
-                                      + "      },\n"
-                                      + "      {\n"
-                                      + "        \"name\": \"value_min\",\n"
-                                      + "        \"fieldName\": \"value\",\n"
-                                      + "        \"type\": \"doubleMin\"\n"
-                                      + "      },\n"
-                                      + "      {\n"
-                                      + "        \"name\": \"value_max\",\n"
-                                      + "        \"fieldName\": \"value\",\n"
-                                      + "        \"type\": \"doubleMax\"\n"
-                                      + "      }\n"
-                                      + "    ],\n"
-                                      + "    \"granularitySpec\": {\n"
-                                      + "      \"type\": \"uniform\",\n"
-                                      + "      \"segmentGranularity\": \"HOUR\",\n"
-                                      + "      \"queryGranularity\": \"NONE\"\n"
-                                      + "    }\n"
-                                      + "  },\n"
-                                      + "  \"ioConfig\": {\n"
-                                      + "    \"topicPattern\": \"metrics\",\n"
-                                      + "    \"consumerProperties\": {\n"
-                                      + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                                      + "    },\n"
-                                      + "    \"taskCount\": 1\n"
-                                      + "  }\n"
-                                      + "}";
-    KafkaSupervisorSpec invalidDestSpecThree = mapper.readValue(invalidDestSpecThreeJson, KafkaSupervisorSpec.class);
+    KafkaSupervisorSpec multiTopicMatchingSourceString = getSpec(null, "metrics");
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(multiTopicMatchingSourceString)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            "Update of the input source stream from [(single-topic) metrics] to [(multi-topic) metrics] is not supported for a running supervisor."
+            + "\nTo perform the update safely, follow these steps:"
+            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+            + "\n(2) Create a new supervisor with the new input source stream."
+            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
+        )
+    );
 
-    assertThrows(
-        DruidException.class,
-        () -> sourceSpec.validateSpecUpdateTo(invalidDestSpecThree));
     // test the inverse as well
-    assertThrows(
-        DruidException.class,
-        () -> invalidDestSpecThree.validateSpecUpdateTo(sourceSpec));
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> multiTopicMatchingSourceString.validateSpecUpdateTo(sourceSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            "Update of the input source stream from [(multi-topic) metrics] to [(single-topic) metrics] is not supported for a running supervisor."
+            + "\nTo perform the update safely, follow these steps:"
+            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+            + "\n(2) Create a new supervisor with the new input source stream."
+            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
+        )
+    );
 
-    // Changing non-source related field is allowed. We change taskCount to 3
-    String validDestSpecJson = "{\n"
-                                    + "  \"type\": \"kafka\",\n"
-                                    + "  \"dataSchema\": {\n"
-                                    + "    \"dataSource\": \"metrics-kafka\",\n"
-                                    + "    \"parser\": {\n"
-                                    + "      \"type\": \"string\",\n"
-                                    + "      \"parseSpec\": {\n"
-                                    + "        \"format\": \"json\",\n"
-                                    + "        \"timestampSpec\": {\n"
-                                    + "          \"column\": \"timestamp\",\n"
-                                    + "          \"format\": \"auto\"\n"
-                                    + "        },\n"
-                                    + "        \"dimensionsSpec\": {\n"
-                                    + "          \"dimensions\": [],\n"
-                                    + "          \"dimensionExclusions\": [\n"
-                                    + "            \"timestamp\",\n"
-                                    + "            \"value\"\n"
-                                    + "          ]\n"
-                                    + "        }\n"
-                                    + "      }\n"
-                                    + "    },\n"
-                                    + "    \"metricsSpec\": [\n"
-                                    + "      {\n"
-                                    + "        \"name\": \"count\",\n"
-                                    + "        \"type\": \"count\"\n"
-                                    + "      },\n"
-                                    + "      {\n"
-                                    + "        \"name\": \"value_sum\",\n"
-                                    + "        \"fieldName\": \"value\",\n"
-                                    + "        \"type\": \"doubleSum\"\n"
-                                    + "      },\n"
-                                    + "      {\n"
-                                    + "        \"name\": \"value_min\",\n"
-                                    + "        \"fieldName\": \"value\",\n"
-                                    + "        \"type\": \"doubleMin\"\n"
-                                    + "      },\n"
-                                    + "      {\n"
-                                    + "        \"name\": \"value_max\",\n"
-                                    + "        \"fieldName\": \"value\",\n"
-                                    + "        \"type\": \"doubleMax\"\n"
-                                    + "      }\n"
-                                    + "    ],\n"
-                                    + "    \"granularitySpec\": {\n"
-                                    + "      \"type\": \"uniform\",\n"
-                                    + "      \"segmentGranularity\": \"HOUR\",\n"
-                                    + "      \"queryGranularity\": \"NONE\"\n"
-                                    + "    }\n"
-                                    + "  },\n"
-                                    + "  \"ioConfig\": {\n"
-                                    + "    \"topic\": \"metrics\",\n"
-                                    + "    \"consumerProperties\": {\n"
-                                    + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                                    + "    },\n"
-                                    + "    \"taskCount\": 3\n"
-                                    + "  }\n"
-                                    + "}";
-    KafkaSupervisorSpec validDestSpec = mapper.readValue(validDestSpecJson, KafkaSupervisorSpec.class);
+    // Test valid spec update. This spec changes context vs the sourceSpec
+    KafkaSupervisorSpec validDestSpec = new KafkaSupervisorSpec(
+        null,
+        DataSchema.builder().withDataSource("testDs").withAggregators(new CountAggregatorFactory("rows")).withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)).build(),
+        null,
+        new KafkaSupervisorIOConfig(
+            "metrics",
+            null,
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+            null,
+            null,
+            null,
+            Map.of("bootstrap.servers", "localhost:9092"),
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        Map.of(
+            "key1",
+            "value1",
+            "key2",
+            "value2"
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
     sourceSpec.validateSpecUpdateTo(validDestSpec);
   }
 
-  private static class OtherSupervisorSpec implements SupervisorSpec
+  private KafkaSupervisorSpec getSpec(String topic, String topicPattern)
   {
-
-    @Override
-    public String getId()
-    {
-      return "";
-    }
-
-    @Override
-    public Supervisor createSupervisor()
-    {
-      return null;
-    }
-
-    @Override
-    public List<String> getDataSources()
-    {
-      return List.of();
-    }
-
-    @Override
-    public String getType()
-    {
-      return "";
-    }
-
-    @Override
-    public String getSource()
-    {
-      return "";
-    }
+    return new KafkaSupervisorSpec(
+      null,
+      DataSchema.builder().withDataSource("testDs").withAggregators(new CountAggregatorFactory("rows")).withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)).build(),
+      null,
+      new KafkaSupervisorIOConfig(
+          topic,
+          topicPattern,
+          new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+          null,
+          null,
+          null,
+          Map.of("bootstrap.servers", "localhost:9092"),
+          null,
+          null,
+          null,
+          null,
+          true,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          false
+      ),
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+  );
   }
 }

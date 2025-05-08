@@ -105,12 +105,12 @@ public interface SupervisorSpec
   /**
    * Checks if a spec can be replaced with a proposed spec (proposesSpec).
    * <p>
-   * By default, this  method does no validation checks. Implementations of this method can choose to define rules
+   * By default, this method does no validation checks. Implementations of this method can choose to define rules
    * for spec updates and throw an exception if the update is not allowed.
    * </p>
    *
    * @param proposedSpec the proposed supervisor spec
-   * @throws IllegalArgumentException if the spec update is not allowed
+   * @throws DruidException if the spec update is not allowed
    */
   default void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
   {

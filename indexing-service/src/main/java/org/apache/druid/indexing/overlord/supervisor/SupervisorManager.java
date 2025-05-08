@@ -199,14 +199,12 @@ public class SupervisorManager
         Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
         if (currentSupervisor == null || currentSupervisor.rhs == null) {
           return true;
+        } else if (Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
+          return false;
         } else {
-          if (!Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
-            // The spec bytes are different, so we need to check if the replacement is allowed
-            currentSupervisor.rhs.validateSpecUpdateTo(spec);
-            return true;
-          } else {
-            return false;
-          }
+          // The spec bytes are different, so we need to check if the update is allowed
+          currentSupervisor.rhs.validateSpecUpdateTo(spec);
+          return true;
         }
       }
       catch (JsonProcessingException ex) {

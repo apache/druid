@@ -194,31 +194,19 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   {
     if (!(proposedSpec instanceof KafkaSupervisorSpec)) {
       throw InvalidInput.exception(
-          StringUtils.format("Cannot evolve to [%s] from [%s]", getClass().getName(), proposedSpec.getClass().getName())
+          "Cannot change spec from type[%s] to type[%s]", getClass().getSimpleName(), proposedSpec.getClass().getSimpleName()
       );
     }
     KafkaSupervisorSpec other = (KafkaSupervisorSpec) proposedSpec;
     if (this.getSpec().getIOConfig().isMultiTopic() != other.getSpec().getIOConfig().isMultiTopic()) {
-      throw InvalidInput.exception(getIllegalInputSourceUpdateErrorMessage("(%s) %s", "(%s) %s"),
-                                   this.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic",
-                                   this.getSource(),
-                                   other.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic",
-                                   other.getSource());
+      throw InvalidInput.exception(
+          SeekableStreamSupervisorSpec.ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE,
+          StringUtils.format("(%s) %s", this.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic", this.getSource()),
+          StringUtils.format("(%s) %s", other.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic", other.getSource())
+      );
     }
 
     super.validateSpecUpdateTo(proposedSpec);
-  }
-
-  @Override
-  protected String getIllegalInputSourceUpdateErrorMessage(String existingSource, String proposedSource)
-  {
-    return StringUtils.format(
-        "Update of topic/topicPattern from [%s] to [%s] is not supported for a running Kafka supervisor."
-        + "%nTo perform the update safely, follow these steps:"
-        + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-        + "%n(2) Create a new supervisor with the new topic or topicPattern."
-        + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.",
-        existingSource, proposedSource);
   }
 
   @Override

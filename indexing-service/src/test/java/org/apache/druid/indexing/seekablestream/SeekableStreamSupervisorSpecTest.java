@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -36,7 +37,6 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -55,11 +55,13 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAu
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -67,6 +69,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -1303,12 +1306,12 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
   @Test
-  public void testValidateSpecUpdateToShortCircuits()
+  public void test_validateSpecUpdateTo_ShortCircuits()
   {
     mockIngestionSchema();
     TestSeekableStreamSupervisorSpec originalSpec = new TestSeekableStreamSupervisorSpec(
         ingestionSchema,
-        ImmutableMap.of("key", "value"),
+        Map.of("key", "value"),
         false,
         taskStorage,
         taskMaster,
@@ -1324,7 +1327,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     );
     TestSeekableStreamSupervisorSpec proposedSpec = new TestSeekableStreamSupervisorSpec(
         ingestionSchema,
-        ImmutableMap.of("key", "value"),
+        Map.of("key", "value"),
         false,
         taskStorage,
         taskMaster,
@@ -1338,20 +1341,33 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         supervisor4,
         "id1"
     );
-    assertThrows(
-        DruidException.class,
-        () -> originalSpec.validateSpecUpdateTo(proposedSpec)
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            "Cannot update supervisor spec since one or both of the specs have not provided an input source stream in the 'ioConfig'."
+        )
     );
 
-    OtherSupervisorSpec otherSpec = new OtherSupervisorSpec();
-    assertThrows(
-        DruidException.class,
-        () -> originalSpec.validateSpecUpdateTo(otherSpec)
+
+    TestSupervisorSpec otherSpec = new TestSupervisorSpec("fake", new Object());
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(otherSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            StringUtils.format("Cannot update supervisor spec from type[%s] to type[%s]", proposedSpec.getClass().getSimpleName(), otherSpec.getClass().getSimpleName())
+        )
     );
   }
 
   @Test
-  public void testValidateSpecUpdateToSourceComparisons()
+  public void test_validateSpecUpdateTo_SourceStringComparisons()
   {
     mockIngestionSchema();
     TestSeekableStreamSupervisorSpec originalSpec = new TestSeekableStreamSupervisorSpec(
@@ -1424,10 +1440,23 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       }
     };
 
-    assertThrows(
-        DruidException.class,
-        () -> originalSpec.validateSpecUpdateTo(proposedSpecDiffSource)
+    // Mistmatched stream strings test
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpecDiffSource)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            "Update of the input source stream from [source1] to [source2] is not supported for a running supervisor."
+            + "\nTo perform the update safely, follow these steps:"
+            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+            + "\n(2) Create a new supervisor with the new input source stream."
+            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
+        )
     );
+
+    // Happy path test
     originalSpec.validateSpecUpdateTo(proposedSpecSameSource);
   }
 
@@ -1543,40 +1572,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     autoScalerConfig.put("scaleOutStep", 2);
     autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
     return autoScalerConfig;
-  }
-
-  private static class OtherSupervisorSpec implements SupervisorSpec
-  {
-
-    @Override
-    public String getId()
-    {
-      return "";
-    }
-
-    @Override
-    public Supervisor createSupervisor()
-    {
-      return null;
-    }
-
-    @Override
-    public List<String> getDataSources()
-    {
-      return List.of();
-    }
-
-    @Override
-    public String getType()
-    {
-      return "";
-    }
-
-    @Override
-    public String getSource()
-    {
-      return "";
-    }
   }
 
 }

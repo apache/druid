@@ -36,7 +36,6 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -48,6 +47,11 @@ import java.util.Map;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
+  protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE = "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
+                                                                   + "%nTo perform the update safely, follow these steps:"
+                                                                   + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+                                                                   + "%n(2) Create a new supervisor with the new input source stream."
+                                                                   + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.";
 
   private static SeekableStreamSupervisorIngestionSpec checkIngestionSchema(
       SeekableStreamSupervisorIngestionSpec ingestionSchema
@@ -219,41 +223,21 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   {
     if (!(proposedSpec instanceof SeekableStreamSupervisorSpec)) {
       throw InvalidInput.exception(
-          StringUtils.format("Cannot evolve to [%s] from [%s]", getClass().getName(), proposedSpec.getClass().getName())
+          "Cannot update supervisor spec from type[%s] to type[%s]", getClass().getSimpleName(), proposedSpec.getClass().getSimpleName()
       );
     }
     SeekableStreamSupervisorSpec other = (SeekableStreamSupervisorSpec) proposedSpec;
     if (this.getSource() == null || other.getSource() == null) {
       // Not likely to happen, but covering just in case.
-      throw InvalidInput.exception("Cannot consider SeekableStreamSupervisorSpec evolution when one or both of "
-                                   + "the specs have not provided an input source stream in the IOConfig.");
+      throw InvalidInput.exception("Cannot update supervisor spec since one or both of "
+                                   + "the specs have not provided an input source stream in the 'ioConfig'.");
     }
 
     if (!this.getSource().equals(other.getSource())) {
-      throw InvalidInput.exception(getIllegalInputSourceUpdateErrorMessage(this.getSource(), other.getSource()));
+      throw InvalidInput.exception(ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE, this.getSource(), other.getSource());
     }
   }
 
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
-
-  /**
-   * Returns an error message for illegal update of the input source stream.
-   * <p>
-   * This is a reasonable default message, but subclasses may override it to provide more domain specific terminology.
-   * </p>
-   * @param existingSource The existing input source stream
-   * @param proposedSource The proposed input source stream
-   * @return A formatted error message
-   */
-  protected String getIllegalInputSourceUpdateErrorMessage(String existingSource, String proposedSource)
-  {
-    return StringUtils.format(
-        "Update of the input source stream from [%s] to [%s] is not supported for a running supervisror."
-        + "%nTo perform the update safely, follow these steps:"
-        + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-        + "%n(2) Create a new supervisor with the new input source stream."
-        + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.",
-        existingSource, proposedSource);
-  }
 
 }
