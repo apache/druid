@@ -84,15 +84,6 @@ interface FilterModeAndNeedle {
   needleParts: string[];
 }
 
-export function addFilter(
-  filters: readonly Filter[],
-  id: string,
-  mode: FilterMode,
-  needle: string,
-): Filter[] {
-  return addOrUpdateFilter(filters, { id, value: combineModeAndNeedle(mode, needle) });
-}
-
 export function parseFilterModeAndNeedle(
   filter: Filter,
   loose = false,

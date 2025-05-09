@@ -22,7 +22,7 @@ import React from 'react';
 import type { Filter } from 'react-table';
 
 import type { FilterMode } from '../../react-table';
-import { addFilter, filterModeToIcon } from '../../react-table';
+import { addOrUpdateFilter, combineModeAndNeedle, filterModeToIcon } from '../../react-table';
 import { Deferred } from '../deferred/deferred';
 
 import './table-filterable-cell.scss';
@@ -57,7 +57,14 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
                   key={i}
                   icon={filterModeToIcon(mode)}
                   text={value}
-                  onClick={() => onFiltersChange(addFilter(filters, field, mode, value))}
+                  onClick={() =>
+                    onFiltersChange(
+                      addOrUpdateFilter(filters, {
+                        id: field,
+                        value: combineModeAndNeedle(mode, value),
+                      }),
+                    )
+                  }
                 />
               ))}
             </Menu>
