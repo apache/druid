@@ -30,27 +30,37 @@ import java.util.Objects;
 public class CanceledFault extends BaseMSQFault
 {
   public static final String CODE = "Canceled";
-  private final Reason reason;
+  private final CancelationReason reason;
 
   @JsonCreator
-  CanceledFault(@JsonProperty("reason") Reason reason)
+  public CanceledFault(@JsonProperty("reason") CancelationReason reason)
   {
     super(CODE, "Query canceled due to [%s].", reason);
     this.reason = reason;
   }
 
+  public static CanceledFault userRequest()
+  {
+    return new CanceledFault(CancelationReason.USER_REQUEST);
+  }
+
   public static CanceledFault shutdown()
   {
-    return new CanceledFault(Reason.TASK_SHUTDOWN);
+    return new CanceledFault(CancelationReason.TASK_SHUTDOWN);
   }
 
   public static CanceledFault timeout()
   {
-    return new CanceledFault(Reason.QUERY_TIMEOUT);
+    return new CanceledFault(CancelationReason.QUERY_TIMEOUT);
+  }
+
+  public static CanceledFault unknown()
+  {
+    return new CanceledFault(CancelationReason.UNKNOWN);
   }
 
   @JsonProperty
-  public Reason getReason()
+  public CancelationReason getReason()
   {
     return reason;
   }
@@ -84,34 +94,5 @@ public class CanceledFault extends BaseMSQFault
   public int hashCode()
   {
     return Objects.hash(super.hashCode(), reason);
-  }
-
-  /**
-   * Enum denoting the reason for query cancelation.
-   */
-  public enum Reason
-  {
-    /**
-     * Query was shutdown due to the task shutting down, either due to the task being canceled by the user, or shutdown
-     * by the overlord.
-     */
-    TASK_SHUTDOWN("User cancelation or task shutdown"),
-    /**
-     * Query was shutdown due to exceeding the configured query timeout.
-     */
-    QUERY_TIMEOUT("Query timeout");
-
-    private final String reason;
-
-    Reason(String reason)
-    {
-      this.reason = reason;
-    }
-
-    @Override
-    public String toString()
-    {
-      return reason;
-    }
   }
 }

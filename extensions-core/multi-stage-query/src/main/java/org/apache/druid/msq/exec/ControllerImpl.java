@@ -104,6 +104,7 @@ import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
 import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
+import org.apache.druid.msq.indexing.error.CancelationReason;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
@@ -328,7 +329,7 @@ public class ControllerImpl implements Controller
   }
 
   @Override
-  public void stop()
+  public void stop(CancelationReason reason)
   {
     final QueryDefinition queryDef = queryDefRef.get();
 

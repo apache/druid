@@ -56,6 +56,7 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.error.CancelationReason;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
@@ -309,7 +310,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   public void stopGracefully(final TaskConfig taskConfig)
   {
     if (controller != null) {
-      controller.stop();
+      controller.stop(CancelationReason.TASK_SHUTDOWN);
     }
   }
 

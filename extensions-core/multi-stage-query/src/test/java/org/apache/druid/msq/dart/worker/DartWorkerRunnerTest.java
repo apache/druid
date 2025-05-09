@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
-import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
@@ -46,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -136,9 +136,9 @@ public class DartWorkerRunnerTest
 
     // "worker.stop()" sets "workerRun" to a cancellation error.
     Mockito.doAnswer(invocation -> {
-      workerRun.setException(new MSQException(CanceledFault.shutdown()));
+      workerRun.setException(new MSQException((invocation.getArgument(0))));
       return null;
-    }).when(worker).stop();
+    }).when(worker).stop(ArgumentMatchers.any());
 
     // "worker.controllerFailed()" sets "workerRun" to an error.
     Mockito.doAnswer(invocation -> {

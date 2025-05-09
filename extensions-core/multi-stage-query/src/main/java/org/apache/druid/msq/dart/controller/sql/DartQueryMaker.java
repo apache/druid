@@ -44,6 +44,7 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.error.CancelationReason;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
@@ -251,7 +252,7 @@ public class DartQueryMaker implements QueryMaker
                   controllerHolder.getController().queryId(),
                   null,
                   null,
-                  CanceledFault.shutdown()
+                  CanceledFault.userRequest()
               )
               .toDruidException();
         }
@@ -351,7 +352,7 @@ public class DartQueryMaker implements QueryMaker
                     controllerHolder.getController().queryId(),
                     null,
                     null,
-                    CanceledFault.shutdown()
+                    CanceledFault.userRequest()
                 ).toDruidException()
             );
           }
@@ -386,7 +387,7 @@ public class DartQueryMaker implements QueryMaker
     public void cleanup(final ResultIterator iterFromMake)
     {
       if (!iterFromMake.complete) {
-        controllerHolder.cancel();
+        controllerHolder.cancel(CancelationReason.UNKNOWN);
       }
     }
   }
