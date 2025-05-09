@@ -23,14 +23,11 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Metrics for segment generation.
- */
 public class SegmentGenerationMetrics
 {
   private static final long NO_EMIT_SEGMENT_HANDOFF_TIME = -1L;
-
   private static final long NO_EMIT_MESSAGE_GAP = -1L;
 
   private final AtomicLong dedupCount = new AtomicLong(0);
@@ -40,9 +37,7 @@ public class SegmentGenerationMetrics
   private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
   private final AtomicLong failedPersists = new AtomicLong(0);
   private final AtomicLong failedHandoffs = new AtomicLong(0);
-  // Measures the number of rows that have been merged. Segments are merged into a single file before they are pushed to deep storage.
   private final AtomicLong mergedRows = new AtomicLong(0);
-  // Measures the number of rows that have been pushed to deep storage.
   private final AtomicLong pushedRows = new AtomicLong(0);
   private final AtomicLong mergeTimeMillis = new AtomicLong(0);
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
@@ -52,8 +47,48 @@ public class SegmentGenerationMetrics
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
   private final AtomicBoolean processingDone = new AtomicBoolean(false);
-
   private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
+
+  public static class MessageGapStats
+  {
+    long minMessageGap = Long.MAX_VALUE;
+    long maxMessageGap = Long.MIN_VALUE;
+    long numMessageGap = 0;
+    double totalMessageGap = 0;
+
+    public double avgMessageGap()
+    {
+      return totalMessageGap / numMessageGap;
+    }
+
+    public long getMinMessageGap()
+    {
+      return minMessageGap;
+    }
+
+    public long getMaxMessageGap()
+    {
+      return maxMessageGap;
+    }
+
+    public long getNumMessageGap()
+    {
+      return numMessageGap;
+    }
+
+    public MessageGapStats copyOf()
+    {
+      final MessageGapStats copy = new MessageGapStats();
+      copy.minMessageGap = minMessageGap;
+      copy.maxMessageGap = maxMessageGap;
+      copy.numMessageGap = numMessageGap;
+      copy.totalMessageGap = totalMessageGap;
+      return copy;
+    }
+  }
+
+  private final MessageGapStats messageGapStats = new MessageGapStats();
+  private final ReentrantLock lock = new ReentrantLock();
 
   public void incrementRowOutputCount(long numRows)
   {
@@ -105,14 +140,32 @@ public class SegmentGenerationMetrics
     this.sinkCount.set(sinkCount);
   }
 
+  public void reportMessageGap(final long messageGap)
+  {
+    lock.lock();
+    try {
+      messageGapStats.totalMessageGap += messageGap;
+      ++messageGapStats.numMessageGap;
+      if (messageGapStats.minMessageGap > messageGap) {
+        messageGapStats.minMessageGap = messageGap;
+      }
+      if (messageGapStats.maxMessageGap < messageGap) {
+        messageGapStats.maxMessageGap = messageGap;
+      }
+    }
+    finally {
+      lock.unlock();
+    }
+  }
+
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
   {
-    this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
+    this.messageMaxTimestamp.getAndAccumulate(messageMaxTimestamp, Math::max);
   }
 
   public void reportMaxSegmentHandoffTime(long maxSegmentHandoffTime)
   {
-    this.maxSegmentHandoffTime.set(Math.max(maxSegmentHandoffTime, this.maxSegmentHandoffTime.get()));
+    this.maxSegmentHandoffTime.getAndAccumulate(maxSegmentHandoffTime, Math::max);
   }
 
   public void markProcessingDone()
@@ -170,6 +223,7 @@ public class SegmentGenerationMetrics
   {
     return pushedRows.get();
   }
+
   public long mergeTimeMillis()
   {
     return mergeTimeMillis.get();
@@ -193,6 +247,17 @@ public class SegmentGenerationMetrics
   public long sinkCount()
   {
     return sinkCount.get();
+  }
+
+  public MessageGapStats getMessageGapStats()
+  {
+    lock.lock();
+    try {
+      return messageGapStats.copyOf();
+    }
+    finally {
+      lock.unlock();
+    }
   }
 
   public long messageGap()
@@ -220,19 +285,35 @@ public class SegmentGenerationMetrics
     retVal.persistCpuTime.set(persistCpuTime.get());
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
-    retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
     retVal.mergedRows.set(mergedRows.get());
     retVal.pushedRows.set(pushedRows.get());
 
     long messageGapSnapshot = 0;
-    final long maxTimestamp = retVal.messageMaxTimestamp.get();
+    final long maxTimestamp = messageMaxTimestamp.get();
+    retVal.messageMaxTimestamp.set(maxTimestamp);
     if (processingDone.get()) {
       messageGapSnapshot = NO_EMIT_MESSAGE_GAP;
     } else if (maxTimestamp > 0) {
       messageGapSnapshot = System.currentTimeMillis() - maxTimestamp;
     }
     retVal.messageGap.set(messageGapSnapshot);
+
+    lock.lock();
+    try {
+      retVal.messageGapStats.totalMessageGap = messageGapStats.totalMessageGap;
+      retVal.messageGapStats.numMessageGap = messageGapStats.numMessageGap;
+      retVal.messageGapStats.minMessageGap = messageGapStats.minMessageGap;
+      retVal.messageGapStats.maxMessageGap = messageGapStats.maxMessageGap;
+
+      messageGapStats.totalMessageGap = 0;
+      messageGapStats.numMessageGap = 0;
+      messageGapStats.minMessageGap = Long.MAX_VALUE;
+      messageGapStats.maxMessageGap = Long.MIN_VALUE;
+    }
+    finally {
+      lock.unlock();
+    }
 
     reset();
 
