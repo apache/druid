@@ -28,7 +28,9 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
 import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.skife.jdbi.v2.PreparedBatch;
@@ -173,7 +175,7 @@ public class SegmentSchemaTestUtils
     );
   }
 
-  public void verifySegmentSchema(Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap)
+  public void verifySegmentSchema(Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap)
   {
     final String segmentsTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
     // segmentId -> schemaFingerprint, numRows
@@ -191,82 +193,49 @@ public class SegmentSchemaTestUtils
     final String schemaTable = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentSchemasTable();
 
     derbyConnector.retryWithHandle(
-        handle -> handle.createQuery("SELECT fingerprint, payload, created_date, used, version FROM "
-                                     + schemaTable)
+        handle -> handle.createQuery("SELECT fingerprint, payload, used, version FROM " + schemaTable)
                         .map(((index, r, ctx) ->
                             schemaRepresentationMap.put(
                                 r.getString(1),
                                 new SegmentSchemaRecord(
-                                    r.getString(1),
                                     JacksonUtils.readValue(
                                         mapper,
                                         r.getBytes(2),
                                         SchemaPayload.class
                                     ),
-                                    r.getString(3),
-                                    r.getBoolean(4),
-                                    r.getInt(5)
+                                    r.getBoolean(3),
+                                    r.getInt(4)
                                 )
                             )))
                         .list());
 
-    for (Map.Entry<String, Pair<SchemaPayload, Integer>> entry : segmentIdSchemaMap.entrySet()) {
-      String id = entry.getKey();
-      SchemaPayload schemaPayload = entry.getValue().lhs;
-      Integer random = entry.getValue().rhs;
+    for (Map.Entry<SegmentId, SchemaPayloadPlus> entry : segmentIdSchemaMap.entrySet()) {
+      final String id = entry.getKey().toString();
+      SchemaPayload schemaPayload = entry.getValue().getSchemaPayload();
+      Long numRows = entry.getValue().getNumRows();
 
       Assert.assertTrue(segmentStats.containsKey(id));
-
-      Assert.assertEquals(random.intValue(), segmentStats.get(id).rhs.intValue());
+      Assert.assertEquals(numRows, segmentStats.get(id).rhs);
       Assert.assertTrue(schemaRepresentationMap.containsKey(segmentStats.get(id).lhs));
 
       SegmentSchemaRecord schemaRepresentation = schemaRepresentationMap.get(segmentStats.get(id).lhs);
-      Assert.assertEquals(schemaPayload, schemaRepresentation.getSchemaPayload());
-      Assert.assertTrue(schemaRepresentation.isUsed());
-      Assert.assertEquals(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaRepresentation.getVersion());
+      Assert.assertEquals(schemaPayload, schemaRepresentation.schemaPayload);
+      Assert.assertTrue(schemaRepresentation.isUsed);
+      Assert.assertEquals(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaRepresentation.version);
     }
   }
 
-  public static class SegmentSchemaRecord
+  private static class SegmentSchemaRecord
   {
-    private final String fingerprint;
     private final SchemaPayload schemaPayload;
-    private final String createdDate;
-    private final boolean used;
+    private final boolean isUsed;
     private final int version;
 
-    public SegmentSchemaRecord(String fingerprint, SchemaPayload schemaPayload, String createdDate, Boolean used, int version)
+    private SegmentSchemaRecord(SchemaPayload schemaPayload, Boolean isUsed, int version)
     {
-      this.fingerprint = fingerprint;
       this.schemaPayload = schemaPayload;
-      this.createdDate = createdDate;
-      this.used = used;
+      this.isUsed = isUsed;
       this.version = version;
-    }
-
-    public String getFingerprint()
-    {
-      return fingerprint;
-    }
-
-    public SchemaPayload getSchemaPayload()
-    {
-      return schemaPayload;
-    }
-
-    public String getCreatedDate()
-    {
-      return createdDate;
-    }
-
-    public boolean isUsed()
-    {
-      return used;
-    }
-
-    public int getVersion()
-    {
-      return version;
     }
   }
 }

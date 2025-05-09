@@ -694,10 +694,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
 
-    // We are emitting the stats here since this method is called periodically.
-    // Secondly, the stats are emitted before polling the schema,
-    // as {@link SegmentSchemaCache#resetInTransitSMQResultPublishedOnDBPoll} call after schema poll clears some cached information.
-    segmentSchemaCache.emitStats();
+    // Collect and emit stats for the schema cache before every DB poll
+    segmentSchemaCache.getStats().forEach(this::emitMetric);
 
     // some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
@@ -772,9 +770,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         });
 
     ImmutableMap<String, SchemaPayload> schemaMap = schemaMapBuilder.build();
-    segmentSchemaCache.updateFinalizedSegmentSchema(
-        new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentMetadataBuilder.build(), schemaMap)
-    );
+    segmentSchemaCache.resetSchemaForPublishedSegments(segmentMetadataBuilder.build(), schemaMap);
 
     Preconditions.checkNotNull(
         segments,

@@ -21,10 +21,8 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Functions;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.DateTimes;
@@ -41,18 +39,15 @@ import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.TransactionCallback;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
- * Handles segment schema persistence and cleanup.
+ * Handles segment schema persistence and cleanup on the Coordinator.
  */
 @LazySingleton
 public class SegmentSchemaManager
@@ -76,7 +71,10 @@ public class SegmentSchemaManager
   }
 
   /**
-   * Return a list of schema fingerprints
+   * Finds all schema fingerprints which have been marked as unused but are
+   * still referenced by some used segments.
+   *
+   * @return Empty list if no such schema fingerprint exists.
    */
   public List<String> findReferencedSchemaMarkedAsUnused()
   {
@@ -93,12 +91,17 @@ public class SegmentSchemaManager
     );
   }
 
+  /**
+   * Marks the segment schema entries for the given fingerprints as used.
+   *
+   * @param schemaFingerprints List of fingerprints to mark as used
+   * @return Number of rows updated in the metadata store.
+   */
   public int markSchemaAsUsed(List<String> schemaFingerprints)
   {
     if (schemaFingerprints.isEmpty()) {
       return 0;
     }
-    String inClause = getInClause(schemaFingerprints.stream());
 
     return connector.retryWithHandle(
         handle ->
@@ -106,7 +109,7 @@ public class SegmentSchemaManager
                       StringUtils.format(
                           "UPDATE %s SET used = true, used_status_last_updated = :now"
                           + " WHERE fingerprint IN (%s)",
-                          dbTables.getSegmentSchemasTable(), inClause
+                          dbTables.getSegmentSchemasTable(), buildInClause(schemaFingerprints)
                       )
                   )
                   .bind("now", DateTimes.nowUtc().toString())
@@ -119,10 +122,10 @@ public class SegmentSchemaManager
     return connector.retryWithHandle(
         handle -> handle.createStatement(
                             StringUtils.format(
-                                "DELETE FROM %s WHERE used = false AND used_status_last_updated < :now",
+                                "DELETE FROM %s WHERE used = false AND used_status_last_updated < :maxUpdateTime",
                                 dbTables.getSegmentSchemasTable()
                             ))
-                        .bind("now", DateTimes.utc(timestamp).toString())
+                        .bind("maxUpdateTime", DateTimes.utc(timestamp).toString())
                         .execute());
   }
 
@@ -180,36 +183,37 @@ public class SegmentSchemaManager
     if (fingerprintSchemaPayloadMap.isEmpty()) {
       return;
     }
-    // Filter already existing schema
-    Map<Boolean, Set<String>> existingFingerprintsAndUsedStatus = fingerprintExistBatch(
+    // Fetch already existing schema fingerprints
+    final Map<String, Boolean> existingFingerprintsAndUsedStatus = getExistingFingerprints(
         handle,
         fingerprintSchemaPayloadMap.keySet()
     );
 
-    // Used schema can also be marked as unused by the schema cleanup duty in parallel.
-    // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
-    Set<String> usedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(true)
-                                           ? existingFingerprintsAndUsedStatus.get(true)
-                                           : new HashSet<>();
-    Set<String> unusedExistingFingerprints = existingFingerprintsAndUsedStatus.containsKey(false)
-                                             ? existingFingerprintsAndUsedStatus.get(false)
-                                             : new HashSet<>();
-    Set<String> existingFingerprints = Sets.union(usedExistingFingerprints, unusedExistingFingerprints);
-    if (existingFingerprints.size() > 0) {
+    // Used schema can be marked as unused by the schema cleanup duty
+    // See KillUnreferencedSegmentSchema for more details.
+    final Set<String> usedExistingFingerprints = Maps.filterEntries(
+        existingFingerprintsAndUsedStatus,
+        e -> Boolean.TRUE.equals(e.getValue())
+    ).keySet();
+    final Set<String> unusedExistingFingerprints = Maps.filterEntries(
+        existingFingerprintsAndUsedStatus,
+        e -> Boolean.FALSE.equals(e.getValue())
+    ).keySet();
+
+    final Set<String> existingFingerprints = existingFingerprintsAndUsedStatus.keySet();
+    if (!existingFingerprints.isEmpty()) {
       log.info(
-          "Found already existing schema in the DB for dataSource [%1$s]. "
-          + "Used fingeprints: [%2$s], Unused fingerprints: [%3$s].",
-          dataSource,
-          usedExistingFingerprints,
-          unusedExistingFingerprints
+          "Found already existing schema in the DB for dataSource[%s]. "
+          + "Used fingeprints: [%s], Unused fingerprints: [%s].",
+          dataSource, usedExistingFingerprints, unusedExistingFingerprints
       );
     }
 
     // Unused schema can be deleted by the schema cleanup duty in parallel.
     // Refer to the javadocs in org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemaDuty for more details.
-    if (unusedExistingFingerprints.size() > 0) {
+    if (!unusedExistingFingerprints.isEmpty()) {
       // make the unused schema as used to prevent deletion
-      markSchemaAsUsed(new ArrayList<>(unusedExistingFingerprints));
+      markSchemaAsUsed(List.copyOf(unusedExistingFingerprints));
     }
 
     Map<String, SchemaPayload> schemaPayloadToPersist = new HashMap<>();
@@ -259,17 +263,13 @@ public class SegmentSchemaManager
       }
       if (failedInserts.isEmpty()) {
         log.info(
-            "Published schemas [%s] to DB for datasource [%s] and version [%s]",
-            partition,
-            dataSource,
-            version
+            "Published schemas [%s] to DB for datasource[%s] and version[%s].",
+            partition, dataSource, version
         );
       } else {
         throw new ISE(
-            "Failed to publish schemas [%s] to DB for datasource [%s] and version [%s]",
-            failedInserts,
-            dataSource,
-            version
+            "Failed to publish schemas[%s] to DB for datasource[%s] and version[%s]",
+            failedInserts, dataSource, version
         );
       }
     }
@@ -295,10 +295,7 @@ public class SegmentSchemaManager
     PreparedBatch segmentUpdateBatch = handle.prepareBatch(updateSql);
 
     List<List<SegmentSchemaMetadataPlus>> partitionedSegmentIds =
-        Lists.partition(
-            batch,
-            DB_ACTION_PARTITION_SIZE
-        );
+        Lists.partition(batch, DB_ACTION_PARTITION_SIZE);
 
     for (List<SegmentSchemaMetadataPlus> partition : partitionedSegmentIds) {
       for (SegmentSchemaMetadataPlus segmentSchema : partition) {
@@ -326,25 +323,17 @@ public class SegmentSchemaManager
       } else {
         throw new ISE(
             "Failed to update segments with schema information: %s",
-            getCommaSeparatedIdentifiers(failedUpdates));
+            failedUpdates
+        );
       }
     }
   }
 
-  private Object getCommaSeparatedIdentifiers(final Collection<SegmentId> ids)
-  {
-    if (ids == null || ids.isEmpty()) {
-      return null;
-    }
-
-    return Collections2.transform(ids, Functions.identity());
-  }
-
   /**
-   * Query the metadata DB to filter the fingerprints that exists.
-   * It returns separate set for used and unused fingerprints in a map.
+   * Query the metadata DB to filter the fingerprints that already exist.
+   * @return Map from fingerprint to its "used" status
    */
-  private Map<Boolean, Set<String>> fingerprintExistBatch(
+  private Map<String, Boolean> getExistingFingerprints(
       final Handle handle,
       final Set<String> fingerprintsToInsert
   )
@@ -358,27 +347,27 @@ public class SegmentSchemaManager
         DB_ACTION_PARTITION_SIZE
     );
 
-    Map<Boolean, Set<String>> existingFingerprints = new HashMap<>();
+    final Map<String, Boolean> existingFingerprints = new HashMap<>();
     for (List<String> fingerprintList : partitionedFingerprints) {
-      String fingerprints = fingerprintList.stream()
-                                           .map(fingerprint -> "'" + StringUtils.escapeSql(fingerprint) + "'")
-                                           .collect(Collectors.joining(","));
       handle.createQuery(
                 StringUtils.format(
                     "SELECT used, fingerprint FROM %s WHERE fingerprint IN (%s)",
-                    dbTables.getSegmentSchemasTable(), fingerprints
+                    dbTables.getSegmentSchemasTable(), buildInClause(fingerprintList)
                 )
             )
-            .map((index, r, ctx) -> existingFingerprints.computeIfAbsent(
-                r.getBoolean(1), value -> new HashSet<>()).add(r.getString(2)))
+            .map((index, r, ctx) -> existingFingerprints.put(r.getString(2), r.getBoolean(1)))
             .list();
     }
     return existingFingerprints;
   }
 
-  private String getInClause(final Stream<String> ids)
+  /**
+   * Builds a String joining the given values with commas.
+   */
+  private static String buildInClause(List<String> ids)
   {
     return ids
+        .stream()
         .map(value -> "'" + StringUtils.escapeSql(value) + "'")
         .collect(Collectors.joining(","));
   }

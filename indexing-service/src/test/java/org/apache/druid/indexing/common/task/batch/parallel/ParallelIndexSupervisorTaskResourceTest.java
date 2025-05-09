@@ -499,7 +499,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
           supervisorTask.getContext(),
-          CentralizedDatasourceSchemaConfig.create(true)
+          CentralizedDatasourceSchemaConfig.enabled(true)
       );
       this.supervisorTask = supervisorTask;
     }

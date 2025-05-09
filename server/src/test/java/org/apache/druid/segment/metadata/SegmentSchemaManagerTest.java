@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Before;
 import org.junit.Rule;
@@ -51,7 +51,7 @@ import java.util.Set;
 public class SegmentSchemaManagerTest
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -79,7 +79,7 @@ public class SegmentSchemaManagerTest
   @Test
   public void testPersistSchemaAndUpdateSegmentsTable()
   {
-    final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
     Random random = new Random(5);
 
     Set<DataSegment> segments = new HashSet<>();
@@ -118,7 +118,7 @@ public class SegmentSchemaManagerTest
               schemaMetadata
           );
       schemaMetadataPluses.add(plus);
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      segmentIdSchemaMap.put(segment.getId(), new SchemaPayloadPlus(schemaPayload, (long) randomNum));
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
@@ -128,7 +128,7 @@ public class SegmentSchemaManagerTest
 
     // associate a new segment with existing schema
     DataSegment segment = segments.stream().findAny().get();
-    Pair<SchemaPayload, Integer> schemaPayloadIntegerPair = segmentIdSchemaMap.get(segment.getId().toString());
+    SchemaPayloadPlus payloadPlus = segmentIdSchemaMap.get(segment.getId());
 
     final DataSegment newSegment = new DataSegment(
         "foo",
@@ -143,15 +143,12 @@ public class SegmentSchemaManagerTest
     );
 
     SchemaPayloadPlus schemaMetadata =
-        new SchemaPayloadPlus(
-            schemaPayloadIntegerPair.lhs,
-            500L
-        );
+        new SchemaPayloadPlus(payloadPlus.getSchemaPayload(), 500L);
     SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
         new SegmentSchemaManager.SegmentSchemaMetadataPlus(
             newSegment.getId(),
             fingerprintGenerator.generateFingerprint(
-                schemaPayloadIntegerPair.lhs,
+                payloadPlus.getSchemaPayload(),
                 newSegment.getDataSource(),
                 CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
             ),
@@ -166,7 +163,7 @@ public class SegmentSchemaManagerTest
     );
 
     segmentIdSchemaMap.clear();
-    segmentIdSchemaMap.put(newSegment.getId().toString(), Pair.of(schemaPayloadIntegerPair.lhs, 500));
+    segmentIdSchemaMap.put(newSegment.getId(), schemaMetadata);
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
   }
@@ -174,7 +171,7 @@ public class SegmentSchemaManagerTest
   @Test
   public void testPersistAndUpdateSegmentsTable_unusedExistingSegment()
   {
-    final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
 
     Set<DataSegment> segments = new HashSet<>();
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
@@ -211,7 +208,7 @@ public class SegmentSchemaManagerTest
               schemaMetadata
           );
       schemaMetadataPluses.add(plus);
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, i));
+      segmentIdSchemaMap.put(segment.getId(), new SchemaPayloadPlus(schemaPayload, (long) i));
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());

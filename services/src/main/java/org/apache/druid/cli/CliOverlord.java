@@ -113,7 +113,6 @@ import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -210,12 +209,6 @@ public class CliOverlord extends ServerRunnable
                     .to(DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
-
-              JsonConfigProvider.bind(
-                  binder,
-                  CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX,
-                  CentralizedDatasourceSchemaConfig.class
-              );
 
               binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
               binder.bind(SegmentsMetadataManager.class)

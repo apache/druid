@@ -29,9 +29,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 @RunWith(Parameterized.class)
 public class PostgreSQLConnectorTest
@@ -44,14 +41,12 @@ public class PostgreSQLConnectorTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder()
+  public static Object[][] constructorFeeder()
   {
-    final List<Object[]> constructors = new ArrayList<>();
-    constructors.add(new Object[]{CentralizedDatasourceSchemaConfig.create()});
-    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
-    config.setEnabled(true);
-    constructors.add(new Object[]{config});
-    return constructors;
+    return new Object[][]{
+        {CentralizedDatasourceSchemaConfig.enabled(false)},
+        {CentralizedDatasourceSchemaConfig.enabled(true)}
+    };
   }
 
   @Test

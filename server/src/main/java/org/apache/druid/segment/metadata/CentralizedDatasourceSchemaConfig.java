@@ -19,80 +19,100 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.config.Configs;
+
+import javax.annotation.Nullable;
 
 /**
- * Config for centralizing datasource schema management in Coordinator.
+ * Config for caching and managing datasource schema on the Coordinator.
+ * This config is used by the following services:
+ * <ul>
+ * <li>Coordinator: to enable backfill of segment schema in the metadata store
+ * and caching of schema in memory.</li>
+ * <li>Overlord: to enable publish of schema when segments are committed.</li>
+ * <li>Peons: to enable inclusion of schema in segment publish requests.</li>
+ * <li>Brokers: to enable polling of cached schema from the Coordinator.</li>
+ * </ul>
+ * The corresponding segment schemas table is created in the metadata store only
+ * when this config is enabled for the first time on a cluster. Subsequent
+ * disabling of this config does not drop the table but the services do not read
+ * or update it anymore.
  */
 public class CentralizedDatasourceSchemaConfig
 {
   public static final String PROPERTY_PREFIX = "druid.centralizedDatasourceSchema";
+  private static final CentralizedDatasourceSchemaConfig DEFAULT
+      = new CentralizedDatasourceSchemaConfig(null, null, null, null);
 
+  /**
+   * Currently supported version of segment schema format. The schema cache can
+   * contain schemas for only this version.
+   */
   public static final int SCHEMA_VERSION = 1;
 
   @JsonProperty
-  private boolean enabled = false;
+  private final boolean enabled;
+  @JsonProperty
+  private final boolean taskSchemaPublishDisabled;
+  @JsonProperty
+  private final boolean backFillEnabled;
+  @JsonProperty
+  private final long backFillPeriod;
 
-  // internal config meant for testing
-  @JsonProperty
-  private boolean taskSchemaPublishDisabled = false;
-  @JsonProperty
-  private boolean backFillEnabled = true;
-  @JsonProperty
-  private long backFillPeriod = 60000;
+  @JsonCreator
+  public CentralizedDatasourceSchemaConfig(
+      @JsonProperty("enabled") @Nullable Boolean enabled,
+      @JsonProperty("backFillEnabled") @Nullable Boolean backFillEnabled,
+      @JsonProperty("backFillPeriod") @Nullable Long backFillPeriod,
+      @JsonProperty("taskSchemaPublishDisabled") @Nullable Boolean taskSchemaPublishDisabled
+  )
+  {
+    this.enabled = Configs.valueOrDefault(enabled, false);
+    this.backFillEnabled = Configs.valueOrDefault(backFillEnabled, true);
+    this.backFillPeriod = Configs.valueOrDefault(backFillPeriod, 60_000L);
+    this.taskSchemaPublishDisabled = Configs.valueOrDefault(taskSchemaPublishDisabled, false);
+  }
 
-  @JsonProperty
   public boolean isEnabled()
   {
     return enabled;
   }
 
-  @JsonProperty
   public boolean isBackFillEnabled()
   {
     return backFillEnabled;
   }
 
-  @JsonProperty
-  public long getBackFillPeriod()
+  /**
+   * Period in milliseconds dictating the frequency of the schema backfill job.
+   */
+  public long getBackFillPeriodInMillis()
   {
     return backFillPeriod;
   }
 
-  @JsonProperty
+  /**
+   * Config used to disable publishing of schema when a task commits segments.
+   * This config is used only in integration tests to verify that schema is
+   * populated correctly even when tasks fail to publish the schema.
+   */
   public boolean isTaskSchemaPublishDisabled()
   {
     return taskSchemaPublishDisabled;
   }
 
+  /**
+   * @return Default config with schema management and caching disabled.
+   */
   public static CentralizedDatasourceSchemaConfig create()
   {
-    return new CentralizedDatasourceSchemaConfig();
+    return DEFAULT;
   }
 
-  public static CentralizedDatasourceSchemaConfig create(boolean enabled)
+  public static CentralizedDatasourceSchemaConfig enabled(boolean enabled)
   {
-    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
-    config.setEnabled(enabled);
-    return config;
-  }
-
-  @VisibleForTesting
-  public void setEnabled(boolean enabled)
-  {
-    this.enabled = enabled;
-  }
-
-  @VisibleForTesting
-  public void setBackFillEnabled(boolean backFillEnabled)
-  {
-    this.backFillEnabled = backFillEnabled;
-  }
-
-  @VisibleForTesting
-  public void setBackFillPeriod(long backFillPeriod)
-  {
-    this.backFillPeriod = backFillPeriod;
+    return new CentralizedDatasourceSchemaConfig(enabled, null, null, null);
   }
 }

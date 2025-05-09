@@ -25,6 +25,7 @@ import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 
 public class MetadataConfigModule implements Module
 {
@@ -36,5 +37,13 @@ public class MetadataConfigModule implements Module
 
     JsonConfigProvider.bind(binder, "druid.manager.segments", SegmentsMetadataManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
+
+    // SegmentSchemaCacheConfig needs to be bound on all services since
+    // it is a dependency of SqlSegmentsMetadataManager (both legacy and V2)
+    JsonConfigProvider.bind(
+        binder,
+        CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX,
+        CentralizedDatasourceSchemaConfig.class
+    );
   }
 }

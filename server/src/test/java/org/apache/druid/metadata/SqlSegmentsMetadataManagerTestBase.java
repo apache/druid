@@ -76,7 +76,7 @@ public class SqlSegmentsMetadataManagerTestBase
     connector = derbyConnectorRule.getConnector();
     storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
-    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
+    segmentSchemaCache = new SegmentSchemaCache();
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
