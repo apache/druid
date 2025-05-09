@@ -147,6 +147,9 @@ public class RedisCacheConfig
   @JsonProperty
   private RedisClusterConfig cluster;
 
+  @JsonProperty
+  private boolean enableTls = false;
+
   public String getHost()
   {
     return host;
@@ -195,5 +198,10 @@ public class RedisCacheConfig
   public int getDatabase()
   {
     return database;
+  }
+
+  public boolean getEnableTls()
+  {
+    return enableTls;
   }
 }
