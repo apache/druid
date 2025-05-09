@@ -100,9 +100,13 @@ public class PullDependenciesTest
   private final Artifact extension_B = new DefaultArtifact(EXTENSION_B_COORDINATE);
   private final Artifact hadoop_client_2_3_0 = new DefaultArtifact(HADOOP_CLIENT_2_3_0_COORDINATE);
   private final Artifact hadoop_client_2_4_0 = new DefaultArtifact(HADOOP_CLIENT_2_4_0_COORDINATE);
+  private List<String> commonDependencyList;
+  private List<String> extension_A_expected;
+  private List<String> extension_B_expected;
   private PullDependencies pullDependencies;
   private File rootExtensionsDir;
   private File rootHadoopDependenciesDir;
+  private File rootCommonDependenciesDir;
 
   @Before
   public void setUp() throws Exception
@@ -110,16 +114,20 @@ public class PullDependenciesTest
     localRepo = temporaryFolder.newFolder("local_repo");
     extensionToDependency = new HashMap<>();
 
-    extensionToDependency.put(extension_A, ImmutableList.of("a", "b", "c"));
-    extensionToDependency.put(extension_B, ImmutableList.of("d", "e"));
+    extensionToDependency.put(extension_A, ImmutableList.of("a", "b", "c", "d"));
+    extensionToDependency.put(extension_B, ImmutableList.of("c", "d", "e"));
     extensionToDependency.put(hadoop_client_2_3_0, ImmutableList.of("f", "g"));
     extensionToDependency.put(
         hadoop_client_2_4_0,
         ImmutableList.of("h", "i", HADOOP_CLIENT_VULNERABLE_ARTIFACTID1, HADOOP_CLIENT_VULNERABLE_ARTIFACTID2)
     );
+    commonDependencyList = ImmutableList.of("c", "d");
+    extension_A_expected = ImmutableList.of("a", "b");
+    extension_B_expected = ImmutableList.of("e");
 
     rootExtensionsDir = temporaryFolder.newFolder("extensions");
     rootHadoopDependenciesDir = temporaryFolder.newFolder("druid_hadoop_dependencies");
+    rootCommonDependenciesDir = temporaryFolder.newFolder("commonDeps");
 
     RepositorySystem realRepositorySystem = RealRepositorySystemUtil.newRepositorySystem();
     RepositorySystem spyMockRepositorySystem = spy(realRepositorySystem);
@@ -149,6 +157,12 @@ public class PullDependenciesTest
           public String getHadoopDependenciesDir()
           {
             return rootHadoopDependenciesDir.getAbsolutePath();
+          }
+
+          @Override
+          public String getCommonDependenciesDir()
+          {
+            return rootCommonDependenciesDir.getAbsolutePath();
           }
         },
         HADOOP_EXCLUSIONS
@@ -194,6 +208,20 @@ public class PullDependenciesTest
     result.setRoot(rootNode);
     result.setArtifactResults(artifacts);
     return result;
+  }
+
+  private List<File> getExpectedJarFiles(List<String> expectedJarList, File baseDir, Artifact artifact)
+  {
+    return expectedJarList.stream()
+                          .map(name -> new File(
+                              StringUtils.format(
+                                  "%s/%s/%s",
+                                  baseDir,
+                                  artifact == null ? "" : artifact.getArtifactId(),
+                                  name + ".jar"
+                              )
+                          ))
+                          .collect(Collectors.toList());
   }
 
   private List<File> getExpectedJarFiles(Artifact artifact)
@@ -250,6 +278,26 @@ public class PullDependenciesTest
   }
 
   /**
+   * If --clean is not specified and common dependencies directory already exists, skip creating.
+   */
+  @Test()
+  public void testPullDependencies_root_common_dependencies_dir_exists()
+  {
+    pullDependencies.run();
+  }
+
+  /**
+   * A file exists on the root extension directory path, but it's not a directory, throw exception.
+   */
+  @Test(expected = RuntimeException.class)
+  public void testPullDependencies_root_common_dependencies_dir_bad_state() throws IOException
+  {
+    Assert.assertTrue(rootCommonDependenciesDir.delete());
+    Assert.assertTrue(rootCommonDependenciesDir.createNewFile());
+    pullDependencies.run();
+  }
+
+  /**
    * If --clean is not specified and hadoop dependencies directory already exists, skip creating.
    */
   @Test()
@@ -281,11 +329,14 @@ public class PullDependenciesTest
 
     final List<File> jarsUnderExtensionA = Arrays.asList(actualExtensions[0].listFiles());
     Collections.sort(jarsUnderExtensionA);
-    Assert.assertEquals(getExpectedJarFiles(extension_A), jarsUnderExtensionA);
+    Assert.assertEquals(getExpectedJarFiles(extension_A_expected, rootExtensionsDir, extension_A), jarsUnderExtensionA);
 
     final List<File> jarsUnderExtensionB = Arrays.asList(actualExtensions[1].listFiles());
     Collections.sort(jarsUnderExtensionB);
-    Assert.assertEquals(getExpectedJarFiles(extension_B), jarsUnderExtensionB);
+    Assert.assertEquals(getExpectedJarFiles(extension_B_expected, rootExtensionsDir, extension_B), jarsUnderExtensionB);
+
+    final List<File> jarsUnderCommon = Arrays.asList(rootCommonDependenciesDir.listFiles());
+    Assert.assertEquals(getExpectedJarFiles(commonDependencyList, rootCommonDependenciesDir, null), jarsUnderCommon);
 
     final File[] actualHadoopDependencies = rootHadoopDependenciesDir.listFiles();
     Arrays.sort(actualHadoopDependencies);

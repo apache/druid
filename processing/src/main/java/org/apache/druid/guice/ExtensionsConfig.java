@@ -46,6 +46,9 @@ public class ExtensionsConfig
   @JsonProperty
   private String hadoopContainerDruidClasspath = null;
 
+  @JsonProperty
+  private String commonDependenciesDir = null;
+
   //Only applicable when hadoopContainerDruidClasspath is explicitly specified.
   @JsonProperty
   private boolean addExtensionsToHadoopContainer = false;
@@ -71,6 +74,11 @@ public class ExtensionsConfig
   public String getHadoopDependenciesDir()
   {
     return hadoopDependenciesDir;
+  }
+
+  public String getCommonDependenciesDir()
+  {
+    return commonDependenciesDir;
   }
 
   public String getHadoopContainerDruidClasspath()
