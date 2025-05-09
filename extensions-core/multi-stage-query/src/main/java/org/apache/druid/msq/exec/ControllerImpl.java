@@ -339,7 +339,7 @@ public class ControllerImpl implements Controller
     stopExternalFetchers();
     addToKernelManipulationQueue(
         kernel -> {
-          throw new MSQException(CanceledFault.shutdown());
+          throw new MSQException(new CanceledFault(reason));
         }
     );
 

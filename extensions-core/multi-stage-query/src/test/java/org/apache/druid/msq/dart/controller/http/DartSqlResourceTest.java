@@ -617,7 +617,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1),
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true, QueryContexts.TIMEOUT_KEY, 1),
         Collections.emptyList()
     );
 
@@ -774,7 +774,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals("Canceled", e.get("errorCode"));
     Assertions.assertEquals("CANCELED", e.get("category"));
     Assertions.assertEquals(
-        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.shutdown()),
+        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.userRequest()),
         e.get("errorMessage")
     );
   }
