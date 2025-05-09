@@ -28,6 +28,7 @@ import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -85,7 +86,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(100, config.getPollTimeout());
     Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
-    Assert.assertEquals(false, config.isUseEarliestOffset());
+    Assert.assertFalse(config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
@@ -151,10 +152,10 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
-    Assert.assertEquals(true, config.isUseEarliestOffset());
+    Assert.assertTrue(config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
-    Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
-    Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
+    Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().orNull());
+    Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().orNull());
   }
 
   @Test
@@ -194,9 +195,9 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
-    Assert.assertEquals(true, config.isUseEarliestOffset());
+    Assert.assertTrue(config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
-    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getLateMessageRejectionStartDateTime().get());
+    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getLateMessageRejectionStartDateTime().orNull());
   }
 
   @Test
@@ -286,14 +287,14 @@ public class KafkaSupervisorIOConfigTest
         + "  \"lateMessageRejectionStartDateTime\": \"2016-05-31T12:00Z\"\n"
         + "}";
     exception.expect(JsonMappingException.class);
-    KafkaSupervisorIOConfig config = mapper.readValue(
+    mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
                 KafkaSupervisorIOConfig.class
-                )
-            ), KafkaSupervisorIOConfig.class
-        );
+            )
+        ), KafkaSupervisorIOConfig.class
+    );
   }
 
   @Test
@@ -327,6 +328,7 @@ public class KafkaSupervisorIOConfigTest
         new Period("PT1H"),
         consumerProperties,
         mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -361,6 +363,7 @@ public class KafkaSupervisorIOConfigTest
         new Period("PT1H"),
         consumerProperties,
         mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        LagAggregator.DEFAULT,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -411,6 +414,7 @@ public class KafkaSupervisorIOConfigTest
         1,
         new Period("PT1H"),
         consumerProperties,
+        null,
         null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
