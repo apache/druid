@@ -290,16 +290,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     {
       return "TaskGroup{" +
              "groupId=" + groupId +
-             ", startingSequences=" + startingSequences +
-             ", unfilteredStartingSequencesForSequenceName=" + unfilteredStartingSequencesForSequenceName +
              ", tasks=" + tasks +
-             ", minimumMessageTime=" + minimumMessageTime +
-             ", maximumMessageTime=" + maximumMessageTime +
-             ", exclusiveStartSequenceNumberPartitions=" + exclusiveStartSequenceNumberPartitions +
-             ", checkpointSequences=" + checkpointSequences +
-             ", baseSequenceName='" + baseSequenceName + '\'' +
-             ", completionTimeout=" + completionTimeout +
-             ", handoffEarly=" + handoffEarly +
              '}';
     }
   }
