@@ -107,7 +107,7 @@ always return 0 as the initial value.
 ## Sketch functions
 
 These functions create sketch objects that you can use to perform fast, approximate analyses.
-For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approx).
+For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approximate-aggregations).
 To operate on sketch objects, see the scalar [DataSketches post aggregator functions](sql-scalar.md#sketch-functions).
 
 ### HLL sketch functions
