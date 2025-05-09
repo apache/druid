@@ -52,7 +52,7 @@ The automatic compaction system uses the following syntax:
 }
 ```
 
-:::info Experimental
+:::info[Experimental]
 
 The MSQ task engine is available as a compaction engine when you run automatic compaction as a compaction supervisor. For more information, see [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
 
