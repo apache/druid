@@ -2205,7 +2205,12 @@ public class ControllerImpl implements Controller
       final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
       // Not using QueryContexts.hasTimeout(), as this considers the default timeout as timeout being set.
       final boolean hasTimeout = QueryContexts.NO_TIMEOUT != timeout;
-      final long queryFailDeadline = System.currentTimeMillis() + timeout;
+      final long queryFailDeadline = MultiStageQueryContext.getStartTime(queryContext) + timeout;
+
+      // The timeout could have already elapsed while waiting for the controller to start, check it now.
+      if (hasTimeout) {
+        checkTimeout(queryFailDeadline);
+      }
 
       while (!queryKernel.isDone()) {
         startStages();
@@ -2221,8 +2226,8 @@ public class ControllerImpl implements Controller
           runKernelCommands(hasTimeout, queryFailDeadline);
         }
 
-        if (hasTimeout && (queryFailDeadline < System.currentTimeMillis())) {
-          throw new MSQException(CanceledFault.timeout());
+        if (hasTimeout) {
+          checkTimeout(queryFailDeadline);
         }
       }
 
@@ -2233,6 +2238,13 @@ public class ControllerImpl implements Controller
       updateLiveReportMaps();
       cleanUpEffectivelyFinishedStages();
       return Pair.of(queryKernel, workerTaskLauncherFuture);
+    }
+
+    private void checkTimeout(long queryFailDeadline)
+    {
+      if (queryFailDeadline < System.currentTimeMillis()) {
+        throw new MSQException(CanceledFault.timeout());
+      }
     }
 
     private void checkForErrorsInSketchFetcher()
@@ -2326,11 +2338,11 @@ public class ControllerImpl implements Controller
         if (hasTimeout) {
           // Wait till timeout for the next command.
           command = kernelManipulationQueue.poll(queryFailDeadline - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-          if (command == null) {
-            return;
-          }
         } else {
           command = kernelManipulationQueue.take();
+        }
+        if (command == null) {
+          return;
         }
         command.accept(queryKernel);
 
