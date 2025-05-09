@@ -105,6 +105,24 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelect1024pow4()
+  {
+    // This case is here to document the current behavior and not to test it.
+    // The fact that the signature is the same for both of them is misleading -
+    // not sure if it could cause problems.
+    testBuilder()
+        .sql("SELECT cast(1024 as bigint)*1024*1024*1024")
+        .expectedSignature(RowSignature.builder().add("EXPR$0", ColumnType.LONG).build())
+        .expectedResults(ImmutableList.of(new Object[] {1099511627776L}))
+        .run();
+    testBuilder()
+        .sql("SELECT 1024*1024*1024*1024")
+        .expectedSignature(RowSignature.builder().add("EXPR$0", ColumnType.LONG).build())
+        .expectedResults(ImmutableList.of(new Object[] {0}))
+        .run();
+  }
+
+  @Test
   public void testExpressionContainingNull()
   {
     testQuery(

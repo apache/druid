@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.query.Query;
@@ -37,6 +36,5 @@ public interface QueryKitSpecFactory
       QueryKit<Query<?>> queryKit,
       String queryId,
       MSQTuningConfig tuningConfig,
-      QueryContext queryContext,
-      ControllerQueryKernelConfig queryKernelConfig);
+      QueryContext queryContext);
 }

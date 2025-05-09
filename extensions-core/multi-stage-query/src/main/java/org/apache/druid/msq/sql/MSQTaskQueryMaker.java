@@ -46,6 +46,7 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
@@ -53,8 +54,10 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -67,7 +70,6 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
-import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -172,7 +174,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     return QueryResponse.withEmptyContext(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
   }
 
-
   public static LegacyMSQSpec makeLegacyMSQSpec(
       @Nullable final IngestDestination targetDataSource,
       final DruidQuery druidQuery,
@@ -189,13 +190,13 @@ public class MSQTaskQueryMaker implements QueryMaker
         terminalStageSpecFactory
     );
 
-    final Map<String, Object> nativeQueryContextOverrides = buildOverrideContext(druidQuery, plannerContext, destination);
+    final Map<String, Object> nativeQueryContextOverrides = buildOverrideContext(druidQuery.getQuery(), plannerContext, destination);
 
     final LegacyMSQSpec querySpec =
         LegacyMSQSpec.builder()
                .query(druidQuery.getQuery())
                .queryContext(queryContext.override(nativeQueryContextOverrides))
-               .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
+               .columnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature()))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(plannerContext.queryContext()))
                .tuningConfig(makeMSQTuningConfig(plannerContext))
@@ -248,7 +249,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   private static Map<String, Object> buildOverrideContext(
-      final DruidQuery druidQuery,
+      final Query<?> query,
       final PlannerContext plannerContext,
       final MSQDestination destination)
   {
@@ -261,7 +262,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
     nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
-    boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(druidQuery.getQuery(), destination);
+    boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
     if (isReindex) {
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
     }
@@ -276,6 +277,74 @@ public class MSQTaskQueryMaker implements QueryMaker
       MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
     }
     return nativeQueryContextOverrides;
+  }
+
+  public static QueryDefMSQSpec makeQueryDefMSQSpec(
+      @Nullable final IngestDestination targetDataSource,
+      final QueryContext queryContext,
+      final List<Entry<Integer, String>> fieldMapping,
+      final PlannerContext plannerContext,
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory,
+      final QueryDefinition queryDef
+  )
+  {
+    final MSQDestination destination = buildMSQDestination(
+        targetDataSource,
+        fieldMapping,
+        plannerContext,
+        terminalStageSpecFactory
+    );
+
+    final QueryDefMSQSpec querySpec = new QueryDefMSQSpec.Builder()
+        .columnMappings(QueryUtils.buildColumnMappings(fieldMapping, queryDef.getOutputRowSignature()))
+        .destination(destination)
+        .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(plannerContext.queryContext()))
+        .tuningConfig(makeMSQTuningConfig(plannerContext))
+        .queryDef(queryDef.withOverriddenContext(buildOverrideContext(null, plannerContext, destination)))
+        .build();
+
+    return querySpec;
+  }
+
+  /**
+   * Simpler version of {@link #makeResultsContext(DruidQuery, List, PlannerContext)}; without any support for intermediate types.
+   */
+  public static ResultsContext makeSimpleResultContext(
+      QueryDefinition queryDef,
+      RelDataType rowType,
+      List<Entry<Integer, String>> fieldMapping,
+      PlannerContext plannerContext)
+  {
+    RowSignature outputRowSignature = queryDef.getOutputRowSignature();
+    List<Pair<SqlTypeName, ColumnType>> types = new ArrayList<>();
+
+    if (!MultiStageQueryContext.isFinalizeAggregations(plannerContext.queryContext())) {
+      throw DruidException.defensive("Non-finalized execution is not supported!");
+    }
+
+    for (final Entry<Integer, String> entry : fieldMapping) {
+      final String queryColumn = outputRowSignature.getColumnName(entry.getKey());
+      final SqlTypeName sqlTypeName = rowType.getFieldList().get(entry.getKey()).getType().getSqlTypeName();
+      final ColumnType columnType = outputRowSignature.getColumnType(queryColumn).orElse(ColumnType.STRING);
+      types.add(Pair.of(sqlTypeName, columnType));
+    }
+
+    ResultsContext resultsContext = new ResultsContext(
+        types.stream().map(p -> p.lhs).collect(Collectors.toList()),
+        SqlResults.Context.fromPlannerContext(plannerContext)
+    );
+    return resultsContext;
+  }
+
+  public static ResultsContext makeResultsContext(DruidQuery druidQuery, List<Entry<Integer, String>> fieldMapping,
+      PlannerContext plannerContext)
+  {
+    final List<Pair<SqlTypeName, ColumnType>> types = getTypes(druidQuery, fieldMapping, plannerContext);
+    final ResultsContext resultsContext = new ResultsContext(
+        types.stream().map(p -> p.lhs).collect(Collectors.toList()),
+        SqlResults.Context.fromPlannerContext(plannerContext)
+    );
+    return resultsContext;
   }
 
   public static List<Pair<SqlTypeName, ColumnType>> getTypes(

@@ -86,7 +86,6 @@ public class QueryDefinitionBuilder
   {
     final List<StageDefinition> stageDefinitions =
         stageBuilders.stream().map(builder -> builder.build(queryId)).collect(Collectors.toList());
-
     return QueryDefinition.create(stageDefinitions, null);
   }
 }

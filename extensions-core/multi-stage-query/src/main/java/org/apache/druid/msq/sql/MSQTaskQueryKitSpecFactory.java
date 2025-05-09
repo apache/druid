@@ -22,7 +22,6 @@ package org.apache.druid.msq.sql;
 import com.google.inject.Inject;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -45,8 +44,7 @@ public class MSQTaskQueryKitSpecFactory implements QueryKitSpecFactory
       QueryKit<Query<?>> queryKit,
       String queryId,
       MSQTuningConfig tuningConfig,
-      QueryContext queryContext,
-      ControllerQueryKernelConfig queryKernelConfig)
+      QueryContext queryContext)
   {
     return new QueryKitSpec(
         queryKit,

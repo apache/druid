@@ -19,30 +19,40 @@
 
 package org.apache.druid.msq.sql;
 
+import com.google.inject.Inject;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 
 public class DartQueryKitSpecFactory implements QueryKitSpecFactory
 {
+  private final TimelineServerView serverView;
+
+  @Inject
+  public DartQueryKitSpecFactory(TimelineServerView serverView)
+  {
+    this.serverView = serverView;
+  }
+
   @Override
   public QueryKitSpec makeQueryKitSpec(
       final QueryKit<Query<?>> queryKit,
       final String queryId,
       final MSQTuningConfig tuningConfig,
-      final QueryContext queryContext,
-      final ControllerQueryKernelConfig queryKernelConfig)
+      final QueryContext queryContext)
   {
     return new QueryKitSpec(
         queryKit,
         queryId,
-        queryKernelConfig.getWorkerIds().size(),
+        getNumHistoricals(),
         queryContext.getInt(
             DartControllerContext.CTX_MAX_NON_LEAF_WORKER_COUNT,
             DartControllerContext.DEFAULT_MAX_NON_LEAF_WORKER_COUNT
@@ -52,5 +62,16 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
             DartControllerContext.DEFAULT_TARGET_PARTITIONS_PER_WORKER
         )
     );
+  }
+
+  private int getNumHistoricals()
+  {
+    int cnt = 0;
+    for (DruidServerMetadata s : serverView.getDruidServerMetadatas()) {
+      if (s.getType() == ServerType.HISTORICAL) {
+        cnt++;
+      }
+    }
+    return cnt;
   }
 }
