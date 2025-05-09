@@ -1,0 +1,1423 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B13_C4_D2
+#-------------------------------------------------------------------------
+SELECT mod(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mod(c, s_int)<99999
+       OR mod(c, s_int) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B14_C1_D2
+#-------------------------------------------------------------------------
+SELECT sin(c)+sin(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((sin(c)+sin(c))<99999
+       OR (sin(c)+sin(c)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+|  1.682941969615793 |
+|  1.682941969615793 |
+|  1.682941969615793 |
+| 1.8185948536513634 |
+| 1.8185948536513634 |
+| 1.8185948536513634 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B14_C2_D2
+#-------------------------------------------------------------------------
+SELECT sin(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (sin(c+c)<99999
+       OR sin(c+c) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.7568024953079282 |
+| -0.7568024953079282 |
+| -0.7568024953079282 |
+|  0.9092974268256817 |
+|  0.9092974268256817 |
+|  0.9092974268256817 |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B14_C3_D2
+#-------------------------------------------------------------------------
+SELECT sin(c)+sin(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((sin(c)+sin(s_int))<99999
+       OR (sin(c)+sin(s_int)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+|  1.682941969615793 |
+| 1.7507684116335782 |
+| 1.7507684116335782 |
+| 1.8185948536513634 |
+|                    |
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B14_C4_D2
+#-------------------------------------------------------------------------
+SELECT sin(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (sin(c+s_int)<99999
+       OR sin(c+s_int)<99999 IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.7568024953079282 |
+|  0.1411200080598672 |
+|  0.1411200080598672 |
+|  0.9092974268256817 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B15_C1_D2
+#-------------------------------------------------------------------------
+SELECT cos(c)+cos(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((cos(c)+cos(c))<99999
+       OR (cos(c)+cos(c)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.8322936730942848 |
+| -0.8322936730942848 |
+| -0.8322936730942848 |
+|  1.0806046117362795 |
+|  1.0806046117362795 |
+|  1.0806046117362795 |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B15_C2_D2
+#-------------------------------------------------------------------------
+SELECT cos(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (cos(c+c)<99999
+       OR cos(c+c) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.4161468365471424 |
+| -0.4161468365471424 |
+| -0.4161468365471424 |
+| -0.6536436208636119 |
+| -0.6536436208636119 |
+| -0.6536436208636119 |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B15_C3_D2
+#-------------------------------------------------------------------------
+SELECT cos(c)+cos(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((cos(c)+cos(s_int))<99999
+       OR (cos(c)+cos(s_int)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.8322936730942848 |
+| 0.12415546932099736 |
+| 0.12415546932099736 |
+|  1.0806046117362795 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B15_C4_D2
+#-------------------------------------------------------------------------
+SELECT cos(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (cos(c+s_int)<99999
+       OR cos(c+s_int) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.4161468365471424 |
+| -0.6536436208636119 |
+| -0.9899924966004454 |
+| -0.9899924966004454 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B16_C1_D2
+#-------------------------------------------------------------------------
+SELECT tan(c)+tan(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((tan(c)+tan(c))<99999
+       OR (tan(c)+tan(c)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| -4.370079726523038 |
+| -4.370079726523038 |
+| -4.370079726523038 |
+| 3.1148154493098046 |
+| 3.1148154493098046 |
+| 3.1148154493098046 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B16_C2_D2
+#-------------------------------------------------------------------------
+SELECT tan(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (tan(c+c)<99999
+       OR tan(c+c) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| -2.185039863261519 |
+| -2.185039863261519 |
+| -2.185039863261519 |
+| 1.1578212823495775 |
+| 1.1578212823495775 |
+| 1.1578212823495775 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B16_C3_D2
+#-------------------------------------------------------------------------
+SELECT tan(c)+tan(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((tan(c)+tan(s_int))<99999
+       OR (tan(c)+tan(s_int)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.6276321386066166 |
+| -0.6276321386066166 |
+|  -4.370079726523038 |
+|  3.1148154493098046 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B16_C4_D2
+#-------------------------------------------------------------------------
+SELECT tan(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (tan(c+s_int)<99999
+       OR tan(c+s_int) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.1425465430742778 |
+| -0.1425465430742778 |
+|  -2.185039863261519 |
+|  1.1578212823495775 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B17_C1_D2
+#-------------------------------------------------------------------------
+SELECT cot(c)+cot(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((cot(c)+cot(c))<99999
+       OR (cot(c)+cot(c)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.9153151087205715 |
+| -0.9153151087205715 |
+| -0.9153151087205715 |
+|  1.2841852318686615 |
+|  1.2841852318686615 |
+|  1.2841852318686615 |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B17_C2_D2
+#-------------------------------------------------------------------------
+SELECT cot(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (cot(c+c)<99999
+       OR cot(c+c) IS NULL);
++----------------------+
+| col                  |
++----------------------+
+| -0.45765755436028577 |
+| -0.45765755436028577 |
+| -0.45765755436028577 |
+|   0.8636911544506167 |
+|   0.8636911544506167 |
+|   0.8636911544506167 |
+|                      |
+|                      |
+|                      |
++----------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B17_C3_D2
+#-------------------------------------------------------------------------
+SELECT cot(c)+cot(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((cot(c)+cot(s_int))<99999
+       OR (cot(c)+cot(s_int)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| -0.9153151087205715 |
+|   0.184435061574045 |
+|   0.184435061574045 |
+|  1.2841852318686615 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B17_C4_D2
+#-------------------------------------------------------------------------
+SELECT cot(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (cot(c+s_int)<99999
+       OR cot(c+s_int) IS NULL);
++----------------------+
+| col                  |
++----------------------+
+| -0.45765755436028577 |
+|   -7.015252551434534 |
+|   -7.015252551434534 |
+|   0.8636911544506167 |
+|                      |
+|                      |
+|                      |
+|                      |
+|                      |
++----------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B18_C1_D2
+#-------------------------------------------------------------------------
+SELECT asin(c)+asin(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((asin(c)+asin(c))<99999
+       OR (asin(c)+asin(c)) IS NULL);
++-------------------+
+| col               |
++-------------------+
+| 3.141592653589793 |
+| 3.141592653589793 |
+| 3.141592653589793 |
+|                   |
+|                   |
+|                   |
++-------------------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B18_C2_D2
+#-------------------------------------------------------------------------
+SELECT asin(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (asin(c+c)<99999
+       OR asin(c+c)<99999 IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B18_C3_D2
+#-------------------------------------------------------------------------
+SELECT asin(c)+asin(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((asin(c)+asin(s_int))<99999
+       OR (asin(c)+asin(s_int)) IS NULL);
++-------------------+
+| col               |
++-------------------+
+| 3.141592653589793 |
+|                   |
+|                   |
+|                   |
+|                   |
+|                   |
++-------------------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B18_C4_D2
+#-------------------------------------------------------------------------
+SELECT asin(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (asin(c+s_int)<99999
+       OR asin(c+s_int)<99999 IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B19_C1_D2
+#-------------------------------------------------------------------------
+SELECT acos(c)+acos(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((acos(c)+acos(c))<99999
+       OR (acos(c)+acos(c)) IS NULL);
++-----+
+| col |
++-----+
+| 0.0 |
+| 0.0 |
+| 0.0 |
+|     |
+|     |
+|     |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B19_C2_D2
+#-------------------------------------------------------------------------
+SELECT acos(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (acos(c+c)<99999
+       OR acos(c+c) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B19_C3_D2
+#-------------------------------------------------------------------------
+SELECT acos(c)+acos(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((acos(c)+acos(s_int))<99999
+       OR (acos(c)+acos(s_int)) IS NULL);
++-----+
+| col |
++-----+
+| 0.0 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B19_C4_D2
+#-------------------------------------------------------------------------
+SELECT acos(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (acos(c+s_int)<99999
+       OR acos(c+s_int) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B20_C1_D2
+#-------------------------------------------------------------------------
+SELECT atan(c)+atan(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((atan(c)+atan(c))<99999
+       OR (atan(c)+atan(c)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 1.5707963267948966 |
+| 1.5707963267948966 |
+| 1.5707963267948966 |
+|  2.214297435588181 |
+|  2.214297435588181 |
+|  2.214297435588181 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B20_C2_D2
+#-------------------------------------------------------------------------
+SELECT atan(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (atan(c+c)<99999
+       OR atan(c+c) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 1.1071487177940904 |
+| 1.1071487177940904 |
+| 1.1071487177940904 |
+| 1.3258176636680326 |
+| 1.3258176636680326 |
+| 1.3258176636680326 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B20_C3_D2
+#-------------------------------------------------------------------------
+SELECT atan(c)+atan(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((atan(c)+atan(s_int))<99999
+       OR (atan(c)+atan(s_int)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 1.5707963267948966 |
+| 1.8925468811915387 |
+| 1.8925468811915387 |
+|  2.214297435588181 |
+|                    |
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B20_C4_D2
+#-------------------------------------------------------------------------
+SELECT atan(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (atan(c+s_int)<99999
+       OR atan(c+s_int) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 1.1071487177940904 |
+| 1.2490457723982544 |
+| 1.2490457723982544 |
+| 1.3258176636680326 |
+|                    |
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B21_C1_D2
+#-------------------------------------------------------------------------
+SELECT atan2(c, 1)+atan2(c, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((atan2(c, 1)+atan2(c, 1))<99999
+       OR (atan2(c, 1)+atan2(c, 1)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 1.5707963267948966 |
+| 1.5707963267948966 |
+| 1.5707963267948966 |
+|  2.214297435588181 |
+|  2.214297435588181 |
+|  2.214297435588181 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B21_C2_D2
+#-------------------------------------------------------------------------
+SELECT atan2(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (atan2(c, c)<99999
+       OR atan2(c, c) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 0.7853981633974483 |
+| 0.7853981633974483 |
+| 0.7853981633974483 |
+| 0.7853981633974483 |
+| 0.7853981633974483 |
+| 0.7853981633974483 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B21_C3_D2
+#-------------------------------------------------------------------------
+SELECT atan2(c, 1)+atan2(s_int, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((atan2(c, 1)+atan2(s_int, 1))<99999
+       OR (atan2(c, 1)+atan2(s_int, 1)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 1.5707963267948966 |
+| 1.8925468811915387 |
+| 1.8925468811915387 |
+|  2.214297435588181 |
+|                    |
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B21_C4_D2
+#-------------------------------------------------------------------------
+SELECT atan2(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (atan2(c, s_int)<99999
+       OR atan2(c, s_int) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 0.4636476090008061 |
+| 0.7853981633974483 |
+| 0.7853981633974483 |
+| 1.1071487177940904 |
+|                    |
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B22_C1_D2
+#-------------------------------------------------------------------------
+SELECT degrees(c)+degrees(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((degrees(c)+degrees(c))<99999
+       OR (degrees(c)+degrees(c)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 114.59155902616465 |
+| 114.59155902616465 |
+| 114.59155902616465 |
+|  229.1831180523293 |
+|  229.1831180523293 |
+|  229.1831180523293 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B22_C2_D2
+#-------------------------------------------------------------------------
+SELECT degrees(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (degrees(c+c)<99999
+       OR degrees(c+c) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 114.59155902616465 |
+| 114.59155902616465 |
+| 114.59155902616465 |
+|  229.1831180523293 |
+|  229.1831180523293 |
+|  229.1831180523293 |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B22_C3_D2
+#-------------------------------------------------------------------------
+SELECT degrees(c)+degrees(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((degrees(c)+degrees(s_int))<99999
+       OR (degrees(c)+degrees(s_int)) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 114.59155902616465 |
+| 171.88733853924697 |
+| 171.88733853924697 |
+|  229.1831180523293 |
+|                    |
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B22_C4_D2
+#-------------------------------------------------------------------------
+SELECT degrees(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (degrees(c+s_int)<99999
+       OR degrees(c+s_int) IS NULL);
++--------------------+
+| col                |
++--------------------+
+| 114.59155902616465 |
+| 171.88733853924697 |
+| 171.88733853924697 |
+|  229.1831180523293 |
+|                    |
+|                    |
+|                    |
+|                    |
+|                    |
++--------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B23_C1_D2
+#-------------------------------------------------------------------------
+SELECT radians(c)+radians(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((radians(c)+radians(c))<99999
+       OR (radians(c)+radians(c)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| 0.03490658503988659 |
+| 0.03490658503988659 |
+| 0.03490658503988659 |
+| 0.06981317007977318 |
+| 0.06981317007977318 |
+| 0.06981317007977318 |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B23_C2_D2
+#-------------------------------------------------------------------------
+SELECT radians(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (radians(c+c)<99999
+       OR radians(c+c) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| 0.03490658503988659 |
+| 0.03490658503988659 |
+| 0.03490658503988659 |
+| 0.06981317007977318 |
+| 0.06981317007977318 |
+| 0.06981317007977318 |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B23_C3_D2
+#-------------------------------------------------------------------------
+SELECT radians(c)+radians(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((radians(c)+radians(s_int))<99999
+       OR (radians(c)+radians(s_int)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| 0.03490658503988659 |
+| 0.05235987755982989 |
+| 0.05235987755982989 |
+| 0.06981317007977318 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B23_C4_D2
+#-------------------------------------------------------------------------
+SELECT radians(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (radians(c+s_int)<99999
+       OR radians(c+s_int) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| 0.03490658503988659 |
+| 0.05235987755982989 |
+| 0.05235987755982989 |
+| 0.06981317007977318 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B24_C1_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_and(c, 1)+bitwise_and(c, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_and(c, 1)+bitwise_and(c, 1))<99999
+       OR (bitwise_and(c, 1)+bitwise_and(c, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   2 |
+|   2 |
+|   2 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B24_C2_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_and(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_and(c, c)<99999
+       OR bitwise_and(c, c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   2 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B24_C3_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_and(c, 1)+bitwise_and(s_int, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_and(c, 1)+bitwise_and(s_int, 1))<99999
+       OR (bitwise_and(c, 1)+bitwise_and(s_int, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   1 |
+|   2 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B24_C4_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_and(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_and(c, s_int)<99999
+       OR bitwise_and(c, s_int) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   1 |
+|   2 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B25_C1_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_complement(c)+bitwise_complement(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_complement(c)+bitwise_complement(c))<99999
+       OR (bitwise_complement(c)+bitwise_complement(c)) IS NULL);
++-----+
+| col |
++-----+
+|  -4 |
+|  -4 |
+|  -4 |
+|  -6 |
+|  -6 |
+|  -6 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B25_C2_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_complement(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_complement(c+c)<99999
+       OR bitwise_complement(c+c) IS NULL);
++-----+
+| col |
++-----+
+|  -3 |
+|  -3 |
+|  -3 |
+|  -5 |
+|  -5 |
+|  -5 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B25_C3_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_complement(c)+bitwise_complement(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_complement(c)+bitwise_complement(s_int))<99999
+       OR (bitwise_complement(c)+bitwise_complement(s_int)) IS NULL);
++-----+
+| col |
++-----+
+|  -4 |
+|  -5 |
+|  -5 |
+|  -6 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B25_C4_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_complement(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_complement(c+s_int)<99999
+       OR bitwise_complement(c+s_int) IS NULL);
++-----+
+| col |
++-----+
+|  -3 |
+|  -4 |
+|  -4 |
+|  -5 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B26_C1_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)))>0
+       OR (bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)))<0
+       OR (bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))) IS NULL);
++----------------------+
+| col                  |
++----------------------+
+| -9223372036854775808 |
+| -9223372036854775808 |
+| -9223372036854775808 |
+|  9214364837600034816 |
+|  9214364837600034816 |
+|  9214364837600034816 |
+|                      |
+|                      |
+|                      |
++----------------------+
+(9 rows)
+
+!ok
+

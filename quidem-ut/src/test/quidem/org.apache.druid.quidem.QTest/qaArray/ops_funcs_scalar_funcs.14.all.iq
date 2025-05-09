@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C1_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C2_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C3_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C4_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C5_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C6_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C7_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C8_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C9_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C10_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C11_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C12_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C13_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C14_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C15_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C16_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C17_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C18_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C19_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C20_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C21_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C22_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C23_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B29_C24_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_LEFT' to arguments of type 'BITWISE_SHIFT_LEFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C1_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C2_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C3_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C4_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C5_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C6_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C7_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C8_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C9_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C10_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C11_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C12_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C13_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C14_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C15_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C16_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C17_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C18_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C19_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C20_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C21_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C22_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C23_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B30_C24_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_SHIFT_RIGHT' to arguments of type 'BITWISE_SHIFT_RIGHT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C1_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C2_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+

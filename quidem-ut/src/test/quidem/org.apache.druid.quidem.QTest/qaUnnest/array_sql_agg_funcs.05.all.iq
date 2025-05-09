@@ -1,0 +1,1119 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C5_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C6_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(c, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C7_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(c, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(c, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C8_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(c, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C9_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C10_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D')) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C1_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C2_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C2_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C3_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C3_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C4_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C4_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C5_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C5_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C6_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(c, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C7_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(c, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(c, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C8_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(c, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C9_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B20_C10_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(s_int, time_floor(__time, 'P1D'), 100) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING earliest_by(s_int, time_floor(__time, 'P1D'), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C1_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C2_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C2_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C3_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C3_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C4_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C4_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C5_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C5_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C6_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING latest(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C7_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING latest(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING latest(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C8_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING latest(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING latest(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C9_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING latest(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B21_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT latest(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING latest(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+

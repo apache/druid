@@ -576,7 +576,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(DartSqlEngine.CTX_FULL_REPORT, true),
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true),
         Collections.emptyList()
     );
 
@@ -658,7 +658,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(DartSqlEngine.CTX_FULL_REPORT, true),
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true),
         Collections.emptyList()
     );
 
@@ -730,7 +730,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId, DartSqlEngine.CTX_FULL_REPORT, fullReport),
+        ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId, QueryContexts.CTX_FULL_REPORT, fullReport),
         Collections.emptyList()
     );
 

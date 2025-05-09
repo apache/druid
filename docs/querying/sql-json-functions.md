@@ -34,10 +34,11 @@ Druid supports nested columns, which provide optimized storage and indexes for n
 
 You can use the following JSON functions to extract, transform, and create `COMPLEX<json>` objects.
 
+
 | Function | Notes |
 | --- | --- |
 |`JSON_KEYS(expr, path)`| Returns an array of field names from `expr` at the specified `path`.|
-|`JSON_MERGE(expr1, expr2[, expr3 ...])`| Merges two or more JSON `STRING` or `COMPLEX<json>` values into one, preserving the rightmost value when there are key overlaps. Always returns a `COMPLEX<json>` object.|
+|`JSON_MERGE(expr1, expr2[, expr3 ...])`| Merges two or more JSON `STRING` or `COMPLEX<json>` values into one, preserving the rightmost value when there are key overlaps. Returns `NULL` if any argument is `NULL`. Always returns a `COMPLEX<json>` object.|
 |`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])` | Constructs a new `COMPLEX<json>` object from one or more expressions. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` objects. The function can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.|
 |`JSON_PATHS(expr)`| Returns an array of all paths which refer to literal values in `expr` in JSONPath format. |
 |`JSON_QUERY(expr, path)`| Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`. |

@@ -237,8 +237,12 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
   {
     ClientSqlQuery clientSqlQuery = new ClientSqlQuery(
         StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
-        ResultFormat.OBJECTLINES.contentType(),
-        false, false, false, null, null
+        ResultFormat.OBJECTLINES.name(),
+        false,
+        false,
+        false,
+        null,
+        null
     );
     final String response = FutureUtils.get(brokerClient.submitSqlQuery(clientSqlQuery), true);
 
