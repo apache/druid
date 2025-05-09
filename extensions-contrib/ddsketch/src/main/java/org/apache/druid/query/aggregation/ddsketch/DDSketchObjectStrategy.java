@@ -48,9 +48,8 @@ public class DDSketchObjectStrategy implements ObjectStrategy<DDSketch>
     readOnlyBuffer.limit(buffer.position() + numBytes);
     try {
       com.datadoghq.sketch.ddsketch.proto.DDSketch proto = com.datadoghq.sketch.ddsketch.proto.DDSketch.parseFrom(readOnlyBuffer);
-      DDSketch recovered = DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
-      return recovered;
-    } 
+      return DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
+    }
     catch (InvalidProtocolBufferException e) {
       throw new UnsupportedOperationException("Unable to decode from Proto");
     }
@@ -60,6 +59,10 @@ public class DDSketchObjectStrategy implements ObjectStrategy<DDSketch>
   public byte[] toBytes(@Nullable DDSketch val)
   {
     if (val == null) {
+      return EMPTY_BYTES;
+    }
+
+    if (val.isEmpty()) {
       return EMPTY_BYTES;
     }
     return DDSketchProtoBinding.toProto(val).toByteArray();
