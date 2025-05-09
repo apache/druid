@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -146,6 +147,42 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testCreateOrUpdateAndStartSupervisorIllegalEvolution()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1)
+    {
+      @Override
+      public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+      {
+        throw InvalidInput.exception("Illegal spec update proposed");
+      }
+    };
+    SupervisorSpec spec2 = new TestSupervisorSpec("id1", supervisor2);
+
+    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
+    metadataSupervisorManager.insert("id1", spec);
+    supervisor1.start();
+    replayAll();
+
+    manager.start();
+    Assert.assertEquals(0, manager.getSupervisorIds().size());
+
+    manager.createOrUpdateAndStartSupervisor(spec);
+    Assert.assertEquals(1, manager.getSupervisorIds().size());
+    Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+
+    resetAll();
+    exception.expect(DruidException.class);
+    replayAll();
+
+    manager.createOrUpdateAndStartSupervisor(spec2);
+    verifyAll();
+  }
+
+  @Test
   public void testCreateOrUpdateAndStartSupervisorNotStarted()
   {
     exception.expect(IllegalStateException.class);
@@ -193,6 +230,30 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertFalse(manager.shouldUpdateSupervisor(spec));
     Assert.assertTrue(manager.shouldUpdateSupervisor(spec2));
     Assert.assertTrue(manager.shouldUpdateSupervisor(new NoopSupervisorSpec("id1", null)));
+  }
+
+  @Test
+  public void testShouldUpdateSupervisorIllegalEvolution()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1)
+    {
+      @Override
+      public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+      {
+        throw InvalidInput.exception("Illegal spec update proposed");
+      }
+    };
+    SupervisorSpec spec2 = new TestSupervisorSpec("id1", supervisor2);
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", spec
+    );
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    exception.expect(DruidException.class);
+    replayAll();
+    manager.start();
+    manager.shouldUpdateSupervisor(spec2);
+    verifyAll();
   }
 
   @Test

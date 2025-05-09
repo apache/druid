@@ -197,8 +197,15 @@ public class SupervisorManager
       try {
         byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
         Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
-        return currentSupervisor == null
-               || !Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs));
+        if (currentSupervisor == null || currentSupervisor.rhs == null) {
+          return true;
+        } else if (Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))) {
+          return false;
+        } else {
+          // The spec bytes are different, so we need to check if the update is allowed
+          currentSupervisor.rhs.validateSpecUpdateTo(spec);
+          return true;
+        }
       }
       catch (JsonProcessingException ex) {
         log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
@@ -527,6 +534,15 @@ public class SupervisorManager
                               supervisorId,
                               supervisor.rhs.getType()
                           );
+    }
+  }
+
+  @Nullable
+  private SupervisorSpec getSpec(String id)
+  {
+    synchronized (lock) {
+      Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+      return supervisor == null ? null : supervisor.rhs;
     }
   }
 }
