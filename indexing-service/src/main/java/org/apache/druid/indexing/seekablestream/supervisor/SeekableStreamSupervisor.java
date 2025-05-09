@@ -284,6 +284,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     {
       return baseSequenceName;
     }
+
+    @Override
+    public String toString()
+    {
+      return "TaskGroup{" +
+             "groupId=" + groupId +
+             ", tasks=" + tasks +
+             '}';
+    }
   }
 
   private class TaskData
@@ -462,7 +471,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               log.info(
                   "Skipping DynamicAllocationTasksNotice execution for datasource [%s] because following tasks are pending [%s]",
                   dataSource,
-                  pendingCompletionTaskGroups
+                  list
               );
               return;
             }
