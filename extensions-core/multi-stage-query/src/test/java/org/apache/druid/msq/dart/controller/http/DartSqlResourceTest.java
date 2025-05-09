@@ -201,7 +201,8 @@ public class DartSqlResourceTest extends MSQTestBase
         controllerExecutor = Execs.multiThreaded(
             MAX_CONTROLLERS,
             StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
-        )
+        ),
+        new ServerConfig()
     );
 
     final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
@@ -616,7 +617,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(DartSqlEngine.CTX_FULL_REPORT, true, QueryContexts.TIMEOUT_KEY, 1),
+        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1),
         Collections.emptyList()
     );
 
