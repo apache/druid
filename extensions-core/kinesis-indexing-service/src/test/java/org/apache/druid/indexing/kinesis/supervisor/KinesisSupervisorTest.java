@@ -5694,6 +5694,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
     {
       return stateManager;
     }
+
+    @Override
+    public int getPartitionCount()
+    {
+      return recordSupplier != null ? super.getPartitionCount() : 1;
+    }
   }
 
   private class TestableKinesisSupervisorWithCustomIsTaskCurrent extends TestableKinesisSupervisor
