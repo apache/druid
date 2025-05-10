@@ -44,6 +44,7 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.error.CancelationReason;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
@@ -51,9 +52,11 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -108,6 +111,7 @@ public class DartQueryMaker implements QueryMaker
    * {@link DartControllerConfig#getConcurrentQueries()}, which limits the number of concurrent controllers.
    */
   private final ExecutorService controllerExecutor;
+  private final ServerConfig serverConfig;
 
   public DartQueryMaker(
       List<Entry<Integer, String>> fieldMapping,
@@ -115,7 +119,8 @@ public class DartQueryMaker implements QueryMaker
       PlannerContext plannerContext,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
-      ExecutorService controllerExecutor
+      ExecutorService controllerExecutor,
+      ServerConfig serverConfig
   )
   {
     this.fieldMapping = fieldMapping;
@@ -124,6 +129,7 @@ public class DartQueryMaker implements QueryMaker
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -141,7 +147,7 @@ public class DartQueryMaker implements QueryMaker
     final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
         null,
         druidQuery,
-        druidQuery.getQuery().context(),
+        finalizeTimeout(druidQuery.getQuery().context()),
         fieldMapping,
         plannerContext,
         null // Only used for DML, which this isn't
@@ -182,6 +188,18 @@ public class DartQueryMaker implements QueryMaker
       controllerRegistry.deregister(controllerHolder);
       throw e;
     }
+  }
+
+  /**
+   * Adds the timeout parameter to the query context, considering the default and maximum values from
+   * {@link ServerConfig}.
+   */
+  private QueryContext finalizeTimeout(QueryContext queryContext)
+  {
+    final long timeout = queryContext.getTimeout(serverConfig.getDefaultQueryTimeout());
+    QueryContext timeoutContext = queryContext.override(Map.of(QueryContexts.TIMEOUT_KEY, timeout));
+    timeoutContext.verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
+    return timeoutContext;
   }
 
   /**
@@ -227,7 +245,12 @@ public class DartQueryMaker implements QueryMaker
         } else {
           // Controller was canceled before it ran.
           throw MSQErrorReport
-              .fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
+              .fromFault(
+                  controllerHolder.getController().queryId(),
+                  null,
+                  null,
+                  CanceledFault.userRequest()
+              )
               .toDruidException();
         }
       }
@@ -322,8 +345,12 @@ public class DartQueryMaker implements QueryMaker
             // Controller was canceled before it ran. Push a cancellation error to the resultIterator, so the sequence
             // returned by "runWithoutReport" can resolve.
             resultIterator.pushError(
-                MSQErrorReport.fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
-                              .toDruidException()
+                MSQErrorReport.fromFault(
+                    controllerHolder.getController().queryId(),
+                    null,
+                    null,
+                    CanceledFault.userRequest()
+                ).toDruidException()
             );
           }
         }
@@ -357,7 +384,7 @@ public class DartQueryMaker implements QueryMaker
     public void cleanup(final ResultIterator iterFromMake)
     {
       if (!iterFromMake.complete) {
-        controllerHolder.cancel();
+        controllerHolder.cancel(CancelationReason.UNKNOWN);
       }
     }
   }

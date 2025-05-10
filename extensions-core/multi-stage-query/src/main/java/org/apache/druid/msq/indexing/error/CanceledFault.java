@@ -20,24 +20,49 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
+
+import java.util.Objects;
 
 @JsonTypeName(CanceledFault.CODE)
 public class CanceledFault extends BaseMSQFault
 {
-  public static final CanceledFault INSTANCE = new CanceledFault();
   public static final String CODE = "Canceled";
-
-  CanceledFault()
-  {
-    super(CODE, "Query canceled by user or by task shutdown.");
-  }
+  private final CancelationReason reason;
 
   @JsonCreator
-  public static CanceledFault instance()
+  public CanceledFault(@JsonProperty("reason") CancelationReason reason)
   {
-    return INSTANCE;
+    super(CODE, "Query canceled due to [%s].", reason);
+    this.reason = reason;
+  }
+
+  public static CanceledFault userRequest()
+  {
+    return new CanceledFault(CancelationReason.USER_REQUEST);
+  }
+
+  public static CanceledFault shutdown()
+  {
+    return new CanceledFault(CancelationReason.TASK_SHUTDOWN);
+  }
+
+  public static CanceledFault timeout()
+  {
+    return new CanceledFault(CancelationReason.QUERY_TIMEOUT);
+  }
+
+  public static CanceledFault unknown()
+  {
+    return new CanceledFault(CancelationReason.UNKNOWN);
+  }
+
+  @JsonProperty
+  public CancelationReason getReason()
+  {
+    return reason;
   }
 
   @Override
@@ -47,5 +72,27 @@ public class CanceledFault extends BaseMSQFault
                          .ofCategory(DruidException.Category.CANCELED)
                          .withErrorCode(getErrorCode())
                          .build(MSQFaultUtils.generateMessageWithErrorCode(this));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    CanceledFault that = (CanceledFault) o;
+    return reason == that.reason;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), reason);
   }
 }

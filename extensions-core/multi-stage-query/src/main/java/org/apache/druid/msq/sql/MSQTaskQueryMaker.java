@@ -83,7 +83,6 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -265,7 +264,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (isReindex) {
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
     }
-
     nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
 
     // adding user
@@ -275,6 +273,10 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (msqMode != null) {
       MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
     }
+
+    // Add the start time.
+    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, System.currentTimeMillis());
+
     return nativeQueryContextOverrides;
   }
 

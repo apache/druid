@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -136,9 +137,9 @@ public class DartWorkerRunnerTest
 
     // "worker.stop()" sets "workerRun" to a cancellation error.
     Mockito.doAnswer(invocation -> {
-      workerRun.setException(new MSQException(CanceledFault.instance()));
+      workerRun.setException(new MSQException(new CanceledFault(invocation.getArgument(0))));
       return null;
-    }).when(worker).stop();
+    }).when(worker).stop(ArgumentMatchers.any());
 
     // "worker.controllerFailed()" sets "workerRun" to an error.
     Mockito.doAnswer(invocation -> {

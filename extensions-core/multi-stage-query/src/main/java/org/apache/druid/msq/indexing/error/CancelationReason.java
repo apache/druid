@@ -17,19 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.msq.indexing.error;
 
-public enum ExecutionMode
+/**
+ * Enum denoting the reason for query cancelation.
+ */
+public enum CancelationReason
 {
-
   /**
-   * This mode executes the query in a blocking way. The results are returned as part of the original post query call. Current sql/native endpoints are sync execution.
+   * Query was cancaled due to the task shutting down.
    */
-  SYNC,
-
+  TASK_SHUTDOWN("Task shutdown"),
   /**
-   * This mode executes the query in a non-blocking way. The results are returned as part of subsequent get results call. Currently, the msq engine uses this mode of execution.
+   * Query was cancaled due to a request from the user.
    */
-  ASYNC
+  USER_REQUEST("User request"),
+  /**
+   * Query was canceled due to exceeding the configured query timeout.
+   */
+  QUERY_TIMEOUT("Query timeout"),
+  /**
+   * Query was canceled due to an unknown reason.
+   */
+  UNKNOWN("Unknown");
 
+  private final String reason;
+
+  CancelationReason(String reason)
+  {
+    this.reason = reason;
+  }
+
+  @Override
+  public String toString()
+  {
+    return reason;
+  }
 }

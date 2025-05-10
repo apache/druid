@@ -279,7 +279,7 @@ public class RunWorkOrder
 
       try {
         // notifyListener will ignore this error if work has already succeeded.
-        notifyListener(Either.error(t != null ? t : new MSQException(CanceledFault.instance())));
+        notifyListener(Either.error(t != null ? t : new MSQException(CanceledFault.unknown())));
       }
       catch (Throwable e2) {
         if (t == null) {

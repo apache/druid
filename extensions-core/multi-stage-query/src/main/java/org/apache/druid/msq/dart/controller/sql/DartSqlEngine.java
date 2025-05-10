@@ -35,6 +35,7 @@ import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -55,19 +56,22 @@ public class DartSqlEngine implements SqlEngine
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
   private final ExecutorService controllerExecutor;
+  private final ServerConfig serverConfig;
 
   @Inject
   public DartSqlEngine(
       DartControllerContextFactory controllerContextFactory,
       DartControllerRegistry controllerRegistry,
-      DartControllerConfig controllerConfig
+      DartControllerConfig controllerConfig,
+      ServerConfig serverConfig
   )
   {
     this(
         controllerContextFactory,
         controllerRegistry,
         controllerConfig,
-        Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
+        Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s"),
+        serverConfig
     );
   }
 
@@ -75,13 +79,15 @@ public class DartSqlEngine implements SqlEngine
       DartControllerContextFactory controllerContextFactory,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
-      ExecutorService controllerExecutor
+      ExecutorService controllerExecutor,
+      ServerConfig serverConfig
   )
   {
     this.controllerContextFactory = controllerContextFactory;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -165,7 +171,8 @@ public class DartSqlEngine implements SqlEngine
         plannerContext,
         controllerRegistry,
         controllerConfig,
-        controllerExecutor
+        controllerExecutor,
+        serverConfig
     );
   }
 

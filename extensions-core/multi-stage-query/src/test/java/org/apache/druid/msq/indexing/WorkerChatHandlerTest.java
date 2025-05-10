@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
+import org.apache.druid.msq.indexing.error.CancelationReason;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -127,7 +128,7 @@ public class WorkerChatHandlerTest
     }
 
     @Override
-    public void stop()
+    public void stop(CancelationReason reason)
     {
 
     }

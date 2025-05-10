@@ -423,6 +423,7 @@ WHERE client_ip IN ('107.13.54.103',
           "maxParseExceptions" : 0,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "useApproximateCountDistinct" : "false",
           "windowFunctionOperatorTransformation" : true
         },
@@ -1049,6 +1050,7 @@ WHERE client_ip IN ('107.13.54.103',
           "maxParseExceptions" : 0,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "useApproximateCountDistinct" : "false",
           "windowFunctionOperatorTransformation" : true
         },
@@ -1671,6 +1673,7 @@ GROUP BY server_ip,
           "maxParseExceptions" : 0,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "useApproximateCountDistinct" : "false",
           "windowFunctionOperatorTransformation" : true
         },
@@ -2292,6 +2295,7 @@ GROUP BY server_ip,
           "maxParseExceptions" : 0,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "useApproximateCountDistinct" : "false",
           "windowFunctionOperatorTransformation" : true
         },
