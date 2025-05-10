@@ -261,8 +261,9 @@ public class MSQTaskQueryMaker implements QueryMaker
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
     nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
     boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(druidQuery.getQuery(), destination);
-    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
-
+    if (isReindex) {
+      nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
+    }
     nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
 
     // adding user
