@@ -300,7 +300,7 @@ PARTITIONED BY <time granularity>
 5. A [PARTITIONED BY](#partitioned-by) clause, such as `PARTITIONED BY DAY`.
 6. An optional [CLUSTERED BY](#clustered-by) clause.
 
-For more information, see [Overwrite data with REPLACE](concepts.md#replace).
+For more information, see [Overwrite data with REPLACE](concepts.md#overwrite-data-with-replace).
 
 ### `PARTITIONED BY`
 

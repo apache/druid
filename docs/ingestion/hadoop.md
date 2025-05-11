@@ -448,7 +448,7 @@ classification=yarn-site,properties=[mapreduce.reduce.memory.mb=6144,mapreduce.r
 ```
 
 - Follow the instructions under
-[Configure for connecting to Hadoop](../tutorials/cluster.md#hadoop) using the XML files from `/etc/hadoop/conf`
+[Configure for connecting to Hadoop](../tutorials/cluster.md#configure-for-connecting-to-hadoop-optional) using the XML files from `/etc/hadoop/conf`
 on your EMR master.
 
 ## Kerberized Hadoop clusters
