@@ -169,6 +169,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
         {
           return null;
         }
+
       };
       EasyMock.expect(supervisorManager.getSupervisorSpec(EasyMock.anyString()))
               .andReturn(Optional.of(supervisorSpec))

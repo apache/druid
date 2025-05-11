@@ -2226,6 +2226,7 @@ maxStreamLength
 toString
 100TB
 compressedBigDecimal
+compressedBigDecimalSum
 limitSpec
 metricsSpec
 postAggregations

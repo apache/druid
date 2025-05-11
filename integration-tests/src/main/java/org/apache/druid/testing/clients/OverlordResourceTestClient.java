@@ -514,6 +514,13 @@ public class OverlordResourceTestClient
 
   public SupervisorStateManager.BasicState getSupervisorStatus(String id)
   {
+    final String state = (String) getFullSupervisorStatus(id).get("state");
+    LOG.debug("Supervisor id[%s] has state [%s]", id, state);
+    return SupervisorStateManager.BasicState.valueOf(state);
+  }
+
+  public Map<String, Object> getFullSupervisorStatus(String id)
+  {
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
@@ -537,13 +544,10 @@ public class OverlordResourceTestClient
           response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
 
-      Map<String, Object> payload = jsonMapper.convertValue(
+      return jsonMapper.convertValue(
           responseData.get("payload"),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
-      String state = (String) payload.get("state");
-      LOG.debug("Supervisor id[%s] has state [%s]", id, state);
-      return SupervisorStateManager.BasicState.valueOf(state);
     }
     catch (ISE e) {
       throw e;
