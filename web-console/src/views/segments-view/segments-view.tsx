@@ -245,7 +245,7 @@ export interface SegmentsViewState {
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   static baseQuery(visibleColumns: LocalStorageBackedVisibility) {
     const columns = compact([
-      visibleColumns.shown('Segment ID') && `"segment_id"`,
+      `"segment_id"`,
       visibleColumns.shown('Datasource') && `"datasource"`,
       `"start"`,
       `"end"`,
