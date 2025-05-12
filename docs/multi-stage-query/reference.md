@@ -372,7 +372,7 @@ column names or expressions.
 This column list is used for [secondary partitioning](../ingestion/partitioning.md#secondary-partitioning) of segments
 within a time chunk, and [sorting](../ingestion/partitioning.md#sorting) of rows within a segment. For sorting purposes,
 Druid implicitly prepends `__time` to the `CLUSTERED BY` column list, unless
-[`forceSegmentSortByTime`](#context) is set to `false`
+[`forceSegmentSortByTime`](#context-parameters) is set to `false`
 (an experimental feature; see [Sorting](../ingestion/partitioning.md#sorting) for details).
 
 For more information about clustering, see [Clustering](concepts.md#clustering).
@@ -575,14 +575,14 @@ The following table lists query limits:
 
 | Limit | Value | Error if exceeded |
 |---|---|---|
-| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. | 1 MB | [`RowTooLarge`](#error_RowTooLarge) |
-| Number of segment-granular time chunks encountered during ingestion. | 5,000 | [`TooManyBuckets`](#error_TooManyBuckets) |
-| Number of input files/segments per worker. | 10,000 | [`TooManyInputFiles`](#error_TooManyInputFiles) |
-| Number of output partitions for any one stage. Number of segments generated during ingestion. |25,000 | [`TooManyPartitions`](#error_TooManyPartitions) |
-| Number of output columns for any one stage. | 2,000 | [`TooManyColumns`](#error_TooManyColumns) |
-| Number of cluster by columns that can appear in a stage | 1,500 | [`TooManyClusteredByColumns`](#error_TooManyClusteredByColumns) |
-| Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | [`TooManyWorkers`](#error_TooManyWorkers) |
-| Maximum memory occupied by broadcasted tables. | 30% of each [processor memory bundle](concepts.md#memory-usage). | [`BroadcastTablesTooLarge`](#error_BroadcastTablesTooLarge) |
+| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. | 1 MB | [`RowTooLarge`](#error-codes) |
+| Number of segment-granular time chunks encountered during ingestion. | 5,000 | [`TooManyBuckets`](#error-codes) |
+| Number of input files/segments per worker. | 10,000 | [`TooManyInputFiles`](#error-codes) |
+| Number of output partitions for any one stage. Number of segments generated during ingestion. |25,000 | [`TooManyPartitions`](#error-codes) |
+| Number of output columns for any one stage. | 2,000 | [`TooManyColumns`](#error-codes) |
+| Number of cluster by columns that can appear in a stage | 1,500 | [`TooManyClusteredByColumns`](#error-codes) |
+| Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | [`TooManyWorkers`](#error-codes) |
+| Maximum memory occupied by broadcasted tables. | 30% of each [processor memory bundle](concepts.md#memory-usage). | [`BroadcastTablesTooLarge`](#error-codes) |
 | Maximum memory occupied by buffered data during sort-merge join. Only relevant when `sqlJoinAlgorithm` is `sortMerge`. | 10 MB | `TooManyRowsWithSameKey` |
 | Maximum relaunch attempts per worker. Initial run is not a relaunch. The worker will be spawned 1 + `workerRelaunchLimit` times before the job fails. | 2 | `TooManyAttemptsForWorker` |
 | Maximum relaunch attempts for a job across all workers. | 100 | `TooManyAttemptsForJob` |

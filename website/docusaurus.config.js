@@ -44,7 +44,6 @@ module.exports={
   markdown: {
     mermaid: true,
   },
-  // "onBrokenAnchors": "throw",
   "presets": [
     [
       "@docusaurus/preset-classic",
