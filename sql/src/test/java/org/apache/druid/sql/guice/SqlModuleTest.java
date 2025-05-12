@@ -56,6 +56,7 @@ import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
@@ -218,6 +219,8 @@ public class SqlModuleTest
               binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
               binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
               binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
+              binder.bind(CentralizedDatasourceSchemaConfig.class)
+                    .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
             },
             sqlModule,
             new TestViewManagerModule()
