@@ -26,9 +26,9 @@ import org.apache.druid.query.policy.Policy;
  * caller to apply the policy.
  * <p>
  * This class is useful when a query engine needs direct access to interfaces that cannot have policies applied
- * transparently. For example, {@link RestrictedSegment} returns null for {@link #asQueryableIndex} because it cannot
- * apply policies transparently to a {@link QueryableIndex}. To use one, a query engine needs to obtain a
- * {@link BypassRestrictedSegment} and apply the policies itself.
+ * transparently. For example, {@link RestrictedSegment} returns null for {@link #as(Class)} when attempting to use
+ * {@link QueryableIndex} because it cannot apply policies transparently to a {@link QueryableIndex}. To use one, a
+ * query engine needs to obtain a {@link BypassRestrictedSegment} and apply the policies itself.
  */
 class BypassRestrictedSegment extends WrappedSegmentReference
 {
@@ -46,18 +46,6 @@ class BypassRestrictedSegment extends WrappedSegmentReference
   public Policy getPolicy()
   {
     return policy;
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return delegate.asCursorFactory();
-  }
-
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return delegate.asQueryableIndex();
   }
 
   @Override

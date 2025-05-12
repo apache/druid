@@ -1,0 +1,85 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaSsb/norm/data",
+        "filter" : "supplier.tbl.gz"
+      },
+      "inputFormat": {
+        "type": "tsv",
+        "columns": [
+          "s_suppkey",
+          "s_name",
+          "s_address",
+          "s_city",
+          "s_nation",
+          "s_region",
+          "s_phone"
+        ],
+        "findColumnsFromHeader": false,
+        "delimiter": "|"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      }
+    },
+    "dataSchema": {
+      "dataSource": "ssb_norm_supplier",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "!!!_no_such_column_!!!",
+        "format": "auto",
+        "missingValue": "2010-01-01T00:00:00Z"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "s_suppkey"
+          },
+          {
+            "type": "string",
+            "name": "s_name",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_address",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_city",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_nation",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_region",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "s_phone",
+            "createBitmapIndex": true
+          }
+        ]
+      } 
+    }
+  }
+}

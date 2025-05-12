@@ -1,0 +1,410 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B12_C19_D1
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM a_mixed) AS col
+FROM test_array;
+Cannot apply 'EXTRACT' to arguments of type 'EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B12_C20_D1
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'EXTRACT' to arguments of type 'EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B12_C21_D1
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'EXTRACT' to arguments of type 'EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B12_C22_D1
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM a_nested) AS col
+FROM test_array;
+Cannot apply 'EXTRACT' to arguments of type 'EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B12_C23_D1
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'EXTRACT' to arguments of type 'EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B12_C24_D1
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'EXTRACT' to arguments of type 'EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C1_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_bool TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C2_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[0]' RETURNING boolean array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C3_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][0]' RETURNING boolean array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C4_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_int TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C5_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[1]' RETURNING bigint array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C6_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][1]' RETURNING bigint array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C7_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_float TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C8_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[2]' RETURNING decimal array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C9_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][2]' RETURNING decimal array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C10_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_str TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C11_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[3]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C12_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][3]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C13_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_null TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C14_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[4]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C15_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][4]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C16_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_empty TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C17_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[5]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C18_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][5]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C19_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_mixed TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C20_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[6]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C21_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][6]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C22_D1
+#-------------------------------------------------------------------------
+SELECT floor(a_nested TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C23_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B13_C24_D1
+#-------------------------------------------------------------------------
+SELECT floor(json_value(a_nested, '$[7][7]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'FLOOR' to arguments of type 'FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C1_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_bool TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C2_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[0]' RETURNING boolean array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C3_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][0]' RETURNING boolean array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C4_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_int TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C5_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[1]' RETURNING bigint array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C6_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][1]' RETURNING bigint array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C7_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_float TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C8_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[2]' RETURNING decimal array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C9_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][2]' RETURNING decimal array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C10_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_str TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C11_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[3]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C12_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][3]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C13_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_null TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C14_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[4]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C15_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][4]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C16_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_empty TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C17_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[5]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C18_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][5]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C19_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_mixed TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C20_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[6]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+

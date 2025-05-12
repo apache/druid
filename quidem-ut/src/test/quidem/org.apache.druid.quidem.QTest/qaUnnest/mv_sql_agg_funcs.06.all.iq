@@ -1,0 +1,354 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C5
+#-------------------------------------------------------------------------
+SELECT bit_or(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C6
+#-------------------------------------------------------------------------
+SELECT bit_or(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C7
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING bit_or(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C8
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING bit_or(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C9
+#-------------------------------------------------------------------------
+SELECT bit_or(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING bit_or(c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C10
+#-------------------------------------------------------------------------
+SELECT bit_or(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING bit_or(c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C1
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C2
+#-------------------------------------------------------------------------
+SELECT bit_xor(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C3
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
+|   3 |
+|     |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C4
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C5
+#-------------------------------------------------------------------------
+SELECT bit_xor(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C6
+#-------------------------------------------------------------------------
+SELECT bit_xor(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C7
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING bit_xor(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C8
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING bit_xor(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C9
+#-------------------------------------------------------------------------
+SELECT bit_xor(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING bit_xor(c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C10
+#-------------------------------------------------------------------------
+SELECT bit_xor(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING bit_xor(c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
++-----+
+(3 rows)
+
+!ok
+

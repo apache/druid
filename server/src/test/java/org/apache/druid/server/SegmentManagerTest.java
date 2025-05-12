@@ -378,15 +378,13 @@ public class SegmentManagerTest
           segment.getInterval(),
           segment.getVersion(),
           segment.getShardSpec().createChunk(
-              ReferenceCountingSegment.wrapSegment(
                   ReferenceCountingSegment.wrapSegment(
                       new TestSegmentUtils.SegmentForTesting(
                           segment.getDataSource(),
                           (Interval) segment.getLoadSpec().get("interval"),
                           MapUtils.getString(segment.getLoadSpec(), "version")
-                  ), segment.getShardSpec()),
-                  segment.getShardSpec()
-              )
+                  ), segment.getShardSpec())
+              
           )
       );
     }

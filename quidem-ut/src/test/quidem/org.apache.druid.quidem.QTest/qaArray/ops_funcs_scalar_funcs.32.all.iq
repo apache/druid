@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C11_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[3]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C12_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C13_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_null, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C14_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[4]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C15_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C16_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_empty, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C17_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[5]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C18_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C19_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_mixed, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C20_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[6]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C21_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C22_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_nested, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C23_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C24_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C1_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_bool, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C2_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[0]' RETURNING boolean array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C3_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C4_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_int, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C5_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[1]' RETURNING bigint array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C6_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C7_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_float, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C8_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[2]' RETURNING decimal array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C9_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C10_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_str, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C11_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[3]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C12_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C13_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_null, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C14_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[4]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C15_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C16_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_empty, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C17_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[5]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C18_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C19_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_mixed, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C20_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[6]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C21_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C22_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(a_nested, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C23_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B5_C24_D1
+#-------------------------------------------------------------------------
+SELECT time_floor(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_FLOOR' to arguments of type 'TIME_FLOOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C1_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_bool, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C2_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[0]' RETURNING boolean array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_int, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C5_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[1]' RETURNING bigint array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C6_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C7_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_float, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C8_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[2]' RETURNING decimal array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C9_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C10_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_str, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C11_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[3]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C12_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+

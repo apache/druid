@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -282,7 +283,7 @@ public class FrameChannelMergerBenchmark
               signature
           );
       final Sequence<Frame> frameSequence =
-          FrameSequenceBuilder.fromCursorFactory(segment.asCursorFactory())
+          FrameSequenceBuilder.fromCursorFactory(segment.as(CursorFactory.class))
                               .allocator(ArenaMemoryAllocator.createOnHeap(10_000_000))
                               .frameType(FrameType.ROW_BASED)
                               .frames();

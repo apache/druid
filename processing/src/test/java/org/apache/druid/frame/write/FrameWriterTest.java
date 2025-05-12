@@ -75,6 +75,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -519,7 +520,8 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       inputSegment = new FrameSegment(inputFrame, FrameReader.create(signature));
     }
 
-    try (final CursorHolder cursorHolder = inputSegment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (final CursorHolder cursorHolder = Objects.requireNonNull(inputSegment.as(CursorFactory.class))
+                                                  .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       int numRows = 0;

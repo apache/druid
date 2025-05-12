@@ -40,6 +40,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -171,24 +172,12 @@ public class TestSegmentUtils
     }
 
     @Override
-    public QueryableIndex asQueryableIndex()
-    {
-      return INDEX;
-    }
-
-    @Override
-    public CursorFactory asCursorFactory()
-    {
-      return new QueryableIndexCursorFactory(INDEX);
-    }
-
-    @Override
     public <T> T as(@Nonnull Class<T> clazz)
     {
       if (clazz.equals(QueryableIndex.class)) {
-        return (T) asQueryableIndex();
+        return (T) INDEX;
       } else if (clazz.equals(CursorFactory.class)) {
-        return (T) asCursorFactory();
+        return (T) new QueryableIndexCursorFactory(INDEX);
       }
       return null;
     }
@@ -224,10 +213,14 @@ public class TestSegmentUtils
       );
     }
 
+    @Nullable
     @Override
-    public CursorFactory asCursorFactory()
+    public <T> T as(@Nonnull Class<T> clazz)
     {
-      return segment.asCursorFactory();
+      if (CursorFactory.class.isAssignableFrom(clazz)) {
+        return (T) segment.as(CursorFactory.class);
+      }
+      return null;
     }
   }
 

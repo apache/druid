@@ -46,9 +46,9 @@ public class RowBasedSegment<RowType> implements Segment
    * this, and callers will expect it.
    *
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of
-   * {@link #asCursorFactory()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's
-   * cursor factory will allow creation of selectors on any field, using the {@link RowAdapter#columnFunction} for that
-   * field, even if it doesn't appear in "rowSignature".
+   * {@link #as(Class)} to get a {@link CursorFactory}. Note that the {@link ColumnSelectorFactory} implementation
+   * returned by this segment's cursor factory will allow creation of selectors on any field, using the
+   * {@link RowAdapter#columnFunction} for that field, even if it doesn't appear in "rowSignature".
    *
    * @param rowSequence  objects that comprise this segment. Must be re-iterable if support for {@link Cursor#reset()}
    *                     is required. Otherwise, does not need to be re-iterable.
@@ -81,15 +81,12 @@ public class RowBasedSegment<RowType> implements Segment
 
   @Nullable
   @Override
-  public QueryableIndex asQueryableIndex()
+  public <T> T as(@Nonnull Class<T> clazz)
   {
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) new RowBasedCursorFactory<>(rowSequence, rowAdapter, rowSignature);
+    }
     return null;
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new RowBasedCursorFactory<>(rowSequence, rowAdapter, rowSignature);
   }
 
   @Override

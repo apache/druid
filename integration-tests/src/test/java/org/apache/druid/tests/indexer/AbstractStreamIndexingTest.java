@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -146,6 +147,8 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       String parserType,
       String parserOrInputFormat,
       List<String> dimensions,
+      Map<String, Object> context,
+      LagAggregator lagAggregator,
       IntegrationTestingConfig config
   );
 
@@ -948,9 +951,15 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     private final String streamName;
     private final String fullDatasourceName;
+    private final String parserType;
+    private final String parserOrInputFormat;
+    private final List<String> dimensions;
+
+    private final Function<String, String> streamQueryPropsTransform;
+
     private String supervisorId;
-    private Function<String, String> streamIngestionPropsTransform;
-    private Function<String, String> streamQueryPropsTransform;
+    private LagAggregator lagAggregator;
+    private Map<String, Object> context = Map.of();
 
     public GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
     {
@@ -959,7 +968,10 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
     public GeneratedTestConfig(String parserType, String parserOrInputFormat, List<String> dimensions) throws Exception
     {
-      streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
+      this.parserType = parserType;
+      this.parserOrInputFormat = parserOrInputFormat;
+      this.dimensions = dimensions;
+      this.streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
       String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();
       Map<String, String> tags = ImmutableMap.of(
           STREAM_EXPIRE_TAG,
@@ -974,15 +986,19 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "Wait for stream active"
       );
       fullDatasourceName = datasource + config.getExtraDatasourceNameSuffix();
-      streamIngestionPropsTransform = generateStreamIngestionPropsTransform(
-          streamName,
-          fullDatasourceName,
-          parserType,
-          parserOrInputFormat,
-          dimensions,
-          config
-      );
       streamQueryPropsTransform = generateStreamQueryPropsTransform(streamName, fullDatasourceName);
+    }
+
+    public GeneratedTestConfig withContext(Map<String, Object> context)
+    {
+      this.context = context;
+      return this;
+    }
+
+    public GeneratedTestConfig withLagAggregator(LagAggregator lagAggregator)
+    {
+      this.lagAggregator = lagAggregator;
+      return this;
     }
 
     public String getSupervisorId()
@@ -1007,7 +1023,16 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
     public Function<String, String> getStreamIngestionPropsTransform()
     {
-      return streamIngestionPropsTransform;
+      return generateStreamIngestionPropsTransform(
+          streamName,
+          fullDatasourceName,
+          parserType,
+          parserOrInputFormat,
+          dimensions,
+          context,
+          lagAggregator,
+          config
+      );
     }
 
     public Function<String, String> getStreamQueryPropsTransform()

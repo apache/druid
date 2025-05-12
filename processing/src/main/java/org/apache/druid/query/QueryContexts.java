@@ -126,6 +126,10 @@ public class QueryContexts
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
+  // Dart
+  public static final String CTX_DART_QUERY_ID = "dartQueryId";
+  public static final String CTX_FULL_REPORT = "fullReport";
+
   // SQL statement resource specific keys
   public static final String CTX_EXECUTION_MODE = "executionMode";
 
@@ -164,6 +168,7 @@ public class QueryContexts
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
   public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+  public static final boolean DEFAULT_CTX_FULL_REPORT = false;
 
 
   @SuppressWarnings("unused") // Used by Jackson serialization

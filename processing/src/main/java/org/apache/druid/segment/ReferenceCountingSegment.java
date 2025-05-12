@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
@@ -72,7 +73,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     );
   }
 
-  protected ReferenceCountingSegment(
+  private ReferenceCountingSegment(
       Segment baseSegment,
       int startRootPartitionId,
       int endRootPartitionId,
@@ -81,6 +82,14 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   )
   {
     super(baseSegment);
+    // ReferenceCountingSegment should not wrap another SegmentReference, because the inner reference would effectively
+    // be ignored.
+    if (baseSegment instanceof SegmentReference) {
+      throw DruidException.defensive(
+          "Cannot use a SegmentReference[%s] as baseSegment for a ReferenceCountingSegment",
+          baseSegment.asString()
+      );
+    }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;
     this.minorVersion = minorVersion;
@@ -105,20 +114,6 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   public Interval getDataInterval()
   {
     return !isClosed() ? baseObject.getDataInterval() : null;
-  }
-
-  @Override
-  @Nullable
-  public QueryableIndex asQueryableIndex()
-  {
-    return !isClosed() ? baseObject.asQueryableIndex() : null;
-  }
-
-  @Nullable
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return !isClosed() ? baseObject.asCursorFactory() : null;
   }
 
   @Override

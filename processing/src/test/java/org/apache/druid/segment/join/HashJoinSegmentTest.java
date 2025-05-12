@@ -157,19 +157,6 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
 
       @Nullable
       @Override
-      public QueryableIndex asQueryableIndex()
-      {
-        return referencedSegment.asQueryableIndex();
-      }
-
-      @Override
-      public CursorFactory asCursorFactory()
-      {
-        return referencedSegment.asCursorFactory();
-      }
-
-      @Nullable
-      @Override
       public <T> T as(@Nonnull Class<T> clazz)
       {
         return referencedSegment.as(clazz);
@@ -233,15 +220,14 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   @Test
   public void test_asQueryableIndex()
   {
-    Assert.assertNull(hashJoinSegment.asQueryableIndex());
     Assert.assertNull(hashJoinSegment.as(QueryableIndex.class));
   }
 
   @Test
-  public void test_asStorageAdapter()
+  public void test_asCursorFactory()
   {
     Assert.assertThat(
-        hashJoinSegment.asCursorFactory(),
+        hashJoinSegment.as(CursorFactory.class),
         CoreMatchers.instanceOf(HashJoinSegmentCursorFactory.class)
     );
   }

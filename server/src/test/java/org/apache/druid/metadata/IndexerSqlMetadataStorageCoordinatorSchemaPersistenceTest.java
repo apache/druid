@@ -44,6 +44,7 @@ import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -70,7 +71,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   @Before
   public void setUp()
@@ -90,8 +91,8 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
 
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+        = CentralizedDatasourceSchemaConfig.enabled(true);
 
     SqlSegmentMetadataTransactionFactory transactionFactory = new SqlSegmentMetadataTransactionFactory(
         mapper,
@@ -147,7 +148,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     Random random = new Random(5);
 
-    final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
 
     for (int i = 0; i < 10; i++) {
       final DataSegment segment = createSegment(
@@ -172,7 +173,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
           )
       );
 
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      segmentIdSchemaMap.put(segment.getId(), new SchemaPayloadPlus(schemaPayload, (long) randomNum));
     }
 
     for (int i = 0; i < 10; i++) {
@@ -234,7 +235,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Set<DataSegment> segments = new HashSet<>();
     SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     Random random = ThreadLocalRandom.current();
-    Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
 
     for (int i = 0; i < 105; i++) {
       DataSegment segment = new DataSegment(
@@ -254,7 +255,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      segmentIdSchemaMap.put(segment.getId(), new SchemaPayloadPlus(schemaPayload, (long) randomNum));
       segmentSchemaMapping.addSchema(
           segment.getId(),
           new SchemaPayloadPlus(schemaPayload, (long) randomNum),
@@ -298,7 +299,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Set<DataSegment> segments = new HashSet<>();
     SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     // Store the first observed column order for each segment for verification purpose
-    Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
 
     RowSignature originalOrder =
         RowSignature.builder()
@@ -354,10 +355,11 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       }
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(new SchemaPayload(originalOrder), randomNum));
+      SchemaPayloadPlus payloadPlus = new SchemaPayloadPlus(new SchemaPayload(originalOrder), (long) randomNum);
+      segmentIdSchemaMap.put(segment.getId(), payloadPlus);
       segmentSchemaMapping.addSchema(
           segment.getId(),
-          new SchemaPayloadPlus(schemaPayload, (long) randomNum),
+          payloadPlus,
           fingerprintGenerator.generateFingerprint(
               schemaPayload,
               segment.getDataSource(),
@@ -404,7 +406,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Set<DataSegment> segments = new HashSet<>();
     SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     Random random = ThreadLocalRandom.current();
-    Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
 
     Map<String, SchemaPayload> schemaPayloadMapToPerist = new HashMap<>();
 
@@ -426,7 +428,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      segmentIdSchemaMap.put(segment.getId(), new SchemaPayloadPlus(schemaPayload, (long) randomNum));
       String fingerprint =
           fingerprintGenerator.generateFingerprint(
               schemaPayload,
@@ -443,7 +445,12 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     }
 
     derbyConnector.retryWithHandle(handle -> {
-      segmentSchemaManager.persistSegmentSchema(handle, "fooDataSource", CentralizedDatasourceSchemaConfig.SCHEMA_VERSION, schemaPayloadMapToPerist);
+      segmentSchemaManager.persistSegmentSchema(
+          handle,
+          "fooDataSource",
+          CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
+          schemaPayloadMapToPerist
+      );
       return null;
     });
 
@@ -480,7 +487,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
     final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
 
-    final Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+    final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
     final Map<String, Pair<String, Long>> segmentStatsMap = new HashMap<>();
     Random random = new Random(5);
 
@@ -510,7 +517,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
           ),
           schemaPayload
       );
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, 6));
+      segmentIdSchemaMap.put(segment.getId(), new SchemaPayloadPlus(schemaPayload, 6L));
 
       segmentsAppendedWithReplaceLock.add(segment);
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
@@ -518,10 +525,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
 
     segmentSchemaTestUtils.insertSegmentSchema("foo", schemaPayloadMap, schemaPayloadMap.keySet());
 
-    for (Map.Entry<String, Pair<SchemaPayload, Integer>> entry : segmentIdSchemaMap.entrySet()) {
-      String segmentId = entry.getKey();
-      String fingerprint = fingerprintGenerator.generateFingerprint(entry.getValue().lhs, "foo", CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
-      long numRows = entry.getValue().rhs;
+    for (Map.Entry<SegmentId, SchemaPayloadPlus> entry : segmentIdSchemaMap.entrySet()) {
+      String segmentId = entry.getKey().toString();
+      String fingerprint = fingerprintGenerator.generateFingerprint(
+          entry.getValue().getSchemaPayload(),
+          "foo",
+          CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+      );
+      long numRows = entry.getValue().getNumRows();
       segmentStatsMap.put(segmentId, Pair.of(fingerprint, numRows));
     }
 
@@ -554,7 +565,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
               CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
           )
       );
-      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
+      segmentIdSchemaMap.put(segment.getId(), new SchemaPayloadPlus(schemaPayload, (long) randomNum));
       replacingSegments.add(segment);
     }
 
@@ -584,7 +595,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       }
       RowSignature rowSignature = RowSignature.builder().add("c6", ColumnType.FLOAT).build();
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      segmentIdSchemaMap.put(segmentReplicaWithNewVersion.getId().toString(), Pair.of(schemaPayload, 6));
+      segmentIdSchemaMap.put(segmentReplicaWithNewVersion.getId(), new SchemaPayloadPlus(schemaPayload, 6L));
       Assert.assertTrue(hasBeenCarriedForward);
     }
 

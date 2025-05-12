@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -63,6 +64,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -394,7 +396,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   @GuardedBy("hydrantLock")
   private void overwriteIndexDimensions(Segment segment)
   {
-    RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
+    RowSignature rowSignature = Objects.requireNonNull(segment.as(CursorFactory.class)).getRowSignature();
     for (String dim : rowSignature.getColumnNames()) {
       columnsExcludingCurrIndex.add(dim);
       rowSignature.getColumnType(dim).ifPresent(type -> columnTypeExcludingCurrIndex.put(dim, type));
@@ -415,7 +417,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       }
 
       // Add columns from the currHydrant that do not yet exist in columnsExcludingCurrIndex.
-      RowSignature currSignature = currHydrant.getHydrantSegment().asCursorFactory().getRowSignature();
+      RowSignature currSignature = currHydrant.getHydrantSegment().as(CursorFactory.class).getRowSignature();
 
       for (String dim : currSignature.getColumnNames()) {
         if (!columnsExcludingCurrIndex.contains(dim)) {

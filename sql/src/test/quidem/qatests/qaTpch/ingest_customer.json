@@ -1,0 +1,49 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaTpch/data",
+        "filter" : "customer.tbl.gz"
+      },
+      "inputFormat": { "type": "tsv", "columns": ["c_custkey", "c_name", "c_address", "c_nationkey", "c_phone", "c_acctbal", "c_mktsegment", "c_comment"], "findColumnsFromHeader": false, "delimiter": "|" },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 100,
+        "maxTotalRows": 100
+      },
+      "maxNumConcurrentSubTasks": 2,
+      "indexSpec": {
+        "stringDictionaryEncoding": {
+          "type": "frontCoded",
+          "bucketSize": 4,
+          "formatVersion": 1
+        }
+      }
+    },
+    "dataSchema": {
+      "dataSource": "customer",
+      "granularitySpec": {
+        "segmentGranularity": "year",
+        "queryGranularity": null,
+        "rollup": false
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto",
+	"missingValue": "2025-01-01T00:00:00.000"
+      },
+      "dimensionsSpec": {
+        "dimensions": [{"name": "c_custkey", "type": "long"}, {"name": "c_name", "type": "string"}, {"name": "c_address", "type": "string"}, {"name": "c_nationkey", "type": "long"}, {"name": "c_phone", "type": "string"}, {"name": "c_acctbal", "type": "double"}, {"name": "c_mktsegment", "type": "string"}, {"name": "c_comment", "type": "string"}]
+      }
+    }
+  }
+}
+
+

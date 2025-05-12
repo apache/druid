@@ -80,7 +80,7 @@ public class ScanQueryEngine
 
     final boolean hasTimeout = query.context().hasTimeout();
     final Long timeoutAt = responseContext.getTimeoutTime();
-    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
 
     if (cursorFactory == null) {
       throw new ISE(

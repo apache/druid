@@ -1705,7 +1705,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
     catch (Exception e) {
-      log.errorSegments(segments, "Exception inserting segments");
+      log.errorSegments(e, segments, "Exception inserting segments");
       throw e;
     }
 

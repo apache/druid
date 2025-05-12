@@ -1,0 +1,837 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B43_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                  json_value(a_nested, '$[7][6]' RETURNING varchar array))
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [null, S1, 0.1, 1, true] |   2 |
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                      json_value(a_nested, '$[7][6]' RETURNING varchar array));
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                      json_value(a_nested, '$[7][6]' RETURNING varchar array))
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                         json_value(a_nested, '$[7][6]' RETURNING varchar array)));
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                         json_value(a_nested, '$[7][6]' RETURNING varchar array)))
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                      json_value(a_nested, '$[7][6]' RETURNING varchar array));
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                      json_value(a_nested, '$[7][6]' RETURNING varchar array))
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                         json_value(a_nested, '$[7][6]' RETURNING varchar array)))
+SELECT a_mixed
+FROM t1;
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                         json_value(a_nested, '$[7][6]' RETURNING varchar array)))
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                      json_value(a_nested, '$[7][6]' RETURNING varchar array));
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B44_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed NOT IN (json_value(a_nested, '$[6]' RETURNING varchar array),
+                      json_value(a_nested, '$[7][6]' RETURNING varchar array))
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed IN
+    (SELECT a_mixed
+     FROM test_array);
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed IN
+    (SELECT a_mixed
+     FROM test_array)
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed IN
+       (SELECT a_mixed
+        FROM test_array));
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed IN
+       (SELECT a_mixed
+        FROM test_array))
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed IN
+    (SELECT a_mixed
+     FROM test_array);
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed IN
+    (SELECT a_mixed
+     FROM test_array)
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed IN
+       (SELECT a_mixed
+        FROM test_array))
+SELECT a_mixed
+FROM t1;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed IN
+       (SELECT a_mixed
+        FROM test_array))
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed IN
+    (SELECT a_mixed
+     FROM test_array);
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B45_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed IN
+    (SELECT a_mixed
+     FROM test_array)
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed NOT IN
+    (SELECT a_mixed
+     FROM test_array);
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed NOT IN
+    (SELECT a_mixed
+     FROM test_array)
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN
+       (SELECT a_mixed
+        FROM test_array));
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN
+       (SELECT a_mixed
+        FROM test_array))
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed NOT IN
+    (SELECT a_mixed
+     FROM test_array);
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed NOT IN
+    (SELECT a_mixed
+     FROM test_array)
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN
+       (SELECT a_mixed
+        FROM test_array))
+SELECT a_mixed
+FROM t1;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed NOT IN
+       (SELECT a_mixed
+        FROM test_array))
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed NOT IN
+    (SELECT a_mixed
+     FROM test_array);
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B46_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed NOT IN
+    (SELECT a_mixed
+     FROM test_array)
+GROUP BY a_mixed;
+ARRAY
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C1
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM test_array
+WHERE a_nested=a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C2
+#-------------------------------------------------------------------------
+SELECT a_nested,
+       count(*) cnt
+FROM test_array
+WHERE a_nested=a_nested
+GROUP BY a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| a_nested                                                                                                                                                                                                                                                                                                                      | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C3
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_nested=a_nested);
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C4
+#-------------------------------------------------------------------------
+SELECT a_nested,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_nested=a_nested)
+GROUP BY a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| a_nested                                                                                                                                                                                                                                                                                                                      | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C5
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_nested=a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C6
+#-------------------------------------------------------------------------
+SELECT a_nested,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_nested=a_nested
+GROUP BY a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| a_nested                                                                                                                                                                                                                                                                                                                      | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_nested=a_nested)
+SELECT a_nested
+FROM t1;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_nested=a_nested)
+SELECT a_nested,
+       count(*) cnt
+FROM t1
+GROUP BY a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| a_nested                                                                                                                                                                                                                                                                                                                      | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_nested
+FROM t1
+WHERE a_nested=a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B1_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_nested,
+       count(*) cnt
+FROM t1
+WHERE a_nested=a_nested
+GROUP BY a_nested;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| a_nested                                                                                                                                                                                                                                                                                                                      | cnt |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |   2 |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C1
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM test_array
+WHERE a_nested<>a_nested;
++----------+
+| a_nested |
++----------+
++----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C2
+#-------------------------------------------------------------------------
+SELECT a_nested,
+       count(*) cnt
+FROM test_array
+WHERE a_nested<>a_nested
+GROUP BY a_nested;
++----------+-----+
+| a_nested | cnt |
++----------+-----+
++----------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C3
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_nested<>a_nested);
++----------+
+| a_nested |
++----------+
++----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C4
+#-------------------------------------------------------------------------
+SELECT a_nested,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_nested<>a_nested)
+GROUP BY a_nested;
++----------+-----+
+| a_nested | cnt |
++----------+-----+
++----------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C5
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_nested<>a_nested;
++----------+
+| a_nested |
++----------+
++----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C6
+#-------------------------------------------------------------------------
+SELECT a_nested,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_nested<>a_nested
+GROUP BY a_nested;
++----------+-----+
+| a_nested | cnt |
++----------+-----+
++----------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_nested<>a_nested)
+SELECT a_nested
+FROM t1;
++----------+
+| a_nested |
++----------+
++----------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_nested<>a_nested)
+SELECT a_nested,
+       count(*) cnt
+FROM t1
+GROUP BY a_nested;
++----------+-----+
+| a_nested | cnt |
++----------+-----+
++----------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A8_B2_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_nested
+FROM t1
+WHERE a_nested<>a_nested;
++----------+
+| a_nested |
++----------+
++----------+
+(0 rows)
+
+!ok
+

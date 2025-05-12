@@ -522,61 +522,6 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   @Test
-  public void test_doPost_regularUser_restricted_throwsForbidden()
-  {
-    final MockAsyncContext asyncContext = new MockAsyncContext();
-    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
-    asyncContext.response = asyncResponse;
-
-    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-           .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
-    Mockito.when(httpServletRequest.startAsync())
-           .thenReturn(asyncContext);
-
-    final SqlQuery sqlQuery = new SqlQuery(
-        StringUtils.format("SELECT * FROM \"%s\"", CalciteTests.RESTRICTED_DATASOURCE),
-        ResultFormat.ARRAY,
-        false,
-        false,
-        false,
-        Collections.emptyMap(),
-        Collections.emptyList()
-    );
-
-    ForbiddenException e = Assertions.assertThrows(
-        ForbiddenException.class,
-        () -> sqlResource.doPost(sqlQuery, httpServletRequest)
-    );
-    Assertions.assertEquals("Unauthorized", e.getMessage());
-  }
-
-  @Test
-  public void test_doPost_superUser_restricted_throwsServerError()
-  {
-    final MockAsyncContext asyncContext = new MockAsyncContext();
-    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
-    asyncContext.response = asyncResponse;
-
-    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-           .thenReturn(makeAuthenticationResult(CalciteTests.TEST_SUPERUSER_NAME));
-    Mockito.when(httpServletRequest.startAsync())
-           .thenReturn(asyncContext);
-
-    final SqlQuery sqlQuery = new SqlQuery(
-        StringUtils.format("SELECT * FROM \"%s\"", CalciteTests.RESTRICTED_DATASOURCE),
-        ResultFormat.ARRAY,
-        false,
-        false,
-        false,
-        Collections.emptyMap(),
-        Collections.emptyList()
-    );
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
-    // Super user can run a dart query, but we don't support it yet.
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
-  }
-
-  @Test
   public void test_doPost_regularUser_runtimeError() throws IOException
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();
@@ -629,7 +574,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(DartSqlEngine.CTX_FULL_REPORT, true),
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true),
         Collections.emptyList()
     );
 
@@ -670,7 +615,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(DartSqlEngine.CTX_FULL_REPORT, true),
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true),
         Collections.emptyList()
     );
 
@@ -742,7 +687,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId, DartSqlEngine.CTX_FULL_REPORT, fullReport),
+        ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId, QueryContexts.CTX_FULL_REPORT, fullReport),
         Collections.emptyList()
     );
 

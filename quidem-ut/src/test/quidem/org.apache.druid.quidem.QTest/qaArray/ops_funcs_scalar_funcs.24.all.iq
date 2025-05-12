@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C21_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C22_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_nested, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C23_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C24_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C1_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_bool, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C2_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[0]' RETURNING boolean array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C3_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C4_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_int, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C5_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[1]' RETURNING bigint array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C6_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C7_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_float, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C8_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[2]' RETURNING decimal array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C9_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C10_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_str, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C11_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[3]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C12_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C13_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_null, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C14_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[4]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C15_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C16_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_empty, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C17_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[5]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C18_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C19_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_mixed, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C20_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[6]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C21_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C22_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(a_nested, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C23_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B15_C24_D1
+#-------------------------------------------------------------------------
+SELECT icontains_string(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'ICONTAINS_STRING' to arguments of type 'ICONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C1_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_bool, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C2_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[0]' RETURNING boolean array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C3_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C4_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_int, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C5_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[1]' RETURNING bigint array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C6_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C7_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_float, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C8_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[2]' RETURNING decimal array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C9_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C10_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_str, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C11_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[3]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C12_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C13_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_null, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C14_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[4]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C15_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C16_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_empty, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C17_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[5]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C18_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C19_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_mixed, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C20_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[6]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C21_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C22_D1
+#-------------------------------------------------------------------------
+SELECT replace(a_nested, 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+

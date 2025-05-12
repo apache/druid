@@ -34,8 +34,8 @@ import java.util.Optional;
 
 /**
  * A {@link SegmentReference} wrapper with a {@link Policy} restriction that is automatically enforced.
- * The policy seamlessly governs queries on the wrapped segment, ensuring compliance. For example,
- * {@link #asCursorFactory()} returns a policy-enforced {@link RestrictedCursorFactory}.
+ * The policy seamlessly governs queries on the wrapped segment, ensuring compliance for supported interfaces. For
+ * example, {@link #as(Class)} with {@link CursorFactory} returns a policy-enforced {@link RestrictedCursorFactory}.
  *
  * <p>
  * Direct access to the policy or the underlying SegmentReference (the delegate) is not allowed.
@@ -76,25 +76,12 @@ public class RestrictedSegment implements SegmentReference
     return delegate.getDataInterval();
   }
 
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new RestrictedCursorFactory(delegate.asCursorFactory(), policy);
-  }
-
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return null;
-  }
-
   @Nullable
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
   {
     if (CursorFactory.class.equals(clazz)) {
-      return (T) asCursorFactory();
+      return (T) new RestrictedCursorFactory(delegate.as(CursorFactory.class), policy);
     } else if (QueryableIndex.class.equals(clazz)) {
       return null;
     } else if (TimeBoundaryInspector.class.equals(clazz)) {

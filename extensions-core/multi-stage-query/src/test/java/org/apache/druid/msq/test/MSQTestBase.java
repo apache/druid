@@ -726,15 +726,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
         @Nullable
         @Override
-        public QueryableIndex asQueryableIndex()
+        public <T> T as(@Nonnull Class<T> clazz)
         {
-          return index;
-        }
-
-        @Override
-        public CursorFactory asCursorFactory()
-        {
-          return new QueryableIndexCursorFactory(index);
+          if (CursorFactory.class.equals(clazz)) {
+            return (T) new QueryableIndexCursorFactory(index);
+          } else if (QueryableIndex.class.equals(clazz)) {
+            return (T) index;
+          }
+          return null;
         }
 
         @Override

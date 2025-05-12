@@ -1,0 +1,1004 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B13_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed>ARRAY['true',
+                    '1',
+                    '0.1',
+                    'S1',
+                    NULL,
+                    'extra element']
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array);
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array)
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array));
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array))
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array);
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array)
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array))
+SELECT a_mixed
+FROM t1;
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array))
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array);
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B14_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed>json_value(a_nested, '$[6]' RETURNING varchar array)
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array)
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array));
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array))
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array)
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array))
+SELECT a_mixed
+FROM t1;
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array))
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B15_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed>json_value(a_nested, '$[7][6]' RETURNING varchar array)
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1'];
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1']
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1']);
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1'])
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1'];
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1']
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1'])
+SELECT a_mixed
+FROM t1;
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1'])
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1'];
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B16_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1']
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL]
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL]);
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL])
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL]
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL])
+SELECT a_mixed
+FROM t1;
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL])
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B17_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL]
+GROUP BY a_mixed;
++--------------------------+-----+
+| a_mixed                  | cnt |
++--------------------------+-----+
+| [true, 1, 0.1, S1, null] |   2 |
++--------------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C1
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM test_array
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL,
+                     'extra element'];
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C2
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM test_array
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL,
+                     'extra element']
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL,
+                        'extra element']);
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C4
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL,
+                        'extra element'])
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C5
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL,
+                     'extra element'];
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C6
+#-------------------------------------------------------------------------
+SELECT a_mixed,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL,
+                     'extra element']
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL,
+                        'extra element'])
+SELECT a_mixed
+FROM t1;
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_mixed>=ARRAY['true',
+                        '1',
+                        '0.1',
+                        'S1',
+                        NULL,
+                        'extra element'])
+SELECT a_mixed,
+       count(*) cnt
+FROM t1
+GROUP BY a_mixed;
++---------+-----+
+| a_mixed | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B18_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_mixed
+FROM t1
+WHERE a_mixed>=ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL,
+                     'extra element'];
++---------+
+| a_mixed |
++---------+
++---------+
+(0 rows)
+
+!ok
+

@@ -56,7 +56,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private SegmentsMetadataManager manager;
   private BlockingExecutorService segmentMetadataCacheExec;
@@ -185,7 +185,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
                 connector,
                 Suppliers.ofInstance(config),
                 derbyConnectorRule.metadataTablesConfigSupplier(),
-                () -> CentralizedDatasourceSchemaConfig.create(true),
+                () -> CentralizedDatasourceSchemaConfig.enabled(true),
                 emitter,
                 jsonMapper
             )

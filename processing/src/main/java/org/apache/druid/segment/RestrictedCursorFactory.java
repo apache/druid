@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 
 /**
  * A factory class for creating {@code Cursor} instances with strict adherence to {@link Policy} restrictions. Created
- * by {@link RestrictedSegment#asCursorFactory()}, and applies policies transparently.
+ * by {@link RestrictedSegment#as(Class)}, and applies policies transparently.
  * <p>
  * The {@code CursorFactory} simplifies the process of initializing and retrieving {@code Cursor} objects while ensuring
  * that any cursor created complies with the {@link Policy} restrictions.
