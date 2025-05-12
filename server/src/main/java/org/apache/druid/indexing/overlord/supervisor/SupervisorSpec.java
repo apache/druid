@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -100,4 +101,19 @@ public interface SupervisorSpec
    * @return source like stream or topic name
    */
   String getSource();
+
+  /**
+   * Checks if a spec can be replaced with a proposed spec (proposesSpec).
+   * <p>
+   * By default, this method does no validation checks. Implementations of this method can choose to define rules
+   * for spec updates and throw an exception if the update is not allowed.
+   * </p>
+   *
+   * @param proposedSpec the proposed supervisor spec
+   * @throws DruidException if the spec update is not allowed
+   */
+  default void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+  {
+    // The default implementation does not do any validation checks.
+  }
 }

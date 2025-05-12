@@ -1,0 +1,607 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B2_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_int
+FROM t1
+CROSS JOIN test_array t2;
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B3_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_float
+FROM test_array t1
+CROSS JOIN test_array t2;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B3_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array t1
+   CROSS JOIN test_array t2);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B3_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_float
+FROM t1
+CROSS JOIN test_array t2;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B4_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_str
+FROM test_array t1
+CROSS JOIN test_array t2;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B4_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array t1
+   CROSS JOIN test_array t2);
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B4_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_str
+FROM t1
+CROSS JOIN test_array t2;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B5_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_null
+FROM test_array t1
+CROSS JOIN test_array t2;
++--------------------+
+| a_null             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B5_C3
+#-------------------------------------------------------------------------
+SELECT a_null
+FROM
+  (SELECT *
+   FROM test_array t1
+   CROSS JOIN test_array t2);
++--------------------+
+| a_null             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B5_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_null
+FROM t1
+CROSS JOIN test_array t2;
++--------------------+
+| a_null             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B6_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_empty
+FROM test_array t1
+CROSS JOIN test_array t2;
++---------+
+| a_empty |
++---------+
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
++---------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B6_C3
+#-------------------------------------------------------------------------
+SELECT a_empty
+FROM
+  (SELECT *
+   FROM test_array t1
+   CROSS JOIN test_array t2);
++---------+
+| a_empty |
++---------+
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
++---------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B6_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_empty
+FROM t1
+CROSS JOIN test_array t2;
++---------+
+| a_empty |
++---------+
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
+| []      |
++---------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B7_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_mixed
+FROM test_array t1
+CROSS JOIN test_array t2;
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B7_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array t1
+   CROSS JOIN test_array t2);
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B7_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_mixed
+FROM t1
+CROSS JOIN test_array t2;
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B8_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_nested
+FROM test_array t1
+CROSS JOIN test_array t2;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B8_C3
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM
+  (SELECT *
+   FROM test_array t1
+   CROSS JOIN test_array t2);
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(16 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A7_B8_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_nested
+FROM t1
+CROSS JOIN test_array t2;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(16 rows)
+
+!ok
+

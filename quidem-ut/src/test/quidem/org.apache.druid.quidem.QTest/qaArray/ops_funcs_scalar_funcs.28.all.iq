@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C5_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C6_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C7_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_float) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C8_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C9_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C10_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_str) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C11_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C12_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C13_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_null) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C14_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C15_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C16_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_empty) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C17_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C18_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C19_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_mixed) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C20_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C21_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C22_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_nested) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C23_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C24_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C1_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_bool) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C2_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C3_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C4_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_int) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C5_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C6_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C7_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_float) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C8_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C9_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C10_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_str) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C11_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C12_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C13_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_null) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C14_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C15_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C16_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_empty) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C17_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C18_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C19_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_mixed) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C20_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C21_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C22_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(a_nested) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C23_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B24_C24_D1
+#-------------------------------------------------------------------------
+SELECT ltrim(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LTRIM' to arguments of type 'LTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C1_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_bool) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C2_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C3_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C4_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_int) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C5_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C6_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+

@@ -53,8 +53,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
@@ -89,8 +87,6 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   private static final Long NOT_SET = -1L;
   private static final Long END_OF_PARTITION = Long.MAX_VALUE;
 
-  private final ServiceEmitter emitter;
-  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private volatile Map<String, Long> latestSequenceFromStream;
 
   private final RabbitStreamSupervisorSpec spec;
@@ -116,8 +112,6 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         false);
 
     this.spec = spec;
-    this.emitter = spec.getEmitter();
-    this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
   }
 
   @Override
@@ -168,7 +162,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestSequenceFromStream : null,
         includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? aggregatePartitionLags(partitionLag).getTotalLag() : null,
         includeOffsets ? sequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.isHealthy(),
@@ -363,7 +357,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionRecordLag);
+    return aggregatePartitionLags(partitionRecordLag);
   }
 
   @Override

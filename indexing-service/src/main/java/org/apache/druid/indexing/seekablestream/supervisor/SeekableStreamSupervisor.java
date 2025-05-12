@@ -4607,7 +4607,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
 
-        LagStats lagStats = computeLags(partitionLags);
+        final LagStats lagStats = aggregatePartitionLags(partitionLags);
         Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
         for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
           emitter.emit(
@@ -4660,17 +4660,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @param partitionLags lags per partition
    */
-  protected LagStats computeLags(Map<PartitionIdType, Long> partitionLags)
+  protected LagStats aggregatePartitionLags(Map<PartitionIdType, Long> partitionLags)
   {
-    long maxLag = 0, totalLag = 0, avgLag;
-    for (long lag : partitionLags.values()) {
-      if (lag > maxLag) {
-        maxLag = lag;
-      }
-      totalLag += lag;
-    }
-    avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
-    return new LagStats(maxLag, totalLag, avgLag);
+    return spec.getIoConfig().getLagAggregator().aggregate(partitionLags);
   }
 
   /**

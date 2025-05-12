@@ -198,6 +198,7 @@ Murmur3
 MVCC
 MV_TO_ARRAY
 NFS
+NodeCache
 OCF
 OIDC
 OLAP
@@ -209,6 +210,7 @@ OutputStream
 ParAccel
 ParseSpec
 ParseSpecs
+PathChildrenCache
 Protobuf
 protobuf
 pull-deps
@@ -2224,6 +2226,7 @@ maxStreamLength
 toString
 100TB
 compressedBigDecimal
+compressedBigDecimalSum
 limitSpec
 metricsSpec
 postAggregations

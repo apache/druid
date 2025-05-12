@@ -1,0 +1,755 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_infmt_json_file
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_json_cols;
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D01
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT __time
+   FROM test_json_cols
+   GROUP BY __time);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D02
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_str, '$.') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D03
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_num_int, '$.') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D04
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_num_float, '$.') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D05
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_bool, '$.') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D06
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(s_null, '$.') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D07
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj, '$.') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D08
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array, '$.') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D09
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_obj_nested, '$.') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D10
+#-------------------------------------------------------------------------
+SELECT json_query(c_empty_array_nested, '$.') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D11
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_str = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D12
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_num_int = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D13
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_num_float = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D14
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_bool = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D15
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_null IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D16
+#-------------------------------------------------------------------------
+SELECT c_empty_obj
+FROM test_json_cols;
++-------------+
+| c_empty_obj |
++-------------+
+| {}          |
+|             |
++-------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D17
+#-------------------------------------------------------------------------
+SELECT c_empty_array
+FROM test_json_cols;
++---------------+
+| c_empty_array |
++---------------+
+| []            |
+|               |
++---------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D18
+#-------------------------------------------------------------------------
+SELECT c_empty_obj_nested
+FROM test_json_cols;
++-----------------------------+
+| c_empty_obj_nested          |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D19
+#-------------------------------------------------------------------------
+SELECT c_empty_array_nested
+FROM test_json_cols;
++----------------------+
+| c_empty_array_nested |
++----------------------+
+| [{},[],null]         |
+|                      |
++----------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D20
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D21
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D22
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D23
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D24
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D25
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D26
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D27
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D28
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D29
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D30
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D31
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D32
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D33
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_obj.a_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D34
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D35
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D36
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D37
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_obj.a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D38
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D39
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D40
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D41
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D42
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_array[0].a_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D43
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D44
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D45
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D46
+#-------------------------------------------------------------------------
+SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D47
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D48
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_infmt_json_file TEST_ID: D49
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+

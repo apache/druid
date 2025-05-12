@@ -1,0 +1,230 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmless_tsv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_json_cols;
++-----+
+| cnt |
++-----+
+|   2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H01
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT __time
+   FROM test_json_cols
+   GROUP BY __time);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H02
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_str = 'A'
+  OR s_str = '"A"';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H03
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_num_int = '1';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H04
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_num_float = '0.1';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H05
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE s_bool = 'true';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H07
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c_empty_obj = '{}';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H08
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c_empty_array = '[]';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H09
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c_empty_obj_nested = '{"o1":{},"o2":[],"o3":null}';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H10
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c_empty_array_nested = '[{},[],null]';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H11
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 like '%a_str%';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H12
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 like '%b_str%';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H13
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c2 like '%a_str%';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H14
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c2 like '%b_str%';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_ingest_schmless_tsv TEST_ID: H15
+#-------------------------------------------------------------------------
+SELECT sum(cnt) s
+FROM test_json_cols;
++---+
+| s |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+

@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C21_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][6]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C22_D1
+#-------------------------------------------------------------------------
+SELECT ceil(a_nested TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C23_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B14_C24_D1
+#-------------------------------------------------------------------------
+SELECT ceil(json_value(a_nested, '$[7][7]' RETURNING varchar array) TO DAY) AS col
+FROM test_array;
+Cannot apply 'CEIL' to arguments of type 'CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C1_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_bool) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C2_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C3_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C4_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_int) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C5_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C6_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C7_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_float) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C8_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C9_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C10_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_str) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C11_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C12_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C13_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_null) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C14_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C15_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C16_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_empty) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C17_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C18_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C19_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_mixed) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C20_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C21_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C22_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, a_nested) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C23_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B15_C24_D1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPADD' to arguments of type 'TIMESTAMPADD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C1_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_bool) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C2_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C3_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C4_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_int) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C5_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C6_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C7_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_float) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C8_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C9_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C10_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_str) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C11_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C12_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C13_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_null) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C14_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C15_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C16_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_empty) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C17_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C18_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C19_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_mixed) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C20_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C21_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C22_D1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, CURRENT_TIMESTAMP, a_nested) AS col
+FROM test_array;
+Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
+!error
+

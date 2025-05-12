@@ -1,0 +1,420 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C11_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[3]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C12_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][3]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C13_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_null, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C14_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[4]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C15_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][4]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C16_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_empty, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C17_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[5]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C18_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][5]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C19_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_mixed, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C20_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[6]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C21_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][6]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C22_D1
+#-------------------------------------------------------------------------
+SELECT rpad(a_nested, 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C23_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B29_C24_D1
+#-------------------------------------------------------------------------
+SELECT rpad(json_value(a_nested, '$[7][7]' RETURNING varchar array), 2, 'A') AS col
+FROM test_array;
+Cannot apply 'RPAD' to arguments of type 'RPAD(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT CURRENT_TIMESTAMP AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT CURRENT_DATE AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C1_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_bool) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C2_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C3_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C4_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_int) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C5_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C6_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C7_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_float) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C8_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C9_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C10_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_str) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C11_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C12_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C13_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_null) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C14_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C15_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C16_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_empty) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C17_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C18_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C19_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_mixed) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C20_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C21_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C22_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', a_nested) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C23_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B3_C24_D1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'DATE_TRUNC' to arguments of type 'DATE_TRUNC(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C1_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_bool, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C2_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[0]' RETURNING boolean array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C3_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C4_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_int, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C5_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[1]' RETURNING bigint array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C6_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C7_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_float, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C8_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[2]' RETURNING decimal array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C9_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B4_C10_D1
+#-------------------------------------------------------------------------
+SELECT time_ceil(a_str, 'P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_CEIL' to arguments of type 'TIME_CEIL(
+!error
+
