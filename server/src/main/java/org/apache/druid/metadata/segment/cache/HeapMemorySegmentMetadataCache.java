@@ -907,6 +907,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       return;
     }
 
+    // Emit metrics for the current contents of the cache
+    segmentSchemaCache.getStats().forEach(this::emitMetric);
+
     final Stopwatch fetchDuration = Stopwatch.createStarted();
     final String sql = StringUtils.format(
         "SELECT fingerprint, payload FROM %s WHERE version = %s",
@@ -925,7 +928,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         records.stream().filter(Objects::nonNull).collect(Collectors.toMap(r -> r.fingerprint, r -> r.payload));
 
     if (fingerprintToSchemaPayload.size() < records.size()) {
-      emitMetric("skipped_schemas", records.size() - fingerprintToSchemaPayload.size());
+      emitMetric(Metric.SKIPPED_SEGMENT_SCHEMAS, records.size() - fingerprintToSchemaPayload.size());
     }
 
     final Map<SegmentId, SegmentMetadata> segmentIdToMetadata = new HashMap<>(
@@ -948,7 +951,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         segmentIdToMetadata,
         fingerprintToSchemaPayload
     );
-    emitMetric("schema_poll_duration", fetchDuration.millisElapsed());
+    emitMetric(Metric.RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS, fetchDuration.millisElapsed());
   }
 
   /**

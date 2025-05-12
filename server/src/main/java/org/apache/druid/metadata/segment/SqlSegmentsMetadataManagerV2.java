@@ -82,15 +82,6 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
     );
     this.managerConfig = managerConfig.get();
     this.segmentMetadataCache = segmentMetadataCache;
-
-    // Segment metadata cache currently cannot handle schema updates
-    if (segmentMetadataCache.isEnabled() && centralizedDatasourceSchemaConfig.isEnabled()) {
-      throw new IllegalArgumentException(
-          "Segment metadata incremental cache['druid.manager.segments.useIncrementalCache']"
-          + " and segment schema cache['druid.centralizedDatasourceSchema.enabled']"
-          + " must not be enabled together."
-      );
-    }
   }
 
   /**

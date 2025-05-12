@@ -258,6 +258,10 @@ public class SegmentSchemaCache
     return false;
   }
 
+  /**
+   * @return Immutable map from segment ID to {@link SegmentMetadata} for all
+   * published used segments currently present in this cache.
+   */
   public Map<SegmentId, SegmentMetadata> getSegmentMetadataMap()
   {
     return publishedSegmentSchemas.get().segmentIdToMetadata;
