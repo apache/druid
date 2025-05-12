@@ -35,6 +35,7 @@ import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
@@ -91,6 +92,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(storageConfig),
         Suppliers.ofInstance(CentralizedDatasourceSchemaConfig.create()),
+        new SegmentSchemaCache(),
         connector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, segmentMetadataCacheExec, false),
         emitter

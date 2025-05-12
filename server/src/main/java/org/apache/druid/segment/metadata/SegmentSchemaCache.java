@@ -258,7 +258,7 @@ public class SegmentSchemaCache
     return false;
   }
 
-  private Map<SegmentId, SegmentMetadata> getSegmentMetadataMap()
+  public Map<SegmentId, SegmentMetadata> getSegmentMetadataMap()
   {
     return publishedSegmentSchemas.get().segmentIdToMetadata;
   }

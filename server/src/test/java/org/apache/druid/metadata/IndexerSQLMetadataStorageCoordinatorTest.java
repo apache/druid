@@ -45,6 +45,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -154,6 +155,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         CentralizedDatasourceSchemaConfig::create,
+        new SegmentSchemaCache(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
             nameFormat,

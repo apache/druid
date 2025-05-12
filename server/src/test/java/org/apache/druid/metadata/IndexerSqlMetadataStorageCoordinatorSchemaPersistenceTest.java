@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
@@ -449,7 +450,8 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
           handle,
           "fooDataSource",
           CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
-          schemaPayloadMapToPerist
+          schemaPayloadMapToPerist,
+          DateTimes.nowUtc()
       );
       return null;
     });

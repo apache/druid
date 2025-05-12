@@ -40,6 +40,7 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
@@ -177,6 +178,7 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         Suppliers.ofInstance(CentralizedDatasourceSchemaConfig.create()),
+        new SegmentSchemaCache(),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
         NoopServiceEmitter.instance()

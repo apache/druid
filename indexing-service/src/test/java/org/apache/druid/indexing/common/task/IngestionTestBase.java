@@ -326,6 +326,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         Suppliers.ofInstance(CentralizedDatasourceSchemaConfig.create()),
+        new SegmentSchemaCache(),
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()
