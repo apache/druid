@@ -171,7 +171,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   }
 
   @Test
-  public void test_manager_pollsSegmentsAndSchemas_ifBothCacheAndSchemaAreEnabled()
+  public void test_manager_usesCachedSegmentsAndSchemas_ifBothCacheAndSchemaAreEnabled()
   {
     initManager(SegmentMetadataCache.UsageMode.ALWAYS, true);
 
