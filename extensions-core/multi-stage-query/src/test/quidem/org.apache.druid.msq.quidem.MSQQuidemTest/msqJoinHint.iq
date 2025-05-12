@@ -197,6 +197,7 @@ where w1.cityName='New York';
           "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"j0.countryName\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "windowFunctionOperatorTransformation" : true
         },
         "columnTypes" : [ "STRING", "STRING" ],
@@ -439,6 +440,7 @@ LogicalJoin:[[broadcast inheritPath:[0, 0]]]
           "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"j0.countryName\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "windowFunctionOperatorTransformation" : true
         },
         "columnTypes" : [ "STRING", "STRING" ],
@@ -709,6 +711,7 @@ LogicalJoin:[[sort_merge inheritPath:[0, 0]]]
           "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"j0.countryName\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "windowFunctionOperatorTransformation" : true
         },
         "columnTypes" : [ "STRING", "STRING" ],
