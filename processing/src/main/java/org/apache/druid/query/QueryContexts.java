@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -90,6 +89,7 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  public static final String ENGINE = "engine";
   // this flag controls whether the topN engine can use the 'pooled' algorithm when query granularity is set to
   // anything other than 'ALL' and the cardinality + number of aggregators would require more size than is available
   // in the buffers and so must reset the cursor to use multiple passes. This is likely slower than the default
@@ -155,6 +155,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
   public static final CloneQueryMode DEFAULT_CLONE_QUERY_MODE = CloneQueryMode.EXCLUDECLONES;
+  public static final Engine DEFAULT_ENGINE = Engine.NATIVE;
   public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = true;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
