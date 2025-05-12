@@ -350,6 +350,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
   private TestGroupByBuffers groupByBuffers;
   protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(makeTestWorkerMemoryParameters());
   protected static final String TEST_CONTROLLER_TASK_ID = "query-test-query";
+  // Fields in the query context to ignore during assertion.
+  protected Set<String> ignoreFields = Set.of(MultiStageQueryContext.CTX_START_TIME);
 
   protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
@@ -863,10 +865,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   private void assertMSQSpec(LegacyMSQSpec expectedMSQSpec, LegacyMSQSpec querySpecForTask)
   {
-    // Adds system fields which are expected to be set by MSQ, and cannot be passed in the query by the user.
-    final Map<String, Object> systemFields = Map.of(MultiStageQueryContext.CTX_IS_REINDEX, false);
+    final Map<String, Object> ignoredContext = new HashMap<>();
+    final Map<String, Object> actualQueryContext = querySpecForTask.getQuery().getContext();
+    for (String ignoredField : ignoreFields) {
+      if (actualQueryContext.containsKey(ignoredField)) {
+        ignoredContext.put(ignoredField, actualQueryContext.get(ignoredField));
+      }
+    }
 
-    Assert.assertEquals(expectedMSQSpec.getQuery().withOverriddenContext(systemFields), querySpecForTask.getQuery());
+    Assert.assertEquals(expectedMSQSpec.getQuery().withOverriddenContext(ignoredContext), querySpecForTask.getQuery());
     Assert.assertEquals(expectedMSQSpec.getAssignmentStrategy(), querySpecForTask.getAssignmentStrategy());
     Assert.assertEquals(expectedMSQSpec.getColumnMappings(), querySpecForTask.getColumnMappings());
     Assert.assertEquals(expectedMSQSpec.getDestination(), querySpecForTask.getDestination());
