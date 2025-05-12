@@ -72,7 +72,7 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
         />
       }
     >
-      {children}
+      {children ?? value}
     </Popover>
   );
 });
