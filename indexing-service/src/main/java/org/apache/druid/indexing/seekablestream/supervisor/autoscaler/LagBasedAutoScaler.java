@@ -223,6 +223,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     // Cache the factorization in an immutable list for quick lookup later
     // Partition counts *can* change externally without a new instance of this class being created
     if (partitionFactors.isEmpty() || partitionCount != partitionFactors.get(partitionFactors.size() - 1)) {
+      log.debug("(Re)computing partitionCount factorization for partitionCount=[%d]", partitionCount);
       partitionFactors = factorize(partitionCount);
     }
 
@@ -232,7 +233,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     return applyMinMaxChecks(desiredActiveTaskCount, currentActiveTaskCount, partitionCount);
   }
 
-  private int computeDesiredTaskCountHelper(List<Long> lags, int currentActiveTaskCount)
+  private int computeDesiredTaskCountHelper(final List<Long> lags, final int currentActiveTaskCount)
   {
     int beyond = 0;
     int within = 0;
@@ -263,11 +264,11 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
 
-  private int applyMinMaxChecks(int desiredActiveTaskCount, int currentActiveTaskCount, int partitionCount)
+  private int applyMinMaxChecks(int desiredActiveTaskCount, final int currentActiveTaskCount, final int partitionCount)
   {
     // for now, only attempt to scale to nearest factor for scale up
     if (lagBasedAutoScalerConfig.getUseNearestFactorScaling() && desiredActiveTaskCount > currentActiveTaskCount) {
-      desiredActiveTaskCount = nearestFactor(desiredActiveTaskCount).orElse(desiredActiveTaskCount);
+      desiredActiveTaskCount = nearestPartitionCountFactor(desiredActiveTaskCount).orElse(desiredActiveTaskCount);
     }
 
     if (desiredActiveTaskCount == currentActiveTaskCount) {
@@ -279,9 +280,17 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     final int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
 
     if (currentActiveTaskCount == actualTaskCountMax && currentActiveTaskCount < desiredActiveTaskCount) {
+      log.debug(
+          "CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource[%s].",
+          dataSource
+      );
       emitSkipMetric("Already at max task count", desiredActiveTaskCount);
       return -1;
     } else if (currentActiveTaskCount == actualTaskCountMin && currentActiveTaskCount > desiredActiveTaskCount) {
+      log.debug(
+          "CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource[%s].",
+          dataSource
+      );
       emitSkipMetric("Already at min task count", desiredActiveTaskCount);
       return -1;
     }
@@ -291,7 +300,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     return desiredActiveTaskCount;
   }
 
-  private void emitSkipMetric(final String reason, int taskCount)
+  private void emitSkipMetric(final String reason, final int taskCount)
   {
     emitter.emit(metricBuilder
                      .setDimension(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION, reason)
@@ -299,10 +308,10 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /*
-    Finds the nearest divisor of the topic's partition count that is ≥ `desiredTaskCount`.
-    If no such divisor exists, we return an empty optional.
+    Finds the next largest factor of the topic's partition count that is ≥ `desiredTaskCount`.
+    If no such factor exists, return an empty optional.
   */
-  private Optional<Integer> nearestFactor(int desiredTaskCount)
+  private Optional<Integer> nearestPartitionCountFactor(final int desiredTaskCount)
   {
     int lo = 0;
     int hi = partitionFactors.size();
@@ -327,7 +336,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     return lagBasedAutoScalerConfig;
   }
 
-  private static ImmutableList<Integer> factorize(int partitionCount)
+  private static ImmutableList<Integer> factorize(final int partitionCount)
   {
     final ImmutableList.Builder<Integer> factors = new ImmutableList.Builder<>();
     for (int i = 1; i <= partitionCount; ++i) {

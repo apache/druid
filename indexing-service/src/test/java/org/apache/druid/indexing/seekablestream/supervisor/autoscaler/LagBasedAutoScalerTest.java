@@ -159,7 +159,7 @@ public class LagBasedAutoScalerTest
   {
     List<Long> lagValues = ImmutableList.of(2000L, 2100L, 1900L, 2200L, 2300L);
     // currentActiveTaskCount == taskCountMax == partitionCount
-    int result = testStaticAutoScale(lagValues, createConfig(false, 10), 10, 10);
+    int result = testStaticAutoScale(lagValues, defaultConfig, 10, 10);
     Assert.assertEquals("Should not scale as already at max", -1, result);
     emitter.verifyEmitted(
         SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC,
@@ -360,8 +360,6 @@ public class LagBasedAutoScalerTest
     int result = testStaticAutoScale(lagValues, highThresholdConfig, 3, 10);
     Assert.assertEquals("Should not scale out with high threshold", -1, result);
 
-    Mockito.reset();
-
     LagBasedAutoScalerConfig lowThresholdConfig = createConfig(
         false,
         DEFAULT_MIN_TASK_COUNT,
@@ -395,8 +393,6 @@ public class LagBasedAutoScalerTest
     );
     int result = testStaticAutoScale(lagValues, highThresholdConfig, 3, 10);
     Assert.assertEquals("Should scale in with high threshold", 2, result);
-
-    Mockito.reset();
 
     LagBasedAutoScalerConfig lowThresholdConfig = createConfig(
         false,
