@@ -185,7 +185,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/w
 
 
 ```HTTP
-POST /druid/indexer/v1/indexer/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
+POST /druid/indexer/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Accept: application/json, text/plain
@@ -281,7 +281,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_hour/m
 
 
 ```HTTP
-POST /druid/indexer/v1/indexer/wikipedia_hour/markUnused HTTP/1.1
+POST /druid/indexer/v1/datasources/wikipedia_hour/markUnused HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 230
