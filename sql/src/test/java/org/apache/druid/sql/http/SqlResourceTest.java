@@ -1860,7 +1860,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertTrue(validateAndAuthorizeLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     Assert.assertTrue(lifecycleAddLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
     planLatch.countDown();
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
@@ -1893,7 +1893,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
     execLatch.countDown();
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
@@ -1921,7 +1921,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery("invalidQuery", makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery("invalidQuery", null, makeRequestForCancel());
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
@@ -1946,7 +1946,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(3, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
     Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());

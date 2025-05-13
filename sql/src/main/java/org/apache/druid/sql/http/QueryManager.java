@@ -20,11 +20,21 @@
 package org.apache.druid.sql.http;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.SqlLifecycleManager;
 
+import javax.ws.rs.core.Response;
 import java.util.List;
+import java.util.function.Function;
 
 @ExtensionPoint
 public interface QueryManager
 {
+  // TODO: change from response to something better
+  Response cancelQuery(
+      String sqlQueryId,
+      Function<List<SqlLifecycleManager.Cancelable>, AuthorizationResult> authFunction
+  );
+
   List<QueryInfo> getRunningQueries(boolean selfOnly);
 }

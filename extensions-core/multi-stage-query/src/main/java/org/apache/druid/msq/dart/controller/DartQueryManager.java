@@ -26,27 +26,85 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.QueryInfo;
 import org.apache.druid.sql.http.QueryManager;
 import org.apache.druid.sql.http.SqlResource;
 
+import javax.ws.rs.core.Response;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class DartQueryManager implements QueryManager
 {
   private static final Logger log = new Logger(SqlResource.class);
   private final DartControllerRegistry controllerRegistry;
+  private final SqlLifecycleManager sqlLifecycleManager;
   private final DartSqlClients sqlClients;
 
   @Inject
-  public DartQueryManager(DartControllerRegistry controllerRegistry, DartSqlClients sqlClients)
+  public DartQueryManager(
+      DartControllerRegistry controllerRegistry,
+      DartSqlClients sqlClients,
+      SqlLifecycleManager sqlLifecycleManager
+  )
   {
     log.error("CREATED");
     this.controllerRegistry = controllerRegistry;
     this.sqlClients = sqlClients;
+    this.sqlLifecycleManager = sqlLifecycleManager;
+  }
+
+  @Override
+  public Response cancelQuery(
+      String sqlQueryId,
+      Function<List<SqlLifecycleManager.Cancelable>, AuthorizationResult> authFunction
+  )
+  {
+    List<SqlLifecycleManager.Cancelable> cancelables = sqlLifecycleManager.getAll(sqlQueryId);
+    final AuthorizationResult authResult = authFunction.apply(cancelables);
+
+    if (cancelables.isEmpty()) {
+      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
+      // Brokers, this ensures the user sees a successful request.
+      return Response.status(Response.Status.ACCEPTED).build();
+    }
+
+    if (authResult.allowAccessWithNoRestriction()) {
+      sqlLifecycleManager.removeAll(sqlQueryId, cancelables);
+
+      // Don't call cancel() on the cancelables. That just cancels native queries, which is useless here. Instead,
+      // get the controller and stop it.
+      for (SqlLifecycleManager.Cancelable cancelable : cancelables) {
+        final HttpStatement stmt = (HttpStatement) cancelable;
+        final Object dartQueryId = stmt.context().get(QueryContexts.CTX_DART_QUERY_ID);
+        if (dartQueryId instanceof String) {
+          final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
+          if (holder != null) {
+            holder.cancel();
+          }
+        } else {
+          log.warn(
+              "%s[%s] for query[%s] is not a string, cannot cancel.",
+              QueryContexts.CTX_DART_QUERY_ID,
+              dartQueryId,
+              sqlQueryId
+          );
+        }
+      }
+
+      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
+      // Brokers, this ensures the user sees a successful request.
+      return Response.status(Response.Status.ACCEPTED).build();
+    } else {
+      return Response.status(Response.Status.FORBIDDEN).build();
+    }
   }
 
   @Override

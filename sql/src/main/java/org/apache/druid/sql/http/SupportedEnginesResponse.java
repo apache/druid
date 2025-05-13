@@ -30,7 +30,7 @@ public class SupportedEnginesResponse
   private final Set<Engine> supportedEngines;
 
   @JsonCreator
-  public SupportedEnginesResponse( @JsonProperty("supportedEngines")Set<Engine> supportedEngines)
+  public SupportedEnginesResponse(@JsonProperty("supportedEngines")Set<Engine> supportedEngines)
   {
     this.supportedEngines = supportedEngines;
   }

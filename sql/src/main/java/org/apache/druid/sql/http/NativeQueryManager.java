@@ -16,15 +16,53 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.sql.http;
 
+import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.SqlLifecycleManager;
+
+import javax.ws.rs.core.Response;
 import java.util.List;
+import java.util.function.Function;
 
 public class NativeQueryManager implements QueryManager
 {
- @Override
- public List<QueryInfo> getRunningQueries(boolean selfOnly)
- {
-  throw new UnsupportedOperationException();
- }
+  private final SqlLifecycleManager sqlLifecycleManager;
+
+  @Inject
+  public NativeQueryManager(SqlLifecycleManager sqlLifecycleManager)
+  {
+    this.sqlLifecycleManager = sqlLifecycleManager;
+  }
+
+  @Override
+  public Response cancelQuery(String sqlQueryId, Function<List<SqlLifecycleManager.Cancelable>, AuthorizationResult> authFunction)
+  {
+    List<SqlLifecycleManager.Cancelable> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
+    if (lifecycles.isEmpty()) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    final AuthorizationResult authResult = authFunction.apply(lifecycles);
+
+    if (authResult.allowAccessWithNoRestriction()) {
+      // should remove only the lifecycles in the snapshot.
+      sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
+      lifecycles.forEach(SqlLifecycleManager.Cancelable::cancel);
+      return Response.status(Response.Status.ACCEPTED).build();
+    } else {
+      return Response.status(Response.Status.FORBIDDEN).build();
+    }
+  }
+
+  @Override
+  public List<QueryInfo> getRunningQueries(boolean selfOnly)
+  {
+    throw DruidException.forPersona(DruidException.Persona.USER)
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("getRunningQueries is not supported for native queries.");
+  }
 }

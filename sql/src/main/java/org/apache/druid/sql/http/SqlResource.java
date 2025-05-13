@@ -142,18 +142,18 @@ public class SqlResource
       @Context final HttpServletRequest request
   )
   {
-    final Engine engine = QueryContexts.getAsEnum(
-        QueryContexts.ENGINE,
-        engineString,
-        Engine.class,
-        QueryContexts.DEFAULT_ENGINE
-    );
-
     final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
     final AuthorizationResult stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
         authorizerMapper
+    );
+
+    final Engine engine = QueryContexts.getAsEnum(
+        QueryContexts.ENGINE,
+        engineString,
+        Engine.class,
+        QueryContexts.DEFAULT_ENGINE
     );
 
     QueryManager queryManager = queryManagers.getOrDefault(engine, null);
@@ -215,26 +215,30 @@ public class SqlResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response cancelQuery(
       @PathParam("id") String sqlQueryId,
+      @QueryParam("engine") String engineString,
       @Context final HttpServletRequest req
   )
   {
     log.debug("Received cancel request for query [%s]", sqlQueryId);
+    final Engine engine = QueryContexts.getAsEnum(
+        QueryContexts.ENGINE,
+        engineString,
+        Engine.class,
+        QueryContexts.DEFAULT_ENGINE
+    );
 
-    List<Cancelable> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
-    if (lifecycles.isEmpty()) {
-      return Response.status(Status.NOT_FOUND).build();
+    QueryManager queryManager = queryManagers.getOrDefault(engine, null);
+    if (queryManager == null) {
+      return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
-
-    final AuthorizationResult authResult = authorizeCancellation(req, lifecycles);
-
-    if (authResult.allowAccessWithNoRestriction()) {
-      // should remove only the lifecycles in the snapshot.
-      sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
-      lifecycles.forEach(Cancelable::cancel);
-      return Response.status(Status.ACCEPTED).build();
-    } else {
-      return Response.status(Status.FORBIDDEN).build();
-    }
+    return queryManager.cancelQuery(sqlQueryId, cancelables -> {
+      if (cancelables.isEmpty()) {
+        AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
+        return null;
+      } else {
+        return authorizeCancellation(req, cancelables);
+      }
+    });
   }
 
   /**

@@ -20,14 +20,9 @@
 package org.apache.druid.msq.dart.controller.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
-import org.apache.druid.msq.dart.controller.ControllerHolder;
-import org.apache.druid.msq.dart.controller.DartControllerRegistry;
-import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -36,10 +31,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.QueryManager;
@@ -48,17 +40,13 @@ import org.apache.druid.sql.http.SqlResource;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -72,12 +60,6 @@ public class DartSqlResource extends SqlResource
 {
   public static final String PATH = "/druid/v2/sql/dart";
 
-  private static final Logger log = new Logger(DartSqlResource.class);
-
-  private final DartControllerRegistry controllerRegistry;
-  private final SqlLifecycleManager sqlLifecycleManager;
-  private final DartSqlClients sqlClients;
-  private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig dartQueryConfig;
 
   @Inject
@@ -85,9 +67,7 @@ public class DartSqlResource extends SqlResource
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
       @Dart final SqlStatementFactory sqlStatementFactory,
-      final DartControllerRegistry controllerRegistry,
       final SqlLifecycleManager sqlLifecycleManager,
-      final DartSqlClients sqlClients,
       final ServerConfig serverConfig,
       final ResponseContextConfig responseContextConfig,
       @Self final DruidNode selfNode,
@@ -105,24 +85,7 @@ public class DartSqlResource extends SqlResource
         responseContextConfig,
         selfNode
     );
-    this.controllerRegistry = controllerRegistry;
-    this.sqlLifecycleManager = sqlLifecycleManager;
-    this.sqlClients = sqlClients;
-    this.authorizerMapper = authorizerMapper;
     this.dartQueryConfig = dartQueryConfig;
-  }
-
-  /**
-   * API that allows callers to check if this resource is installed without actually issuing a query. If installed,
-   * this call returns 200 OK. If not installed, callers get 404 Not Found.
-   */
-  @GET
-  @Path("/enabled")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response doGetEnabled(@Context final HttpServletRequest request)
-  {
-    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
-    return Response.ok(ImmutableMap.of("enabled", true)).build();
   }
 
   /**
@@ -158,60 +121,5 @@ public class DartSqlResource extends SqlResource
     context.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
 
     return super.doPost(sqlQuery.withOverridenContext(context), req);
-  }
-
-  /**
-   * API to cancel a query.
-   */
-  @DELETE
-  @Path("{id}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Override
-  public Response cancelQuery(
-      @PathParam("id") String sqlQueryId,
-      @Context final HttpServletRequest req
-  )
-  {
-    log.debug("Received cancel request for query[%s]", sqlQueryId);
-
-    List<SqlLifecycleManager.Cancelable> cancelables = sqlLifecycleManager.getAll(sqlQueryId);
-    if (cancelables.isEmpty()) {
-      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
-      // Brokers, this ensures the user sees a successful request.
-      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
-      return Response.status(Response.Status.ACCEPTED).build();
-    }
-
-    final AuthorizationResult authResult = authorizeCancellation(req, cancelables);
-
-    if (authResult.allowAccessWithNoRestriction()) {
-      sqlLifecycleManager.removeAll(sqlQueryId, cancelables);
-
-      // Don't call cancel() on the cancelables. That just cancels native queries, which is useless here. Instead,
-      // get the controller and stop it.
-      for (SqlLifecycleManager.Cancelable cancelable : cancelables) {
-        final HttpStatement stmt = (HttpStatement) cancelable;
-        final Object dartQueryId = stmt.context().get(QueryContexts.CTX_DART_QUERY_ID);
-        if (dartQueryId instanceof String) {
-          final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
-          if (holder != null) {
-            holder.cancel();
-          }
-        } else {
-          log.warn(
-              "%s[%s] for query[%s] is not a string, cannot cancel.",
-              QueryContexts.CTX_DART_QUERY_ID,
-              dartQueryId,
-              sqlQueryId
-          );
-        }
-      }
-
-      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
-      // Brokers, this ensures the user sees a successful request.
-      return Response.status(Response.Status.ACCEPTED).build();
-    } else {
-      return Response.status(Response.Status.FORBIDDEN).build();
-    }
   }
 }
