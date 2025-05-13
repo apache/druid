@@ -56,12 +56,12 @@ The same request payloads may be used for both versions of any API and the respo
 
 |API|Method|Deprecated Coordinator path|New Overlord path|Change in response payload|
 |---|------|---------------------------|-----------------|--------------------------|
-|Mark a single segment as used|`POST`|`/druid/coordinator/v1/datasources/segments/{segmentId}`|`/druid/coordinator/v1/datasources/segments/{segmentId}`|Yes|
-|Mark a single segment as unused|`DELETE`|`/druid/coordinator/v1/datasources/{datasource}/segments/{segmentId}`|`/druid/indexer/v1/datasources/{datasource}/segments/{segmentId}`|Yes|
-|Mark a group of non-overshadowed segments as used|`POST`|`/druid/coordinator/v1/datasources/{datasource}/markUsed`|`/druid/indexer/v1/datasources/{datasource}/markUsed`|No|
-|Mark a group of segments as unused|`POST`|`/druid/coordinator/v1/datasources/{datasource}/markUnused`|`/druid/indexer/v1/datasources/{datasource}/markUnused`|No|
-|Mark all non-overshadowed segments of a datasource as used|`POST`|`/druid/coordinator/v1/datasources/{datasource}`|`/druid/indexer/v1/datasources/{datasource}`|No|
-|Mark all segments of a datasource as unused|`DELETE`|`/druid/coordinator/v1/datasources/{datasource}`|`/druid/indexer/v1/datasources/{datasource}`|No|
+|[Mark a single segment as used](#mark-a-single-segment-as-used)|`POST`|`/druid/coordinator/v1/datasources/segments/{segmentId}`|`/druid/coordinator/v1/datasources/segments/{segmentId}`|Yes (old: `{"segmentStateChanged": true}`, new: `{"numChangedSegments": 1}`)|
+|[Mark a single segment as unused](#mark-a-single-segment-unused)|`DELETE`|`/druid/coordinator/v1/datasources/{datasource}/segments/{segmentId}`|`/druid/indexer/v1/datasources/{datasource}/segments/{segmentId}`|Yes (old: `{"segmentStateChanged": true}`, new: `{"numChangedSegments": 1}`)|
+|[Mark a group of non-overshadowed segments as used](#mark-a-group-of-segments-used)|`POST`|`/druid/coordinator/v1/datasources/{datasource}/markUsed`|`/druid/indexer/v1/datasources/{datasource}/markUsed`|No|
+|[Mark a group of segments as unused](#mark-a-group-of-segments-unused)|`POST`|`/druid/coordinator/v1/datasources/{datasource}/markUnused`|`/druid/indexer/v1/datasources/{datasource}/markUnused`|No|
+|[Mark all non-overshadowed segments of a datasource as used](#mark-all-non-overshadowed-segments-used)|`POST`|`/druid/coordinator/v1/datasources/{datasource}`|`/druid/indexer/v1/datasources/{datasource}`|No|
+|[Mark all segments of a datasource as unused](#mark-all-segments-unused)|`DELETE`|`/druid/coordinator/v1/datasources/{datasource}`|`/druid/indexer/v1/datasources/{datasource}`|No|
 
 ### Segment IDs
 
@@ -485,11 +485,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Mark all non-overshadowed segments used
 
-Marks the state of all non-overshadowed unused segments of a datasource as used.
+Marks the state of all unused segments of a datasource as used given that they are not already overshadowed by other segments.
 The endpoint returns the number of changed segments.
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
-Check the response payload to confirm if any segment was actually updated.
+Check the response payload to get the number of segments actually updated.
 
 #### URL
 
