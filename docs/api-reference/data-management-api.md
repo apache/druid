@@ -49,19 +49,8 @@ Furthermore, it is possible that all segments could be unused, yet an indexing t
 
 ### New Overlord APIs
 
-All of the following APIs, except [Segment deletion](#segment-deletion) have been moved from the Coordinator to the Overlord as it is the service responsible for performing actions on segment metadata on behalf of indexing tasks.
-This makes the Overlord the single source of truth for segment metadata, thus ensuring a consistent view across the Druid cluster and allowing the Overlord to cache metadata to improve performance.
-The corresponding Coordinator APIs are now deprecated and will be removed in a future release. For the time being, they simply redirect the request to the Overlord.
-The same request payloads may be used for both versions of any API and the response payload has changed only in a couple of cases.
-
-|API|Method|Deprecated Coordinator path|New Overlord path|Change in response payload|
-|---|------|---------------------------|-----------------|--------------------------|
-|[Mark a single segment as used](#mark-a-single-segment-as-used)|`POST`|`/druid/coordinator/v1/datasources/segments/{segmentId}`|`/druid/coordinator/v1/datasources/segments/{segmentId}`|Yes (old: `{"segmentStateChanged": true}`, new: `{"numChangedSegments": 1}`)|
-|[Mark a single segment as unused](#mark-a-single-segment-unused)|`DELETE`|`/druid/coordinator/v1/datasources/{datasource}/segments/{segmentId}`|`/druid/indexer/v1/datasources/{datasource}/segments/{segmentId}`|Yes (old: `{"segmentStateChanged": true}`, new: `{"numChangedSegments": 1}`)|
-|[Mark a group of non-overshadowed segments as used](#mark-a-group-of-segments-used)|`POST`|`/druid/coordinator/v1/datasources/{datasource}/markUsed`|`/druid/indexer/v1/datasources/{datasource}/markUsed`|No|
-|[Mark a group of segments as unused](#mark-a-group-of-segments-unused)|`POST`|`/druid/coordinator/v1/datasources/{datasource}/markUnused`|`/druid/indexer/v1/datasources/{datasource}/markUnused`|No|
-|[Mark all non-overshadowed segments of a datasource as used](#mark-all-non-overshadowed-segments-used)|`POST`|`/druid/coordinator/v1/datasources/{datasource}`|`/druid/indexer/v1/datasources/{datasource}`|No|
-|[Mark all segments of a datasource as unused](#mark-all-segments-unused)|`DELETE`|`/druid/coordinator/v1/datasources/{datasource}`|`/druid/indexer/v1/datasources/{datasource}`|No|
+All of the following APIs, except [Segment deletion](#segment-deletion) are served by the Overlord as it is the service responsible for performing actions on segment metadata on behalf of indexing tasks.
+This makes it the single source of truth for segment metadata, thus ensuring a consistent view across the Druid cluster and allowing the Overlord to cache metadata to improve performance.
 
 ### Segment IDs
 
@@ -152,7 +141,7 @@ Marks the state of a segment as used, using the segment ID.
 
 #### URL
 
-`POST` `/druid/indexer/v1/datasources/segments/{segmentId}`
+`POST` `/druid/indexer/v1/datasources/{datasource}/segments/{segmentId}`
 
 #### Header
 
