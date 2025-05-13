@@ -47,8 +47,6 @@ When you use these APIs concurrently with an indexing task or a kill task, the b
 Druid terminates some segments and marks others as used.
 Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully.
 
-### New Overlord APIs
-
 All of the following APIs, except [Segment deletion](#segment-deletion) are served by the Overlord as it is the service responsible for performing actions on segment metadata on behalf of indexing tasks.
 This makes it the single source of truth for segment metadata, thus ensuring a consistent view across the Druid cluster and allowing the Overlord to cache metadata to improve performance.
 
