@@ -178,7 +178,7 @@ export function sqlQueryCustomTableFilters(filters: Filter[]): SqlExpression {
 
 export function tableFiltersToString(tableFilters: Filter[]): string {
   return tableFilters
-    .map(({ id, value }) => `${id}${value.replace(/[&%]/g, encodeURIComponent)}`)
+    .map(({ id, value }) => `${id}${value.replace(/[&%/]/g, encodeURIComponent)}`)
     .join('&');
 }
 
@@ -187,7 +187,7 @@ export function stringToTableFilters(str: string | undefined): Filter[] {
   // '~' | '=' | '!=' | '<' | '<=' | '>' | '>=';
   return filterMap(str.split('&'), clause => {
     const m = /^(\w+)((?:~|=|!=|<(?!=)|<=|>(?!=)|>=).*)$/.exec(
-      clause.replace(/%2[56]/g, decodeURIComponent),
+      clause.replace(/%2[56F]/g, decodeURIComponent),
     );
     if (!m) return;
     return { id: m[1], value: m[2] };
