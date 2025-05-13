@@ -128,6 +128,7 @@ Accept: application/json, text/plain
 
 ```json
 {
+    "segmentStateChanged": true,
     "numChangedSegments": 1
 }
 ```
@@ -200,6 +201,7 @@ Accept: application/json, text/plain
 
 ```json
 {
+    "segmentStateChanged": true,
     "numChangedSegments": 1
 }
 ```
