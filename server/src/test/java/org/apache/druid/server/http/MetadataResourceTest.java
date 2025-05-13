@@ -122,13 +122,13 @@ public class MetadataResourceTest
     storageCoordinator = Mockito.mock(IndexerMetadataStorageCoordinator.class);
     Mockito.doReturn(segments[4])
            .when(storageCoordinator)
-           .retrieveUsedSegmentForId(DATASOURCE1, segments[4].getId().toString());
+           .retrieveUsedSegmentForId(segments[4].getId());
     Mockito.doReturn(null)
            .when(storageCoordinator)
-           .retrieveUsedSegmentForId(DATASOURCE1, segments[5].getId().toString());
+           .retrieveUsedSegmentForId(segments[5].getId());
     Mockito.doReturn(segments[5])
            .when(storageCoordinator)
-           .retrieveSegmentForId(DATASOURCE1, segments[5].getId().toString());
+           .retrieveSegmentForId(segments[5].getId());
 
     Mockito.doAnswer(mockIterateAllUnusedSegmentsForDatasource())
            .when(storageCoordinator)
