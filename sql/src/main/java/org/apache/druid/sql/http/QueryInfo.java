@@ -17,27 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.controller.sql;
+package org.apache.druid.sql.http;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
-import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.SqlResource;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import javax.servlet.http.HttpServletRequest;
-
-/**
- * Client for the {@link DartSqlResource} resource.
- */
-public interface DartSqlClient
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "engine")
+public interface QueryInfo
 {
+  String getIdentity();
+
+  String getAuthenticator();
+
   /**
-   * Get information about all currently-running queries on this server.
-   *
-   * @param selfOnly true if only queries from this server should be returned; false if queries from all servers
-   *                 should be returned
-   *
-   * @see SqlResource#doGetRunningQueries(String, String, HttpServletRequest) the server side
+   * Returns a copy of this instance with {@link #getAuthenticator()} and {@link #getIdentity()} nulled.
    */
-  ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly);
+  QueryInfo withoutAuthenticationResult();
 }

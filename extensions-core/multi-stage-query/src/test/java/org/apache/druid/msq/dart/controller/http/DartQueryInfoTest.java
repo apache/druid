@@ -19,11 +19,35 @@
 
 package org.apache.druid.msq.dart.controller.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class DartQueryInfoTest
 {
+  @Test
+  void test_serde() throws Exception
+  {
+    DartQueryInfo dartQueryInfo = new DartQueryInfo(
+        "sid",
+        "did",
+        "SELECT 1",
+        "localhost:1001",
+        "",
+        "",
+        DateTimes.of("2000"),
+        ControllerHolder.State.RUNNING.toString()
+    );
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    byte[] bytes = jsonMapper.writeValueAsBytes(dartQueryInfo);
+    DartQueryInfo deserialized = jsonMapper.readValue(bytes, DartQueryInfo.class);
+    Assertions.assertEquals(dartQueryInfo, deserialized);
+  }
+
   @Test
   public void test_equals()
   {

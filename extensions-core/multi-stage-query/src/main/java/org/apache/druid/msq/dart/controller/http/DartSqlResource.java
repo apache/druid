@@ -21,10 +21,7 @@ package org.apache.druid.msq.dart.controller.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
@@ -34,20 +31,18 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.Engine;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.http.QueryManager;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 
@@ -59,23 +54,19 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Resource for Dart queries. API-compatible with {@link SqlResource}, so clients can be pointed from
  * {@code /druid/v2/sql/} to {@code /druid/v2/sql/dart/} without code changes.
  */
+@Deprecated
 @Path(DartSqlResource.PATH + '/')
 public class DartSqlResource extends SqlResource
 {
@@ -100,6 +91,7 @@ public class DartSqlResource extends SqlResource
       final ServerConfig serverConfig,
       final ResponseContextConfig responseContextConfig,
       @Self final DruidNode selfNode,
+      final Map<Engine, QueryManager> queryManagers,
       @Dart final DefaultQueryConfig dartQueryConfig
   )
   {
@@ -109,6 +101,7 @@ public class DartSqlResource extends SqlResource
         sqlStatementFactory,
         sqlLifecycleManager,
         serverConfig,
+        queryManagers,
         responseContextConfig,
         selfNode
     );
@@ -130,73 +123,6 @@ public class DartSqlResource extends SqlResource
   {
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
     return Response.ok(ImmutableMap.of("enabled", true)).build();
-  }
-
-  /**
-   * API to list all running queries.
-   *
-   * @param selfOnly if true, return queries running on this server. If false, return queries running on all servers.
-   * @param req      http request
-   */
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  public GetQueriesResponse doGetRunningQueries(
-      @QueryParam("selfOnly") final String selfOnly,
-      @Context final HttpServletRequest req
-  )
-  {
-    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
-    final AuthorizationResult stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
-        authenticationResult,
-        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
-        authorizerMapper
-    );
-
-    final List<DartQueryInfo> queries =
-        controllerRegistry.getAllHolders()
-                          .stream()
-                          .map(DartQueryInfo::fromControllerHolder)
-                          .collect(Collectors.toList());
-
-    // Add queries from all other servers, if "selfOnly" is not set.
-    if (selfOnly == null) {
-      final List<GetQueriesResponse> otherQueries = FutureUtils.getUnchecked(
-          Futures.successfulAsList(
-              Iterables.transform(sqlClients.getAllClients(), client -> client.getRunningQueries(true))),
-          true
-      );
-
-      for (final GetQueriesResponse response : otherQueries) {
-        if (response != null) {
-          queries.addAll(response.getQueries());
-        }
-      }
-    }
-
-    // Sort queries by start time, breaking ties by query ID, so the list comes back in a consistent and nice order.
-    queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
-
-    final GetQueriesResponse response;
-    if (stateReadAccess.allowAccessWithNoRestriction()) {
-      // User can READ STATE, so they can see all running queries, as well as authentication details.
-      response = new GetQueriesResponse(queries);
-    } else {
-      // User cannot READ STATE, so they can see only their own queries, without authentication details.
-      response = new GetQueriesResponse(
-          queries.stream()
-                 .filter(
-                     query ->
-                         authenticationResult.getAuthenticatedBy() != null
-                         && authenticationResult.getIdentity() != null
-                         && Objects.equals(authenticationResult.getAuthenticatedBy(), query.getAuthenticator())
-                         && Objects.equals(authenticationResult.getIdentity(), query.getIdentity()))
-                 .map(DartQueryInfo::withoutAuthenticationResult)
-                 .collect(Collectors.toList())
-      );
-    }
-
-    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
-    return response;
   }
 
   /**

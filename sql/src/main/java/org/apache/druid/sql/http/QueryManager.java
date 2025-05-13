@@ -17,42 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.sql.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 
-/**
- * Enum determining the engine used in executing the query.
- */
-public enum Engine
+import java.util.List;
+
+@ExtensionPoint
+public interface QueryManager
 {
-  NATIVE("native"),
-  MSQ_TASK("msq-task"),
-  MSQ_DART("msq-dart");
-
-  private final String name;
-
-  Engine(String name)
-  {
-    this.name = name;
-  }
-
-  @JsonCreator
-  public static Engine fromString(String value)
-  {
-    for (Engine mode : values()) {
-      if (mode.toString().equals(value)) {
-        return mode;
-      }
-    }
-
-    throw InvalidInput.exception("Engine not supported:[%s]", value);
-  }
-
-  @Override
-  public String toString()
-  {
-    return name;
-  }
+  List<QueryInfo> getRunningQueries(boolean selfOnly);
 }

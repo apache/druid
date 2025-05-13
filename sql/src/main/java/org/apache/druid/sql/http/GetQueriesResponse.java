@@ -17,42 +17,57 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.error.InvalidInput;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.List;
+import java.util.Objects;
 
 /**
- * Enum determining the engine used in executing the query.
+ * Class returned by {@link SqlResource#doGetRunningQueries}, the "list all queries" API.
  */
-public enum Engine
+public class GetQueriesResponse
 {
-  NATIVE("native"),
-  MSQ_TASK("msq-task"),
-  MSQ_DART("msq-dart");
-
-  private final String name;
-
-  Engine(String name)
-  {
-    this.name = name;
-  }
+  private final List<QueryInfo> queries;
 
   @JsonCreator
-  public static Engine fromString(String value)
+  public GetQueriesResponse(@JsonProperty("queries") List<QueryInfo> queries)
   {
-    for (Engine mode : values()) {
-      if (mode.toString().equals(value)) {
-        return mode;
-      }
-    }
+    this.queries = queries;
+  }
 
-    throw InvalidInput.exception("Engine not supported:[%s]", value);
+  @JsonProperty
+  public List<QueryInfo> getQueries()
+  {
+    return queries;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    GetQueriesResponse response = (GetQueriesResponse) o;
+    return Objects.equals(queries, response.queries);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(queries);
   }
 
   @Override
   public String toString()
   {
-    return name;
+    return "GetQueriesResponse{" +
+           "queries=" + queries +
+           '}';
   }
 }

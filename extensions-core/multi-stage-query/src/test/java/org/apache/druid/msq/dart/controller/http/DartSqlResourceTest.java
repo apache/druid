@@ -51,6 +51,7 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.Engine;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -78,6 +79,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
+import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.hamcrest.CoreMatchers;
@@ -91,7 +93,6 @@ import org.mockito.MockitoAnnotations;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -251,6 +252,7 @@ public class DartSqlResourceTest extends MSQTestBase
         new ServerConfig() /* currently only used for error transform strategy */,
         ResponseContextConfig.newConfig(false),
         SELF_NODE,
+        Map.of(),
         new DefaultQueryConfig(ImmutableMap.of("foo", "bar"))
     );
 
@@ -295,7 +297,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals(
         new GetQueriesResponse(Collections.singletonList(DartQueryInfo.fromControllerHolder(holder))),
-        sqlResource.doGetRunningQueries("", httpServletRequest)
+        sqlResource.doGetRunningQueries("", Engine.MSQ_DART.toString(), httpServletRequest)
     );
 
     controllerRegistry.deregister(holder);
@@ -319,7 +321,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries("", httpServletRequest)
+        sqlResource.doGetRunningQueries("", Engine.MSQ_DART.toString(), httpServletRequest)
     );
 
     controllerRegistry.deregister(holder);
@@ -360,7 +362,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 remoteQueryInfo
             )
         ),
-        sqlResource.doGetRunningQueries(null, httpServletRequest)
+        sqlResource.doGetRunningQueries(null, Engine.MSQ_DART.toString(), httpServletRequest)
     );
 
     controllerRegistry.deregister(localHolder);
@@ -387,7 +389,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // were able to fetch.)
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
-        sqlResource.doGetRunningQueries(null, httpServletRequest)
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest)
     );
 
     controllerRegistry.deregister(localHolder);
@@ -424,7 +426,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, httpServletRequest)
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest)
     );
 
     controllerRegistry.deregister(localHolder);
@@ -460,7 +462,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(remoteQueryInfo.withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, httpServletRequest)
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest)
     );
 
     controllerRegistry.deregister(holder);

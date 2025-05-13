@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.dart.guice;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -43,6 +45,7 @@ import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.messages.server.OutboxImpl;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
+import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.worker.DartDataSegmentProvider;
 import org.apache.druid.msq.dart.worker.DartWorkerFactory;
@@ -57,6 +60,8 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 
@@ -149,5 +154,18 @@ public class DartWorkerModule implements DruidModule
     {
       return new OutboxImpl<>();
     }
+  }
+
+  @Override
+  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return Collections.<com.fasterxml.jackson.databind.Module>singletonList(
+        new SimpleModule("DartModule").registerSubtypes(
+            new NamedType(
+                DartQueryInfo.class,
+                "msq-dart"
+            )
+        )
+    );
   }
 }

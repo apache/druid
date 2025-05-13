@@ -23,7 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.sql.http.GetQueriesResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +36,7 @@ public class GetQueriesResponseTest
   @Test
   public void test_serde() throws Exception
   {
-    final ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
+    final ObjectMapper jsonMapper = TestHelper.JSON_MAPPER.registerModules(new DartWorkerModule().getJacksonModules());
     final GetQueriesResponse response = new GetQueriesResponse(
         Collections.singletonList(
             new DartQueryInfo(

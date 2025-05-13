@@ -329,6 +329,7 @@ public class SqlResourceTest extends CalciteTestBase
         sqlStatementFactory,
         lifecycleManager,
         new ServerConfig(),
+        Map.of(),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1648,6 +1649,7 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
+        Map.of(),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );

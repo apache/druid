@@ -19,10 +19,13 @@
 
 package org.apache.druid.msq.dart.guice;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
@@ -40,6 +43,8 @@ import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.DartMessageRelayFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelays;
+import org.apache.druid.msq.dart.controller.DartQueryManager;
+import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactoryImpl;
@@ -47,9 +52,13 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.Engine;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.http.QueryManager;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -94,6 +103,10 @@ public class DartControllerModule implements DruidModule
       binder.bind(ResourcePermissionMapper.class)
             .annotatedWith(Dart.class)
             .to(DartResourcePermissionMapper.class);
+      MapBinder.newMapBinder(binder, Engine.class, QueryManager.class)
+               .addBinding(Engine.MSQ_DART)
+               .to(DartQueryManager.class)
+               .in(LazySingleton.class);
     }
 
     @Provides
@@ -113,5 +126,18 @@ public class DartControllerModule implements DruidModule
     {
       return new DartMessageRelays(discoveryProvider, messageRelayFactory);
     }
+  }
+
+  @Override
+  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return Collections.<com.fasterxml.jackson.databind.Module>singletonList(
+        new SimpleModule("DartModule").registerSubtypes(
+            new NamedType(
+                DartQueryInfo.class,
+                "msq-dart"
+            )
+        )
+    );
   }
 }

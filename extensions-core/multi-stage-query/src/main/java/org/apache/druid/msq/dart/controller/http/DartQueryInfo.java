@@ -22,11 +22,14 @@ package org.apache.druid.msq.dart.controller.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.QueryInfo;
 import org.joda.time.DateTime;
 
 import java.util.Objects;
@@ -34,7 +37,8 @@ import java.util.Objects;
 /**
  * Class included in {@link GetQueriesResponse}.
  */
-public class DartQueryInfo
+@JsonTypeName("msq-dart")
+public class DartQueryInfo implements QueryInfo
 {
   private final String sqlQueryId;
   private final String dartQueryId;
@@ -122,6 +126,7 @@ public class DartQueryInfo
   /**
    * Authenticator that authenticated the identity from {@link #getIdentity()}.
    */
+  @Override
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getAuthenticator()
@@ -132,6 +137,7 @@ public class DartQueryInfo
   /**
    * User that issued this query.
    */
+  @Override
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getIdentity()
@@ -158,6 +164,7 @@ public class DartQueryInfo
   /**
    * Returns a copy of this instance with {@link #getAuthenticator()} and {@link #getIdentity()} nulled.
    */
+  @Override
   public DartQueryInfo withoutAuthenticationResult()
   {
     return new DartQueryInfo(sqlQueryId, dartQueryId, sql, controllerHost, null, null, startTime, state);

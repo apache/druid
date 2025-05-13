@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -34,6 +35,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
+import org.apache.druid.query.Engine;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
@@ -50,6 +52,8 @@ import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewModule;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.http.NativeQueryManager;
+import org.apache.druid.sql.http.QueryManager;
 import org.apache.druid.sql.http.SqlHttpModule;
 
 import java.util.Properties;
@@ -124,6 +128,12 @@ public class SqlModule implements Module
 
     // Default do-nothing catalog resolver
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+
+    // Bind the native query manager.
+    MapBinder.newMapBinder(binder, Engine.class, QueryManager.class)
+             .addBinding(Engine.NATIVE)
+             .to(NativeQueryManager.class)
+             .in(LazySingleton.class);
   }
 
   private boolean isEnabled()
