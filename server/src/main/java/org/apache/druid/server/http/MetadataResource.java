@@ -33,6 +33,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
@@ -407,17 +408,26 @@ public class MetadataResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response getSegment(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentId,
+      @PathParam("segmentId") String serializedSegmentId,
       @QueryParam("includeUnused") @Nullable Boolean includeUnused
   )
   {
+    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, serializedSegmentId);
+    if (segmentId == null) {
+      return Response.status(Response.Status.BAD_REQUEST).entity(
+          StringUtils.format(
+              "Could not parse Segment ID[%s] for DataSource[%s]",
+              StringUtils.escapeHtml(serializedSegmentId),
+              StringUtils.escapeHtml(dataSourceName)
+          )
+      ).build();
+    }
+
     ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
-    }
-
-    for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId)) {
-      DataSegment segment = dataSource.getSegment(possibleSegmentId);
+    } else {
+      DataSegment segment = dataSource.getSegment(segmentId);
       if (segment != null) {
         return Response.status(Response.Status.OK).entity(segment).build();
       }
@@ -425,9 +435,9 @@ public class MetadataResource
     // fallback to db
     final DataSegment segment;
     if (Boolean.TRUE.equals(includeUnused)) {
-      segment = metadataStorageCoordinator.retrieveSegmentForId(dataSourceName, segmentId);
+      segment = metadataStorageCoordinator.retrieveSegmentForId(segmentId);
     } else {
-      segment = metadataStorageCoordinator.retrieveUsedSegmentForId(dataSourceName, segmentId);
+      segment = metadataStorageCoordinator.retrieveUsedSegmentForId(segmentId);
     }
 
     if (segment != null) {
