@@ -44,7 +44,6 @@ import org.apache.druid.sql.calcite.rel.logical.DruidProject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class LogicalStageBuilder
 {
@@ -55,9 +54,22 @@ public class LogicalStageBuilder
     this.plannerContext = plannerContext2;
   }
 
+  /**
+   * Provides unique ids for the stages.
+   */
+  static class StageIdSequence
+  {
+    private int currentValue = 0;
+
+    public int next()
+    {
+      return currentValue++;
+    }
+  }
+
   class StageMaker
   {
-    public final AtomicInteger stageIdSeq = new AtomicInteger(0);
+    public final StageIdSequence stageIdSeq = new StageIdSequence();
 
     StageDefinition makeScanStage(
         VirtualColumns virtualColumns,
@@ -74,7 +86,7 @@ public class LogicalStageBuilder
           .columnTypes(signature.getColumnTypes())
           .build();
       ScanQueryFrameProcessorFactory scanProcessorFactory = new ScanQueryFrameProcessorFactory(s);
-      StageDefinitionBuilder sdb = StageDefinition.builder(stageIdSeq.incrementAndGet())
+      StageDefinitionBuilder sdb = StageDefinition.builder(stageIdSeq.next())
           .inputs(inputs)
           .signature(signature)
           .shuffleSpec(MixShuffleSpec.instance())
