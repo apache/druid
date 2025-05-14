@@ -56,7 +56,8 @@ public class LogicalStageBuilder
 
   class StageMaker
   {
-    private int stageIdSeq;
+    /** Provides ids for the stages. */
+    private int stageIdSeq = 0;
 
     StageDefinition makeScanStage(
         VirtualColumns virtualColumns,
