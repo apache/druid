@@ -62,37 +62,35 @@ public class SegmentGenerationMetrics
     long numMessageGap = 0;
     double totalMessageGap = 0;
 
-    public double avgMessageGap()
+    public synchronized double avgMessageGap()
     {
       return totalMessageGap / numMessageGap;
     }
 
-    public long getMinMessageGap()
+    public synchronized long getMinMessageGap()
     {
       return minMessageGap;
     }
 
-    public long getMaxMessageGap()
+    public synchronized long getMaxMessageGap()
     {
       return maxMessageGap;
     }
 
-    public long getNumMessageGap()
+    public synchronized long getNumMessageGap()
     {
       return numMessageGap;
     }
 
-    public void add(final long messageGap)
+    public synchronized void add(final long messageGap)
     {
-      synchronized (this) {
-        totalMessageGap += messageGap;
-        ++numMessageGap;
-        if (minMessageGap > messageGap) {
-          minMessageGap = messageGap;
-        }
-        if (maxMessageGap < messageGap) {
-          maxMessageGap = messageGap;
-        }
+      totalMessageGap += messageGap;
+      ++numMessageGap;
+      if (minMessageGap > messageGap) {
+        minMessageGap = messageGap;
+      }
+      if (maxMessageGap < messageGap) {
+        maxMessageGap = messageGap;
       }
     }
 
@@ -109,9 +107,8 @@ public class SegmentGenerationMetrics
         numMessageGap = 0;
         minMessageGap = Long.MAX_VALUE;
         maxMessageGap = Long.MIN_VALUE;
-
-        return copy;
       }
+      return copy;
     }
   }
 

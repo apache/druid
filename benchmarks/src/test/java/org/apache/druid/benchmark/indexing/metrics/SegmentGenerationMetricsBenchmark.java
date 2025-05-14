@@ -31,17 +31,12 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Benchmark for SegmentGenerationMetrics focusing on reportMessageGap and reportMaxSegmentHandoffTime methods.
+ * Benchmark for SegmentGenerationMetrics
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -51,29 +46,31 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class SegmentGenerationMetricsBenchmark
 {
+  private static final int NUM_ITERATIONS = 10_000;
+  private long[] samples;
   private SegmentGenerationMetrics metrics;
-
-  // Pre-generated values for benchmarks
-  private long messageGapValue;
-  private long handoffTimeValue;
 
   @Setup(Level.Iteration)
   public void setup()
   {
     metrics = new SegmentGenerationMetrics();
+    samples = new long[NUM_ITERATIONS];
 
     final ThreadLocalRandom random = ThreadLocalRandom.current();
-    messageGapValue = random.nextLong(1, 10000);
-    handoffTimeValue = random.nextLong(1, 5000);
+    for (int i = 0; i < NUM_ITERATIONS; ++i) {
+      samples[i] = random.nextLong(1, Long.MAX_VALUE);
+    }
   }
 
   /**
-   * Benchmark for the reportMessageGap in hot loop.
+   * Benchmark for reportMessageGap in hot loop.
    */
   @Benchmark
   public void benchmarkMultipleReportMessageGap()
   {
-    metrics.reportMessageGap(messageGapValue);
+    for (int i = 0; i < NUM_ITERATIONS; ++i) {
+      metrics.reportMessageGap(samples[i]);
+    }
   }
 
   /**
@@ -82,20 +79,19 @@ public class SegmentGenerationMetricsBenchmark
   @Benchmark
   public void benchmarkMultipleReportMaxSegmentHandoffTime()
   {
-    metrics.reportMaxSegmentHandoffTime(handoffTimeValue);
+    for (int i = 0; i < NUM_ITERATIONS; ++i) {
+      metrics.reportMaxSegmentHandoffTime(samples[i]);
+    }
   }
 
-
-  public static void main(String[] args) throws RunnerException
+  /**
+   * Benchmark for reportMessageMaxTimestamp in hot loop.
+   */
+  @Benchmark
+  public void benchmarkMultipleReportMessageMaxTimestamp()
   {
-    Options opt = new OptionsBuilder()
-        .include(SegmentGenerationMetricsBenchmark.class.getSimpleName())
-        .forks(1)
-        .warmupIterations(1)
-        .warmupTime(TimeValue.seconds(1))
-        .measurementIterations(2)
-        .measurementTime(TimeValue.seconds(2))
-        .build();
-    new Runner(opt).run();
+    for (int i = 0; i < NUM_ITERATIONS; ++i) {
+      metrics.reportMessageMaxTimestamp(samples[i]);
+    }
   }
 }

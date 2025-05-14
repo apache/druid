@@ -135,6 +135,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     final SegmentGenerationMetrics.MessageGapStats messageGapStats = metrics.getMessageGapStats();
     final long minMessageGap = messageGapStats.getMinMessageGap();
     final long maxMessageGap = messageGapStats.getMaxMessageGap();
+    final double avgMessageGap = messageGapStats.avgMessageGap();
     // Best-effort way to ensure parity amongst emitted metrics
     if (minMessageGap != Long.MAX_VALUE) {
       emitter.emit(builder.setMetric("ingest/events/minMessageGap", minMessageGap));
@@ -142,7 +143,6 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     if (maxMessageGap != Long.MIN_VALUE) {
       emitter.emit(builder.setMetric("ingest/events/maxMessageGap", maxMessageGap));
     }
-    final double avgMessageGap = messageGapStats.avgMessageGap();
     if (!Double.isNaN(avgMessageGap)) {
       emitter.emit(builder.setMetric("ingest/events/avgMessageGap", avgMessageGap));
     }
