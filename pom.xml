@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.5.0</apache.curator.version>
-        <apache.kafka.version>3.6.1</apache.kafka.version>
+        <apache.kafka.version>3.7.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
         <apache.ranger.version>2.4.0</apache.ranger.version>
@@ -983,7 +983,7 @@
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
                 <!-- Uses Netty 4.1.x -->
-                <version>2.5.3</version>
+                <version>2.12.4</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
