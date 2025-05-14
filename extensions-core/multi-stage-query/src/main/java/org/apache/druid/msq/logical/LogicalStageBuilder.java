@@ -45,13 +45,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Helper class to build a {@link LogicalStage} tree.
+ *
+ * Tightly coupled to {@link DruidLogicalToQueryDefinitionTranslator}.
+ * Currently its just a context to hold all the {@link LogicalStage} classes.
+ */
 public class LogicalStageBuilder
 {
   private PlannerContext plannerContext;
 
-  public LogicalStageBuilder(PlannerContext plannerContext2)
+  public LogicalStageBuilder(PlannerContext plannerContext)
   {
-    this.plannerContext = plannerContext2;
+    this.plannerContext = plannerContext;
   }
 
   class StageMaker
@@ -97,7 +103,7 @@ public class LogicalStageBuilder
     }
   }
 
-  public class AbstractLogicalStage implements LogicalStage
+  public abstract class AbstractLogicalStage implements LogicalStage
   {
     protected final List<InputSpec> inputSpecs;
     protected final RowSignature signature;
@@ -114,12 +120,6 @@ public class LogicalStageBuilder
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
       throw DruidException.defensive("This should have been implemented - or not reach this point!");
-    }
-
-    @Override
-    public LogicalStage extendWith(DruidNodeStack stack)
-    {
-      return null;
     }
 
     @Override
@@ -140,16 +140,22 @@ public class LogicalStageBuilder
     }
   }
 
-  public class RootStage extends AbstractLogicalStage
+  /**
+   * Represents a stage that reads data from input sources.
+   */
+  public class ReadStage extends AbstractLogicalStage
   {
-    public RootStage(RowSignature signature, List<InputSpec> inputSpecs)
+    public ReadStage(RowSignature signature, List<InputSpec> inputSpecs)
     {
       super(signature, inputSpecs, Collections.emptyList());
     }
 
-    public RootStage(RootStage root, RowSignature newSignature)
+    /**
+     * Copy constructor.
+     */
+    public ReadStage(ReadStage readStage, RowSignature newSignature)
     {
-      super(newSignature, root.inputSpecs, root.inputStages);
+      super(newSignature, readStage.inputSpecs, readStage.inputStages);
     }
 
     @Override
@@ -161,14 +167,14 @@ public class LogicalStageBuilder
     @Override
     public LogicalStage extendWith(DruidNodeStack stack)
     {
-      if (stack.peekNode() instanceof DruidFilter) {
-        DruidFilter filter = (DruidFilter) stack.peekNode();
+      if (stack.getNode() instanceof DruidFilter) {
+        DruidFilter filter = (DruidFilter) stack.getNode();
         return makeFilterStage(filter);
       }
 
-      if (stack.peekNode() instanceof DruidProject) {
+      if (stack.getNode() instanceof DruidProject) {
 
-        DruidProject project = (DruidProject) stack.peekNode();
+        DruidProject project = (DruidProject) stack.getNode();
         DruidFilter dummyFilter = new DruidFilter(
             project.getCluster(), project.getTraitSet(), project,
             project.getCluster().getRexBuilder().makeLiteral(true)
@@ -199,7 +205,7 @@ public class LogicalStageBuilder
     }
   }
 
-  public FilterStage create(RootStage inputStage, DruidFilter filter)
+  public FilterStage create(ReadStage inputStage, DruidFilter filter)
   {
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         inputStage.signature,
@@ -210,22 +216,25 @@ public class LogicalStageBuilder
     return new FilterStage(inputStage, virtualColumnRegistry, dimFilter);
   }
 
-  class FilterStage extends RootStage
+  class FilterStage extends ReadStage
   {
     protected final VirtualColumnRegistry virtualColumnRegistry;
     private DimFilter dimFilter;
 
-    public FilterStage(RootStage inputStage, VirtualColumnRegistry virtualColumnRegistry, DimFilter dimFilter)
+    public FilterStage(ReadStage inputStage, VirtualColumnRegistry virtualColumnRegistry, DimFilter dimFilter)
     {
       super(inputStage, inputStage.signature);
       this.virtualColumnRegistry = virtualColumnRegistry;
       this.dimFilter = dimFilter;
     }
 
-    public FilterStage(FilterStage root, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
+    /**
+     * Copy constructor.
+     */
+    public FilterStage(FilterStage stage, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
     {
-      super(root, rowSignature);
-      this.dimFilter = root.dimFilter;
+      super(stage, rowSignature);
+      this.dimFilter = stage.dimFilter;
       this.virtualColumnRegistry = newVirtualColumnRegistry;
     }
 
@@ -239,8 +248,8 @@ public class LogicalStageBuilder
     @Override
     public LogicalStage extendWith(DruidNodeStack stack)
     {
-      if (stack.peekNode() instanceof DruidProject) {
-        DruidProject project = (DruidProject) stack.peekNode();
+      if (stack.getNode() instanceof DruidProject) {
+        DruidProject project = (DruidProject) stack.getNode();
         Projection preAggregation = Projection
             .preAggregation(project, plannerContext, signature, virtualColumnRegistry);
 
@@ -270,9 +279,9 @@ public class LogicalStageBuilder
 
   private static final String IRRELEVANT = "irrelevant";
 
-  public RootStage makeRootStage(RowSignature rowSignature, List<InputSpec> isp)
+  public ReadStage makeReadStage(RowSignature rowSignature, List<InputSpec> isp)
   {
-    return new RootStage(rowSignature, isp);
+    return new ReadStage(rowSignature, isp);
   }
 
 }

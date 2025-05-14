@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.logical.LogicalStageBuilder.RootStage;
+import org.apache.druid.msq.logical.LogicalStageBuilder.ReadStage;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -84,8 +84,8 @@ public class DruidLogicalToQueryDefinitionTranslator
   {
     List<LogicalStage> inputStages = buildInputStages(stack);
 
-    DruidLogicalNode node = stack.peekNode();
-    Optional<RootStage> stage = buildRootStage(node);
+    DruidLogicalNode node = stack.getNode();
+    Optional<ReadStage> stage = buildReadStage(node);
     if (stage.isPresent()) {
       return stage.get();
     }
@@ -102,7 +102,7 @@ public class DruidLogicalToQueryDefinitionTranslator
   private List<LogicalStage> buildInputStages(DruidNodeStack stack)
   {
     List<LogicalStage> inputStages = new ArrayList<>();
-    List<RelNode> inputs = stack.peekNode().getInputs();
+    List<RelNode> inputs = stack.getNode().getInputs();
     for (RelNode input : inputs) {
       stack.push((DruidLogicalNode) input, inputStages.size());
       inputStages.add(buildStageFor(stack));
@@ -111,7 +111,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     return inputStages;
   }
 
-  private Optional<RootStage> buildRootStage(DruidLogicalNode node)
+  private Optional<ReadStage> buildReadStage(DruidLogicalNode node)
   {
     if (node instanceof DruidValues) {
       return translateValues((DruidValues) node);
@@ -122,21 +122,21 @@ public class DruidLogicalToQueryDefinitionTranslator
     return Optional.empty();
   }
 
-  private Optional<RootStage> translateTableScan(DruidTableScan node)
+  private Optional<ReadStage> translateTableScan(DruidTableScan node)
   {
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     TableDataSource ids = (TableDataSource) sd.dataSource;
     TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
-    RootStage stage = stageBuilder.makeRootStage(sd.rowSignature, ImmutableList.of(inputSpec));
+    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, ImmutableList.of(inputSpec));
     return Optional.of(stage);
   }
 
-  private Optional<RootStage> translateValues(DruidValues node)
+  private Optional<ReadStage> translateValues(DruidValues node)
   {
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     InlineDataSource ids = (InlineDataSource) sd.dataSource;
     InlineInputSpec inputSpec = new InlineInputSpec(ids);
-    RootStage stage = stageBuilder.makeRootStage(sd.rowSignature, ImmutableList.of(inputSpec));
+    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, ImmutableList.of(inputSpec));
     return Optional.of(stage);
   }
 }

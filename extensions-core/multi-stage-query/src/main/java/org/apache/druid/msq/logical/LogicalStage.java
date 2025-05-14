@@ -24,6 +24,8 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**
@@ -51,6 +53,7 @@ public interface LogicalStage
    *
    * @return null if the current stage cannot be extended
    */
+  @Nullable
   LogicalStage extendWith(DruidNodeStack stack);
 
   /**
