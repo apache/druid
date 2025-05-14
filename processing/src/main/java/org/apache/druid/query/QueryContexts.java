@@ -138,7 +138,7 @@ public class QueryContexts
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   public static final String CTX_PREPLANNED = "prePlanned";
-  public static final boolean DEFAULT_PREPLANNED = false;
+  public static final boolean DEFAULT_PREPLANNED = true;
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;

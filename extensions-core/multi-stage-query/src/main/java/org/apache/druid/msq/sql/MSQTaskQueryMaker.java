@@ -267,16 +267,19 @@ public class MSQTaskQueryMaker implements QueryMaker
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
     }
 
-    nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
+    final LegacyMSQSpec querySpec =
+        LegacyMSQSpec.builder()
+               .query(druidQuery.getQuery())
+               .queryContext(queryContext.override(nativeQueryContextOverrides))
+               .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
+               .destination(destination)
+               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
+               .tuningConfig(makeMSQTuningConfig(plannerContext))
+               .build();
 
-    // adding user
-    nativeQueryContextOverrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), druidQuery.getQuery());
 
-    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
-    if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
-    }
-    return nativeQueryContextOverrides;
+    return querySpec.withOverriddenContext(nativeQueryContext);
   }
 
   public static QueryDefMSQSpec makeQueryDefMSQSpec(
@@ -308,6 +311,8 @@ public class MSQTaskQueryMaker implements QueryMaker
 
   /**
    * Simpler version of {@link #makeResultsContext(DruidQuery, List, PlannerContext)}; without any support for intermediate types.
+   *
+   * @throws DruidException if the query is not finalized
    */
   public static ResultsContext makeSimpleResultContext(
       QueryDefinition queryDef,
@@ -336,6 +341,11 @@ public class MSQTaskQueryMaker implements QueryMaker
     return resultsContext;
   }
 
+  /**
+   * Creates a {@link ResultsContext} for the given arguments.
+   *
+   * The {@link ResultsContext} may contain intermediate types depending on the finalized state.
+   */
   public static ResultsContext makeResultsContext(DruidQuery druidQuery, List<Entry<Integer, String>> fieldMapping,
       PlannerContext plannerContext)
   {
@@ -520,7 +530,6 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
     }
 
-    // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
     final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);

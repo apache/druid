@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.sql.calcite.planner.QueryHandler;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 
@@ -37,6 +38,13 @@ public interface QueryMaker
   QueryResponse<Object[]> runQuery(DruidQuery druidQuery);
 
 
+  /**
+   * Marks that the {@link QueryMaker} supports executing
+   * {@link DruidLogicalNode}-s.
+   *
+   * In case {@link QueryMaker} implements this interface - this approach will
+   * be preferred to execute the query in {@link QueryHandler}.
+   */
   public interface FromDruidLogical
   {
     /**

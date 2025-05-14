@@ -50,10 +50,10 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
   private PlannerContext plannerContext;
   private DartQueryMaker dartQueryMaker;
 
-  public PrePlannedDartQueryMaker(PlannerContext plannerContext, QueryMaker queryMaker)
+  public PrePlannedDartQueryMaker(PlannerContext plannerContext, DartQueryMaker queryMaker)
   {
     this.plannerContext = plannerContext;
-    this.dartQueryMaker = (DartQueryMaker) queryMaker;
+    this.dartQueryMaker = queryMaker;
   }
 
   @Override

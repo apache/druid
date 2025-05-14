@@ -559,8 +559,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
       if (queryMaker instanceof QueryMaker.FromDruidLogical) {
         QueryMaker.FromDruidLogical logicalQueryMaker = (QueryMaker.FromDruidLogical) queryMaker;
-        QueryResponse<Object[]> respone = logicalQueryMaker.runQuery((DruidLogicalNode) newRoot);
-        return new PlannerResult(() -> respone, returnedRowType);
+        QueryResponse<Object[]> response = logicalQueryMaker.runQuery((DruidLogicalNode) newRoot);
+        return new PlannerResult(() -> response, returnedRowType);
       }
 
       DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, (DruidLogicalNode) newRoot, rexBuilder);
