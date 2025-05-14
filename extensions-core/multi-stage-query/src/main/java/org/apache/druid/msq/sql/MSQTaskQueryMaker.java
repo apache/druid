@@ -267,19 +267,16 @@ public class MSQTaskQueryMaker implements QueryMaker
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
     }
 
-    final LegacyMSQSpec querySpec =
-        LegacyMSQSpec.builder()
-               .query(druidQuery.getQuery())
-               .queryContext(queryContext.override(nativeQueryContextOverrides))
-               .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
-               .destination(destination)
-               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
-               .tuningConfig(makeMSQTuningConfig(plannerContext))
-               .build();
+    nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
 
-    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext(), querySpec.getDestination(), druidQuery.getQuery());
+    // adding user
+    nativeQueryContextOverrides.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
 
-    return querySpec.withOverriddenContext(nativeQueryContext);
+    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
+    if (msqMode != null) {
+      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
+    }
+    return nativeQueryContextOverrides;
   }
 
   public static QueryDefMSQSpec makeQueryDefMSQSpec(
@@ -530,6 +527,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
     }
 
+    // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
     final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);

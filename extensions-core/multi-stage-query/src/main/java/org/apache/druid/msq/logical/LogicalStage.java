@@ -38,7 +38,7 @@ public interface LogicalStage
   /**
    * Builds the current stage.
    */
-  StageDefinition buildCurrentStage(StageMaker stageBuildContext);
+  StageDefinition buildCurrentStage(StageMaker stageMaker);
 
   /**
    * Attempts to extend the current stage with an additional node.
@@ -50,7 +50,7 @@ public interface LogicalStage
   /**
    * Internal method to build the stage definitions.
    */
-  List<StageDefinition> buildStageDefinitions(StageMaker stageBuildContext);
+  List<StageDefinition> buildStageDefinitions(StageMaker stageMaker);
 
 
 }

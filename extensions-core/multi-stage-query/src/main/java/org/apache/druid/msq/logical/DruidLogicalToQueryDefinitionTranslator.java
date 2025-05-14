@@ -85,17 +85,8 @@ public class DruidLogicalToQueryDefinitionTranslator
       if (newStage != null) {
         return newStage;
       }
-      Optional<LogicalStage> seq = buildSequence(stack, newInputs.get(0));
-      if (seq.isPresent()) {
-        return seq.get();
-      }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
-  }
-
-  private Optional<LogicalStage> buildSequence(DruidNodeStack stack, LogicalStage stage)
-  {
-    return Optional.empty();
   }
 
   private Optional<RootStage> buildRootStage(DruidLogicalNode node)
@@ -126,7 +117,6 @@ public class DruidLogicalToQueryDefinitionTranslator
     return Optional.of(stage);
   }
 
-  // this is a hack for now
   private Optional<RootStage> translateValues(DruidValues node)
   {
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
