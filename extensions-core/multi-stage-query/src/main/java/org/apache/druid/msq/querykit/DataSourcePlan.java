@@ -359,7 +359,7 @@ public class DataSourcePlan
     return broadcastInputs.size() == inputSpecs.size();
   }
 
-  public static DataSourcePlan forTable(
+  private static DataSourcePlan forTable(
       final TableDataSource dataSource,
       final List<Interval> intervals,
       @Nullable final DimFilter filter,
@@ -412,7 +412,7 @@ public class DataSourcePlan
     );
   }
 
-  public static DataSourcePlan forInline(
+  private static DataSourcePlan forInline(
       final InlineDataSource dataSource,
       final boolean broadcast
   )

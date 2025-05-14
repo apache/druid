@@ -19,14 +19,14 @@
 
 package org.apache.druid.msq.logical;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.inline.InlineInputSpec;
+import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.logical.LogicalStageBuilder.RootStage;
-import org.apache.druid.msq.querykit.DataSourcePlan;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDe
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -103,29 +104,18 @@ public class DruidLogicalToQueryDefinitionTranslator
   private Optional<RootStage> translateTableScan(DruidTableScan node)
   {
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
-    DataSource ds = sd.dataSource;
-    TableDataSource ids = (TableDataSource) ds;
-    DataSourcePlan dsp = DataSourcePlan.forTable(
-        ids,
-        Intervals.ONLY_ETERNITY,
-        null, null,
-        false
-    );
-    List<InputSpec> isp = dsp.getInputSpecs();
-
-    RootStage stage = stageBuilder.makeRootStage(sd.rowSignature, isp);
+    TableDataSource ids = (TableDataSource) sd.dataSource;
+    TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
+    RootStage stage = stageBuilder.makeRootStage(sd.rowSignature, ImmutableList.of(inputSpec));
     return Optional.of(stage);
   }
 
   private Optional<RootStage> translateValues(DruidValues node)
   {
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
-    DataSource ds = sd.dataSource;
-    InlineDataSource ids = (InlineDataSource) ds;
-    DataSourcePlan dsp = DataSourcePlan.forInline(ids, false);
-    List<InputSpec> isp = dsp.getInputSpecs();
-
-    RootStage stage = stageBuilder.makeRootStage(sd.rowSignature, isp);
+    InlineDataSource ids = (InlineDataSource) sd.dataSource;
+    InlineInputSpec inputSpec = new InlineInputSpec(ids);
+    RootStage stage = stageBuilder.makeRootStage(sd.rowSignature, ImmutableList.of(inputSpec));
     return Optional.of(stage);
   }
 }
