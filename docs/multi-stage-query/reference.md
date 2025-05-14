@@ -575,14 +575,14 @@ The following table lists query limits:
 
 | Limit | Value | Error if exceeded |
 |---|---|---|
-| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. | 1 MB | [`RowTooLarge`] |
-| Number of segment-granular time chunks encountered during ingestion. | 5,000 | [`TooManyBuckets`]|
-| Number of input files/segments per worker. | 10,000 | [`TooManyInputFiles`]|
-| Number of output partitions for any one stage. Number of segments generated during ingestion. |25,000 | [`TooManyPartitions`]|
-| Number of output columns for any one stage. | 2,000 | [`TooManyColumns`]|
-| Number of cluster by columns that can appear in a stage | 1,500 | [`TooManyClusteredByColumns`] |
-| Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | [`TooManyWorkers`]|
-| Maximum memory occupied by broadcasted tables. | 30% of each [processor memory bundle](concepts.md#memory-usage). | [`BroadcastTablesTooLarge`] |
+| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. | 1 MB | `RowTooLarge` |
+| Number of segment-granular time chunks encountered during ingestion. | 5,000 | `TooManyBuckets`|
+| Number of input files/segments per worker. | 10,000 | `TooManyInputFiles`|
+| Number of output partitions for any one stage. Number of segments generated during ingestion. |25,000 | `TooManyPartitions`|
+| Number of output columns for any one stage. | 2,000 | `TooManyColumns`|
+| Number of cluster by columns that can appear in a stage | 1,500 | `TooManyClusteredByColumns` |
+| Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | `TooManyWorkers`|
+| Maximum memory occupied by broadcasted tables. | 30% of each [processor memory bundle](concepts.md#memory-usage). | `BroadcastTablesTooLarge` |
 | Maximum memory occupied by buffered data during sort-merge join. Only relevant when `sqlJoinAlgorithm` is `sortMerge`. | 10 MB | `TooManyRowsWithSameKey` |
 | Maximum relaunch attempts per worker. Initial run is not a relaunch. The worker will be spawned 1 + `workerRelaunchLimit` times before the job fails. | 2 | `TooManyAttemptsForWorker` |
 | Maximum relaunch attempts for a job across all workers. | 100 | `TooManyAttemptsForJob` |
