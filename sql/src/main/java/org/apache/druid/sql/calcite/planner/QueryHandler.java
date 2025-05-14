@@ -539,7 +539,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     );
     QueryValidations.validateLogicalQueryForDruid(handlerContext.plannerContext(), parameterized);
     CalcitePlanner planner = handlerContext.planner();
-    final RelDataType returnedRowType = prepareResult.getReturnedRowType();
+    final RelDataType rowType = prepareResult.getReturnedRowType();
 
     if (plannerContext.getPlannerConfig()
                       .getNativeQuerySqlPlanningMode()
@@ -559,7 +559,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       if (queryMaker instanceof QueryMaker.FromDruidLogical) {
         QueryMaker.FromDruidLogical logicalQueryMaker = (QueryMaker.FromDruidLogical) queryMaker;
         QueryResponse<Object[]> response = logicalQueryMaker.runQuery((DruidLogicalNode) newRoot);
-        return new PlannerResult(() -> response, returnedRowType);
+        return new PlannerResult(() -> response, rowType);
       }
 
       DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, (DruidLogicalNode) newRoot, rexBuilder);
@@ -581,7 +581,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         return planExplanation(possiblyLimitedRoot, newRoot, true);
       }
 
-      return new PlannerResult(resultsSupplier, returnedRowType);
+      return new PlannerResult(resultsSupplier, rowType);
     } else {
       final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
           CalciteRulesManager.DRUID_CONVENTION_RULES,
@@ -613,7 +613,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
             "Authorization sanity check failed"
         );
 
-        return new PlannerResult(druidRel::runQuery, returnedRowType);
+        return new PlannerResult(druidRel::runQuery, rowType);
       }
     }
   }

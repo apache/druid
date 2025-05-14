@@ -26,6 +26,12 @@ import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNo
 
 import java.util.List;
 
+/**
+ * Represents an unbuilt physical stage - which can be built.
+ *
+ * Implementations of this interface will keep track of the inputs needed to
+ * build the physical stage.
+ */
 public interface LogicalStage
 {
   /**

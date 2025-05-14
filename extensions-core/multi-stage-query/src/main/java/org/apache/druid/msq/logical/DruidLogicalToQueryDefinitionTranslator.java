@@ -41,6 +41,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Translates the logical plan defined by the {@link DruidLogicalNode} into a
+ * {@link QueryDefinition}.
+ *
+ * The translation should be executed as a single pass over the logical plan.
+ *
+ * During translation all stages have access to {@link DruidNodeStack} which
+ * contain all current parents of the current stage.
+ */
 public class DruidLogicalToQueryDefinitionTranslator
 {
   private PlannerContext plannerContext;
@@ -52,6 +61,9 @@ public class DruidLogicalToQueryDefinitionTranslator
     this.stageBuilder = new LogicalStageBuilder(plannerContext);
   }
 
+  /**
+   * Executes the translation of the logical plan into a query definition.
+   */
   public QueryDefinition translate(DruidLogicalNode relRoot)
   {
     DruidNodeStack stack = new DruidNodeStack();
@@ -60,34 +72,43 @@ public class DruidLogicalToQueryDefinitionTranslator
     return logicalStage.build();
   }
 
+  /**
+   * Builds a logical stage for the given input.
+   *
+   * Conducts building the stage by first building all the inputs and then the stage itself.
+   * It should build the stage corresponding to stack#peekNode
+   *
+   * @throws DruidException if the stage cannot be built
+   */
   private LogicalStage buildStageFor(DruidNodeStack stack)
   {
-    List<LogicalStage> newInputs = new ArrayList<>();
+    List<LogicalStage> inputStages = buildInputStages(stack);
 
-    for (RelNode input : stack.peekNode().getInputs()) {
-      stack.push((DruidLogicalNode) input, newInputs.size());
-      newInputs.add(buildStageFor(stack));
-      stack.pop();
-    }
-    LogicalStage stage = processNodeWithInputs(stack, newInputs);
-    return stage;
-  }
-
-  private LogicalStage processNodeWithInputs(DruidNodeStack stack, List<LogicalStage> newInputs)
-  {
     DruidLogicalNode node = stack.peekNode();
     Optional<RootStage> stage = buildRootStage(node);
     if (stage.isPresent()) {
       return stage.get();
     }
-    if (newInputs.size() == 1) {
-      LogicalStage inputStage = newInputs.get(0);
+    if (inputStages.size() == 1) {
+      LogicalStage inputStage = inputStages.get(0);
       LogicalStage newStage = inputStage.extendWith(stack);
       if (newStage != null) {
         return newStage;
       }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
+  }
+
+  private List<LogicalStage> buildInputStages(DruidNodeStack stack)
+  {
+    List<LogicalStage> inputStages = new ArrayList<>();
+    List<RelNode> inputs = stack.peekNode().getInputs();
+    for (RelNode input : inputs) {
+      stack.push((DruidLogicalNode) input, inputStages.size());
+      inputStages.add(buildStageFor(stack));
+      stack.pop();
+    }
+    return inputStages;
   }
 
   private Optional<RootStage> buildRootStage(DruidLogicalNode node)
