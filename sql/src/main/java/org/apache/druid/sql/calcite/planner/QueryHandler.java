@@ -541,7 +541,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     CalcitePlanner planner = handlerContext.planner();
     final RelDataType returnedRowType = prepareResult.getReturnedRowType();
 
-
     if (plannerContext.getPlannerConfig()
                       .getNativeQuerySqlPlanningMode()
                       .equals(QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)

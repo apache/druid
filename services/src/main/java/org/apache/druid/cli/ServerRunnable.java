@@ -53,7 +53,7 @@ import java.util.Set;
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
-  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED =
+  private static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED =
       CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
 
   private static final EmittingLogger log = new EmittingLogger(ServerRunnable.class);
@@ -207,7 +207,7 @@ public abstract class ServerRunnable extends GuiceRunnable
 
   protected static void validateCentralizedDatasourceSchemaConfig(Properties properties)
   {
-    if (isSegmentMetadataCacheEnabled(properties)) {
+    if (isSegmentSchemaCacheEnabled(properties)) {
       String serverViewType = properties.getProperty(ServerViewModule.SERVERVIEW_TYPE_PROPERTY);
       if (serverViewType != null && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
         throw DruidException
@@ -216,18 +216,19 @@ public abstract class ServerRunnable extends GuiceRunnable
             .build(
                 StringUtils.format(
                     "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
-                    + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
+                    + "Please consider switching to HTTP-based segment discovery (set %1$s=%3$s) "
                     + "or disable the feature (set %4$s=false).",
                     ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
                     serverViewType,
                     ServerViewModule.SERVERVIEW_TYPE_HTTP,
                     CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
-                ));
+                )
+            );
       }
     }
   }
 
-  protected static boolean isSegmentMetadataCacheEnabled(Properties properties)
+  protected static boolean isSegmentSchemaCacheEnabled(Properties properties)
   {
     return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }

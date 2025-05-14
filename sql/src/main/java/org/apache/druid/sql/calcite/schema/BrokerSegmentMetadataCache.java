@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.InternalQueryConfig;
@@ -28,15 +27,16 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -51,7 +51,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Broker-side cache of segment metadata that combines segments to build
@@ -294,24 +293,19 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)
   {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     List<DataSourceInformation> dataSourceInformations = null;
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric(
-        "metadatacache/schemaPoll/count", 1));
     try {
       dataSourceInformations = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true);
     }
     catch (Exception e) {
       log.debug(e, "Failed to query datasource information from the Coordinator.");
-      emitter.emit(ServiceMetricEvent.builder().setMetric(
-          "metadatacache/schemaPoll/failed", 1));
+      emitMetric(Metric.BROKER_POLL_FAILED, 1);
     }
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric(
-        "metadatacache/schemaPoll/time",
-        stopwatch.elapsed(TimeUnit.MILLISECONDS)));
+    emitMetric(Metric.BROKER_POLL_DURATION_MILLIS, stopwatch.millisElapsed());
 
     final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
 
