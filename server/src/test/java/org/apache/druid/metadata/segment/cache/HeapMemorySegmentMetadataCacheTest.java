@@ -200,18 +200,18 @@ public class HeapMemorySegmentMetadataCacheTest
   }
 
   @Test
-  public void testGetDataSource_throwsException_ifCacheIsDisabled()
+  public void testReadCacheForDataSource_throwsException_ifCacheIsDisabled()
   {
     setupTargetWithCaching(SegmentMetadataCache.UsageMode.NEVER);
     DruidExceptionMatcher.defensive().expectMessageIs(
         "Segment metadata cache is not enabled."
     ).assertThrowsAndMatches(
-        () -> cache.getDatasource(TestDataSource.WIKI)
+        () -> cache.readCacheForDataSource(TestDataSource.WIKI, d -> 0)
     );
   }
 
   @Test
-  public void testGetDataSource_throwsException_ifCacheIsStoppedOrNotLeader()
+  public void testReadCacheForDataSource_throwsException_ifCacheIsStoppedOrNotLeader()
   {
     setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     Assert.assertTrue(cache.isEnabled());
@@ -219,19 +219,19 @@ public class HeapMemorySegmentMetadataCacheTest
     DruidExceptionMatcher.internalServerError().expectMessageIs(
         "Segment metadata cache has not been started yet."
     ).assertThrowsAndMatches(
-        () -> cache.getDatasource(TestDataSource.WIKI)
+        () -> cache.readCacheForDataSource(TestDataSource.WIKI, d -> 0)
     );
 
     cache.start();
     DruidExceptionMatcher.internalServerError().expectMessageIs(
         "Not leader yet. Segment metadata cache is not usable."
     ).assertThrowsAndMatches(
-        () -> cache.getDatasource(TestDataSource.WIKI)
+        () -> cache.readCacheForDataSource(TestDataSource.WIKI, d -> 0)
     );
   }
 
   @Test(timeout = 60_000)
-  public void testGetDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
+  public void testReadCacheForDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
   {
     setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);
     cache.start();
@@ -241,7 +241,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     // Invoke getDatasource in Thread 1
     final Thread getDatasourceThread = new Thread(() -> {
-      cache.getDatasource(TestDataSource.WIKI);
+      cache.readCacheForDataSource(TestDataSource.WIKI, d -> 0);
       observedEventOrder.add("getDatasource completed");
     });
     getDatasourceThread.start();
@@ -264,7 +264,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     // Verify that subsequent calls to getDatasource do not wait
     final Thread getDatasourceThread2 = new Thread(() -> {
-      cache.getDatasource(TestDataSource.WIKI);
+      cache.readCacheForDataSource(TestDataSource.WIKI, d -> 0);
       observedEventOrder.add("getDatasource 2 completed");
     });
     getDatasourceThread2.start();
@@ -281,16 +281,29 @@ public class HeapMemorySegmentMetadataCacheTest
   {
     setupAndSyncCache();
 
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
-
     final DataSegmentPlus segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                       .markUsed().asPlus();
     final SegmentId segmentId = segment.getDataSegment().getId();
 
-    Assert.assertNull(wikiCache.findUsedSegment(segmentId));
+    Assert.assertNull(
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(segmentId)
+        )
+    );
 
-    Assert.assertEquals(1, wikiCache.insertSegments(Set.of(segment)));
-    Assert.assertEquals(segment.getDataSegment(), wikiCache.findUsedSegment(segmentId));
+    final int numInsertedSegments = cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertSegments(Set.of(segment))
+    );
+    Assert.assertEquals(1, numInsertedSegments);
+    Assert.assertEquals(
+        segment.getDataSegment(),
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(segmentId)
+        )
+    );
   }
 
   @Test
@@ -302,9 +315,11 @@ public class HeapMemorySegmentMetadataCacheTest
         = CreateDataSegments.ofDatasource(TestDataSource.WIKI).updatedNow().markUsed().asPlus();
     insertSegmentsInMetadataStore(Set.of(usedSegmentPlus));
 
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
     Assert.assertTrue(
-        wikiCache.findUsedSegmentsPlusOverlappingAnyOf(List.of()).isEmpty()
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
+        ).isEmpty()
     );
 
     syncCache();
@@ -314,7 +329,10 @@ public class HeapMemorySegmentMetadataCacheTest
 
     Assert.assertEquals(
         usedSegmentPlus.getDataSegment(),
-        wikiCache.findUsedSegment(usedSegmentPlus.getDataSegment().getId())
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(usedSegmentPlus.getDataSegment().getId())
+        )
     );
   }
 
@@ -363,11 +381,18 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyValue(Metric.CACHED_USED_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.SKIPPED_SEGMENTS, 1L);
 
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
-    Assert.assertNull(wikiCache.findUsedSegment(invalidSegment.getDataSegment().getId()));
+    Assert.assertNull(
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(invalidSegment.getDataSegment().getId())
+        )
+    );
     Assert.assertEquals(
         validSegment.getDataSegment(),
-        wikiCache.findUsedSegment(validSegment.getDataSegment().getId())
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(validSegment.getDataSegment().getId())
+        )
     );
   }
 
@@ -412,11 +437,18 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyValue(Metric.PERSISTED_USED_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.PERSISTED_PENDING_SEGMENTS, 0L);
 
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
-    Assert.assertEquals(segment.getDataSegment(), wikiCache.findUsedSegment(segment.getDataSegment().getId()));
+    Assert.assertEquals(
+        segment.getDataSegment(),
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(segment.getDataSegment().getId())
+        )
+    );
     Assert.assertTrue(
-        wikiCache.findPendingSegmentsOverlapping(Intervals.ETERNITY)
-                 .isEmpty()
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findPendingSegmentsOverlapping(Intervals.ETERNITY)
+        ).isEmpty()
     );
   }
 
@@ -424,7 +456,6 @@ public class HeapMemorySegmentMetadataCacheTest
   public void testSync_updatesUsedSegment_ifCacheHasOlderEntry()
   {
     setupAndSyncCache();
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
 
     // Add a used segment to both metadata store and cache
     final DateTime updateTime = DateTimes.nowUtc();
@@ -432,11 +463,17 @@ public class HeapMemorySegmentMetadataCacheTest
         CreateDataSegments.ofDatasource(TestDataSource.WIKI).markUsed()
                           .lastUpdatedOn(updateTime).asPlus();
     insertSegmentsInMetadataStore(Set.of(usedSegmentPlus));
-    wikiCache.insertSegments(Set.of(usedSegmentPlus));
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertSegments(Set.of(usedSegmentPlus))
+    );
 
     Assert.assertEquals(
         Set.of(usedSegmentPlus),
-        wikiCache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
+        )
     );
 
     // Add a newer version of segment to metadata store
@@ -458,7 +495,10 @@ public class HeapMemorySegmentMetadataCacheTest
 
     Assert.assertEquals(
         Set.of(updatedSegment),
-        wikiCache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
+        )
     );
   }
 
@@ -466,16 +506,21 @@ public class HeapMemorySegmentMetadataCacheTest
   public void testSync_removesUsedSegment_ifNotPresentInMetadataStore()
   {
     setupAndSyncCache();
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
 
     final DataSegmentPlus unpersistedSegmentPlus =
         CreateDataSegments.ofDatasource(TestDataSource.WIKI).markUsed().asPlus();
-    wikiCache.insertSegments(Set.of(unpersistedSegmentPlus));
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertSegments(Set.of(unpersistedSegmentPlus))
+    );
 
     final DataSegment unpersistedSegment = unpersistedSegmentPlus.getDataSegment();
     Assert.assertEquals(
         unpersistedSegment,
-        wikiCache.findUsedSegment(unpersistedSegment.getId())
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(unpersistedSegment.getId())
+        )
     );
 
     syncCache();
@@ -483,7 +528,10 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyNotEmitted(Metric.PERSISTED_USED_SEGMENTS);
 
     Assert.assertNull(
-        wikiCache.findUsedSegment(unpersistedSegment.getId())
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findUsedSegment(unpersistedSegment.getId())
+        )
     );
   }
 
@@ -491,13 +539,21 @@ public class HeapMemorySegmentMetadataCacheTest
   public void testSync_removesUnusedSegment_ifCacheHasOlderEntry()
   {
     setupAndSyncCache();
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
 
     final DateTime now = DateTimes.nowUtc();
     final DataSegmentPlus unpersistedSegmentPlus =
         CreateDataSegments.ofDatasource(TestDataSource.WIKI).markUsed().asPlus();
-    wikiCache.insertSegments(Set.of(unpersistedSegmentPlus));
-    wikiCache.markSegmentAsUnused(unpersistedSegmentPlus.getDataSegment().getId(), now.minusMinutes(1));
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertSegments(Set.of(unpersistedSegmentPlus))
+    );
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.markSegmentAsUnused(
+            unpersistedSegmentPlus.getDataSegment().getId(),
+            now.minusMinutes(1)
+        )
+    );
 
     syncCache();
     serviceEmitter.verifyValue(Metric.DELETED_SEGMENTS, 1L);
@@ -515,9 +571,14 @@ public class HeapMemorySegmentMetadataCacheTest
         CreateDataSegments.ofDatasource(TestDataSource.WIKI).updatedNow().markUsed().asPlus();
 
     final DateTime now = DateTimes.nowUtc();
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
-    wikiCache.insertSegments(Set.of(usedSegment));
-    wikiCache.markSegmentAsUnused(usedSegment.getDataSegment().getId(), now.plusMinutes(1));
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertSegments(Set.of(usedSegment))
+    );
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.markSegmentAsUnused(usedSegment.getDataSegment().getId(), now.plusMinutes(1))
+    );
 
     syncCache();
     serviceEmitter.verifyValue(Metric.CACHED_UNUSED_SEGMENTS, 1L);
@@ -544,11 +605,13 @@ public class HeapMemorySegmentMetadataCacheTest
     );
 
     final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
     Assert.assertTrue(
-        wikiCache.findPendingSegmentIdsWithExactInterval(
-            pendingSegment.getSequenceName(),
-            segmentId.getInterval()
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findPendingSegmentIdsWithExactInterval(
+                pendingSegment.getSequenceName(),
+                segmentId.getInterval()
+            )
         ).isEmpty()
     );
 
@@ -558,9 +621,12 @@ public class HeapMemorySegmentMetadataCacheTest
 
     Assert.assertEquals(
         List.of(segmentId),
-        wikiCache.findPendingSegmentIdsWithExactInterval(
-            pendingSegment.getSequenceName(),
-            segmentId.getInterval()
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findPendingSegmentIdsWithExactInterval(
+                pendingSegment.getSequenceName(),
+                segmentId.getInterval()
+            )
         )
     );
   }
@@ -572,15 +638,20 @@ public class HeapMemorySegmentMetadataCacheTest
 
     // Create a pending segment and add it only to the cache
     final PendingSegmentRecord pendingSegment = createPendingSegment(DateTimes.nowUtc().minusHours(1));
-    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
-    wikiCache.insertPendingSegment(pendingSegment, false);
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertPendingSegment(pendingSegment, false)
+    );
 
     final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
     Assert.assertEquals(
         List.of(segmentId),
-        wikiCache.findPendingSegmentIdsWithExactInterval(
-            pendingSegment.getSequenceName(),
-            segmentId.getInterval()
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findPendingSegmentIdsWithExactInterval(
+                pendingSegment.getSequenceName(),
+                segmentId.getInterval()
+            )
         )
     );
 
@@ -590,19 +661,41 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyValue(Metric.DELETED_PENDING_SEGMENTS, 1L);
 
     Assert.assertTrue(
-        wikiCache.findPendingSegmentIdsWithExactInterval(
-            pendingSegment.getSequenceName(),
-            segmentId.getInterval()
+        cache.readCacheForDataSource(
+            TestDataSource.WIKI,
+            wikiCache -> wikiCache.findPendingSegmentIdsWithExactInterval(
+                pendingSegment.getSequenceName(),
+                segmentId.getInterval()
+            )
         ).isEmpty()
     );
   }
 
+  @Test
+  public void testSync_cleansUpDataSourceCache_ifEmptyAndNotInUse()
+  {
+    setupAndSyncCache();
+
+    final DateTime now = DateTimes.nowUtc();
+    final DataSegmentPlus segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                      .markUsed().lastUpdatedOn(now.minusHours(1))
+                                                      .asPlus();
+    final int numInsertedSegments = cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertSegments(Set.of(segment))
+    );
+    Assert.assertEquals(1, numInsertedSegments);
+
+    // Verify that sync removes the extra entry from the cache and also cleans it up
+    syncCache();
+    serviceEmitter.verifyValue(Metric.DELETED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.DELETED_DATASOURCES, 1L);
+  }
+
   private void insertSegmentsInMetadataStore(Set<DataSegmentPlus> segments)
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-
     IndexerSqlMetadataStorageCoordinatorTestBase
-        .insertSegments(segments, derbyConnector, table, TestHelper.JSON_MAPPER);
+        .insertSegments(segments, derbyConnectorRule, TestHelper.JSON_MAPPER);
   }
 
   private void updateSegmentInMetadataStore(DataSegmentPlus segment)

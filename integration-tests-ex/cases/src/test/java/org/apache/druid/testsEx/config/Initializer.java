@@ -39,6 +39,7 @@ import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SQLMetadataStorageDruidModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
@@ -64,9 +65,7 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageProvider;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.NoopMetadataStorageProvider;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.storage.mysql.MySQLConnector;
@@ -159,24 +158,6 @@ public class Initializer
       binder.bind(new TypeLiteral<Set<NodeRole>>()
       {
       }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
-
-      // Reduced form of SQLMetadataStorageDruidModule
-      String prop = SQLMetadataStorageDruidModule.PROPERTY;
-      String defaultValue = MySQLMetadataStorageModule.TYPE;
-      PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageConnector.class), defaultValue);
-      PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageProvider.class), defaultValue);
-      PolyBind.createChoiceWithDefault(binder, prop, Key.get(SQLMetadataConnector.class), defaultValue);
-
-      // Reduced form of MetadataConfigModule
-      // Not actually used here (tests don't create tables), but needed by MySQLConnector constructor
-      JsonConfigProvider.bind(binder, MetadataStorageTablesConfig.PROPERTY_BASE, MetadataStorageTablesConfig.class);
-
-      // Build from properties provided in the config
-      JsonConfigProvider.bind(
-          binder,
-          MetadataStorageConnectorConfig.PROPERTY_BASE,
-          MetadataStorageConnectorConfig.class
-      );
     }
 
     @Provides
@@ -226,6 +207,13 @@ public class Initializer
     @Override
     public void configure(Binder binder)
     {
+      // Reduced form of SQLMetadataStorageDruidModule
+      String prop = SQLMetadataStorageDruidModule.PROPERTY;
+      String defaultValue = MySQLMetadataStorageModule.TYPE;
+      PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageConnector.class), defaultValue);
+      PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageProvider.class), defaultValue);
+      PolyBind.createChoiceWithDefault(binder, prop, Key.get(SQLMetadataConnector.class), defaultValue);
+
       JsonConfigProvider.bind(binder, "druid.metadata.mysql.ssl", MySQLConnectorSslConfig.class);
       JsonConfigProvider.bind(binder, "druid.metadata.mysql.driver", MySQLConnectorDriverConfig.class);
       String type = MySQLMetadataStorageModule.TYPE;
@@ -511,6 +499,7 @@ public class Initializer
             new BrokerProcessingModule(),
             new StorageNodeModule(),
             new MSQExternalDataSourceModule(),
+            new MetadataConfigModule(),
 
             // Test-specific items, including bits copy/pasted
             // from modules that don't play well in a client setting.

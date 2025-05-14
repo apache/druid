@@ -43,7 +43,8 @@ This section outlines the configuration properties that are specific to the Amaz
 
 The following example shows a supervisor spec for a stream with the name `KinesisStream`:
 
-<details><summary>Click to view the example</summary>
+<details>
+<summary>Click to view the example</summary>
 
 ```json
 {

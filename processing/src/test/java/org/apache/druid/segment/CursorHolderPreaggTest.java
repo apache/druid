@@ -57,6 +57,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
@@ -189,15 +190,12 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
 
       @Nullable
       @Override
-      public QueryableIndex asQueryableIndex()
+      public <T> T as(@Nonnull Class<T> clazz)
       {
+        if (CursorFactory.class.equals(clazz)) {
+          return (T) cursorFactory;
+        }
         return null;
-      }
-
-      @Override
-      public CursorFactory asCursorFactory()
-      {
-        return cursorFactory;
       }
 
       @Override

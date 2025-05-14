@@ -60,7 +60,7 @@ public class BalanceSegments implements CoordinatorDuty
       return params;
     }
 
-    params.getDruidCluster().getHistoricals().forEach(
+    params.getDruidCluster().getManagedHistoricals().forEach(
         (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
     );
 
@@ -113,7 +113,7 @@ public class BalanceSegments implements CoordinatorDuty
     int numHistoricals = 0;
     int numSegments = 0;
 
-    for (Set<ServerHolder> historicals : cluster.getHistoricals().values()) {
+    for (Set<ServerHolder> historicals : cluster.getManagedHistoricals().values()) {
       for (ServerHolder historical : historicals) {
         ++numHistoricals;
         numSegments += historical.getServer().getNumSegments() + historical.getNumQueuedSegments();

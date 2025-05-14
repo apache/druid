@@ -173,7 +173,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     if (taskId == null) {
       throw DruidException.defensive().build("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
-    return new K8sTaskId(taskId);
+    return new K8sTaskId(taskRunnerConfig.getK8sTaskPodNamePrefix(), taskId);
   }
 
   @VisibleForTesting
@@ -311,6 +311,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     // remove probes
     mainContainer.setReadinessProbe(null);
     mainContainer.setLivenessProbe(null);
+    mainContainer.setStartupProbe(null);
 
     setupPorts(mainContainer);
     addEnvironmentVariables(mainContainer, context, taskContents);

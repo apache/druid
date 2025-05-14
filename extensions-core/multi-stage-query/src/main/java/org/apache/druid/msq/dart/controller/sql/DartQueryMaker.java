@@ -41,7 +41,7 @@ import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -49,10 +49,11 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -128,34 +129,34 @@ public class DartQueryMaker implements QueryMaker
   @Override
   public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
-    if (!plannerContext.getAuthorizationResult().allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
-    }
-    final MSQSpec querySpec = MSQTaskQueryMaker.makeQuerySpec(
+    final List<Pair<SqlTypeName, ColumnType>> types =
+        MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
+
+    final String dartQueryId = druidQuery.getQuery().context().getString(QueryContexts.CTX_DART_QUERY_ID);
+    final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
+    final ResultsContext resultsContext = new ResultsContext(
+        types.stream().map(p -> p.lhs).collect(Collectors.toList()),
+        SqlResults.Context.fromPlannerContext(plannerContext)
+    );
+    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
         null,
         druidQuery,
+        druidQuery.getQuery().context(),
         fieldMapping,
         plannerContext,
         null // Only used for DML, which this isn't
     );
-    final List<Pair<SqlTypeName, ColumnType>> types =
-        MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
 
-    final String dartQueryId = druidQuery.getQuery().context().getString(DartSqlEngine.CTX_DART_QUERY_ID);
-    final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
     final ControllerImpl controller = new ControllerImpl(
         dartQueryId,
         querySpec,
-        new ResultsContext(
-            types.stream().map(p -> p.lhs).collect(Collectors.toList()),
-            SqlResults.Context.fromPlannerContext(plannerContext)
-        ),
-        controllerContext
+        resultsContext,
+        controllerContext,
+        new DartQueryKitSpecFactory()
     );
 
     final ControllerHolder controllerHolder = new ControllerHolder(
         controller,
-        controllerContext,
         plannerContext.getSqlQueryId(),
         plannerContext.getSql(),
         controllerContext.selfNode().getHostAndPortToUse(),
@@ -163,10 +164,7 @@ public class DartQueryMaker implements QueryMaker
         DateTimes.nowUtc()
     );
 
-    final boolean fullReport = druidQuery.getQuery().context().getBoolean(
-        DartSqlEngine.CTX_FULL_REPORT,
-        DartSqlEngine.CTX_FULL_REPORT_DEFAULT
-    );
+    final boolean fullReport = druidQuery.getQuery().context().getFullReport();
 
     // Register controller before submitting anything to controllerExeuctor, so it shows up in
     // "active controllers" lists.
@@ -215,7 +213,7 @@ public class DartQueryMaker implements QueryMaker
                     "maxQueryReportSize[%,d] exceeded. "
                     + "Try limiting the result set for your query, or run it with %s[false]",
                     limit,
-                    DartSqlEngine.CTX_FULL_REPORT
+                    QueryContexts.CTX_FULL_REPORT
                 )
             ),
             plannerContext.getJsonMapper(),
@@ -288,7 +286,7 @@ public class DartQueryMaker implements QueryMaker
         "%s-sqlQueryId[%s]-queryId[%s]",
         Thread.currentThread().getName(),
         plannerContext.getSqlQueryId(),
-        plannerContext.queryContext().get(DartSqlEngine.CTX_DART_QUERY_ID)
+        plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID)
     );
   }
 

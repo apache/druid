@@ -57,9 +57,10 @@ public class FileRequestLogger implements RequestLogger
   private final File baseDir;
   private final DateTimeFormatter filePattern;
   private final Duration durationToRetain;
+  private final Duration rollPeriod;
   private final Object lock = new Object();
 
-  private DateTime currentDay;
+  private DateTime currentPeriodStart;
   private OutputStreamWriter fileWriter;
 
   public FileRequestLogger(
@@ -67,7 +68,8 @@ public class FileRequestLogger implements RequestLogger
       ScheduledExecutorService exec,
       File baseDir,
       String filePattern,
-      Duration durationToRetain
+      Duration durationToRetain,
+      Duration rollPeriod
   )
   {
     this.exec = exec;
@@ -75,9 +77,14 @@ public class FileRequestLogger implements RequestLogger
     this.baseDir = baseDir;
     this.filePattern = DateTimeFormat.forPattern(filePattern);
     this.durationToRetain = durationToRetain;
+    this.rollPeriod = rollPeriod;
     Preconditions.checkArgument(
-        this.durationToRetain == null || this.durationToRetain.compareTo(Duration.standardDays(1)) >= 0,
-        "request logs retention period must be atleast P1D"
+        this.rollPeriod == null || this.rollPeriod.compareTo(Duration.standardHours(1)) >= 0,
+        "request logs roll period must be atleast PT1H"
+    );
+    Preconditions.checkArgument(
+        this.durationToRetain == null || this.durationToRetain.compareTo(this.rollPeriod) >= 0,
+        "request logs retention period must be atleast as long as roll period"
     );
   }
 
@@ -89,19 +96,24 @@ public class FileRequestLogger implements RequestLogger
       FileUtils.mkdirp(baseDir);
 
       MutableDateTime mutableDateTime = DateTimes.nowUtc().toMutableDateTime(ISOChronology.getInstanceUTC());
-      mutableDateTime.setMillisOfDay(0);
+      mutableDateTime.setMinuteOfHour(0);
+      mutableDateTime.setSecondOfMinute(0);
+      mutableDateTime.setMillisOfSecond(0);
+      if (rollPeriod.compareTo(Duration.standardDays(1)) >= 0) {
+        mutableDateTime.setHourOfDay(0);
+      }
       synchronized (lock) {
-        currentDay = mutableDateTime.toDateTime(ISOChronology.getInstanceUTC());
+        currentPeriodStart = mutableDateTime.toDateTime(ISOChronology.getInstanceUTC());
 
         fileWriter = getFileWriter();
       }
-      long nextDay = currentDay.plusDays(1).getMillis();
-      Duration initialDelay = new Duration(nextDay - System.currentTimeMillis());
+      long nextPeriodMillis = currentPeriodStart.plus(rollPeriod).getMillis();
+      Duration initialDelay = new Duration(nextPeriodMillis - System.currentTimeMillis());
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           initialDelay,
-          Duration.standardDays(1),
+          rollPeriod,
           new Callable<>()
           {
             @Override
@@ -109,11 +121,11 @@ public class FileRequestLogger implements RequestLogger
             {
               try {
                 synchronized (lock) {
-                  currentDay = currentDay.plusDays(1);
+                  currentPeriodStart = currentPeriodStart.plus(rollPeriod);
 
                   CloseableUtils.closeAndSuppressExceptions(
                       fileWriter,
-                      e -> log.warn("Could not close log file for %s. Creating new log file anyway.", currentDay)
+                      e -> log.warn("Could not close log file for %s. Creating new log file anyway.", currentPeriodStart)
                   );
 
                   fileWriter = getFileWriter();
@@ -173,7 +185,7 @@ public class FileRequestLogger implements RequestLogger
   private OutputStreamWriter getFileWriter() throws FileNotFoundException
   {
     return new OutputStreamWriter(
-        new FileOutputStream(new File(baseDir, filePattern.print(currentDay)), true),
+        new FileOutputStream(new File(baseDir, filePattern.print(currentPeriodStart)), true),
         StandardCharsets.UTF_8
     );
   }

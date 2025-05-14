@@ -96,7 +96,16 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     },
   },
   component: function BarChartModule(props) {
-    const { querySource, timezone, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const {
+      querySource,
+      timezone,
+      where,
+      setWhere,
+      moduleWhere,
+      parameterValues,
+      stage,
+      runSqlQuery,
+    } = props;
     const containerRef = useRef<HTMLDivElement>();
     const chartRef = useRef<ECharts>();
     const [highlight, setHighlight] = useState<BarChartHighlight | undefined>();
@@ -108,7 +117,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
 
       return {
         query: querySource
-          .getInitQuery(where)
+          .getInitQuery(where.and(moduleWhere))
           .addSelect(
             splitExpression.applyIf(timeBucket, ex => F.timeFloor(ex, timeBucket)).as('dim'),
             {
@@ -127,7 +136,17 @@ ModuleRepository.registerModule<BarChartParameterValues>({
           .changeLimitValue(limit),
         timezone,
       };
-    }, [querySource, timezone, where, splitColumn, timeBucket, measure, measureToSort, limit]);
+    }, [
+      querySource,
+      timezone,
+      where,
+      moduleWhere,
+      splitColumn,
+      timeBucket,
+      measure,
+      measureToSort,
+      limit,
+    ]);
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,

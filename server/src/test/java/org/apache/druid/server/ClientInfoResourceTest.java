@@ -27,6 +27,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.Intervals;
@@ -368,7 +369,7 @@ public class ClientInfoResourceTest
                                      .size(1)
                                      .build();
     server.addDataSegment(segment);
-    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()));
+    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()), HistoricalFilter.IDENTITY_FILTER);
     timeline.add(Intervals.of(interval), version, new SingleElementPartitionChunk<>(ss));
   }
 
@@ -392,7 +393,7 @@ public class ClientInfoResourceTest
                                      .size(1)
                                      .build();
     server.addDataSegment(segment);
-    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()));
+    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()), HistoricalFilter.IDENTITY_FILTER);
     timeline.add(Intervals.of(interval), version, shardSpec.createChunk(ss));
   }
 

@@ -20,22 +20,21 @@
 package org.apache.druid.msq.dart.controller.sql;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
-import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -47,28 +46,30 @@ import org.apache.druid.sql.destination.IngestDestination;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+@LazySingleton
 public class DartSqlEngine implements SqlEngine
 {
   private static final String NAME = "msq-dart";
-
-  /**
-   * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
-   * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
-   * the user may have provided. This becomes the {@link Controller#queryId()}.
-   *
-   * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
-   * for purposes of query cancellation.
-   *
-   * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
-   */
-  public static final String CTX_DART_QUERY_ID = "dartQueryId";
-  public static final String CTX_FULL_REPORT = "fullReport";
-  public static final boolean CTX_FULL_REPORT_DEFAULT = false;
 
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
   private final ExecutorService controllerExecutor;
+
+  @Inject
+  public DartSqlEngine(
+      DartControllerContextFactory controllerContextFactory,
+      DartControllerRegistry controllerRegistry,
+      DartControllerConfig controllerConfig
+  )
+  {
+    this(
+        controllerContextFactory,
+        controllerRegistry,
+        controllerConfig,
+        Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
+    );
+  }
 
   public DartSqlEngine(
       DartControllerContextFactory controllerContextFactory,
@@ -132,12 +133,12 @@ public class DartSqlEngine implements SqlEngine
       Map<String, Object> queryContext
   )
   {
-    if (QueryContext.of(queryContext).getBoolean(CTX_FULL_REPORT, CTX_FULL_REPORT_DEFAULT)) {
+    if (QueryContext.of(queryContext).getFullReport()) {
       return typeFactory.createStructType(
           ImmutableList.of(
               Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
           ),
-          ImmutableList.of(CTX_FULL_REPORT)
+          ImmutableList.of(QueryContexts.CTX_FULL_REPORT)
       );
     } else {
       return validatedRowType;

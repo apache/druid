@@ -677,7 +677,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           metricsSpec,
           transformSpec,
           tuningConfig.getIndexSpec(),
-          granularitySpec
+          granularitySpec,
+          ingestionSpec.getDataSchema().getProjections()
       );
     } else {
       return Function.identity();

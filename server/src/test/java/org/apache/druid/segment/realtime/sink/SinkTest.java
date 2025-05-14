@@ -93,8 +93,7 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         TuningConfig.DEFAULT_APPENDABLE_INDEX,
         MAX_ROWS_IN_MEMORY,
-        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory(),
-        true
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
     );
 
     sink.add(
@@ -276,8 +275,7 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         TuningConfig.DEFAULT_APPENDABLE_INDEX,
         MAX_ROWS_IN_MEMORY,
-        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory(),
-        true
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
     );
 
     sink.add(new MapBasedInputRow(
@@ -362,7 +360,6 @@ public class SinkTest extends InitializedNullHandlingTest
         new FireHydrant(EasyMock.createMock(IncrementalIndex.class), 0, segmentId),
         new FireHydrant(
             new RowBasedSegment<>(
-                segmentId,
                 Sequences.empty(),
                 RowAdapters.standardRow(),
                 RowSignature.empty()

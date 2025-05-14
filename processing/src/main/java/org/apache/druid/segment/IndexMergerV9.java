@@ -533,12 +533,27 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int i = 0; i < dimensions.size(); i++) {
         final String dimension = dimensions.get(i);
-        DimensionMergerV9 merger = mergers.get(i);
+        final DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
-        if (!merger.hasOnlyNulls()) {
-          ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
-          makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
+        final ColumnDescriptor columnDesc;
+        if (merger.hasOnlyNulls()) {
+          // synthetic null column descriptor if merger participates in generic null column stuff
+          // always write a null column if hasOnlyNulls is true. This is correct regardless of how storeEmptyColumns is
+          // set because:
+          // - if storeEmptyColumns is true, the base table also does this,
+          // - if storeEmptyColumns is false, the base table omits the column from the dimensions list as if it does not
+          //   exist, however for projections the dimensions list is always populated by the projection schema, so a
+          //   column always needs to exist to not run into null pointer exceptions.
+          columnDesc = ColumnDescriptor
+              .builder()
+              .setValueType(columnFormats.get(dimension).getLogicalType().getType())
+              .addSerde(new NullColumnPartSerde(rowCount, indexSpec.getBitmapSerdeFactory()))
+              .build();
+        } else {
+          // use merger descriptor, merger either has values or handles it own null column storage details
+          columnDesc = merger.makeColumnDescriptor();
         }
+        makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
       }
 
       progress.stopSection(section2);
@@ -1189,12 +1204,18 @@ public class IndexMergerV9 implements IndexMerger
     List<List<IndexableAdapter>> currentPhases = getMergePhases(indexes, maxColumnsToMerge);
     List<File> currentOutputs = new ArrayList<>();
 
-    log.debug("base outDir: " + outDir);
+    log.debug("Base outDir[%s]", outDir);
 
     try {
       int tierCounter = 0;
       while (true) {
-        log.info("Merging %d phases, tiers finished processed so far: %d.", currentPhases.size(), tierCounter);
+        log.info(
+            "Merging phases[%,d] (indexes[%,d], maxColumnsToMerge[%,d]), tiers finished processed so far[%,d].",
+            currentPhases.size(),
+            indexes.size(),
+            maxColumnsToMerge,
+            tierCounter
+        );
         for (List<IndexableAdapter> phase : currentPhases) {
           final File phaseOutDir;
           final boolean isFinalPhase = currentPhases.size() == 1;
@@ -1206,8 +1227,8 @@ public class IndexMergerV9 implements IndexMerger
             phaseOutDir = FileUtils.createTempDir();
             tempDirs.add(phaseOutDir);
           }
-          log.info("Merging phase with %d indexes.", phase.size());
-          log.debug("phase outDir: " + phaseOutDir);
+          log.info("Merging phase with index count[%,d].", phase.size());
+          log.debug("Phase outDir[%s]", phaseOutDir);
 
           File phaseOutput = merge(
               phase,

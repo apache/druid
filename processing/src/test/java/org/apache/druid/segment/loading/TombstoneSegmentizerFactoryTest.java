@@ -36,6 +36,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static org.junit.Assert.assertThrows;
@@ -57,7 +58,7 @@ public class TombstoneSegmentizerFactoryTest
         .build();
 
     Segment segment = factory.factorize(tombstone, null, true, null);
-    Assert.assertNotNull(segment.asCursorFactory());
+    Assert.assertNotNull(segment.as(CursorFactory.class));
     Assert.assertEquals("foo_2021-01-01T00:00:00.000Z_2022-01-01T00:00:00.000Z_1", segment.getId().toString());
     Assert.assertEquals(expectedInterval, segment.getDataInterval());
 
@@ -72,7 +73,7 @@ public class TombstoneSegmentizerFactoryTest
     assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnHolder(null));
     Assert.assertTrue(segment.isTombstone());
 
-    Assert.assertNotNull(segment.asCursorFactory());
+    Assert.assertNotNull(segment.as(CursorFactory.class));
 
   }
 
@@ -95,43 +96,40 @@ public class TombstoneSegmentizerFactoryTest
 
       @Nullable
       @Override
-      public QueryableIndex asQueryableIndex()
+      public <T> T as(@Nonnull Class<T> clazz)
       {
-        return null;
-      }
-
-      @Override
-      public CursorFactory asCursorFactory()
-      {
-        return new CursorFactory()
-        {
-          @Override
-          public CursorHolder makeCursorHolder(CursorBuildSpec spec)
+        if (CursorFactory.class.equals(clazz)) {
+          return (T) new CursorFactory()
           {
-            return new CursorHolder()
+            @Override
+            public CursorHolder makeCursorHolder(CursorBuildSpec spec)
             {
-              @Nullable
-              @Override
-              public Cursor asCursor()
+              return new CursorHolder()
               {
-                return null;
-              }
-            };
-          }
+                @Nullable
+                @Override
+                public Cursor asCursor()
+                {
+                  return null;
+                }
+              };
+            }
 
-          @Override
-          public RowSignature getRowSignature()
-          {
-            return RowSignature.empty();
-          }
+            @Override
+            public RowSignature getRowSignature()
+            {
+              return RowSignature.empty();
+            }
 
-          @Override
-          @Nullable
-          public ColumnCapabilities getColumnCapabilities(String column)
-          {
-            return null;
-          }
-        };
+            @Override
+            @Nullable
+            public ColumnCapabilities getColumnCapabilities(String column)
+            {
+              return null;
+            }
+          };
+        }
+        return null;
       }
 
       @Override

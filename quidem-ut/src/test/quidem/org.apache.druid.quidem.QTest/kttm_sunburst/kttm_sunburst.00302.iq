@@ -1,0 +1,36 @@
+#The queries in this file were generated; see README.generated
+#started Wed Jul 10 19:19:15 IST 2024
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+# Wed Jul 10 19:21:13 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100'))
+GROUP BY ();
++--------+----+
+| v0     | v1 |
++--------+----+
+| 133113 |  0 |
++--------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:21:13 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 101;
++-----------------+--------+
+| Browser_Version | count  |
++-----------------+--------+
+| 76.0.3809.100   | 133113 |
++-----------------+--------+
+(1 row)
+
+!ok

@@ -236,20 +236,23 @@ export class DruidError extends Error {
       };
     }
 
-    // Semicolon (;) at the end. https://bit.ly/1n1yfkJ
-    // ex: SELECT 1;
-    // ex: Received an unexpected token [;] (line [1], column [9]), acceptable options:
+    // Missing (;) after SET statement
+    // ex: SET sqlTimeZone = 'America/Los_Angeles' SELECT * FROM "kttm_simple"
+    // ex: Received an unexpected token [SELECT] (line [1], column [41]), acceptable options: [<EOF>, <QUOTED_STRING>, ";", "UESCAPE"]
     const matchSemicolon =
-      /Received an unexpected token \[;] \(line \[(\d+)], column \[(\d+)]\),/i.exec(errorMessage);
+      /Received an unexpected token \[(?:SET|SELECT)] \(line \[(\d+)], column \[(\d+)]\), acceptable options: \[[^;]*";"/i.exec(
+        errorMessage,
+      );
     if (matchSemicolon) {
       const line = Number(matchSemicolon[1]);
       const column = Number(matchSemicolon[2]);
       return {
-        label: `Remove trailing semicolon (;)`,
+        label: `Add semicolon (;) after SET statement`,
         fn: str => {
           const index = DruidError.positionToIndex(str, line, column);
-          if (str[index] !== ';') return;
-          return str.slice(0, index) + str.slice(index + 1);
+          const prefix = str.slice(0, index).trimEnd();
+          if (prefix.endsWith(';')) return;
+          return prefix + ';' + str.slice(prefix.length);
         },
       };
     }
@@ -360,6 +363,16 @@ export async function queryDruidSqlDart<T = any>(
 
 export async function getApiArray<T = any>(url: string, cancelToken?: CancelToken): Promise<T[]> {
   const result = (await Api.instance.get(url, { cancelToken })).data;
+  if (!Array.isArray(result)) throw new Error('unexpected result');
+  return result;
+}
+
+export async function getApiArrayFromKey<T = any>(
+  url: string,
+  key: string,
+  cancelToken?: CancelToken,
+): Promise<T[]> {
+  const result = (await Api.instance.get(url, { cancelToken })).data?.[key];
   if (!Array.isArray(result)) throw new Error('unexpected result');
   return result;
 }

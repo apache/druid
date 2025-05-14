@@ -31,7 +31,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestHelper;
@@ -284,7 +284,10 @@ public class BatchDataSegmentAnnouncerTest
     List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(
+          TEST_SEGMENTS_PATH,
+          zNode
+      )));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertTrue(announcedSegment.getDimensions().isEmpty());
       Assert.assertTrue(announcedSegment.getMetrics().isEmpty());
@@ -307,7 +310,10 @@ public class BatchDataSegmentAnnouncerTest
     List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(
+          TEST_SEGMENTS_PATH,
+          zNode
+      )));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertNull(announcedSegment.getLoadSpec());
     }
@@ -402,7 +408,8 @@ public class BatchDataSegmentAnnouncerTest
     segmentAnnouncer.announceSegmentSchemas(
         taskId,
         new SegmentSchemas(Collections.singletonList(absoluteSchema1)),
-        new SegmentSchemas(Collections.singletonList(absoluteSchema1)));
+        new SegmentSchemas(Collections.singletonList(absoluteSchema1))
+    );
 
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot;
 
@@ -618,7 +625,7 @@ public class BatchDataSegmentAnnouncerTest
     }
   }
 
-  private static class TestAnnouncer extends Announcer
+  private static class TestAnnouncer extends NodeAnnouncer
   {
     private final ConcurrentHashMap<String, ConcurrentHashMap<byte[], AtomicInteger>> numPathAnnounced = new ConcurrentHashMap<>();
 
@@ -630,7 +637,9 @@ public class BatchDataSegmentAnnouncerTest
     @Override
     public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
     {
-      numPathAnnounced.computeIfAbsent(path, k -> new ConcurrentHashMap<>()).computeIfAbsent(bytes, k -> new AtomicInteger(0)).incrementAndGet();
+      numPathAnnounced.computeIfAbsent(path, k -> new ConcurrentHashMap<>())
+                      .computeIfAbsent(bytes, k -> new AtomicInteger(0))
+                      .incrementAndGet();
       super.announce(path, bytes, removeParentIfCreated);
     }
   }

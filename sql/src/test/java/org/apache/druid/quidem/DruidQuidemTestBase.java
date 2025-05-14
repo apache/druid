@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import net.hydromatic.quidem.CommandHandler;
@@ -190,7 +191,8 @@ public abstract class DruidQuidemTestBase
   {
     Set<Class<MultiComponentSupplier>> metaSuppliers = new HashSet<>();
 
-    for (String line : Files.readLines(inFile, StandardCharsets.UTF_8)) {
+    List<String> lines = Files.readLines(inFile, StandardCharsets.UTF_8);
+    for (String line : lines) {
       if (line.startsWith("!use")) {
         String[] parts = line.split(" ");
         if (parts.length == 2) {
@@ -201,6 +203,15 @@ public abstract class DruidQuidemTestBase
           }
         }
       }
+    }
+    int nCommands = Iterables.size(Iterables.filter(lines, line -> line.startsWith("!")));
+    if (!commandLimitIgnoredFiles.contains(inFile.getName()) && nCommands > 80) {
+      throw DruidException.defensive(
+          "There are too many commands [%s] in file [%s] which would make working with the test harder. "
+              + "Please reduce the number of queries/commands/etc",
+          nCommands,
+          inFile
+      );
     }
     return metaSuppliers;
   }
@@ -218,7 +229,7 @@ public abstract class DruidQuidemTestBase
     final String testName = testConfig.getTestName();
 
     File inFile = new File(getTestRoot(), testConfig.fileName);
-    final File outFile = new File(inFile.getParentFile(), testName + ".iq.out");
+    final File outFile = new File(getTestRoot(), testName + ".out");
     try (AutoCloseable closeable = Threads.withThreadName(testName)) {
       druidQuidemRunner.run(inFile, outFile, testConfig.componentSupplierName);
     }
@@ -295,6 +306,10 @@ public abstract class DruidQuidemTestBase
         } else {
           fail("Files differ: " + outFile + " " + inFile + "\n" + diff);
         }
+      } else {
+        if (outFile.exists()) {
+          outFile.delete();
+        }
       }
     }
 
@@ -359,4 +374,67 @@ public abstract class DruidQuidemTestBase
   {
     DruidAvaticaTestDriver.CONFIG_STORE.close();
   }
+
+  /**
+   * This list should eventually be removed; as soon as all tests become smaller than 80.
+   */
+  Set<String> commandLimitIgnoredFiles = ImmutableSet.of(
+      "qaSQL_scalar_string.iq",
+      "qaSQL_scalar_numeric.iq",
+      "qaAggFuncs_array_agg_timestamp.iq",
+      "qaAggFuncs_array_agg_double.iq",
+      "qaAggFuncs_array_agg_float.iq",
+      "qaAggFuncs_array_agg_long.iq",
+      "qaAggFuncs_array_agg_string.iq",
+      "qaWin_sql.iq",
+      "qaAggFuncs_string_agg_timestamp.iq",
+      "qaAggFuncs_string_agg_double.iq",
+      "qaAggFuncs_string_agg_float.iq",
+      "qaAggFuncs_string_agg_long.iq",
+      "qaAggFuncs_string_agg_string.iq",
+      "qaUnnest_array_sql_scalar_funcs.iq",
+      "qaUnnest_mv_sql_scalar_funcs.iq",
+      "qaUnnest_mv_sql_other_funcs.iq",
+      "qaUnnest_mv_sql.iq",
+      "qaWin_orderby_range_negative_first_last.iq",
+      "qaWin_orderby_range_negative_sum_count.iq",
+      "qaWin_orderby_rows_negative_first_last.iq",
+      "qaWin_orderby_rows_negative_sum_count.iq",
+      "qaWin_basics.iq",
+      "qaWin_orderby_range_0_following_first_last.iq",
+      "qaWin_orderby_range_0_following_sum_count.iq",
+      "qaWin_orderby_range_0_preceding_first_last.iq",
+      "qaWin_orderby_range_0_preceding_sum_count.iq",
+      "qaWin_orderby_range_1_following_first_last.iq",
+      "qaWin_orderby_range_1_following_sum_count.iq",
+      "qaWin_orderby_range_1_preceding_first_last.iq",
+      "qaWin_orderby_range_1_preceding_sum_count.iq",
+      "qaWin_orderby_range_current_first_last.iq",
+      "qaWin_orderby_range_current_sum_count.iq",
+      "qaWin_orderby_range_ub_following_first_last.iq",
+      "qaWin_orderby_range_ub_following_sum_count.iq",
+      "qaWin_orderby_range_ub_preceding_first_last.iq",
+      "qaWin_orderby_range_ub_preceding_sum_count.iq",
+      "qaWin_orderby_rows_0_following_first_last.iq",
+      "qaWin_orderby_rows_0_following_sum_count.iq",
+      "qaWin_orderby_rows_0_preceding_first_last.iq",
+      "qaWin_orderby_rows_0_preceding_sum_count.iq",
+      "qaWin_orderby_rows_1_following_first_last.iq",
+      "qaWin_orderby_rows_1_following_sum_count.iq",
+      "qaWin_orderby_rows_1_preceding_first_last.iq",
+      "qaWin_orderby_rows_1_preceding_sum_count.iq",
+      "qaWin_orderby_rows_current_first_last.iq",
+      "qaWin_orderby_rows_current_sum_count.iq",
+      "qaWin_orderby_rows_ub_following_first_last.iq",
+      "qaWin_orderby_rows_ub_following_sum_count.iq",
+      "qaWin_orderby_rows_ub_preceding_first_last.iq",
+      "qaWin_orderby_rows_ub_preceding_sum_count.iq",
+      "qaUnnest_array_sql_other_funcs.iq",
+      "qaJsonCols_funcs_and_sql.iq",
+      "qaUnnest_array_sql.iq",
+      "qaUnnest_array_sql_filter.iq",
+      "qaUnnest_mv_sql_filter.iq",
+      "qaArray_sql.iq",
+      "qaArray_ops_funcs.iq"
+  );
 }

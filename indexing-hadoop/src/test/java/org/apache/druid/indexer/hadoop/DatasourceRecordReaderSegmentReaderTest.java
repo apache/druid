@@ -36,6 +36,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.filter.SpatialDimFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -178,7 +179,7 @@ public class DatasourceRecordReaderSegmentReaderTest
 
       // Do a spatial filter
       final DatasourceRecordReader.SegmentReader segmentReader2 = new DatasourceRecordReader.SegmentReader(
-          ImmutableList.of(new WindowedCursorFactory(queryable.asCursorFactory(), Intervals.of("2000/3000"))),
+          ImmutableList.of(new WindowedCursorFactory(queryable.as(CursorFactory.class), Intervals.of("2000/3000"))),
           TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),

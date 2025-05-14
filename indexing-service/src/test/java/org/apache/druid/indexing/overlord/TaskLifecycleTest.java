@@ -106,10 +106,12 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DirectQueryProcessingPool;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -570,6 +572,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         tac,
         emitter,
+        NoopPolicyEnforcer.instance(),
         dataSegmentPusher,
         new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig()),
         (dataSegment, targetLoadSpec) -> dataSegment,
@@ -586,6 +589,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
+        DruidProcessingConfig::new,
         DirectQueryProcessingPool.INSTANCE, // query executor service
         NoopJoinableFactory.INSTANCE,
         () -> monitorScheduler, // monitor scheduler
@@ -1243,6 +1247,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         MapCache.create(2048),
         new CacheConfig(),
         new CachePopulatorStats(),
+        NoopPolicyEnforcer.instance(),
         MAPPER,
         new NoopServiceEmitter(),
         () -> queryRunnerFactoryConglomerate

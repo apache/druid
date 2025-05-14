@@ -27,6 +27,7 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -50,6 +51,8 @@ public interface WorkerContext
   String workerId();
 
   ObjectMapper jsonMapper();
+
+  PolicyEnforcer policyEnforcer();
 
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   Injector injector();

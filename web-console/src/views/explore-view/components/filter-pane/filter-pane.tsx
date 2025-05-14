@@ -48,6 +48,7 @@ import './filter-pane.scss';
 
 export interface FilterPaneProps {
   querySource: QuerySource | undefined;
+  extraFilter: SqlExpression;
   timezone: Timezone;
   filter: SqlExpression;
   onFilterChange(filter: SqlExpression): void;
@@ -59,6 +60,7 @@ export interface FilterPaneProps {
 export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps, ref) {
   const {
     querySource,
+    extraFilter,
     timezone,
     filter,
     onFilterChange,
@@ -139,6 +141,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                 content={
                   <FilterMenu
                     querySource={querySource}
+                    extraFilter={extraFilter}
                     filter={filterPatternsToExpression(without(patterns, pattern))}
                     initPattern={pattern}
                     onPatternChange={newPattern => {
@@ -201,6 +204,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
           content={
             <FilterMenu
               querySource={querySource}
+              extraFilter={extraFilter}
               filter={filter}
               initPattern={menuNew?.column ? initPatternForColumn(menuNew?.column) : undefined}
               onPatternChange={newPattern => {
@@ -220,7 +224,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
             text={patterns.length ? undefined : 'Add filter'}
             onClick={() => setMenuNew({})}
             minimal
-            data-tooltip="Add filter"
+            data-tooltip={patterns.length ? 'Add filter' : undefined}
           />
         </Popover>
       ) : (
@@ -229,7 +233,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
           text={patterns.length ? undefined : 'Add filter'}
           disabled
           minimal
-          data-tooltip="Add filter"
+          data-tooltip="No query source, unable to query"
         />
       )}
     </DroppableContainer>

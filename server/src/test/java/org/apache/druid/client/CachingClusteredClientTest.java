@@ -44,6 +44,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -548,7 +549,8 @@ public class CachingClusteredClientTest
     EasyMock.replay(dataSegment);
     final ServerSelector selector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), dataSegment);
     timeline.add(interval, "v", new SingleElementPartitionChunk<>(selector));
@@ -1751,7 +1753,8 @@ public class CachingClusteredClientTest
 
     ServerSelector selector = new ServerSelector(
         segment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
     return selector;
@@ -1784,7 +1787,8 @@ public class CachingClusteredClientTest
 
     ServerSelector selector = new ServerSelector(
         segment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
     return selector;
@@ -2231,7 +2235,8 @@ public class CachingClusteredClientTest
         EasyMock.replay(mockSegment);
         ServerSelector selector = new ServerSelector(
             expectation.getSegment(),
-            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+            HistoricalFilter.IDENTITY_FILTER
         );
         selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
         EasyMock.reset(mockSegment);
@@ -3036,7 +3041,8 @@ public class CachingClusteredClientTest
     );
     final ServerSelector selector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
     timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
@@ -3052,7 +3058,7 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.getEntityTag());
+    Assert.assertEquals("RsQmZHYstvXNeGf86z3pgpk+Wsg=", responseContext.getEntityTag());
   }
 
   @Test
@@ -3077,7 +3083,8 @@ public class CachingClusteredClientTest
     );
     final ServerSelector selector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
     timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));

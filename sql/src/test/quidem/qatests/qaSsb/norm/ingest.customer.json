@@ -1,0 +1,94 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaSsb/norm/data",
+        "filter" : "customer.tbl.gz"
+      },
+      "inputFormat": {
+        "type": "tsv",
+        "columns": [
+          "c_custkey",
+          "c_name",
+          "c_address",
+          "c_city",
+          "c_nation",
+          "c_region",
+          "c_phone",
+          "c_mktsegment"
+        ],
+        "findColumnsFromHeader": false,
+        "delimiter": "|"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 1000000,
+        "maxTotalRows": 500000000
+      },
+      "maxNumConcurrentSubTasks": 4
+    },
+    "dataSchema": {
+      "dataSource": "ssb_norm_customer",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "!!!_no_such_column_!!!",
+        "format": "auto",
+        "missingValue": "2010-01-01T00:00:00Z"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "c_custkey"
+          },
+          {
+            "type": "string",
+            "name": "c_name",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_address",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_city",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_nation",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_region",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_phone",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "string",
+            "name": "c_mktsegment",
+            "createBitmapIndex": true
+          }
+        ]
+      } 
+    }
+  }
+}

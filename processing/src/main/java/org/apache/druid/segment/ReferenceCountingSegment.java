@@ -20,6 +20,8 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -33,7 +35,7 @@ import java.util.Optional;
  * {@link Segment} that is also a {@link ReferenceCountingSegment}, allowing query engines that operate directly on
  * segments to track references so that dropping a {@link Segment} can be done safely to ensure there are no in-flight
  * queries.
- *
+ * <p>
  * Extensions can extend this class for populating {@link org.apache.druid.timeline.VersionedIntervalTimeline} with
  * a custom implementation through SegmentLoader.
  */
@@ -47,10 +49,11 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
 
   public static ReferenceCountingSegment wrapRootGenerationSegment(Segment baseSegment)
   {
+    int partitionNum = baseSegment.getId() == null ? 0 : baseSegment.getId().getPartitionNum();
     return new ReferenceCountingSegment(
         Preconditions.checkNotNull(baseSegment, "baseSegment"),
-        baseSegment.getId().getPartitionNum(),
-        (baseSegment.getId().getPartitionNum() + 1),
+        partitionNum,
+        partitionNum + 1,
         (short) 0,
         (short) 1
     );
@@ -70,7 +73,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     );
   }
 
-  protected ReferenceCountingSegment(
+  private ReferenceCountingSegment(
       Segment baseSegment,
       int startRootPartitionId,
       int endRootPartitionId,
@@ -79,6 +82,14 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   )
   {
     super(baseSegment);
+    // ReferenceCountingSegment should not wrap another SegmentReference, because the inner reference would effectively
+    // be ignored.
+    if (baseSegment instanceof SegmentReference) {
+      throw DruidException.defensive(
+          "Cannot use a SegmentReference[%s] as baseSegment for a ReferenceCountingSegment",
+          baseSegment.asString()
+      );
+    }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;
     this.minorVersion = minorVersion;
@@ -103,20 +114,6 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   public Interval getDataInterval()
   {
     return !isClosed() ? baseObject.getDataInterval() : null;
-  }
-
-  @Override
-  @Nullable
-  public QueryableIndex asQueryableIndex()
-  {
-    return !isClosed() ? baseObject.asQueryableIndex() : null;
-  }
-
-  @Nullable
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return !isClosed() ? baseObject.asCursorFactory() : null;
   }
 
   @Override
@@ -174,6 +171,12 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   public Optional<Closeable> acquireReferences()
   {
     return incrementReferenceAndDecrementOnceCloseable();
+  }
+
+  @Override
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  {
+    policyEnforcer.validateOrElseThrow(this, null);
   }
 
   @Override

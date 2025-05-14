@@ -274,7 +274,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         stateManager.getSupervisorState(),
         stateManager.getExceptionEvents(),
         includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
+        includeOffsets ? aggregatePartitionLags(partitionLag).getTotalLag() : null
     );
   }
 
@@ -387,7 +387,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionTimeLags);
+    return aggregatePartitionLags(partitionTimeLags);
   }
 
   @Override

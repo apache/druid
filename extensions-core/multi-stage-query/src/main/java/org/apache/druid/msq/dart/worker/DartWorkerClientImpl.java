@@ -27,7 +27,6 @@ import it.unimi.dsi.fastutil.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.rpc.BaseWorkerClientImpl;
@@ -68,7 +67,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   /**
    * Create a worker client.
    *
-   * @param queryId        dart query ID. see {@link DartSqlEngine#CTX_DART_QUERY_ID}
+   * @param queryId        dart query ID. see {@link org.apache.druid.query.QueryContexts#CTX_DART_QUERY_ID}
    * @param clientFactory  service client factor
    * @param smileMapper    Smile object mapper
    * @param controllerHost Controller host (see {@link DartWorkerResource#HEADER_CONTROLLER_HOST}) if this is a

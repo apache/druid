@@ -51,7 +51,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -357,13 +356,12 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
   ) throws IOException
   {
     RowBasedSegment<Map<String, Object>> segment = new RowBasedSegment<>(
-        SegmentId.dummy("test"),
         Sequences.simple(rows),
         columnName -> m -> m.get(columnName),
         signature
     );
 
-    return makeChannelFromCursorFactory(segment.asCursorFactory(), keyColumns);
+    return makeChannelFromCursorFactory(segment.as(CursorFactory.class), keyColumns);
   }
 
   private ReadableInput makeChannelFromCursorFactory(

@@ -44,24 +44,46 @@ import java.util.Map;
  */
 public interface CompactionScheduler
 {
-  void start();
+  void becomeLeader();
 
-  void stop();
+  void stopBeingLeader();
 
+  /**
+   * @return true if the scheduler is enabled i.e. when
+   * {@link DruidCompactionConfig#isUseSupervisors()} is true.
+   */
   boolean isEnabled();
 
+  /**
+   * @return true if the scheduler is currently running and submitting compaction
+   * tasks.
+   */
   boolean isRunning();
 
   CompactionConfigValidationResult validateCompactionConfig(DataSourceCompactionConfig compactionConfig);
 
+  /**
+   * Starts compaction for a datasource if not already running.
+   */
   void startCompaction(String dataSourceName, DataSourceCompactionConfig compactionConfig);
 
+  /**
+   * Stops compaction for a datasource if currently running.
+   */
   void stopCompaction(String dataSourceName);
 
   Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots();
 
+  /**
+   * @return Non-null snapshot of the current status of compaction for the datasource.
+   */
   AutoCompactionSnapshot getCompactionSnapshot(String dataSource);
 
+  /**
+   * Simulates a compaction run with the given cluster config.
+   *
+   * @return Result of the simulation
+   */
   CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest);
 
 }

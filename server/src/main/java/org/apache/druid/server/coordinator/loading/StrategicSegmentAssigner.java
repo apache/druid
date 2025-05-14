@@ -88,7 +88,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
     this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
 
-    cluster.getHistoricals().forEach(
+    cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> tierToHistoricalCount.put(tier, historicals.size())
     );
   }
@@ -275,7 +275,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     final SegmentStatusInTier segmentStatus =
-        new SegmentStatusInTier(segment, cluster.getHistoricalsByTier(tier));
+        new SegmentStatusInTier(segment, cluster.getManagedHistoricalsByTier(tier));
 
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {
@@ -326,7 +326,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public void broadcastSegment(DataSegment segment)
   {
     final Object2IntOpenHashMap<String> tierToRequiredReplicas = new Object2IntOpenHashMap<>();
-    for (ServerHolder server : cluster.getAllServers()) {
+    for (ServerHolder server : cluster.getAllManagedServers()) {
       // Ignore servers which are not broadcast targets
       if (!server.getServer().getType().isSegmentBroadcastTarget()) {
         continue;
@@ -577,7 +577,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     final Map<String, Integer> tierToLoadingReplicaCount = new HashMap<>();
 
-    cluster.getHistoricals().forEach(
+    cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> {
           int numLoadingReplicas = historicals.stream().mapToInt(ServerHolder::getNumLoadingReplicas).sum();
           tierToLoadingReplicaCount.put(tier, numLoadingReplicas);

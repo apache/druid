@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.rowsandcols.ArrayListRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -45,24 +44,22 @@ public class ArrayListSegment<RowType> extends RowBasedSegment<RowType>
    * this, and callers will expect it.
    * <p>
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of
-   * {@link #asCursorFactory()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's
-   * cursor factory will allow creation of selectors on any field, using the {@link RowAdapter#columnFunction} for that
-   * field, even if it doesn't appear in "rowSignature".
+   * {@link #as(Class)} for {@link CursorFactory}. Note that the {@link ColumnSelectorFactory} implementation returned
+   * by this segment's cursor factory will allow creation of selectors on any field, using the
+   * {@link RowAdapter#columnFunction} for that field, even if it doesn't appear in "rowSignature".
    *
-   * @param segmentId    segment identifier; will be returned by {@link #getId()}
    * @param rows         objects that comprise this segment. Must be re-iterable if support for {@link Cursor#reset()}
    *                     is required. Otherwise, does not need to be re-iterable.
    * @param rowAdapter   adapter used for reading these objects
    * @param rowSignature signature of the columns in these objects
    */
   public ArrayListSegment(
-      final SegmentId segmentId,
       final ArrayList<RowType> rows,
       final RowAdapter<RowType> rowAdapter,
       final RowSignature rowSignature
   )
   {
-    super(segmentId, Sequences.simple(rows), rowAdapter, rowSignature);
+    super(Sequences.simple(rows), rowAdapter, rowSignature);
     this.rows = rows;
     this.adapter = rowAdapter;
     this.rowSignature = rowSignature;

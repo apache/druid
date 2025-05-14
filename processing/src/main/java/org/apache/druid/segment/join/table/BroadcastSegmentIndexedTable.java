@@ -77,7 +77,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     this.version = version;
     this.segment = Preconditions.checkNotNull(theSegment, "Segment must not be null");
     this.cursorFactory = Preconditions.checkNotNull(
-        segment.asCursorFactory(),
+        segment.as(CursorFactory.class),
         "Segment[%s] must have a cursor factory",
         segment.getId()
     );

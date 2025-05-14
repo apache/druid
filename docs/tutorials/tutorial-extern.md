@@ -176,7 +176,7 @@ Druid supports Amazon S3 or Google Cloud Storage (GCS) as cloud storage destinat
     LIMIT 10
     ```
 
-  </TabItem>
+   </TabItem>
 
    <TabItem value="2" label="GCS">
 
@@ -203,4 +203,4 @@ Druid supports Amazon S3 or Google Cloud Storage (GCS) as cloud storage destinat
 See the following topics for more information:
 
 * [Export to a destination](../multi-stage-query/reference.md#extern-to-export-to-a-destination) for a reference of the EXTERN.
-* [SQL-based ingestion security](../multi-stage-query/security.md/#permissions-for-durable-storage) for cloud permission requirements for MSQ.
+* [SQL-based ingestion security](../multi-stage-query/security.md#permissions-for-durable-storage) for cloud permission requirements for MSQ.

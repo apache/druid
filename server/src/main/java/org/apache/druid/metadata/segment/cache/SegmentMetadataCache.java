@@ -20,10 +20,11 @@
 package org.apache.druid.metadata.segment.cache;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.error.InvalidInput;
 
 /**
- * Cache for metadata of pending segments and committed segments maintained by
+ * Cache for metadata of pending segments and used segments maintained by
  * the Overlord to improve performance of segment allocation and other task actions.
  * <p>
  * Not to be confused with {@link org.apache.druid.segment.metadata.AbstractSegmentMetadataCache}
@@ -65,9 +66,39 @@ public interface SegmentMetadataCache
   boolean isSyncedForRead();
 
   /**
-   * Returns the cache for the given datasource.
+   * Waits until the cache finishes the next sync with the metadata store or
+   * until the timeout elapses, whichever is sooner.
    */
-  DatasourceSegmentCache getDatasource(String dataSource);
+  void awaitNextSync(long timeoutMillis);
+
+  /**
+   * @return Latest snapshot of the datasources with all their used segments.
+   */
+  DataSourcesSnapshot getDataSourcesSnapshot();
+
+  /**
+   * Performs a thread-safe read action on the cache for the given datasource.
+   * Read actions can be concurrent with other reads but are mutually exclusive
+   * from other write actions on the same datasource.
+   */
+  <T> T readCacheForDataSource(String dataSource, Action<T> readAction);
+
+  /**
+   * Performs a thread-safe write action on the cache for the given datasource.
+   * Write actions are mutually exclusive from other writes or reads on the same
+   * datasource.
+   */
+  <T> T writeCacheForDataSource(String dataSource, Action<T> writeAction);
+
+  /**
+   * Represents a thread-safe read or write action performed on the cache within
+   * required locks.
+   */
+  @FunctionalInterface
+  interface Action<T>
+  {
+    T perform(DatasourceSegmentCache dataSourceCache) throws Exception;
+  }
 
   /**
    * Cache usage modes.

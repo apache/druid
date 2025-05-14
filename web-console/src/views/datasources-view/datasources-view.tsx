@@ -48,6 +48,7 @@ import {
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import type {
   CompactionConfig,
+  CompactionConfigs,
   CompactionInfo,
   CompactionStatus,
   QueryWithContext,
@@ -614,17 +615,20 @@ GROUP BY 1, 2`;
           // Compaction
           auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
             try {
-              const compactionConfigsResp = await Api.instance.get<{
-                compactionConfigs: CompactionConfig[];
-              }>('/druid/coordinator/v1/config/compaction', { cancelToken });
+              const compactionConfigsAndMore = (
+                await Api.instance.get<CompactionConfigs>(
+                  '/druid/indexer/v1/compaction/config/datasources',
+                  { cancelToken },
+                )
+              ).data;
               const compactionConfigs = lookupBy(
-                compactionConfigsResp.data.compactionConfigs || [],
+                compactionConfigsAndMore.compactionConfigs || [],
                 c => c.dataSource,
               );
 
               const compactionStatusesResp = await Api.instance.get<{
                 latestStatus: CompactionStatus[];
-              }>('/druid/coordinator/v1/compaction/status', { cancelToken });
+              }>('/druid/indexer/v1/compaction/status/datasources', { cancelToken });
               const compactionStatuses = lookupBy(
                 compactionStatusesResp.data.latestStatus || [],
                 c => c.dataSource,
@@ -944,7 +948,12 @@ GROUP BY 1, 2`;
   private readonly saveCompaction = async (compactionConfig: CompactionConfig) => {
     if (!compactionConfig) return;
     try {
-      await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      await Api.instance.post(
+        `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(
+          compactionConfig.dataSource,
+        )}`,
+        compactionConfig,
+      );
       this.setState({ compactionDialogOpenOn: undefined });
       this.fetchData();
     } catch (e) {
@@ -968,7 +977,7 @@ GROUP BY 1, 2`;
         onClick: async () => {
           try {
             await Api.instance.delete(
-              `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}`,
+              `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(datasource)}`,
             );
             this.setState({ compactionDialogOpenOn: undefined }, () => this.fetchData());
           } catch (e) {

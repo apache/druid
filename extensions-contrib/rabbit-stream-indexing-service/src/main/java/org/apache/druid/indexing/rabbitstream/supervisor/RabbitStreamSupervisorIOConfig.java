@@ -24,13 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-
 import java.util.Map;
 
 public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
@@ -81,6 +81,7 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         autoScalerConfig,
+        LagAggregator.DEFAULT,
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
         stopTaskCount

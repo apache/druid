@@ -46,18 +46,10 @@ import {
   nonEmptyArray,
   queryDruidSql,
   queryDruidSqlDart,
+  wrapInExplainIfNeeded,
 } from '../../../utils';
 
 import './explain-dialog.scss';
-
-function isExplainQuery(query: string): boolean {
-  return /^\s*EXPLAIN\sPLAN\sFOR/im.test(query);
-}
-
-function wrapInExplainIfNeeded(query: string): string {
-  if (isExplainQuery(query)) return query;
-  return `EXPLAIN PLAN FOR ${query}`;
-}
 
 export interface QueryContextEngine extends QueryWithContext {
   engine: DruidEngine;

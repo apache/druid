@@ -39,11 +39,20 @@ public class KubernetesTaskRunnerConfig
   private String namespace;
 
   @JsonProperty
+  private String k8sTaskPodNamePrefix = "";
+
+  // This property is the namespace that the Overlord is running in.
+  // For cases where we want task pods to run on different namespace from the overlord, we need to specify the namespace of the overlord here.
+  // Else, we can simply leave this field alone.
+  @JsonProperty
+  private String overlordNamespace = "";
+
+  @JsonProperty
   private boolean debugJobs = false;
 
   /**
    * Deprecated, please specify adapter type runtime property instead
-   *
+   * <p>
    * I.E `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer`
    */
   @Deprecated
@@ -53,8 +62,8 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   // if this is not set, then the first container in your pod spec is assumed to be the overlord container.
   // usually this is fine, but when you are dynamically adding sidecars like istio, the service mesh could
-  // in fact place the istio-proxy container as the first container.  Thus you would specify this value to
-  // the name of your primary container.  eg) druid-overlord
+  // in fact place the istio-proxy container as the first container.  Thus, you would specify this value to
+  // the name of your primary container.  e.g. druid-overlord
   private String primaryContainerName = null;
 
   @JsonProperty
@@ -131,6 +140,8 @@ public class KubernetesTaskRunnerConfig
 
   private KubernetesTaskRunnerConfig(
       @Nonnull String namespace,
+      String overlordNamespace,
+      String k8sTaskPodNamePrefix,
       boolean debugJobs,
       boolean sidecarSupport,
       String primaryContainerName,
@@ -151,6 +162,11 @@ public class KubernetesTaskRunnerConfig
   )
   {
     this.namespace = namespace;
+    this.overlordNamespace = ObjectUtils.defaultIfNull(
+        overlordNamespace,
+        this.overlordNamespace
+    );
+    this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
     this.debugJobs = ObjectUtils.defaultIfNull(
         debugJobs,
         this.debugJobs
@@ -223,6 +239,16 @@ public class KubernetesTaskRunnerConfig
     return namespace;
   }
 
+  public String getOverlordNamespace()
+  {
+    return overlordNamespace;
+  }
+
+  public String getK8sTaskPodNamePrefix()
+  {
+    return k8sTaskPodNamePrefix;
+  }
+
   public boolean isDebugJobs()
   {
     return debugJobs;
@@ -258,6 +284,7 @@ public class KubernetesTaskRunnerConfig
   {
     return maxTaskDuration;
   }
+
   public Period getTaskJoinTimeout()
   {
     return taskJoinTimeout;
@@ -317,6 +344,8 @@ public class KubernetesTaskRunnerConfig
   public static class Builder
   {
     private String namespace;
+    private String overlordNamespace;
+    private String k8sTaskPodNamePrefix;
     private boolean debugJob;
     private boolean sidecarSupport;
     private String primaryContainerName;
@@ -342,6 +371,18 @@ public class KubernetesTaskRunnerConfig
     public Builder withNamespace(String namespace)
     {
       this.namespace = namespace;
+      return this;
+    }
+
+    public Builder withOverlordNamespace(String overlordNamespace)
+    {
+      this.overlordNamespace = overlordNamespace;
+      return this;
+    }
+
+    public Builder withK8sTaskPodNamePrefix(String k8sTaskPodNamePrefix)
+    {
+      this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
       return this;
     }
 
@@ -452,6 +493,8 @@ public class KubernetesTaskRunnerConfig
     {
       return new KubernetesTaskRunnerConfig(
           this.namespace,
+          this.overlordNamespace,
+          this.k8sTaskPodNamePrefix,
           this.debugJob,
           this.sidecarSupport,
           this.primaryContainerName,

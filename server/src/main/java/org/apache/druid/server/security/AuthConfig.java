@@ -57,6 +57,8 @@ public class AuthConfig
   public static final Set<String> ALLOWED_CONTEXT_KEYS = ImmutableSet.of(
       // Set in the Avatica server path
       QueryContexts.CTX_SQL_STRINGIFY_ARRAYS,
+      // Set in DartSqlResource
+      QueryContexts.CTX_DART_QUERY_ID,
       // Set by the Router
       QueryContexts.CTX_SQL_QUERY_ID
   );

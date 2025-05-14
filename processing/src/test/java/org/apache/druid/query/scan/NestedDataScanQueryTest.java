@@ -665,7 +665,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryMoreArrayTypesStrictBooleans() throws Exception
+  public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryMoreArrayTypes() throws Exception
   {
     Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
                                             .dataSource("test_datasource")

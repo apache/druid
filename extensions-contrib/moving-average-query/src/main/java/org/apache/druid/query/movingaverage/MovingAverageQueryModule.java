@@ -85,7 +85,7 @@ public class MovingAverageQueryModule implements DruidModule
   public RequestLogger createRequestLogger(@Self Set<NodeRole> nodeRoles, Injector injector)
   {
     if (!nodeRoles.contains(NodeRole.BROKER)) {
-      return new NoopRequestLogger();
+      return NoopRequestLogger.instance();
     }
     return injector.getInstance(RequestLogger.class);
   }

@@ -330,7 +330,7 @@ FROM (
 PARTITIONED BY ALL
 ```
 
-## Ingest a JSON string as COMPLEX<json\>
+## Ingest a JSON string as COMPLEX\<json\>
 
 If your source data contains serialized JSON strings, you can ingest the data as `COMPLEX<JSON>` as follows:
 - During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformSpec`.

@@ -79,6 +79,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -169,6 +170,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisorConfig = new SupervisorStateManagerConfig();
 
     emitter = new StubServiceEmitter("test-supervisor-state", "localhost");
+    EmittingLogger.registerEmitter(emitter);
 
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
@@ -686,6 +688,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         null
@@ -789,6 +792,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         null
@@ -1075,21 +1079,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     DateTime startTime = DateTimes.nowUtc();
     SeekableStreamSupervisorIOConfig ioConfig = new SeekableStreamSupervisorIOConfig(
-            STREAM,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-            1,
-            1,
-            new Period("PT1H"),
-            new Period("PT1S"),
-            new Period("PT30S"),
-            false,
-            new Period("PT30M"),
-            null,
-            null,
-            null,
-            null,
-            new IdleConfig(true, 200L),
-            null
+        STREAM,
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("PT1S"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        LagAggregator.DEFAULT,
+        null,
+        new IdleConfig(true, 200L),
+        null
     ) {};
 
     EasyMock.reset(spec);
@@ -1294,6 +1299,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         stopTaskCount
@@ -1518,6 +1524,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, 200L),
         null
@@ -2560,6 +2567,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         null,
         null
@@ -2622,6 +2630,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
+        LagAggregator.DEFAULT,
         null,
         null,
         null

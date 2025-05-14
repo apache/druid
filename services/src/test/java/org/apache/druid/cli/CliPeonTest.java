@@ -42,6 +42,8 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.joda.time.Duration;
@@ -100,6 +102,23 @@ public class CliPeonTest
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
     Assert.assertNotNull(runnable.makeInjector());
+  }
+
+  @Test
+  public void testCliPeonPolicyEnforcerInToolbox() throws IOException
+  {
+    CliPeon runnable = new CliPeon();
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
+
+    Properties properties = new Properties();
+    properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
+    runnable.configure(properties);
+    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
+
+    Injector secondaryInjector = runnable.makeInjector();
+    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(null), secondaryInjector.getInstance(PolicyEnforcer.class));
   }
 
   @Test

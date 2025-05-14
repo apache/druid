@@ -70,6 +70,7 @@ interface MeasureEditorOpenOn {
 export interface ResourcePaneProps {
   querySource: QuerySource;
   onQueryChange: (newQuery: SqlQuery, rename: Rename | undefined) => void;
+  where: SqlExpression;
   onFilter?: (column: Column) => void;
   onShowColumn(column: Column): void;
   onShowMeasure(measure: Measure): void;
@@ -77,7 +78,8 @@ export interface ResourcePaneProps {
 }
 
 export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
-  const { querySource, onQueryChange, onFilter, onShowColumn, onShowMeasure, runSqlQuery } = props;
+  const { querySource, onQueryChange, where, onFilter, onShowColumn, onShowMeasure, runSqlQuery } =
+    props;
   const [columnSearch, setColumnSearch] = useState('');
 
   const [columnEditorOpenOn, setColumnEditorOpenOn] = useState<ColumnEditorOpenOn | undefined>();
@@ -317,6 +319,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
           columnToDuplicate={columnEditorOpenOn.columnToDuplicate}
           onApply={onQueryChange}
           querySource={querySource}
+          where={where}
           runSqlQuery={runSqlQuery}
           onClose={() => setColumnEditorOpenOn(undefined)}
         />
@@ -336,6 +339,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
           measureToDuplicate={measureEditorOpenOn.measureToDuplicate}
           onApply={onQueryChange}
           querySource={querySource}
+          where={where}
           runSqlQuery={runSqlQuery}
           onClose={() => setMeasureEditorOpenOn(undefined)}
         />

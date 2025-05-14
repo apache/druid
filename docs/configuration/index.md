@@ -148,6 +148,7 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |`druid.zk.service.connectionTimeoutMs`|ZooKeeper connection timeout, in milliseconds.|`15000`|
 |`druid.zk.service.compress`|Boolean flag for whether or not created Znodes should be compressed.|`true`|
 |`druid.zk.service.acl`|Boolean flag for whether or not to enable ACL security for ZooKeeper. If ACL is enabled, zNode creators will have all permissions.|`false`|
+|`druid.zk.service.pathChildrenCacheStrategy`|Dictates the underlying caching strategy for service announcements. Set true to let announcers to use Apache Curator's PathChildrenCache strategy, otherwise NodeCache strategy. Consider using NodeCache strategy when you are dealing with huge number of ZooKeeper watches in your cluster.|`true`|
 
 #### Path configuration
 
@@ -275,9 +276,10 @@ The `file` request logger stores daily request logs on disk.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.dir`|Historical, Realtime, and Broker services maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in|none|
-|`druid.request.logging.filePattern`|[Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file|"yyyy-MM-dd'.log'"|
-| `druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least longer than `P1D`.| none|
+|`druid.request.logging.dir`| Historical, Realtime, and Broker services maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in. | none|
+|`druid.request.logging.filePattern`| [Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file.| "yyyy-MM-dd'.log'"|
+|`druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least as long as roll period.| none|
+|`druid.request.logging.rollPeriod`| Defines the log rotation period for request logs. The period should be at least `PT1H`. For periods smaller than 1 day, it is recommended to use `"yyyy-MM-dd-HH'.log'"` as the file pattern.| P1D|
 
 The format of request logs is TSV, one line per requests, with five fields: timestamp, remote\_addr, native\_query, query\_context, sql\_query.
 
@@ -403,7 +405,7 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Available only on Historical services. Not to be used when lazy loading is configured.|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
 |`org.apache.druid.server.metrics.SubqueryCountStatsMonitor`|Reports how many subqueries have been materialized as rows or bytes and various other statistics related to the subquery execution|
-|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: <https://github.com/apache/druid/pull/4973>.|
+|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
 |`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|
 |`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by Middle Manager node types.|
@@ -585,19 +587,23 @@ This deep storage is used to interface with Cassandra. You must load the `druid-
 |`druid.storage.host`|Cassandra host.|none|
 |`druid.storage.keyspace`|Cassandra key space.|none|
 
-#### Centralized datasource schema
+#### Centralized datasource schema (Experimental)
 
-Centralized datasource schema is an [experimental feature](../development/experimental.md) to centralized datasource schema building within the Coordinator.
-Traditionally, the datasource schema is built in the Brokers by combining schema for all the available segments of a datasource.
-Brokers issue segment metadata query to data nodes and tasks to fetch segment schema.
-In the new arrangement, tasks publish segment schema along with segment metadata to the database and schema for realtime segments is periodically pushed to the Coordinator in the segment announcement flow.
-This enables Coordinator to cache segment schemas and build datasource schema by combining segment schema.
-Brokers query the datasource schema from the Coordinator, while retaining the ability to build table schema if the
-need arises.
+This is an [experimental feature](../development/experimental.md) to improve datasource schema management by persisting segment schemas to the metadata store and caching them on the Coordinator.
+Traditionally, Brokers issue segment metadata queries to data nodes and tasks to fetch the schemas of all available segments.
+Each Broker then individually builds the schema of a datasource by combining the schemas of all the segments of that datasource.
+This mechanism is redundant and prone to errors as there is no single source of truth for schemas.
+
+Centralized schema management improves upon this design as follows:
+- Tasks publish segment schema along with segment metadata to the database.
+- Tasks announce schema for realtime segments periodically to the Coordinator.
+- Coordinator caches segment schemas and builds a combined schema for each datasource.
+- Broker poll the datasource schema cached on the Coordinator rather than building it on their own.
+- Brokers still retain the ability to build a datasource schema if they are unable to fetch it from the Coordinator.
 
 |Property|Description|Default|Required|
-|-----|-----------|-------|--------|
-|`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building in the Coordinator, this should be specified in the common runtime properties.|false|No.|
+|--------|-----------|-------|--------|
+|`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building and caching on the Coordinator. This property should be specified in the common runtime properties.|false|No.|
 |`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. This should be specified in the Middle Manager runtime properties.|false|No.|
 
 If you enable this feature, you can query datasources that are only stored in deep storage and are not loaded on a Historical. For more information, see [Query from deep storage](../querying/query-from-deep-storage.md).
@@ -908,7 +914,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.datasource.on`| Boolean value for whether to enable automatic deletion of datasource metadata (Note: datasource metadata only exists for datasource created from supervisor). If set to true, Coordinator will periodically remove datasource metadata of terminated supervisor from the datasource table in metadata storage.  | No | True|
 |`druid.coordinator.kill.datasource.period`| How often to do automatic deletion of datasource metadata in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Value must be equal to or greater than  `druid.coordinator.period.metadataStoreManagementPeriod`. Only applies if `druid.coordinator.kill.datasource.on` is set to true.| No| `P1D`|
 |`druid.coordinator.kill.datasource.durationToRetain`| Duration of datasource metadata to be retained from created time in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Only applies if `druid.coordinator.kill.datasource.on` is set to true.| Yes if `druid.coordinator.kill.datasource.on` is set to true.| `P90D`|
-|`druid.coordinator.kill.segmentSchema.on`| Boolean value for whether to enable automatic deletion of unused segment schemas. If set to true, Coordinator will periodically identify segment schemas which are not referenced by any used segment and mark them as unused. At a later point, these unused schemas are deleted. Only applies if [Centralized Datasource schema](#centralized-datasource-schema) feature is enabled. | No | True|
+|`druid.coordinator.kill.segmentSchema.on`| Boolean value for whether to enable automatic deletion of unused segment schemas. If set to true, Coordinator will periodically identify segment schemas which are not referenced by any used segment and mark them as unused. At a later point, these unused schemas are deleted. Only applies if [Centralized Datasource schema](#centralized-datasource-schema-experimental) feature is enabled. | No | True|
 |`druid.coordinator.kill.segmentSchema.period`| How often to do automatic deletion of segment schemas in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Value must be equal to or greater than `druid.coordinator.period.metadataStoreManagementPeriod`. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| No| `P1D`|
 |`druid.coordinator.kill.segmentSchema.durationToRetain`| Duration of segment schemas to be retained from the time it was marked as unused in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Only applies if `druid.coordinator.kill.segmentSchema.on` is set to true.| Yes, if `druid.coordinator.kill.segmentSchema.on` is set to true.| `P90D`|
 
@@ -925,6 +931,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |--------|-----------|-------|
 |`druid.manager.config.pollDuration`|How often the manager polls the config table for updates.|`PT1M`|
 |`druid.manager.segments.pollDuration`|The duration between polls the Coordinator does for updates to the set of active segments. Generally defines the amount of lag time it can take for the Coordinator to notice new segments.|`PT1M`|
+|`druid.manager.segments.useIncrementalCache`|(Experimental) Denotes the usage mode of the segment metadata incremental cache. This cache provides a performance improvement over the polling mechanism currently employed by the Coordinator as it retrieves payloads of only updated segments. Possible cache modes are: (a) `never`: Incremental cache is disabled. (b) `always`: Incremental cache is enabled. Service start-up will be blocked until cache has synced with the metadata store at least once. (c) `ifSynced`: Cache is enabled. This mode does not block service start-up and is a way to retain existing behavior of the Coordinator. If the incremental cache is in modes `always` or `ifSynced`, reads from the cache will block until it has synced with the metadata store at least once after becoming leader. The Coordinator never writes to this cache.|`never`|
 |`druid.manager.rules.pollDuration`|The duration between polls the Coordinator does for updates to the set of active rules. Generally defines the amount of lag time it can take for the Coordinator to notice rules.|`PT1M`|
 |`druid.manager.rules.defaultRule`|The default rule for the cluster|`_default`|
 |`druid.manager.rules.alertThreshold`|The duration after a failed poll upon which an alert should be emitted.|`PT10M`|
@@ -953,7 +960,8 @@ The following table shows the dynamic configuration properties for the Coordinat
 |`decommissioningNodes`|List of Historical servers to decommission. Coordinator will not assign new segments to decommissioning servers, and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `maxSegmentsToMove`.|none|
 |`pauseCoordination`|Boolean flag for whether or not the Coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. Duties that are paused include all classes that implement the `CoordinatorDuty` interface. Such duties include: segment balancing, segment compaction, submitting kill tasks for unused segments (if enabled), logging of used segments in the cluster, marking of newly unused or overshadowed segments, matching and execution of load/drop rules for used segments, unloading segments that are no longer marked as used from Historical servers. An example of when an admin may want to pause coordination would be if they are doing deep storage maintenance on HDFS name nodes with downtime and don't want the Coordinator to be directing Historical nodes to hit the name node with API requests until maintenance is done and the deep store is declared healthy for use again.|false|
 |`replicateAfterLoadTimeout`|Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of `druid.coordinator.load.timeout`. If this is set to true, the Coordinator will attempt to replicate the failed segment on a different historical server. This helps improve the segment availability if there are a few slow Historicals in the cluster. However, the slow Historical may still load the segment later and the Coordinator may issue drop requests if the segment is over-replicated.|false|
-|`turboLoadingNodes`| List of Historical servers to place in turbo loading mode. These servers use a larger thread-pool to load segments faster but at the cost of query performance. For servers specified in `turboLoadingNodes`, `druid.coordinator.loadqueuepeon.http.batchSize` is ignored and the coordinator uses the value of the respective `numLoadingThreads` instead. |none|
+|`turboLoadingNodes`| Experimental. List of Historical servers to place in turbo loading mode. These servers use a larger thread-pool to load segments faster but at the cost of query performance. For servers specified in `turboLoadingNodes`, `druid.coordinator.loadqueuepeon.http.batchSize` is ignored and the coordinator uses the value of the respective `numLoadingThreads` instead.<br/>Please use this config with caution. All servers should eventually be removed from this list once the segment loading on the respective historicals is finished. |none|
+|`cloneServers`| Experimental. Map from target Historical server to source Historical server which should be cloned by the target. The target Historical does not participate in regular segment assignment or balancing. Instead, the Coordinator mirrors any segment assignment made to the source Historical onto the target Historical, so that the target becomes an exact copy of the source. Segments on the target Historical do not count towards replica counts either. If the source disappears, the target remains in the last known state of the source server until removed from the configuration. <br/>Use this config with caution. All servers should eventually be removed from this list once the desired state on the respective Historicals is achieved. |none|
 
 ##### Smart segment loading
 
@@ -1169,14 +1177,14 @@ If autoscaling is enabled, you can set these additional configs:
 
 The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../ingestion/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
 
-##### Segment metadata cache (EXPERIMENTAL)
+##### Segment metadata cache (Experimental)
 
 The following properties pertain to segment metadata caching on the Overlord that may be used to speed up segment allocation and other metadata operations.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.manager.segments.useCache`|Denotes the usage mode of the segment metadata cache. Possible modes are: (a) `never`: Cache is disabled. (b) `always`: Reads are always done from the cache. Service start-up will be blocked until cache has synced with the metadata store at least once. Transactions will block until cache has synced with the metadata store at least once after becoming leader. (c) `ifSynced`: Reads are done from the cache only if it has already synced with the metadata store. This mode does not block service start-up or transactions.|`never`|
-|`druid.manager.segments.pollDuration`|Duration (in ISO 8601 format) between successive syncs of the cache with the metadata store. This property is used only when `druid.manager.segments.useCache` is set to `always` or `ifSynced`.|`PT1M` (1 minute)|
+|`druid.manager.segments.useIncrementalCache`|Denotes the usage mode of the segment metadata incremental cache. Possible modes are: (a) `never`: Cache is disabled. (b) `always`: Reads are always done from the cache. Service start-up will be blocked until cache has synced with the metadata store at least once. Transactions will block until cache has synced with the metadata store at least once after becoming leader. (c) `ifSynced`: Reads are done from the cache only if it has already synced with the metadata store. This mode does not block service start-up or transactions.|`never`|
+|`druid.manager.segments.pollDuration`|Duration (in ISO 8601 format) between successive syncs of the cache with the metadata store. This property is used only when `druid.manager.segments.useIncrementalCache` is set to `always` or `ifSynced`.|`PT1M` (1 minute)|
 
 #### Overlord dynamic configuration
 
@@ -1192,7 +1200,8 @@ The following table shows the dynamic configuration properties for the Overlord.
 
 The following is an example of an Overlord dynamic config:
 
-<details><summary>Click to view the example</summary>
+<details>
+<summary>Click to view the example</summary>
 
 ```json
 {
@@ -1464,7 +1473,7 @@ Middle Managers pass their configurations down to their child peons. The Middle 
 |`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used. For example, `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
 |`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir. This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks. The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
 |`druid.worker.category`|A string to name the category that the Middle Manager node belongs to.|`_default_worker_category`|
-|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when [Centralized Datasource Schema](#centralized-datasource-schema) feature is enabled. |false|
+|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when [Centralized Datasource Schema](#centralized-datasource-schema-experimental) feature is enabled. |false|
 
 #### Peon processing
 
@@ -2137,8 +2146,8 @@ The `druid.query.default.context.{query_context_key}` runtime property prefix ap
 
 The precedence chain for query context values is as follows:
 
-hard-coded default value in Druid code <- runtime property not prefixed with `druid.query.default.context`
-<- runtime property prefixed with `druid.query.default.context` <- context parameter in the query
+hard-coded default value in Druid code `<-` runtime property not prefixed with `druid.query.default.context`
+`<-` runtime property prefixed with `druid.query.default.context` `<-` context parameter in the query
 
 Note that not all query context key has a runtime property not prefixed with `druid.query.default.context` that can
 override the hard-coded default value. For example, `maxQueuedBytes` has `druid.broker.http.maxQueuedBytes`

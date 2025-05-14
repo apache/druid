@@ -864,7 +864,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         false,
         'fixed',
-        'arrays',
+        'array',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -947,7 +947,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'arrays',
+        'array',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -1025,7 +1025,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'multi-values',
+        'mvd',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -1103,7 +1103,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'arrays',
+        'array',
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`
@@ -1172,7 +1172,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'multi-values',
+        'mvd',
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`

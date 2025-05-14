@@ -1,0 +1,1729 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W12_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                           timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W13_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W13_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W13_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W13_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W14_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W14_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W14_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W14_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W15_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W15_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY server_ip,
+                                                        time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W15_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W15_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY server_ip,
+                                                           time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W16_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W16_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY server_ip,
+                                                        time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W16_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W16_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY server_ip,
+                                                           time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W17_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W17_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip ASC,
+                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                               timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W17_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W17_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W18_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W18_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip DESC,
+                                                        length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W18_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W18_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip DESC,
+                                                           length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                   timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W19_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W19_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY server_ip ASC,
+                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                               timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W19_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W19_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W20_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W20_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY server_ip DESC,
+                                                        length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W20_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W20_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY server_ip DESC,
+                                                           length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                   timezone RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W21_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W21_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W21_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W21_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W22_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W22_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W22_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) first_val,
+       last_value(timezone) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A5_first_last_W22_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
++--------------+---------------+----------+---------------------+-----------+----------+
+| server_ip    | client_ip     | timezone | t                   | first_val | last_val |
++--------------+---------------+----------+---------------------+-----------+----------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | EDT       | N/A      |
++--------------+---------------+----------+---------------------+-----------+----------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip ASC,
+                                                        timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W1_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W2_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W2_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip DESC,
+                                                        timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W2_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) first_val,
+       last_value(timezone) OVER (PARTITION BY client_ip
+                                  ORDER BY server_ip DESC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W2_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w first_val,
+       last_value(timezone) OVER w last_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip DESC,
+                                                           timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A6_first_last_W3_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (
+                                   ORDER BY server_ip ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) first_val,
+       last_value(timezone) OVER (
+                                  ORDER BY server_ip ASC, timezone RANGE BETWEEN UNBOUNDED PRECEDING AND 0 FOLLOWING) last_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+

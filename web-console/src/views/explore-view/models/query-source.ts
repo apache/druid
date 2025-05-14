@@ -224,7 +224,7 @@ export class QuerySource {
     );
   }
 
-  public transformToBaseColumns(expression: SqlExpression): SqlExpression {
+  public transformExpressionToBaseColumns(expression: SqlExpression): SqlExpression {
     const sourceToBaseSubstitutions = this.getSourceToBaseSubstitutions();
     return expression.walk(ex => {
       if (ex instanceof SqlColumn) {

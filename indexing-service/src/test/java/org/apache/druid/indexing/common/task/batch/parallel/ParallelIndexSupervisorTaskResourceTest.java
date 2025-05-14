@@ -386,6 +386,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   private static HttpServletRequest newRequest()
   {
     final HttpServletRequest request = EasyMock.niceMock(HttpServletRequest.class);
+    EasyMock.expect(request.getMethod()).andReturn("GET").anyTimes();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(new AuthenticationResult("test", "test", "test", Collections.emptyMap()));
@@ -498,7 +499,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
           supervisorTask.getContext(),
-          CentralizedDatasourceSchemaConfig.create(true)
+          CentralizedDatasourceSchemaConfig.enabled(true)
       );
       this.supervisorTask = supervisorTask;
     }

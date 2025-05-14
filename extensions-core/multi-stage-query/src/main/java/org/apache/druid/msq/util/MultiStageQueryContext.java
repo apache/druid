@@ -275,7 +275,7 @@ public class MultiStageQueryContext
   {
     return queryContext.getBoolean(
         CTX_IS_REINDEX,
-        true
+        false
     );
   }
 
