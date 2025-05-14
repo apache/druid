@@ -830,9 +830,10 @@ public class TaskQueue
 
     try {
       if (active) {
-        final Map<String, Task> newTasks = toTaskIDMap(taskStorage.getActiveTasks());
-        final int tasksSynced = newTasks.size();
-        final Map<String, Task> oldTasks = CollectionUtils.mapValues(activeTasks, entry -> entry.task);
+        final Map<String, Task> newTasks =
+            CollectionUtils.toMap(taskStorage.getActiveTasks(), Task::getId, Function.identity());
+        final Map<String, Task> oldTasks =
+            CollectionUtils.mapValues(activeTasks, entry -> entry.task);
 
         // Identify the tasks that have been added or removed from the storage
         final MapDifference<String, Task> mapDifference = Maps.difference(oldTasks, newTasks);
@@ -850,10 +851,8 @@ public class TaskQueue
         }
 
         log.info(
-            "Synced %d tasks from storage (%d tasks added, %d tasks removed).",
-            tasksSynced,
-            addedTasks.size(),
-            removedTasks.size()
+            "Synced [%d] tasks from storage (%d tasks added, %d tasks removed).",
+            newTasks.size(), addedTasks.size(), removedTasks.size()
         );
         requestManagement();
       } else {

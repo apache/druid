@@ -98,6 +98,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -4287,24 +4288,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Get all active tasks from metadata storage
+   * Get all active tasks either from memory or metadata store, if not cached.
    *
    * @return map from taskId to Task
    */
   private Map<String, Task> getActiveTaskMap()
   {
-    final ImmutableMap.Builder<String, Task> activeTaskMap = ImmutableMap.builder();
     final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
-    final List<Task> tasks;
     if (taskQueue.isPresent()) {
       return taskQueue.get().getActiveTasksForDatasource(dataSource);
     } else {
-      tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+      return CollectionUtils.toMap(
+          taskStorage.getActiveTasksByDatasource(dataSource),
+          Task::getId,
+          task -> task
+      );
     }
-    for (Task task : tasks) {
-      activeTaskMap.put(task.getId(), task);
-    }
-    return activeTaskMap.build();
   }
 
   /**
@@ -4312,7 +4311,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @return specific instance of Kafka/Kinesis IOConfig
    */
-  protected abstract SeekableStreamIndexTaskIOConfig createTaskIoConfig(
+  protected abstract SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> createTaskIoConfig(
       int groupId,
       Map<PartitionIdType, SequenceOffsetType> startPartitions,
       Map<PartitionIdType, SequenceOffsetType> endPartitions,
@@ -4335,7 +4334,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       String baseSequenceName,
       ObjectMapper sortingMapper,
       TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> sequenceOffsets,
-      SeekableStreamIndexTaskIOConfig taskIoConfig,
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException;
