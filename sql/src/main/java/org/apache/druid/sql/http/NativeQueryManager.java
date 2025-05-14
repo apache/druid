@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.http;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.NativeQuery;
@@ -43,8 +44,8 @@ public class NativeQueryManager implements QueryManager
       final @NativeQuery SqlStatementFactory sqlStatementFactory
   )
   {
-    this.sqlLifecycleManager = sqlLifecycleManager;
-    this.sqlStatementFactory = sqlStatementFactory;
+    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");;
+    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");;
   }
 
   @Override

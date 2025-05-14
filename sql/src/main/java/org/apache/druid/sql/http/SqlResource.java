@@ -20,10 +20,10 @@
 package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.common.exception.SanitizableException;
-import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -45,10 +45,8 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.HttpStatement;
-import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlRowTransformer;
-import org.apache.druid.sql.SqlStatementFactory;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -87,19 +85,16 @@ public class SqlResource
 
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
-  private final SqlStatementFactory sqlStatementFactory;
-  private final SqlLifecycleManager sqlLifecycleManager;
   private final ServerConfig serverConfig;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
   private final Map<Engine, QueryManager> queryManagers;
 
+  @VisibleForTesting
   @Inject
-  protected SqlResource(
+  public SqlResource(
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
-      final @NativeQuery SqlStatementFactory sqlStatementFactory,
-      final SqlLifecycleManager sqlLifecycleManager,
       final ServerConfig serverConfig,
       final Map<Engine, QueryManager> queryManagers,
       ResponseContextConfig responseContextConfig,
@@ -109,8 +104,6 @@ public class SqlResource
     log.error("RESOURCE[%s]", queryManagers);
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
-    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
-    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
@@ -149,14 +142,7 @@ public class SqlResource
         authorizerMapper
     );
 
-    final Engine engine = QueryContexts.getAsEnum(
-        QueryContexts.ENGINE,
-        engineString,
-        Engine.class,
-        QueryContexts.DEFAULT_ENGINE
-    );
-
-    QueryManager queryManager = queryManagers.getOrDefault(engine, null);
+    QueryManager queryManager = getQueryManager(engineString);
     if (queryManager == null) {
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
@@ -196,14 +182,7 @@ public class SqlResource
       @Context final HttpServletRequest req
   )
   {
-    final Engine engine = QueryContexts.getAsEnum(
-        QueryContexts.ENGINE,
-        engineString,
-        Engine.class,
-        QueryContexts.DEFAULT_ENGINE
-    );
-
-    QueryManager queryManager = queryManagers.getOrDefault(engine, null);
+    QueryManager queryManager = getQueryManager(engineString);
     if (queryManager == null) {
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
@@ -232,17 +211,12 @@ public class SqlResource
   )
   {
     log.debug("Received cancel request for query [%s]", sqlQueryId);
-    final Engine engine = QueryContexts.getAsEnum(
-        QueryContexts.ENGINE,
-        engineString,
-        Engine.class,
-        QueryContexts.DEFAULT_ENGINE
-    );
 
-    QueryManager queryManager = queryManagers.getOrDefault(engine, null);
+    final QueryManager queryManager = getQueryManager(engineString);
     if (queryManager == null) {
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
+
     return queryManager.cancelQuery(sqlQueryId, cancelables -> {
       if (cancelables.isEmpty()) {
         AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
@@ -251,6 +225,17 @@ public class SqlResource
         return authorizeCancellation(req, cancelables);
       }
     });
+  }
+
+  private QueryManager getQueryManager(final String engineString)
+  {
+    final Engine engine;
+    if (engineString == null) {
+      engine = QueryContexts.DEFAULT_ENGINE;
+    } else {
+      engine = Engine.fromString(engineString);
+    }
+    return queryManagers.getOrDefault(engine, null);
   }
 
   /**

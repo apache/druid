@@ -20,24 +20,26 @@
 package org.apache.druid.msq.dart.controller.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.msq.dart.Dart;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Engine;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.SqlLifecycleManager;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.QueryManager;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 
@@ -55,25 +57,33 @@ public class DartSqlResource extends SqlResource
   public DartSqlResource(
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
-      @Dart final SqlStatementFactory sqlStatementFactory,
-      final SqlLifecycleManager sqlLifecycleManager,
       final ServerConfig serverConfig,
       final ResponseContextConfig responseContextConfig,
       @Self final DruidNode selfNode,
-      final Map<Engine, QueryManager> queryManagers,
-      @Dart final DefaultQueryConfig dartQueryConfig
+      final Map<Engine, QueryManager> queryManagers
   )
   {
     super(
         jsonMapper,
         authorizerMapper,
-        sqlStatementFactory,
-        sqlLifecycleManager,
         serverConfig,
         queryManagers,
         responseContextConfig,
         selfNode
     );
+  }
+
+  /**
+   * API that allows callers to check if this resource is installed without actually issuing a query. If installed,
+   * this call returns 200 OK. If not installed, callers get 404 Not Found.
+   */
+  @GET
+  @Path("/enabled")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response doGetEnabled(@Context final HttpServletRequest request)
+  {
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
+    return Response.ok(ImmutableMap.of("enabled", true)).build();
   }
 
   @Override

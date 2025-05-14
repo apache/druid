@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.dart.controller;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
@@ -70,11 +71,11 @@ public class DartQueryManager implements QueryManager
   )
   {
     this.dartQueryConfig = dartQueryConfig;
-    this.sqlStatementFactory = sqlStatementFactory;
+    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
+    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     log.error("CREATED");
     this.controllerRegistry = controllerRegistry;
     this.sqlClients = sqlClients;
-    this.sqlLifecycleManager = sqlLifecycleManager;
   }
 
   @Override

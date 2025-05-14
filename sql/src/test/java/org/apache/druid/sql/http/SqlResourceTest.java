@@ -53,6 +53,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.Engine;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -181,6 +182,7 @@ public class SqlResourceTest extends CalciteTestBase
   private NativeSqlEngine engine;
   private SqlStatementFactory sqlStatementFactory;
   private StubServiceEmitter stubServiceEmitter;
+  private NativeQueryManager nativeQueryManager;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -323,13 +325,12 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
+    nativeQueryManager = new NativeQueryManager(lifecycleManager, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig(),
-        Map.of(),
+        Map.of(Engine.NATIVE, nativeQueryManager),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1633,8 +1634,6 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig()
         {
           @Override
@@ -1649,7 +1648,7 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
-        Map.of(),
+        Map.of(Engine.NATIVE, nativeQueryManager),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -2120,7 +2119,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
 
-    final Response response = resource.doPost(query, null, req);
+    final Response response = resource.doPost(query, Engine.NATIVE.toString(), req);
 
     final Object actualQueryId = getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
