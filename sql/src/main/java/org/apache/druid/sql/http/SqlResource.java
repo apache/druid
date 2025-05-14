@@ -192,10 +192,22 @@ public class SqlResource
   @Nullable
   public Response doPost(
       final SqlQuery sqlQuery,
+      @QueryParam("engine") String engineString,
       @Context final HttpServletRequest req
   )
   {
-    final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);
+    final Engine engine = QueryContexts.getAsEnum(
+        QueryContexts.ENGINE,
+        engineString,
+        Engine.class,
+        QueryContexts.DEFAULT_ENGINE
+    );
+
+    QueryManager queryManager = queryManagers.getOrDefault(engine, null);
+    if (queryManager == null) {
+      return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
+    }
+    final HttpStatement stmt = queryManager.doPost(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
 

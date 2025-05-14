@@ -488,7 +488,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, null, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
     Assertions.assertEquals("[[2]]\n", StringUtils.fromUtf8(asyncResponse.baos.toByteArray()));
   }
@@ -517,7 +517,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertThrows(
         ForbiddenException.class,
-        () -> sqlResource.doPost(sqlQuery, httpServletRequest)
+        () -> sqlResource.doPost(sqlQuery, null, httpServletRequest)
     );
   }
 
@@ -543,7 +543,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, null, httpServletRequest));
     Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
 
     final Map<String, Object> e = objectMapper.readValue(
@@ -578,7 +578,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, null, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -619,7 +619,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, null, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -698,7 +698,7 @@ public class DartSqlResourceTest extends MSQTestBase
       // 1) The controllerExecutor thread, which is blocked up by sleepFuture.
       // 2) The doPostExec thread, which has a doPost in there, blocking on controllerExecutor.
       // 3) The current main test thread, which continues on and which will issue the cancellation request.
-      doPostFuture = doPostExec.submit(() -> sqlResource.doPost(sqlQuery, httpServletRequest));
+      doPostFuture = doPostExec.submit(() -> sqlResource.doPost(sqlQuery, null, httpServletRequest));
       controllerRegistered.await();
 
       // Issue cancellation request.

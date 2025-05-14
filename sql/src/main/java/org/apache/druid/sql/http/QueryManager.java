@@ -21,8 +21,10 @@ package org.apache.druid.sql.http;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.function.Function;
@@ -37,4 +39,6 @@ public interface QueryManager
   );
 
   List<QueryInfo> getRunningQueries(boolean selfOnly);
+
+  HttpStatement doPost(SqlQuery sqlQuery, HttpServletRequest req);
 }

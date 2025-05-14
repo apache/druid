@@ -24,37 +24,53 @@ import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
+import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
+import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.QueryInfo;
 import org.apache.druid.sql.http.QueryManager;
-import org.apache.druid.sql.http.SqlResource;
+import org.apache.druid.sql.http.SqlQuery;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class DartQueryManager implements QueryManager
 {
-  private static final Logger log = new Logger(SqlResource.class);
+  private static final Logger log = new Logger(DartQueryManager.class);
   private final DartControllerRegistry controllerRegistry;
   private final SqlLifecycleManager sqlLifecycleManager;
   private final DartSqlClients sqlClients;
+  private final DefaultQueryConfig dartQueryConfig;
+  private final SqlStatementFactory sqlStatementFactory;
 
   @Inject
   public DartQueryManager(
       DartControllerRegistry controllerRegistry,
       DartSqlClients sqlClients,
-      SqlLifecycleManager sqlLifecycleManager
+      SqlLifecycleManager sqlLifecycleManager,
+      @Dart DefaultQueryConfig dartQueryConfig,
+      @Dart SqlStatementFactory sqlStatementFactory
   )
   {
+    this.dartQueryConfig = dartQueryConfig;
+    this.sqlStatementFactory = sqlStatementFactory;
     log.error("CREATED");
     this.controllerRegistry = controllerRegistry;
     this.sqlClients = sqlClients;
@@ -136,5 +152,31 @@ public class DartQueryManager implements QueryManager
     // Sort queries by start time, breaking ties by query ID, so the list comes back in a consistent and nice order.
     queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
     return List.copyOf(queries);
+  }
+
+  @Override
+  public HttpStatement doPost(SqlQuery sqlQuery, HttpServletRequest req)
+  {
+    final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
+
+    // Default context keys from dartQueryConfig.
+    for (Map.Entry<String, Object> entry : dartQueryConfig.getContext().entrySet()) {
+      context.putIfAbsent(entry.getKey(), entry.getValue());
+    }
+
+    /**
+     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
+     * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
+     * the user may have provided. This becomes the {@link Controller#queryId()}.
+     *
+     * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
+     * for purposes of query cancellation.
+     *
+     * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
+     */
+    final String dartQueryId = UUID.randomUUID().toString();
+    context.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
+
+    return sqlStatementFactory.httpStatement(sqlQuery.withOverridenContext(context), req);
   }
 }

@@ -2093,7 +2093,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
-    Assert.assertNull(resource.doPost(query, req));
+    Assert.assertNull(resource.doPost(query, null, req));
 
     final Object actualQueryId = response.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = response.getHeader(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
@@ -2120,7 +2120,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
 
-    final Response response = resource.doPost(query, req);
+    final Response response = resource.doPost(query, null, req);
 
     final Object actualQueryId = getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);

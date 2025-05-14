@@ -23,11 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.msq.dart.Dart;
-import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Engine;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -38,17 +35,11 @@ import org.apache.druid.sql.http.QueryManager;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Resource for Dart queries. API-compatible with {@link SqlResource}, so clients can be pointed from
@@ -59,8 +50,6 @@ import java.util.UUID;
 public class DartSqlResource extends SqlResource
 {
   public static final String PATH = "/druid/v2/sql/dart";
-
-  private final DefaultQueryConfig dartQueryConfig;
 
   @Inject
   public DartSqlResource(
@@ -85,41 +74,28 @@ public class DartSqlResource extends SqlResource
         responseContextConfig,
         selfNode
     );
-    this.dartQueryConfig = dartQueryConfig;
   }
 
-  /**
-   * API to issue a query.
-   */
-  @POST
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
   @Override
-  public Response doPost(
-      final SqlQuery sqlQuery,
-      @Context final HttpServletRequest req
+  public Response doGetRunningQueries(
+      String selfOnly,
+      @Nullable String engineString,
+      HttpServletRequest request
   )
   {
-    final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
+    return super.doGetRunningQueries(selfOnly, engineString, request);
+  }
 
-    // Default context keys from dartQueryConfig.
-    for (Map.Entry<String, Object> entry : dartQueryConfig.getContext().entrySet()) {
-      context.putIfAbsent(entry.getKey(), entry.getValue());
-    }
+  @Nullable
+  @Override
+  public Response doPost(SqlQuery sqlQuery, String engineString, HttpServletRequest req)
+  {
+    return super.doPost(sqlQuery, engineString, req);
+  }
 
-    /**
-     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
-     * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
-     * the user may have provided. This becomes the {@link Controller#queryId()}.
-     *
-     * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
-     * for purposes of query cancellation.
-     *
-     * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
-     */
-    final String dartQueryId = UUID.randomUUID().toString();
-    context.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
-
-    return super.doPost(sqlQuery.withOverridenContext(context), req);
+  @Override
+  public Response cancelQuery(String sqlQueryId, String engineString, HttpServletRequest req)
+  {
+    return super.cancelQuery(sqlQueryId, engineString, req);
   }
 }
