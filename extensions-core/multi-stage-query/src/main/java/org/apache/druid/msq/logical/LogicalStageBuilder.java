@@ -54,22 +54,9 @@ public class LogicalStageBuilder
     this.plannerContext = plannerContext2;
   }
 
-  /**
-   * Provides unique ids for the stages.
-   */
-  static class StageIdSequence
-  {
-    private int currentValue = 0;
-
-    public int next()
-    {
-      return currentValue++;
-    }
-  }
-
   class StageMaker
   {
-    public final StageIdSequence stageIdSeq = new StageIdSequence();
+    private int stageIdSeq;
 
     StageDefinition makeScanStage(
         VirtualColumns virtualColumns,
@@ -86,12 +73,17 @@ public class LogicalStageBuilder
           .columnTypes(signature.getColumnTypes())
           .build();
       ScanQueryFrameProcessorFactory scanProcessorFactory = new ScanQueryFrameProcessorFactory(s);
-      StageDefinitionBuilder sdb = StageDefinition.builder(stageIdSeq.next())
+      StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
           .inputs(inputs)
           .signature(signature)
           .shuffleSpec(MixShuffleSpec.instance())
           .processorFactory(scanProcessorFactory);
       return sdb.build(getIdForBuilder());
+    }
+
+    private int getNextStageId()
+    {
+      return stageIdSeq++;
     }
 
     private String getIdForBuilder()
