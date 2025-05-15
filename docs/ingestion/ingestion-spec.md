@@ -511,6 +511,7 @@ The following example shows a `tuningConfig` object that sets all of the shared 
 ### `indexSpec`
 
 The `indexSpec` object can include the following properties.
+When you are using Druid SQL for ingestion, you can define an `indexSpec` object in the query context to specify these properties. See the `indexSpec` entry in the [Context parameters](../multi-stage-query/reference.md#context-parameters) section of the SQL reference for multi-stage query.
 
 |Field|Description|Default|
 |-----|-----------|-------|
