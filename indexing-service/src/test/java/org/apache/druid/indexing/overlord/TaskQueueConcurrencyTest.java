@@ -242,7 +242,10 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
   private UpdateAction update(Action action)
   {
-    return new UpdateAction(action);
+    final UpdateAction updateAction = new UpdateAction(action);
+    threadToCriticalUpdate.put(StringUtils.format(THREAD_NAME_FORMAT, threadId++), updateAction.critical);
+
+    return updateAction;
   }
 
   private static Task createTask(String id)
@@ -281,7 +284,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     final CountDownLatch finish = new NamedLatch("finish");
 
     TaskQueue.TaskEntry apply(
-        TaskQueue.TaskEntry existingEntry, Function<TaskQueue.TaskEntry, TaskQueue.TaskEntry> updateOperation
+        TaskQueue.TaskEntry existingEntry,
+        Function<TaskQueue.TaskEntry, TaskQueue.TaskEntry> updateOperation
     )
     {
       hasStarted.countDown();
@@ -320,23 +324,22 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   /**
    * An update action with a critical part and a verification step.
    */
-  private class UpdateAction
+  private static class UpdateAction
   {
     final CountDownLatch finished = new NamedLatch("finished");
     final CriticalUpdate critical = new CriticalUpdate();
 
     final Action action;
-    Action verifyState;
+    Action verifyAction;
 
     UpdateAction(Action action)
     {
       this.action = action;
-      threadToCriticalUpdate.put(StringUtils.format(THREAD_NAME_FORMAT, threadId++), critical);
     }
 
     UpdateAction withEndState(Action verifyAction)
     {
-      this.verifyState = verifyAction;
+      this.verifyAction = verifyAction;
       return this;
     }
 
@@ -354,7 +357,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     void waitToFinishAndVerify()
     {
       waitFor(finished);
-      verifyState.perform();
+      verifyAction.perform();
     }
   }
 
