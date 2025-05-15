@@ -22,6 +22,7 @@ package org.apache.druid.msq.sql;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -70,6 +71,7 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -183,9 +185,10 @@ public class MSQTaskQueryMaker implements QueryMaker
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
     final MSQDestination destination = buildMSQDestination(
         targetDataSource,
-        fieldMapping,
+        columnMappings,
         plannerContext,
         terminalStageSpecFactory
     );
@@ -196,7 +199,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         LegacyMSQSpec.builder()
                .query(druidQuery.getQuery())
                .queryContext(queryContext.override(nativeQueryContextOverrides))
-               .columnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature()))
+               .columnMappings(columnMappings)
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(plannerContext.queryContext()))
                .tuningConfig(makeMSQTuningConfig(plannerContext))
@@ -208,7 +211,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   private static MSQDestination buildMSQDestination(final IngestDestination targetDataSource,
-      final List<Entry<Integer, String>> fieldMapping, final PlannerContext plannerContext,
+      final ColumnMappings columnMappings, final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory)
   {
     final QueryContext sqlQueryContext = plannerContext.queryContext();
@@ -221,7 +224,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     } else if (targetDataSource instanceof TableDestination) {
       destination = buildTableDestination(
           targetDataSource,
-          fieldMapping,
+          columnMappings,
           plannerContext,
           terminalStageSpecFactory,
           segmentGranularity,
@@ -288,15 +291,16 @@ public class MSQTaskQueryMaker implements QueryMaker
       final QueryDefinition queryDef
   )
   {
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, queryDef.getOutputRowSignature());
     final MSQDestination destination = buildMSQDestination(
         targetDataSource,
-        fieldMapping,
+        columnMappings,
         plannerContext,
         terminalStageSpecFactory
     );
 
     final QueryDefMSQSpec querySpec = new QueryDefMSQSpec.Builder()
-        .columnMappings(QueryUtils.buildColumnMappings(fieldMapping, queryDef.getOutputRowSignature()))
+        .columnMappings(columnMappings)
         .destination(destination)
         .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(plannerContext.queryContext()))
         .tuningConfig(makeMSQTuningConfig(plannerContext))
@@ -466,7 +470,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
   private static MSQDestination buildTableDestination(
       IngestDestination targetDataSource,
-      List<Entry<Integer, String>> fieldMapping,
+      ColumnMappings columnMappings,
       PlannerContext plannerContext,
       MSQTerminalStageSpecFactory terminalStageSpecFactory,
       Object segmentGranularity,
@@ -494,8 +498,9 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(
         segmentSortOrder,
-        fieldMapping.stream().map(Entry::getValue).collect(Collectors.toSet())
+        Sets.newHashSet(columnMappings.getOutputColumns())
     );
+
 
     final List<AggregateProjectionSpec> projectionSpecs = getProjections(targetDataSource, plannerContext);
 

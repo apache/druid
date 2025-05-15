@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
+import org.apache.curator.shaded.com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -197,5 +198,10 @@ public class ColumnMappings
     return "ColumnMappings{" +
            "mappings=" + mappings +
            '}';
+  }
+
+  public Iterable<String> getOutputColumns()
+  {
+    return Iterables.transform(mappings, ColumnMapping::getOutputColumn);
   }
 }
