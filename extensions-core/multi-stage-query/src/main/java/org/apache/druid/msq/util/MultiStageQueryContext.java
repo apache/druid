@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
@@ -44,6 +45,7 @@ import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IndexSpec;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -436,17 +438,17 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
   }
 
-  public static long getStartTime(final QueryContext queryContext)
+  public static DateTime getStartTime(final QueryContext queryContext)
   {
     // Get the start time from the query context set by the broker.
     if (!queryContext.containsKey(CTX_START_TIME)) {
       // If it is missing, as could be the case for an older version of the broker, use the current time instead, to
       // have something to timeout against.
-      long startTime = System.currentTimeMillis();
+      DateTime startTime = DateTimes.nowUtc();
       log.warn("Query context does not contain start time. Defaulting to the current time[%s] instead.", startTime);
       return startTime;
     }
-    return queryContext.getLong(CTX_START_TIME);
+    return (DateTime) queryContext.get(CTX_START_TIME);
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)

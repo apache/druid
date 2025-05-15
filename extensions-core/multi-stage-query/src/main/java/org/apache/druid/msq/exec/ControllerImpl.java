@@ -2199,7 +2199,7 @@ public class ControllerImpl implements Controller
       startTaskLauncher();
 
       boolean runAgain;
-      final long queryFailDeadline = getTimeout(querySpec.getContext());
+      final DateTime queryFailDeadline = getQueryDeadline(querySpec.getContext());
 
       // The timeout could have already elapsed while waiting for the controller to start, check it now.
       checkTimeout(queryFailDeadline);
@@ -2230,20 +2230,26 @@ public class ControllerImpl implements Controller
       return Pair.of(queryKernel, workerTaskLauncherFuture);
     }
 
-    private long getTimeout(QueryContext queryContext)
+    /**
+     * Retrieves the timeout and start time from the query context and calculates the timeout deadline.
+     */
+    private DateTime getQueryDeadline(QueryContext queryContext)
     {
       // Fetch the timeout, but don't use default server configured timeout if the user has not specified one.
       final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
       // Not using QueryContexts.hasTimeout(), as this considers the default timeout as timeout being set.
       if (timeout == QueryContexts.NO_TIMEOUT) {
-        return Long.MAX_VALUE;
+        return DateTimes.MAX;
       }
-      return MultiStageQueryContext.getStartTime(queryContext) + timeout;
+      return MultiStageQueryContext.getStartTime(queryContext).plus(timeout);
     }
 
-    private void checkTimeout(long queryFailDeadline)
+    /**
+     * Checks the queryFailDeadline and fails the query with a {@link CanceledFault} if it has passed.
+     */
+    private void checkTimeout(DateTime queryFailDeadline)
     {
-      if (queryFailDeadline < System.currentTimeMillis()) {
+      if (queryFailDeadline.isBeforeNow()) {
         throw new MSQException(CanceledFault.timeout());
       }
     }
@@ -2331,12 +2337,12 @@ public class ControllerImpl implements Controller
     /**
      * Run at least one command from {@link #kernelManipulationQueue}, waiting for it if necessary.
      */
-    private void runKernelCommands(long queryFailDeadline) throws InterruptedException
+    private void runKernelCommands(DateTime queryFailDeadline) throws InterruptedException
     {
       if (!queryKernel.isDone()) {
         // Run the next command, waiting till timeout for it if necessary.
         Consumer<ControllerQueryKernel> command = kernelManipulationQueue.poll(
-            queryFailDeadline - System.currentTimeMillis(),
+            queryFailDeadline.getMillis() - DateTimes.nowUtc().getMillis(),
             TimeUnit.MILLISECONDS
         );
         if (command == null) {

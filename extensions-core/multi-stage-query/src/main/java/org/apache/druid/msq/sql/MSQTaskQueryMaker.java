@@ -34,6 +34,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -275,7 +276,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     }
 
     // Add the start time.
-    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, System.currentTimeMillis());
+    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, DateTimes.nowUtc());
 
     return nativeQueryContextOverrides;
   }
