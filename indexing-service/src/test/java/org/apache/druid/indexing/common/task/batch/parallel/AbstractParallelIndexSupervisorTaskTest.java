@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -105,6 +106,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
@@ -661,7 +663,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   {
     TaskConfig config = new TaskConfigBuilder()
         .build();
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.enabled(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -1024,10 +1026,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       try {
+        final SegmentId parsedSegmentId = IdUtils.getValidSegmentId(dataSource, segmentId);
         final DataSegment segment = exec.submit(
             () -> includeUnused
-                  ? getStorageCoordinator().retrieveSegmentForId(dataSource, segmentId)
-                  : getStorageCoordinator().retrieveUsedSegmentForId(dataSource, segmentId)
+                  ? getStorageCoordinator().retrieveSegmentForId(parsedSegmentId)
+                  : getStorageCoordinator().retrieveUsedSegmentForId(parsedSegmentId)
         ).get();
 
         if (segment == null) {

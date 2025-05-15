@@ -34,7 +34,8 @@ Replace it with the information for your deployment.
 For example, use `http://localhost:8888` for quickstart deployments.
 
 :::info
-Avoid using indexing or kill tasks and these APIs at the same time for the same datasource and time chunk.
+- Coordinator APIs for data management are now deprecated. Use new APIs served by the Overlord instead.
+- Do not use these APIs while an indexing task or kill task is in progress for the same datasource and interval.
 :::
 
 ## Segment management
@@ -45,6 +46,9 @@ Even if these API requests update segments to used, you still need to configure 
 When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined.
 Druid terminates some segments and marks others as used.
 Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully.
+
+All of the following APIs, except [Segment deletion](#segment-deletion) are served by the Overlord as it is the service responsible for performing actions on segment metadata on behalf of indexing tasks.
+This makes it the single source of truth for segment metadata, thus ensuring a consistent view across the Druid cluster and allowing the Overlord to cache metadata to improve performance.
 
 ### Segment IDs
 
@@ -59,10 +63,11 @@ This is a "soft delete" of the segment from Historicals.
 To undo this action, [mark the segment used](#mark-a-single-segment-as-used).
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the segment ID or datasource doesn't exist.
+Check the response payload to confirm if any segment was actually updated.
 
 #### URL
 
-`DELETE` `/druid/coordinator/v1/datasources/{datasource}/segments/{segmentId}`
+`DELETE` `/druid/indexer/v1/datasources/{datasource}/segments/{segmentId}`
 
 #### Header
 
@@ -97,7 +102,7 @@ The following example updates the segment `wikipedia_hour_2015-09-12T16:00:00.00
 
 
 ```shell
-curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z" \
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z" \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json, text/plain'
 ```
@@ -107,7 +112,7 @@ curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasou
 
 
 ```HTTP
-DELETE /druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
+DELETE /druid/indexer/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Accept: application/json, text/plain
@@ -123,7 +128,8 @@ Accept: application/json, text/plain
 
 ```json
 {
-    "segmentStateChanged": true
+    "segmentStateChanged": true,
+    "numChangedSegments": 1
 }
 ```
 </details>
@@ -134,7 +140,7 @@ Marks the state of a segment as used, using the segment ID.
 
 #### URL
 
-`POST` `/druid/coordinator/v1/datasources/segments/{segmentId}`
+`POST` `/druid/indexer/v1/datasources/{datasource}/segments/{segmentId}`
 
 #### Header
 
@@ -169,7 +175,7 @@ The following example updates the segment with ID `wikipedia_hour_2015-09-12T18:
 
 
 ```shell
-curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z" \
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z" \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json, text/plain'
 ```
@@ -179,7 +185,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasourc
 
 
 ```HTTP
-POST /druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
+POST /druid/indexer/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Accept: application/json, text/plain
@@ -195,7 +201,8 @@ Accept: application/json, text/plain
 
 ```json
 {
-    "segmentStateChanged": true
+    "segmentStateChanged": true,
+    "numChangedSegments": 1
 }
 ```
 </details>
@@ -211,14 +218,14 @@ within the specified interval that match the optional list of versions; partiall
 
 #### URL
 
-`POST` `/druid/coordinator/v1/datasources/{datasource}/markUnused`
+`POST` `/druid/indexer/v1/datasources/{datasource}/markUnused`
 
 #### Request body
 
 The group of segments is sent as a JSON request payload that accepts the following properties:
 
 |Property|Description|Required|Example|
-|----------|-------------|---------|---------|
+|--------|-----------|--------|-------|
 |`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
 |`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
 |`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
@@ -259,7 +266,7 @@ The following example marks two segments from the `wikipedia_hour` datasource un
 
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/markUnused" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_hour/markUnused" \
 --header 'Content-Type: application/json' \
 --data '{
     "segmentIds": [
@@ -274,7 +281,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_ho
 
 
 ```HTTP
-POST /druid/coordinator/v1/datasources/wikipedia_hour/markUnused HTTP/1.1
+POST /druid/indexer/v1/datasources/wikipedia_hour/markUnused HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 230
@@ -313,14 +320,14 @@ within the specified interval that match the optional list of versions; partiall
 
 #### URL
 
-`POST` `/druid/coordinator/v1/datasources/{datasource}/markUsed`
+`POST` `/druid/indexer/v1/datasources/{datasource}/markUsed`
 
 #### Request body
 
 The group of segments is sent as a JSON request payload that accepts the following properties:
 
 |Property|Description|Required|Example|
-|----------|-------------|---------|---------|
+|--------|-----------|--------|-------|
 |`interval`|ISO 8601 segments interval.|Yes, if `segmentIds` is not specified.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
 |`segmentIds`|List of segment IDs.|Yes, if `interval` is not specified.|`["segmentId1", "segmentId2"]`|
 |`versions`|List of segment versions. Must be provided with `interval`.|No.|`["2024-03-14T16:00:04.086Z", ""2024-03-12T16:00:04.086Z"]`|
@@ -361,7 +368,7 @@ The following example marks two segments from the `wikipedia_hour` datasource us
 
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/markUsed" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_hour/markUsed" \
 --header 'Content-Type: application/json' \
 --data '{
     "segmentIds": [
@@ -376,7 +383,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_ho
 
 
 ```HTTP
-POST /druid/coordinator/v1/datasources/wikipedia_hour/markUsed HTTP/1.1
+POST /druid/indexer/v1/datasources/wikipedia_hour/markUsed HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 230
@@ -410,10 +417,11 @@ Marks the state of all segments of a datasource as unused.
 This action performs a "soft delete" of the segments from Historicals.
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
+Check the response payload to confirm if any segment was actually updated.
 
 #### URL
 
-`DELETE` `/druid/coordinator/v1/datasources/{datasource}`
+`DELETE` `/druid/indexer/v1/datasources/{datasource}`
 
 #### Responses
 
@@ -437,7 +445,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the datas
 
 
 ```shell
-curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour"
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_hour"
 ```
 
 </TabItem>
@@ -445,7 +453,7 @@ curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasou
 
 
 ```HTTP
-DELETE /druid/coordinator/v1/datasources/wikipedia_hour HTTP/1.1
+DELETE /druid/indexer/v1/datasources/wikipedia_hour HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -464,16 +472,17 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-### Mark all segments used
+### Mark all non-overshadowed segments used
 
-Marks the state of all unused segments of a datasource as used.
+Marks the state of all unused segments of a datasource as used given that they are not already overshadowed by other segments.
 The endpoint returns the number of changed segments.
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
+Check the response payload to get the number of segments actually updated.
 
 #### URL
 
-`POST` `/druid/coordinator/v1/datasources/{datasource}`
+`POST` `/druid/indexer/v1/datasources/{datasource}`
 
 #### Header
 
@@ -509,7 +518,7 @@ The following example updates all unused segments of `wikipedia_hour` to used.
 
 
 ```shell
-curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour" \
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_hour" \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json, text/plain'
 ```
@@ -519,7 +528,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasourc
 
 
 ```HTTP
-POST /druid/coordinator/v1/datasources/wikipedia_hour HTTP/1.1
+POST /druid/indexer/v1/datasources/wikipedia_hour HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Accept: application/json, text/plain

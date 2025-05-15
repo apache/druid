@@ -472,7 +472,7 @@
             },
             "query": {
                 "type": "insensitive_contains",
-                "value": "Sports"
+                "value": "1World_Sports"
             },
             "limit": 3,
             "context": {
@@ -485,16 +485,6 @@
             {
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "result": [
-                    {
-                        "dimension": "user_name",
-                        "value": "1011Sports",
-			"count":1
-                    },
-                    {
-                        "dimension": "user_name",
-                        "value": "11AliveSports",
-			"count":1
-                    },
                     {
                         "dimension": "user_name",
                         "value": "1World_Sports",

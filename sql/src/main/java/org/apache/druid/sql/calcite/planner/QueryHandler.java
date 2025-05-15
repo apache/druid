@@ -540,6 +540,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     QueryValidations.validateLogicalQueryForDruid(handlerContext.plannerContext(), parameterized);
     CalcitePlanner planner = handlerContext.planner();
 
+    final RelDataType rowType = prepareResult.getReturnedRowType();
+
     if (plannerContext.getPlannerConfig()
                       .getNativeQuerySqlPlanningMode()
                       .equals(QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
@@ -574,7 +576,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         return planExplanation(possiblyLimitedRoot, newRoot, true);
       }
 
-      return new PlannerResult(resultsSupplier, finalBaseQuery.getOutputRowType());
+      return new PlannerResult(resultsSupplier, rowType);
     } else {
       final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
           CalciteRulesManager.DRUID_CONVENTION_RULES,
@@ -591,9 +593,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       if (explain != null) {
         return planExplanation(possiblyLimitedRoot, druidRel, true);
       } else {
-        // Compute row type.
-        final RelDataType rowType = prepareResult.getReturnedRowType();
-
         // sanity check
         final Set<ResourceAction> readResourceActions =
             plannerContext.getResourceActions()

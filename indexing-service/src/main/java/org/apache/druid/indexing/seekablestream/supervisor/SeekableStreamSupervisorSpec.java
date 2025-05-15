@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -45,6 +47,11 @@ import java.util.Map;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
+  protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE = "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
+                                                                   + "%nTo perform the update safely, follow these steps:"
+                                                                   + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+                                                                   + "%n(2) Create a new supervisor with the new input source stream."
+                                                                   + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.";
 
   private static SeekableStreamSupervisorIngestionSpec checkIngestionSchema(
       SeekableStreamSupervisorIngestionSpec ingestionSchema
@@ -200,6 +207,35 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   public boolean isSuspended()
   {
     return suspended;
+  }
+
+  /**
+   * Default implementation that prevents unsupported evolution of the supervisor spec
+   * <ul>
+   * <li>You cannot migrate between types of supervisors.</li>
+   * <li>You cannot change the input source stream of a running supervisor.</li>
+   * </ul>
+   * @param proposedSpec the proposed supervisor spec
+   * @throws DruidException if the proposed spec update is not allowed
+   */
+  @Override
+  public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+  {
+    if (!(proposedSpec instanceof SeekableStreamSupervisorSpec)) {
+      throw InvalidInput.exception(
+          "Cannot update supervisor spec from type[%s] to type[%s]", getClass().getSimpleName(), proposedSpec.getClass().getSimpleName()
+      );
+    }
+    SeekableStreamSupervisorSpec other = (SeekableStreamSupervisorSpec) proposedSpec;
+    if (this.getSource() == null || other.getSource() == null) {
+      // Not likely to happen, but covering just in case.
+      throw InvalidInput.exception("Cannot update supervisor spec since one or both of "
+                                   + "the specs have not provided an input source stream in the 'ioConfig'.");
+    }
+
+    if (!this.getSource().equals(other.getSource())) {
+      throw InvalidInput.exception(ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE, this.getSource(), other.getSource());
+    }
   }
 
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);

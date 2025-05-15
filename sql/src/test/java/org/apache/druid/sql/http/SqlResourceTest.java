@@ -634,6 +634,109 @@ public class SqlResourceTest extends CalciteTestBase
     );
   }
 
+
+  @Test
+  public void testPivotRowTypePreservedInDecoupledPlanner() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+            new SqlQuery(
+                    "SET plannerStrategy='DECOUPLED';" +
+                            " WITH t1 AS (\n" +
+                            "  SELECT *\n" +
+                            "  FROM (\n" +
+                            "    VALUES\n" +
+                            "    ('18-19', 'female', 84),\n" +
+                            "    ('18-19', 'male', 217),\n" +
+                            "    ('20-29', 'female', 321),\n" +
+                            "    ('20-29', 'male', 820),\n" +
+                            "    ('30-39', 'female', 63),\n" +
+                            "    ('30-39', 'male', 449),\n" +
+                            "    ('40-49', 'female', 10),\n" +
+                            "    ('40-49', 'male', 83),\n" +
+                            "    ('50-59', 'female', 2),\n" +
+                            "    ('50-59', 'male', 13)\n" +
+                            "  ) AS data(Age, Gender, Visitors)\n" +
+                            "),\n" +
+                            "t2 AS (\n" +
+                            "  SELECT Age, Gender, CAST(SUM(Visitors) AS double) / (SELECT SUM(Visitors) FROM t1) AS Share\n" +
+                            "  FROM t1\n" +
+                            "  GROUP BY 1, 2\n" +
+                            ")\n" +
+                            "SELECT *\n" +
+                            "FROM t2\n" +
+                            "PIVOT (MAX(Share) FOR Gender IN ('female' AS Women, 'male' AS Men));",
+                    ResultFormat.OBJECT,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null
+            )
+    ).rhs;
+
+    Assert.assertEquals(
+            ImmutableList.of(
+                    ImmutableMap.of("Age", "18-19", "Women", 0.040737148399612025, "Men", 0.1052376333656644),
+                    ImmutableMap.of("Age", "20-29", "Women", 0.1556741028128031, "Men", 0.3976721629485936),
+                    ImmutableMap.of("Age", "30-39", "Women", 0.030552861299709022, "Men", 0.2177497575169738),
+                    ImmutableMap.of("Age", "40-49", "Women", 0.004849660523763337, "Men", 0.040252182347235696),
+                    ImmutableMap.of("Age", "50-59", "Women", 0.0009699321047526673, "Men", 0.006304558680892337)
+            ),
+            rows
+    );
+  }
+
+  @Test
+  public void testPivotRowTypePreservedInCoupledPlanner() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+            new SqlQuery(
+                    "SET plannerStrategy='COUPLED';" +
+                            " WITH t1 AS (\n" +
+                            "  SELECT *\n" +
+                            "  FROM (\n" +
+                            "    VALUES\n" +
+                            "    ('18-19', 'female', 84),\n" +
+                            "    ('18-19', 'male', 217),\n" +
+                            "    ('20-29', 'female', 321),\n" +
+                            "    ('20-29', 'male', 820),\n" +
+                            "    ('30-39', 'female', 63),\n" +
+                            "    ('30-39', 'male', 449),\n" +
+                            "    ('40-49', 'female', 10),\n" +
+                            "    ('40-49', 'male', 83),\n" +
+                            "    ('50-59', 'female', 2),\n" +
+                            "    ('50-59', 'male', 13)\n" +
+                            "  ) AS data(Age, Gender, Visitors)\n" +
+                            "),\n" +
+                            "t2 AS (\n" +
+                            "  SELECT Age, Gender, CAST(SUM(Visitors) AS double) / (SELECT SUM(Visitors) FROM t1) AS Share\n" +
+                            "  FROM t1\n" +
+                            "  GROUP BY 1, 2\n" +
+                            ")\n" +
+                            "SELECT *\n" +
+                            "FROM t2\n" +
+                            "PIVOT (MAX(Share) FOR Gender IN ('female' AS Women, 'male' AS Men));",
+                    ResultFormat.OBJECT,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null
+            )
+    ).rhs;
+
+    Assert.assertEquals(
+            ImmutableList.of(
+                    ImmutableMap.of("Age", "18-19", "Women", 0.040737148399612025, "Men", 0.1052376333656644),
+                    ImmutableMap.of("Age", "20-29", "Women", 0.1556741028128031, "Men", 0.3976721629485936),
+                    ImmutableMap.of("Age", "30-39", "Women", 0.030552861299709022, "Men", 0.2177497575169738),
+                    ImmutableMap.of("Age", "40-49", "Women", 0.004849660523763337, "Men", 0.040252182347235696),
+                    ImmutableMap.of("Age", "50-59", "Women", 0.0009699321047526673, "Men", 0.006304558680892337)
+            ),
+            rows
+    );
+  }
+
   @Test
   public void testArrayResultFormat() throws Exception
   {

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
@@ -51,6 +52,8 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final IdleConfig idleConfig;
   @Nullable private final Integer stopTaskCount;
 
+  private final LagAggregator lagAggregator;
+
   public SeekableStreamSupervisorIOConfig(
       String stream,
       @Nullable InputFormat inputFormat,
@@ -64,6 +67,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       @Nullable AutoScalerConfig autoScalerConfig,
+      LagAggregator lagAggregator,
       DateTime lateMessageRejectionStartDateTime,
       @Nullable IdleConfig idleConfig,
       @Nullable Integer stopTaskCount
@@ -72,6 +76,12 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
     this.inputFormat = inputFormat;
     this.replicas = replicas != null ? replicas : 1;
+
+    InvalidInput.conditionalException(
+        lagAggregator != null,
+        "'lagAggregator' must be specified in supervisor 'spec.ioConfig'"
+    );
+    this.lagAggregator = lagAggregator;
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
     // if autoscaler is enable then taskcount will be ignored here. and init taskcount will be equal to taskCountMin
@@ -138,6 +148,12 @@ public abstract class SeekableStreamSupervisorIOConfig
   public AutoScalerConfig getAutoScalerConfig()
   {
     return autoScalerConfig;
+  }
+
+  @JsonProperty
+  public LagAggregator getLagAggregator()
+  {
+    return lagAggregator;
   }
 
   @JsonProperty
