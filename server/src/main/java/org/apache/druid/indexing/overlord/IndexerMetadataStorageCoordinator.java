@@ -358,7 +358,7 @@ public interface IndexerMetadataStorageCoordinator
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      String taskGroup,
+      String taskAllocatorId,
       @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
@@ -466,9 +466,9 @@ public interface IndexerMetadataStorageCoordinator
    * This option exists mainly to provide a consistent view of the metadata, for example, in calls from MSQ controller
    * and worker and would generally not be required.
    */
-  DataSegment retrieveSegmentForId(String dataSource, String segmentId);
+  DataSegment retrieveSegmentForId(SegmentId segmentId);
 
-  DataSegment retrieveUsedSegmentForId(String dataSource, String segmentId);
+  DataSegment retrieveUsedSegmentForId(SegmentId segmentId);
 
   /**
    * Delete entries from the upgrade segments table after the corresponding replace task has ended

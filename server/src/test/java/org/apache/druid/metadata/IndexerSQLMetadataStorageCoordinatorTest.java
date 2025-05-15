@@ -992,7 +992,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     coordinator.commitSegments(Set.of(defaultSegment), null);
     Assert.assertEquals(
         defaultSegment,
-        coordinator.retrieveUsedSegmentForId(defaultSegment.getDataSource(), defaultSegment.getId().toString())
+        coordinator.retrieveUsedSegmentForId(defaultSegment.getId())
     );
   }
 
@@ -1003,7 +1003,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     markAllSegmentsUnused(ImmutableSet.of(defaultSegment), DateTimes.nowUtc());
     Assert.assertEquals(
         defaultSegment,
-        coordinator.retrieveSegmentForId(defaultSegment.getDataSource(), defaultSegment.getId().toString())
+        coordinator.retrieveSegmentForId(defaultSegment.getId())
     );
   }
 
@@ -2841,7 +2841,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
   }
 
-
   @Test
   public void testAllocatePendingSegmentsSkipSegmentPayloadFetch()
   {
@@ -3708,7 +3707,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         false,
         "taskAllocatorId"
     );
-    Assert.assertNull(coordinator.retrieveSegmentForId(theId.getDataSource(), theId.asSegmentId().toString()));
+    Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId()));
   }
 
   @Test
@@ -3972,7 +3971,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       }
     }
 
-    Set<SegmentIdWithShardSpec> observed = transactionFactory.inReadWriteDatasourceTransaction(
+    Set<SegmentIdWithShardSpec> observed = transactionFactory.inReadOnlyDatasourceTransaction(
         datasource,
         transaction ->
             coordinator.retrieveUsedSegmentsForAllocation(transaction, datasource, month)

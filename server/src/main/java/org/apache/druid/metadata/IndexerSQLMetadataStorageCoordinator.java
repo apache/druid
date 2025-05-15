@@ -202,7 +202,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
   {
-    return inReadWriteDatasourceTransaction(
+    return inReadOnlyDatasourceTransaction(
         dataSource,
         transaction -> transaction.findUsedSegmentsPlusOverlappingAnyOf(intervals)
                                   .stream()
@@ -836,7 +836,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       boolean reduceMetadataIO
   )
   {
-    return inReadWriteDatasourceTransaction(
+    return inReadOnlyDatasourceTransaction(
         dataSource,
         transaction -> {
           if (reduceMetadataIO) {
@@ -2383,7 +2383,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @VisibleForTesting
   Set<DataSegment> retrieveUsedSegmentsForAllocation(
-      final SegmentMetadataTransaction transaction,
+      final SegmentMetadataReadTransaction transaction,
       final String dataSource,
       final Interval interval
   )
@@ -2443,22 +2443,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public DataSegment retrieveSegmentForId(final String dataSource, final String segmentId)
+  public DataSegment retrieveSegmentForId(SegmentId segmentId)
   {
-    final SegmentId parsedSegmentId = IdUtils.getValidSegmentId(dataSource, segmentId);
-    return inReadWriteDatasourceTransaction(
-        dataSource,
-        transaction -> transaction.findSegment(parsedSegmentId)
+    return inReadOnlyDatasourceTransaction(
+        segmentId.getDataSource(),
+        transaction -> transaction.findSegment(segmentId)
     );
   }
 
   @Override
-  public DataSegment retrieveUsedSegmentForId(String dataSource, String segmentId)
+  public DataSegment retrieveUsedSegmentForId(SegmentId segmentId)
   {
-    final SegmentId parsedSegmentId = IdUtils.getValidSegmentId(dataSource, segmentId);
-    return inReadWriteDatasourceTransaction(
-        dataSource,
-        transaction -> transaction.findUsedSegment(parsedSegmentId)
+    return inReadOnlyDatasourceTransaction(
+        segmentId.getDataSource(),
+        transaction -> transaction.findUsedSegment(segmentId)
     );
   }
 
