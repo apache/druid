@@ -104,8 +104,8 @@ import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
 import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
-import org.apache.druid.msq.indexing.error.CancelationReason;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
@@ -329,7 +329,7 @@ public class ControllerImpl implements Controller
   }
 
   @Override
-  public void stop(CancelationReason reason)
+  public void stop(CancellationReason reason)
   {
     final QueryDefinition queryDef = queryDefRef.get();
 
@@ -2199,18 +2199,10 @@ public class ControllerImpl implements Controller
       startTaskLauncher();
 
       boolean runAgain;
-      final QueryContext queryContext = querySpec.getContext();
-
-      // Fetch the timeout, but don't use default server configured timeout if the user has not specified one.
-      final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
-      // Not using QueryContexts.hasTimeout(), as this considers the default timeout as timeout being set.
-      final boolean hasTimeout = QueryContexts.NO_TIMEOUT != timeout;
-      final long queryFailDeadline = MultiStageQueryContext.getStartTime(queryContext) + timeout;
+      final long queryFailDeadline = getTimeout(querySpec.getContext());
 
       // The timeout could have already elapsed while waiting for the controller to start, check it now.
-      if (hasTimeout) {
-        checkTimeout(queryFailDeadline);
-      }
+      checkTimeout(queryFailDeadline);
 
       while (!queryKernel.isDone()) {
         startStages();
@@ -2223,12 +2215,10 @@ public class ControllerImpl implements Controller
         checkForErrorsInSketchFetcher();
 
         if (!runAgain) {
-          runKernelCommands(hasTimeout, queryFailDeadline);
+          runKernelCommands(queryFailDeadline);
         }
 
-        if (hasTimeout) {
-          checkTimeout(queryFailDeadline);
-        }
+        checkTimeout(queryFailDeadline);
       }
 
       if (!queryKernel.isSuccess()) {
@@ -2238,6 +2228,17 @@ public class ControllerImpl implements Controller
       updateLiveReportMaps();
       cleanUpEffectivelyFinishedStages();
       return Pair.of(queryKernel, workerTaskLauncherFuture);
+    }
+
+    private long getTimeout(QueryContext queryContext)
+    {
+      // Fetch the timeout, but don't use default server configured timeout if the user has not specified one.
+      final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
+      // Not using QueryContexts.hasTimeout(), as this considers the default timeout as timeout being set.
+      if (timeout == QueryContexts.NO_TIMEOUT) {
+        return Long.MAX_VALUE;
+      }
+      return MultiStageQueryContext.getStartTime(queryContext) + timeout;
     }
 
     private void checkTimeout(long queryFailDeadline)
@@ -2330,17 +2331,14 @@ public class ControllerImpl implements Controller
     /**
      * Run at least one command from {@link #kernelManipulationQueue}, waiting for it if necessary.
      */
-    private void runKernelCommands(boolean hasTimeout, long queryFailDeadline) throws InterruptedException
+    private void runKernelCommands(long queryFailDeadline) throws InterruptedException
     {
       if (!queryKernel.isDone()) {
-        // Run the next command, waiting for it if necessary.
-        Consumer<ControllerQueryKernel> command;
-        if (hasTimeout) {
-          // Wait till timeout for the next command.
-          command = kernelManipulationQueue.poll(queryFailDeadline - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-        } else {
-          command = kernelManipulationQueue.take();
-        }
+        // Run the next command, waiting till timeout for it if necessary.
+        Consumer<ControllerQueryKernel> command = kernelManipulationQueue.poll(
+            queryFailDeadline - System.currentTimeMillis(),
+            TimeUnit.MILLISECONDS
+        );
         if (command == null) {
           return;
         }

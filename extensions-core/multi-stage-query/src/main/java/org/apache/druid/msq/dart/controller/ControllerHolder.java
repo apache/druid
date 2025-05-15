@@ -25,7 +25,7 @@ import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.QueryListener;
-import org.apache.druid.msq.indexing.error.CancelationReason;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -146,10 +146,10 @@ public class ControllerHolder
   }
 
   /**
-   * Places this holder into {@link State#CANCELED}. Calls {@link Controller#stop(CancelationReason)} if it was
+   * Places this holder into {@link State#CANCELED}. Calls {@link Controller#stop(CancellationReason)} if it was
    * previously in state {@link State#RUNNING}.
    */
-  public void cancel(CancelationReason reason)
+  public void cancel(CancellationReason reason)
   {
     if (state.getAndSet(State.CANCELED) == State.RUNNING) {
       controller.stop(reason);

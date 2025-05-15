@@ -24,43 +24,44 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 @JsonTypeName(CanceledFault.CODE)
 public class CanceledFault extends BaseMSQFault
 {
   public static final String CODE = "Canceled";
-  private final CancelationReason reason;
+  private final CancellationReason reason;
 
   @JsonCreator
-  public CanceledFault(@JsonProperty("reason") CancelationReason reason)
+  public CanceledFault(@JsonProperty("reason") @Nullable CancellationReason reason)
   {
-    super(CODE, "Query canceled due to [%s].", reason);
-    this.reason = reason;
+    super(CODE, "Query canceled due to [%s].", reason == null ? CancellationReason.UNKNOWN : reason);
+    this.reason = reason == null ? CancellationReason.UNKNOWN : reason;
   }
 
   public static CanceledFault userRequest()
   {
-    return new CanceledFault(CancelationReason.USER_REQUEST);
+    return new CanceledFault(CancellationReason.USER_REQUEST);
   }
 
   public static CanceledFault shutdown()
   {
-    return new CanceledFault(CancelationReason.TASK_SHUTDOWN);
+    return new CanceledFault(CancellationReason.TASK_SHUTDOWN);
   }
 
   public static CanceledFault timeout()
   {
-    return new CanceledFault(CancelationReason.QUERY_TIMEOUT);
+    return new CanceledFault(CancellationReason.QUERY_TIMEOUT);
   }
 
   public static CanceledFault unknown()
   {
-    return new CanceledFault(CancelationReason.UNKNOWN);
+    return new CanceledFault(CancellationReason.UNKNOWN);
   }
 
   @JsonProperty
-  public CancelationReason getReason()
+  public CancellationReason getReason()
   {
     return reason;
   }

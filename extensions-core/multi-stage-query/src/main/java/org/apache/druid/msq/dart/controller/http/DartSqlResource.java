@@ -32,7 +32,7 @@ import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.indexing.error.CancelationReason;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContexts;
@@ -270,7 +270,7 @@ public class DartSqlResource extends SqlResource
         if (dartQueryId instanceof String) {
           final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
           if (holder != null) {
-            holder.cancel(CancelationReason.USER_REQUEST);
+            holder.cancel(CancellationReason.USER_REQUEST);
           }
         } else {
           log.warn(

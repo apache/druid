@@ -38,7 +38,7 @@ import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
-import org.apache.druid.msq.indexing.error.CancelationReason;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.server.security.ResourceAction;
@@ -155,7 +155,7 @@ public class MSQWorkerTask extends AbstractTask
   public void stopGracefully(TaskConfig taskConfig)
   {
     if (worker != null) {
-      worker.stop(CancelationReason.TASK_SHUTDOWN);
+      worker.stop(CancellationReason.TASK_SHUTDOWN);
     }
   }
 

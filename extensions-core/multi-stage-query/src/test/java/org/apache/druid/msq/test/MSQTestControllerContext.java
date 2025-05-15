@@ -61,7 +61,7 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
-import org.apache.druid.msq.indexing.error.CancelationReason;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -271,7 +271,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     {
       final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
-        worker.stop(CancelationReason.TASK_SHUTDOWN);
+        worker.stop(CancellationReason.TASK_SHUTDOWN);
       }
       return Futures.immediateFuture(null);
     }

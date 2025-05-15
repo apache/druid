@@ -19,10 +19,12 @@
 
 package org.apache.druid.msq.indexing.error;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
- * Enum denoting the reason for query cancelation.
+ * Enum denoting the reason for query cancellation.
  */
-public enum CancelationReason
+public enum CancellationReason
 {
   /**
    * Query was cancaled due to the task shutting down.
@@ -43,9 +45,22 @@ public enum CancelationReason
 
   private final String reason;
 
-  CancelationReason(String reason)
+  CancellationReason(String reason)
   {
     this.reason = reason;
+  }
+
+  @JsonCreator
+  public static CancellationReason fromString(String value)
+  {
+    for (CancellationReason mode : values()) {
+      if (mode.toString().equals(value)) {
+        return mode;
+      }
+    }
+
+    // If the reason is not known, it might be due to the sending task being on a newer version. Just return UNKNOWN.
+    return UNKNOWN;
   }
 
   @Override

@@ -44,8 +44,8 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
-import org.apache.druid.msq.indexing.error.CancelationReason;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
@@ -384,7 +384,7 @@ public class DartQueryMaker implements QueryMaker
     public void cleanup(final ResultIterator iterFromMake)
     {
       if (!iterFromMake.complete) {
-        controllerHolder.cancel(CancelationReason.UNKNOWN);
+        controllerHolder.cancel(CancellationReason.UNKNOWN);
       }
     }
   }

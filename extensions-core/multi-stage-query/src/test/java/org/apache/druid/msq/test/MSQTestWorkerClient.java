@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
-import org.apache.druid.msq.indexing.error.CancelationReason;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.SketchEncoding;
@@ -158,7 +158,7 @@ public class MSQTestWorkerClient implements WorkerClient
   public void close()
   {
     if (closed.compareAndSet(false, true)) {
-      inMemoryWorkers.forEach((k, v) -> v.stop(CancelationReason.UNKNOWN));
+      inMemoryWorkers.forEach((k, v) -> v.stop(CancellationReason.UNKNOWN));
     }
   }
 }
