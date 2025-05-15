@@ -24,8 +24,10 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                        timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                               ORDER BY server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -50,9 +52,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -92,8 +94,10 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                           timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                  ORDER BY server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -118,9 +122,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -172,8 +176,10 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                        timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                               ORDER BY server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -198,9 +204,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -240,8 +246,10 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                           timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                  ORDER BY server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -266,9 +274,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -320,8 +328,11 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                        timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -346,9 +357,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -388,8 +399,11 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                           timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -414,9 +428,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -468,8 +482,11 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                        timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -494,9 +511,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -536,8 +553,11 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                           timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -858,9 +878,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -912,7 +932,8 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY server_ip,
+                                               ORDER BY client_ip,
+                                                        server_ip,
                                                         time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
@@ -938,9 +959,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -980,7 +1001,8 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY server_ip,
+                                                  ORDER BY client_ip,
+                                                           server_ip,
                                                            time_floor(__time, 'PT12H') ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
@@ -1006,9 +1028,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1025,14 +1047,14 @@ WHERE client_ip IN ('107.13.54.103',
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
 +--------------+---------------+----------+---------------------+-----------+----------+
 (8 rows)
 
@@ -1060,19 +1082,20 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY server_ip,
+                                               ORDER BY client_ip,
+                                                        server_ip,
                                                         time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
 +--------------+---------------+----------+---------------------+-----------+----------+
 (8 rows)
 
@@ -1086,9 +1109,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1099,14 +1122,14 @@ GROUP BY server_ip,
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
 +--------------+---------------+----------+---------------------+-----------+----------+
 (8 rows)
 
@@ -1128,19 +1151,20 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY server_ip,
+                                                  ORDER BY client_ip,
+                                                           server_ip,
                                                            time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | EDT      |
-| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
-| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | EDT      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT       | N/A      |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A       | N/A      |
 +--------------+---------------+----------+---------------------+-----------+----------+
 (8 rows)
 
@@ -1154,9 +1178,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1210,7 +1234,8 @@ WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip ASC,
                                                         length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                               timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -1235,9 +1260,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1279,7 +1304,8 @@ GROUP BY server_ip,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
                                                            length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                                  timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -1304,9 +1330,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1360,7 +1386,8 @@ WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip DESC,
                                                         length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -1385,9 +1412,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1429,7 +1456,8 @@ GROUP BY server_ip,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip DESC,
                                                            length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                   timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                                   timezone,
+                                                                                   time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -1454,9 +1482,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1509,8 +1537,10 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
                                                ORDER BY server_ip ASC,
+                                                        server_ip,
                                                         length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                               timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -1535,9 +1565,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1578,8 +1608,10 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
                                                   ORDER BY server_ip ASC,
+                                                           server_ip,
                                                            length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                                  timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -1604,9 +1636,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1659,8 +1691,10 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
                                                ORDER BY server_ip DESC,
+                                                        server_ip,
                                                         length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
@@ -1685,9 +1719,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
+                                   ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
+                                  ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1728,8 +1762,10 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
                                                   ORDER BY server_ip DESC,
+                                                           server_ip,
                                                            length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                   timezone RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
+                                                                                   timezone,
+                                                                                   time_floor(__time, 'PT12H') RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING);
 +--------------+---------------+----------+---------------------+-----------+----------+
 | server_ip    | client_ip     | timezone | t                   | first_val | last_val |
 +--------------+---------------+----------+---------------------+-----------+----------+
