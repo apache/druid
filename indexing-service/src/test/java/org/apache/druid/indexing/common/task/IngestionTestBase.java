@@ -321,7 +321,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         = useSegmentMetadataCache
           ? SegmentMetadataCache.UsageMode.ALWAYS
           : SegmentMetadataCache.UsageMode.NEVER;
+    final Set<NodeRole> nodeRoles = Set.of(NodeRole.OVERLORD);
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
+        nodeRoles,
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
@@ -340,7 +342,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
+        nodeRoles,
         segmentMetadataCache,
         NoopServiceEmitter.instance()
     );

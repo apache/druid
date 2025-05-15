@@ -150,7 +150,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
 
+    final Set<NodeRole> nodeRoles = Set.of(NodeRole.OVERLORD);
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
+        nodeRoles,
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
         derbyConnectorRule.metadataTablesConfigSupplier(),
@@ -180,7 +182,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
+        nodeRoles,
         segmentMetadataCache,
         emitter
     )

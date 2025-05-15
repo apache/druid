@@ -173,7 +173,10 @@ public class TaskActionTestKit extends ExternalResource
         = useSegmentMetadataCache
           ? SegmentMetadataCache.UsageMode.ALWAYS
           : SegmentMetadataCache.UsageMode.NEVER;
+
+    final Set<NodeRole> nodeRoles = Set.of(NodeRole.OVERLORD);
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
+        nodeRoles,
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
@@ -192,7 +195,7 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector,
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
+        nodeRoles,
         segmentMetadataCache,
         NoopServiceEmitter.instance()
     )

@@ -267,7 +267,11 @@ public class SegmentSchemaCache
     return publishedSegmentSchemas.get().segmentIdToMetadata;
   }
 
-  private Map<String, SchemaPayload> getSchemaPayloadMap()
+  /**
+   * @return Immutable map from schema fingerprint to {@link SchemaPayload} for
+   * all schema fingerprints currently present in this cache.
+   */
+  public Map<String, SchemaPayload> getSchemaPayloadMap()
   {
     return publishedSegmentSchemas.get().schemaFingerprintToPayload;
   }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata.segment.cache;
 
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -103,6 +104,7 @@ public class HeapMemorySegmentMetadataCacheTest
     final SegmentsMetadataManagerConfig metadataManagerConfig
         = new SegmentsMetadataManagerConfig(null, cacheMode);
     cache = new HeapMemorySegmentMetadataCache(
+        Set.of(NodeRole.OVERLORD),
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
         derbyConnectorRule.metadataTablesConfigSupplier(),

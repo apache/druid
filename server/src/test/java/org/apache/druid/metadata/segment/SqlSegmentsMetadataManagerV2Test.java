@@ -21,6 +21,7 @@ package org.apache.druid.metadata.segment;
 
 import com.google.common.base.Suppliers;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -80,12 +81,14 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   }
 
   private void initManager(
+      NodeRole nodeRole,
       SegmentMetadataCache.UsageMode cacheMode,
       boolean useSchemaCache
   )
   {
     segmentMetadataCacheExec = new BlockingExecutorService("test");
     SegmentMetadataCache segmentMetadataCache = new HeapMemorySegmentMetadataCache(
+        Set.of(nodeRole),
         jsonMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(storageConfig),
@@ -133,7 +136,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   @Test
   public void test_manager_usesCachedSegments_ifCacheIsEnabled()
   {
-    initManager(SegmentMetadataCache.UsageMode.ALWAYS, false);
+    initManager(NodeRole.OVERLORD, SegmentMetadataCache.UsageMode.ALWAYS, false);
 
     manager.startPollingDatabasePeriodically();
     Assert.assertTrue(manager.isPollingDatabasePeriodically());
@@ -156,7 +159,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   @Test
   public void test_manager_pollsSegments_ifCacheIsDisabled()
   {
-    initManager(SegmentMetadataCache.UsageMode.NEVER, false);
+    initManager(NodeRole.OVERLORD, SegmentMetadataCache.UsageMode.NEVER, false);
 
     manager.startPollingDatabasePeriodically();
     Assert.assertTrue(manager.isPollingDatabasePeriodically());
@@ -173,7 +176,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   @Test
   public void test_manager_usesCachedSegmentsAndSchemas_ifBothCacheAndSchemaAreEnabled()
   {
-    initManager(SegmentMetadataCache.UsageMode.ALWAYS, true);
+    initManager(NodeRole.COORDINATOR, SegmentMetadataCache.UsageMode.ALWAYS, true);
 
     manager.startPollingDatabasePeriodically();
     Assert.assertTrue(manager.isPollingDatabasePeriodically());

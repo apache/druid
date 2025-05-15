@@ -31,6 +31,7 @@ import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.DateTimes;
@@ -147,6 +148,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   @Inject
   public HeapMemorySegmentMetadataCache(
+      Set<NodeRole> nodeRoles,
       ObjectMapper jsonMapper,
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
@@ -161,7 +163,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.cacheMode = config.get().getCacheUsageMode();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
     this.tablesConfig = tablesConfig.get();
-    this.useSchemaCache = schemaConfig.get().isEnabled();
+    this.useSchemaCache = schemaConfig.get().isEnabled() && nodeRoles.contains(NodeRole.COORDINATOR);
     this.segmentSchemaCache = segmentSchemaCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()
@@ -552,7 +554,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     updateUsedSegmentPayloadsInCache(datasourceToSummary);
     retrieveAllPendingSegments(datasourceToSummary);
     updatePendingSegmentsInCache(datasourceToSummary, syncStartTime);
-    retrieveAllSegmentSchemas(datasourceToSummary);
+
+    if (syncFinishTime.get() == null) {
+      retrieveUsedSegmentSchemasUpdatedAfter(DateTimes.COMPARE_DATE_AS_STRING_MIN, datasourceToSummary);
+    } else {
+      retrieveUsedSegmentSchemasUpdatedAfter(syncStartTime, datasourceToSummary);
+    }
+
     markCacheSynced(syncStartTime);
 
     syncFinishTime.set(DateTimes.nowUtc());
@@ -899,7 +907,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * Retrieves all segment schemas from the metadata store irrespective of their
    * used status or last updated time.
    */
-  private void retrieveAllSegmentSchemas(
+  private void retrieveUsedSegmentSchemasUpdatedAfter(
+      DateTime minUpdateTime,
       Map<String, DatasourceSegmentSummary> datasourceToSummary
   )
   {
@@ -910,32 +919,40 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     // Emit metrics for the current contents of the cache
     segmentSchemaCache.getStats().forEach(this::emitMetric);
 
-    final Stopwatch fetchDuration = Stopwatch.createStarted();
+    final Stopwatch schemaSyncDuration = Stopwatch.createStarted();
     final String sql = StringUtils.format(
-        "SELECT fingerprint, payload FROM %s WHERE version = %s",
+        "SELECT fingerprint, payload FROM %s"
+        + " WHERE version = %s AND used = true"
+        + " AND used_status_last_updated >= :minUpdateTime",
         tablesConfig.getSegmentSchemasTable(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
     );
 
     final List<SegmentSchemaRecord> records = inReadOnlyTransaction(
         (handle, status) ->
             handle.createQuery(sql)
+                  .bind("minUpdateTime", minUpdateTime.toString())
                   .setFetchSize(connector.getStreamingFetchSize())
                   .map((index, r, ctx) -> mapToSchemaRecord(r))
                   .list()
     );
 
-    final Map<String, SchemaPayload> fingerprintToSchemaPayload =
+    final Map<String, SchemaPayload> updatedFingerprintToSchemaPayload =
         records.stream().filter(Objects::nonNull).collect(Collectors.toMap(r -> r.fingerprint, r -> r.payload));
 
-    if (fingerprintToSchemaPayload.size() < records.size()) {
-      emitMetric(Metric.SKIPPED_SEGMENT_SCHEMAS, records.size() - fingerprintToSchemaPayload.size());
+    if (updatedFingerprintToSchemaPayload.size() < records.size()) {
+      emitMetric(Metric.SKIPPED_SEGMENT_SCHEMAS, records.size() - updatedFingerprintToSchemaPayload.size());
     }
 
+    // Build a map for the currently cached entries
     final Map<SegmentId, SegmentMetadata> segmentIdToMetadata = new HashMap<>(
         segmentSchemaCache.getSegmentMetadataMap()
     );
+    final Map<String, SchemaPayload> fingerprintToSchemaPayload = new HashMap<>(
+        segmentSchemaCache.getSchemaPayloadMap()
+    );
 
-    // Update the map with the segments fetched in the latest sync
+    // Update the map with the segments fetched in this sync
+    fingerprintToSchemaPayload.putAll(updatedFingerprintToSchemaPayload);
     datasourceToSummary.values().forEach(
         summary -> summary.usedSegments.forEach(segment -> {
           if (segment.getNumRows() != null && segment.getSchemaFingerprint() != null) {
@@ -951,7 +968,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         segmentIdToMetadata,
         fingerprintToSchemaPayload
     );
-    emitMetric(Metric.RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS, fetchDuration.millisElapsed());
+    emitMetric(Metric.RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS, schemaSyncDuration.millisElapsed());
   }
 
   /**
