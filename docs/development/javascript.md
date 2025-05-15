@@ -36,7 +36,7 @@ JavaScript can be used to extend Druid in a variety of ways:
 - [Post-aggregators](../querying/post-aggregations.md#javascript-post-aggregator)
 - [Input parsers](../ingestion/data-formats.md#javascript-parsespec)
 - [Router strategy](../design/router.md#javascript)
-- [Worker select strategy](../configuration/index.md#worker-select-strategy)
+- [Worker select strategy](../configuration/index.md#javascript-1)
 
 JavaScript can be injected dynamically at runtime, making it convenient to rapidly prototype new functionality
 without needing to write and deploy Druid extensions.
