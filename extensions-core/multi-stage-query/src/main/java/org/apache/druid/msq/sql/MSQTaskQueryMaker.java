@@ -151,12 +151,13 @@ public class MSQTaskQueryMaker implements QueryMaker
         typeList.stream().map(typeInfo -> typeInfo.lhs).collect(Collectors.toList()),
         SqlResults.Context.fromPlannerContext(plannerContext)
     );
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
 
     final LegacyMSQSpec querySpec = makeLegacyMSQSpec(
         targetDataSource,
         druidQuery,
         druidQuery.getQuery().context(),
-        fieldMapping,
+        columnMappings,
         plannerContext,
         terminalStageSpecFactory
     );
@@ -180,12 +181,11 @@ public class MSQTaskQueryMaker implements QueryMaker
       @Nullable final IngestDestination targetDataSource,
       final DruidQuery druidQuery,
       final QueryContext queryContext,
-      final List<Entry<Integer, String>> fieldMapping,
+      ColumnMappings columnMappings,
       final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
-    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
     final MSQDestination destination = buildMSQDestination(
         targetDataSource,
         columnMappings,
@@ -285,13 +285,12 @@ public class MSQTaskQueryMaker implements QueryMaker
   public static QueryDefMSQSpec makeQueryDefMSQSpec(
       @Nullable final IngestDestination targetDataSource,
       final QueryContext queryContext,
-      final List<Entry<Integer, String>> fieldMapping,
+      final ColumnMappings columnMappings,
       final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory,
       final QueryDefinition queryDef
   )
   {
-    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, queryDef.getOutputRowSignature());
     final MSQDestination destination = buildMSQDestination(
         targetDataSource,
         columnMappings,
