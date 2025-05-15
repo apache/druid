@@ -538,9 +538,9 @@ public class TaskQueue
   private void addTaskInternal(final Task task, final DateTime updateTime)
   {
     final AtomicBoolean added = new AtomicBoolean(false);
-    final TaskEntry entry = activeTasks.compute(
+    final TaskEntry entry = addOrUpdateTaskEntry(
         task.getId(),
-        (taskId, prevEntry) -> {
+        prevEntry -> {
           if (prevEntry == null) {
             added.set(true);
             return new TaskEntry(task);
@@ -573,9 +573,9 @@ public class TaskQueue
   {
     final AtomicReference<Task> removedTask = new AtomicReference<>();
 
-    activeTasks.compute(
+    addOrUpdateTaskEntry(
         taskId,
-        (id, prevEntry) -> {
+        prevEntry -> {
           // Remove the task only if it doesn't have a more recent update
           if (prevEntry != null && prevEntry.lastUpdatedTime.isBefore(deleteTime)) {
             removedTask.set(prevEntry.task);
@@ -823,7 +823,8 @@ public class TaskQueue
    * Resync the contents of this task queue with our storage facility. Useful to make sure our in-memory state
    * corresponds to the storage facility even if the latter is manually modified.
    */
-  private void syncFromStorage()
+  @VisibleForTesting
+  void syncFromStorage()
   {
     startStopLock.readLock().lock();
     final DateTime syncStartTime = DateTimes.nowUtc();
@@ -1069,17 +1070,28 @@ public class TaskQueue
    */
   private void updateTaskEntry(String taskId, Consumer<TaskEntry> updateOperation)
   {
+    addOrUpdateTaskEntry(
+        taskId,
+        existingEntry -> {
+          updateOperation.accept(existingEntry);
+          if (existingEntry != null) {
+            existingEntry.lastUpdatedTime = DateTimes.nowUtc();
+          }
+          return existingEntry;
+        }
+    );
+  }
+
+  /**
+   * Performs a thread-safe upsert operation on the task entry for the given task ID.
+   */
+  TaskEntry addOrUpdateTaskEntry(String taskId, Function<TaskEntry, TaskEntry> updateOperation)
+  {
     startStopLock.readLock().lock();
     try {
-      activeTasks.compute(
+      return activeTasks.compute(
           taskId,
-          (id, existingEntry) -> {
-            updateOperation.accept(existingEntry);
-            if (existingEntry != null) {
-              existingEntry.lastUpdatedTime = DateTimes.nowUtc();
-            }
-            return existingEntry;
-          }
+          (id, existingEntry) -> updateOperation.apply(existingEntry)
       );
     }
     finally {
@@ -1095,7 +1107,7 @@ public class TaskQueue
   /**
    * Represents an entry in this task queue.
    */
-  private static class TaskEntry
+  static class TaskEntry
   {
     private final Task task;
 

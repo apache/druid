@@ -4333,7 +4333,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @return specific instance of Kafka/Kinesis IOConfig
    */
-  protected abstract SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> createTaskIoConfig(
+  protected abstract SeekableStreamIndexTaskIOConfig createTaskIoConfig(
       int groupId,
       Map<PartitionIdType, SequenceOffsetType> startPartitions,
       Map<PartitionIdType, SequenceOffsetType> endPartitions,
@@ -4356,7 +4356,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       String baseSequenceName,
       ObjectMapper sortingMapper,
       TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> sequenceOffsets,
-      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> taskIoConfig,
+      SeekableStreamIndexTaskIOConfig taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException;

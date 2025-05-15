@@ -76,6 +76,7 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DefaultPasswordProvider;
@@ -131,7 +132,7 @@ public class TaskQueueTest extends IngestionTestBase
           }
         },
         getTaskStorage(),
-        new SimpleTaskRunner(),
+        new SimpleTaskRunner(serviceEmitter),
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
@@ -232,7 +233,7 @@ public class TaskQueueTest extends IngestionTestBase
           }
         },
         getTaskStorage(),
-        new SimpleTaskRunner(),
+        new SimpleTaskRunner(serviceEmitter),
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
@@ -701,14 +702,14 @@ public class TaskQueueTest extends IngestionTestBase
     }
   }
 
-  private class SimpleTaskRunner extends SingleTaskBackgroundRunner
+  static class SimpleTaskRunner extends SingleTaskBackgroundRunner
   {
-    SimpleTaskRunner()
+    SimpleTaskRunner(ServiceEmitter emitter)
     {
       super(
           EasyMock.createMock(TaskToolboxFactory.class),
           null,
-          serviceEmitter,
+          emitter,
           new DruidNode("overlord", "localhost", false, 8091, null, true, false),
           null
       );
