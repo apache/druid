@@ -230,7 +230,7 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 
 ## Auto-compaction using compaction supervisors  
 
-:::info Experimental
+:::info[Experimental]
 Compaction supervisors are experimental. For production use, we recommend [auto-compaction using Coordinator duties](#auto-compaction-using-coordinator-duties).
 :::
 
