@@ -448,7 +448,7 @@ public class MultiStageQueryContext
       log.warn("Query context does not contain start time. Defaulting to the current time[%s] instead.", startTime);
       return startTime;
     }
-    return (DateTime) queryContext.get(CTX_START_TIME);
+    return DateTime.parse(queryContext.getString(CTX_START_TIME));
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
