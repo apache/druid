@@ -169,6 +169,9 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     @Override
     public <T> T as(@Nonnull Class<T> clazz)
     {
+      if (isClosed) {
+        return null;
+      }
       return baseObject.as(clazz);
     }
 

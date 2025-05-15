@@ -30,9 +30,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -42,9 +40,6 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   private IncrementalIndexSegment incrementalIndexSegment;
   private QueryableIndexSegment queryableIndexSegment;
   private FireHydrant hydrant;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setup()
@@ -82,11 +77,10 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   @Test
   public void testAcquireSegmentClosed()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("segment.close() is called somewhere outside FireHydrant.swapSegment()");
     hydrant.getHydrantSegment().close();
     Assert.assertEquals(0, hydrant.getHydrantSegment().getNumReferences());
-    Segment segment = hydrant.acquireSegment();
+    Throwable t = Assert.assertThrows(ISE.class, hydrant::acquireSegment);
+    Assert.assertEquals("segment.close() is called somewhere outside FireHydrant.swapSegment()", t.getMessage());
   }
 
   @Test
@@ -147,15 +141,15 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   @Test
   public void testGetSegmentForQueryButNotAbleToAcquireReferencesSegmentClosed()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("segment.close() is called somewhere outside FireHydrant.swapSegment()");
     ReferenceCountedSegmentProvider incrementalSegmentReference = hydrant.getHydrantSegment();
     Assert.assertEquals(0, incrementalSegmentReference.getNumReferences());
     incrementalSegmentReference.close();
 
-    Optional<Segment> maybeSegmentAndCloseable = hydrant.getSegmentForQuery(
-        SegmentMapFunction.IDENTITY
+    Throwable t = Assert.assertThrows(
+        ISE.class,
+        () -> hydrant.getSegmentForQuery(SegmentMapFunction.IDENTITY)
     );
+    Assert.assertEquals("segment.close() is called somewhere outside FireHydrant.swapSegment()", t.getMessage());
   }
 
   @Test

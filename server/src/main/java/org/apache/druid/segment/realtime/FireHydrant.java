@@ -125,7 +125,7 @@ public class FireHydrant
             newSegment.getId()
         );
       }
-      if (currentSegment == newSegment) {
+      if (currentSegment != null && currentSegment.getBaseSegment() == newSegment) {
         throw new ISE("Cannot swap to the same segment");
       }
       ReferenceCountedSegmentProvider newReferenceCountingSegment =
