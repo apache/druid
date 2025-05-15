@@ -235,7 +235,7 @@
       <property name="id" value="argumentLineBreaking"/>
       <property
           name="format"
-          value='(?&lt;!ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'
+          value='(?&lt;!Map.of|ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'
       />
       <property name="illegalPattern" value="true"/>
       <property name="message" value="&#10;

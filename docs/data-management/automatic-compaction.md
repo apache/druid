@@ -52,7 +52,7 @@ The automatic compaction system uses the following syntax:
 }
 ```
 
-:::info Experimental
+:::info[Experimental]
 
 The MSQ task engine is available as a compaction engine when you run automatic compaction as a compaction supervisor. For more information, see [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
 
@@ -230,7 +230,7 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 
 ## Auto-compaction using compaction supervisors  
 
-:::info Experimental
+:::info[Experimental]
 Compaction supervisors are experimental. For production use, we recommend [auto-compaction using Coordinator duties](#auto-compaction-using-coordinator-duties).
 :::
 

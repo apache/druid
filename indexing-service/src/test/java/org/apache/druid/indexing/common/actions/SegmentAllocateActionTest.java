@@ -1173,7 +1173,7 @@ public class SegmentAllocateActionTest
     // Allocate another id and ensure that it doesn't exist in the druid_segments table
     final SegmentIdWithShardSpec theId =
         allocate(task1, DateTimes.nowUtc(), Granularities.NONE, Granularities.ALL, "seq", "3");
-    Assert.assertNull(coordinator.retrieveSegmentForId(theId.getDataSource(), theId.asSegmentId().toString()));
+    Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId()));
 
     lockbox.unlock(task1, Intervals.ETERNITY);
   }
