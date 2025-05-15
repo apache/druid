@@ -29,7 +29,7 @@ For general information on native batch indexing and parallel task indexing, see
 
 ## S3 input source
 
-:::info Required extension
+:::info[Required extension]
 To use the S3 input source, load the extension [`druid-s3-extensions`](../development/extensions-core/s3.md) in your `common.runtime.properties` file.
 :::
 
@@ -217,7 +217,7 @@ If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credential
 
 ## Google Cloud Storage input source
 
-:::info Required extension
+:::info[Required extension]
 To use the Google Cloud Storage input source, load the extension [`druid-google-extensions`](../development/extensions-core/google.md) in your `common.runtime.properties` file.
 :::
 
@@ -303,7 +303,7 @@ Google Cloud Storage object:
 
 ## Azure input source
 
-:::info Required extension
+:::info[Required extension]
 To use the Azure input source, load the extension [`druid-azure-extensions`](../development/extensions-core/azure.md) in your `common.runtime.properties` file.
 :::
 
@@ -485,7 +485,7 @@ The `objects` property is:
 
 ## HDFS input source
 
-:::info Required extension
+:::info[Required extension]
 To use the HDFS input source, load the extension [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) in your `common.runtime.properties` file.
 :::
 
@@ -825,7 +825,7 @@ For more information on the `maxNumConcurrentSubTasks` field, see [Implementatio
 
 ## SQL input source
 
-:::info Required extension
+:::info[Required extension]
 To use the SQL input source, you must load the appropriate extension in your `common.runtime.properties` file.
 * To connect to MySQL, load the extension [`mysql-metadata-storage`](../development/extensions-core/mysql.md).
 * To connect to PostgreSQL, load the extension [`postgresql-metadata-storage`](../development/extensions-core/postgresql.md).
@@ -935,7 +935,7 @@ The following is an example of a Combining input source spec:
 
 ## Iceberg input source
 
-:::info Required extension
+:::info[Required extension]
 To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md) in your `common.runtime.properties` file.
 :::
 
@@ -1172,7 +1172,7 @@ It is strongly recommended to apply filtering only on Iceberg partition columns.
 
 ## Delta Lake input source
 
-:::info Required extension
+:::info[Required extension]
 To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md) in your `common.runtime.properties` file.
 :::
 
