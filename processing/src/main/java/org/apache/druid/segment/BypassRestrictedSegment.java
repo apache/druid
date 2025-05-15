@@ -22,7 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.query.policy.Policy;
 
 /**
- * A {@link SegmentReference} wrapper with a {@link Policy} restriction that is not applied. Instead, it relies on the
+ * A {@link Segment} wrapper with a {@link Policy} restriction that is not applied. Instead, it relies on the
  * caller to apply the policy.
  * <p>
  * This class is useful when a query engine needs direct access to interfaces that cannot have policies applied
@@ -30,12 +30,12 @@ import org.apache.druid.query.policy.Policy;
  * {@link QueryableIndex} because it cannot apply policies transparently to a {@link QueryableIndex}. To use one, a
  * query engine needs to obtain a {@link BypassRestrictedSegment} and apply the policies itself.
  */
-class BypassRestrictedSegment extends WrappedSegmentReference
+class BypassRestrictedSegment extends WrappedSegment
 {
   protected final Policy policy;
 
   public BypassRestrictedSegment(
-      SegmentReference delegate,
+      Segment delegate,
       Policy policy
   )
   {

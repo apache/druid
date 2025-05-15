@@ -24,13 +24,13 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class FilteredSegment extends WrappedSegmentReference
+public class FilteredSegment extends WrappedSegment
 {
   @Nullable
   private final DimFilter filter;
 
   public FilteredSegment(
-      SegmentReference delegate,
+      Segment delegate,
       @Nullable DimFilter filter
   )
   {

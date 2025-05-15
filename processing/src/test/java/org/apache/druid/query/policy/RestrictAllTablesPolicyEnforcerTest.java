@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
-import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
@@ -80,8 +79,7 @@ public class RestrictAllTablesPolicyEnforcerTest
     );
     policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
     // Test validate segment, fail for ReferenceCountingSegment not wrapped with any policy, success when wrapped with a policy
-    Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    Segment segment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     Assert.assertFalse(policyEnforcer.validate(null));
     Assert.assertTrue(policyEnforcer.validate(policy));
     final DruidException e2 = Assert.assertThrows(
@@ -113,8 +111,7 @@ public class RestrictAllTablesPolicyEnforcerTest
     );
     policyEnforcer.validateOrElseThrow(table, NoRestrictionPolicy.instance());
 
-    Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    Segment segment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, null));
     Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, policy));
     policyEnforcer.validateOrElseThrow(segment, NoRestrictionPolicy.instance());

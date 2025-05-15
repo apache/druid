@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.SegmentId;
@@ -38,7 +37,7 @@ import java.util.concurrent.Executors;
  */
 public class ReferenceCountingSegmentTest
 {
-  private ReferenceCountingSegment segment;
+  private ReferenceCountedSegmentProvider segment;
   private ExecutorService exec;
 
   private final SegmentId segmentId = SegmentId.dummy("test_segment");
@@ -56,7 +55,7 @@ public class ReferenceCountingSegmentTest
     cursorFactory = EasyMock.createNiceMock(CursorFactory.class);
     indexedTable = EasyMock.createNiceMock(IndexedTable.class);
 
-    segment = ReferenceCountingSegment.wrapRootGenerationSegment(
+    segment = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
         new Segment()
         {
           @Override
@@ -153,32 +152,5 @@ public class ReferenceCountingSegmentTest
     segment.close();
     Assert.assertEquals(0, segment.getNumReferences());
     Assert.assertEquals(1, underlyingSegmentClosedCount);
-  }
-
-  @Test
-  public void testExposesWrappedSegment()
-  {
-    Assert.assertEquals(segmentId, segment.getId());
-    Assert.assertEquals(dataInterval, segment.getDataInterval());
-    Assert.assertEquals(index, segment.as(QueryableIndex.class));
-    Assert.assertEquals(cursorFactory, segment.as(CursorFactory.class));
-  }
-
-  @Test
-  public void testSegmentAs()
-  {
-    Assert.assertSame(index, segment.as(QueryableIndex.class));
-    Assert.assertSame(cursorFactory, segment.as(CursorFactory.class));
-    Assert.assertSame(indexedTable, segment.as(IndexedTable.class));
-    Assert.assertNull(segment.as(String.class));
-  }
-
-  @Test
-  public void testThrowWithDoubleWrap()
-  {
-    Assert.assertThrows(
-        DruidException.class,
-        () -> ReferenceCountingSegment.wrapRootGenerationSegment(segment)
-    );
   }
 }

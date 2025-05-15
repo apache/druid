@@ -35,7 +35,8 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
@@ -201,7 +202,7 @@ public class ExecutionVertex
         joinPrefixes.add(joinDataSource.getRightPrefix());
       }
       if (leaf && !isLeftLeaning()) {
-        allRightsAreGlobal &= dataSource.isGlobal();
+        allRightsAreGlobal = allRightsAreGlobal && dataSource.isGlobal();
       }
       return dataSource;
     }
@@ -256,14 +257,9 @@ public class ExecutionVertex
   /**
    * Unwraps the {@link #getBaseDataSource()} if its a {@link TableDataSource}.
    *
-   * @throws An
-   *           error of type {@link DruidException.Category#DEFENSIVE} if the
-   *           {@link #getBaseDataSource()} is not a table.
-   *
-   *           note that this may not be true even
-   *           {@link #isConcreteAndTableBased()} is true - in cases when the
-   *           base datasource is a {@link UnionDataSource} of
-   *           {@link TableDataSource}.
+   * @throws DruidException error of type {@link DruidException.Category#DEFENSIVE} if the {@link #getBaseDataSource()}
+   * is not a table. Note that this may not be true even {@link #isProcessable()} ()} is true - in cases when the base
+   * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
    */
   public final TableDataSource getBaseTableDataSource()
   {
@@ -393,13 +389,15 @@ public class ExecutionVertex
   /**
    * Assembles the segment mapping function which should be applied to the input segments.
    */
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(PolicyEnforcer policyEnforcer)
+  public SegmentMapFunction createSegmentMapFunction(PolicyEnforcer policyEnforcer)
   {
     DataSource topDataSource = getTopDataSource();
-    return topDataSource.createSegmentMapFunction(topQuery).andThen(segmentReference -> {
-      segmentReference.validateOrElseThrow(policyEnforcer);
-      return segmentReference;
-    });
+    final SegmentMapFunction segmentMapFunction = topDataSource.createSegmentMapFunction(topQuery);
+    final Function<Segment, Segment> enforcerFunction = segment -> {
+      segment.validateOrElseThrow(policyEnforcer);
+      return segment;
+    };
+    return SegmentMapFunction.wrap(segmentMapFunction, enforcerFunction);
   }
 
   /**

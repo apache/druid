@@ -23,24 +23,26 @@ import java.io.Closeable;
 import java.util.Optional;
 
 /**
- * Interface for an object that may have a reference acquired in the form of a {@link Closeable}. This is intended to be
- * used with an implementation of {@link ReferenceCountingCloseableObject}, or anything else that wishes to provide
- * a method to account for the acquire and release of a reference to the object.
+ * Interface for "checking out" a {@link Closeable} object as a tracked a reference. This can power anything that
+ * wishes to provide this pattern of acquiring and releasing of a reference to the object when it is closed.
+ * <p>
+ * For ease of implementation, {@link ReferenceCountingCloseableObject} can be used as a basis for implementing this
+ * interface, using the {@link Closeable} from
+ * {@link ReferenceCountingCloseableObject#incrementReferenceAndDecrementOnceCloseable()} in the close method of the
+ * returned object of {@link #acquireReference()} to release the references when closing the object.
  */
-public interface ReferenceCountedObject
+public interface ReferenceCountedObjectProvider<T extends Closeable>
 {
   /**
-   * This method is expected to increment a reference count and provide a {@link Closeable} that decrements the
-   * reference count when closed. This is likely just a wrapper around
-   * {@link ReferenceCountingCloseableObject#incrementReferenceAndDecrementOnceCloseable()}, but may also include any
-   * other associated references which should be incremented when this method is called, and decremented/released by the
-   * closeable.
-   *
+   * This method increments a reference count and provides a {@link Closeable} that decrements the reference count when
+   * closed.
+   * <p>
    * IMPORTANT NOTE: to fulfill the contract of this method, implementors must return a closeable to indicate that the
-   * reference can be acquired, even if there is nothing to close. Implementors should avoid allowing this method or the
-   * {@link Closeable} it creates to throw exceptions.
-   *
+   * reference can be acquired, even if there is nothing to close. Implementors should ideally avoid allowing this
+   * method to throw exceptions, but callers are responsible for closing the returned object should any operations on
+   * it throw exceptions.
+   * <p>
    * For callers: if this method returns non-empty, IT MUST BE CLOSED, else reference counts can potentially leak.
    */
-  Optional<Closeable> acquireReferences();
+  Optional<T> acquireReference();
 }

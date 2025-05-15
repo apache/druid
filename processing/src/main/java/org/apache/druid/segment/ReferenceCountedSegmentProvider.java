@@ -19,38 +19,37 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Optional;
 
 /**
- * {@link Segment} that is also a {@link ReferenceCountingSegment}, allowing query engines that operate directly on
- * segments to track references so that dropping a {@link Segment} can be done safely to ensure there are no in-flight
- * queries.
+ * {@link ReferenceCountedSegmentProvider} wraps a {@link Segment}, allowing query engines that operate directly on segments
+ * to track references so that dropping a {@link Segment} can be done safely to ensure there are no in-flight queries.
  * <p>
  * Extensions can extend this class for populating {@link org.apache.druid.timeline.VersionedIntervalTimeline} with
  * a custom implementation through SegmentLoader.
  */
-public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<Segment>
-    implements SegmentReference, Overshadowable<ReferenceCountingSegment>
+public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableObject<Segment>
+    implements Overshadowable<ReferenceCountedSegmentProvider>, ReferenceCountedObjectProvider<Segment>
 {
   private final short startRootPartitionId;
   private final short endRootPartitionId;
   private final short minorVersion;
   private final short atomicUpdateGroupSize;
 
-  public static ReferenceCountingSegment wrapRootGenerationSegment(Segment baseSegment)
+  public static ReferenceCountedSegmentProvider wrapRootGenerationSegment(Segment baseSegment)
   {
     int partitionNum = baseSegment.getId() == null ? 0 : baseSegment.getId().getPartitionNum();
-    return new ReferenceCountingSegment(
+    return new ReferenceCountedSegmentProvider(
         Preconditions.checkNotNull(baseSegment, "baseSegment"),
         partitionNum,
         partitionNum + 1,
@@ -59,12 +58,12 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     );
   }
 
-  public static ReferenceCountingSegment wrapSegment(
+  public static ReferenceCountedSegmentProvider wrapSegment(
       Segment baseSegment,
       ShardSpec shardSpec
   )
   {
-    return new ReferenceCountingSegment(
+    return new ReferenceCountedSegmentProvider(
         baseSegment,
         shardSpec.getStartRootPartitionId(),
         shardSpec.getEndRootPartitionId(),
@@ -73,7 +72,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     );
   }
 
-  private ReferenceCountingSegment(
+  private ReferenceCountedSegmentProvider(
       Segment baseSegment,
       int startRootPartitionId,
       int endRootPartitionId,
@@ -82,14 +81,6 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   )
   {
     super(baseSegment);
-    // ReferenceCountingSegment should not wrap another SegmentReference, because the inner reference would effectively
-    // be ignored.
-    if (baseSegment instanceof SegmentReference) {
-      throw DruidException.defensive(
-          "Cannot use a SegmentReference[%s] as baseSegment for a ReferenceCountingSegment",
-          baseSegment.asString()
-      );
-    }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;
     this.minorVersion = minorVersion;
@@ -103,21 +94,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   }
 
   @Override
-  @Nullable
-  public SegmentId getId()
-  {
-    return !isClosed() ? baseObject.getId() : null;
-  }
-
-  @Override
-  @Nullable
-  public Interval getDataInterval()
-  {
-    return !isClosed() ? baseObject.getDataInterval() : null;
-  }
-
-  @Override
-  public boolean overshadows(ReferenceCountingSegment other)
+  public boolean overshadows(ReferenceCountedSegmentProvider other)
   {
     if (baseObject.getId().getDataSource().equals(other.baseObject.getId().getDataSource())
         && baseObject.getId().getInterval().overlaps(other.baseObject.getId().getInterval())) {
@@ -129,12 +106,6 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
       }
     }
     return false;
-  }
-
-  private boolean includeRootPartitions(ReferenceCountingSegment other)
-  {
-    return startRootPartitionId <= other.startRootPartitionId
-           && endRootPartitionId >= other.endRootPartitionId;
   }
 
   @Override
@@ -168,35 +139,60 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Segment> acquireReference()
   {
-    return incrementReferenceAndDecrementOnceCloseable();
+    final Optional<Closeable> reference = incrementReferenceAndDecrementOnceCloseable();
+    return reference.map(ReferenceClosingSegment::new);
   }
 
-  @Override
-  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  private boolean includeRootPartitions(ReferenceCountedSegmentProvider other)
   {
-    policyEnforcer.validateOrElseThrow(this, null);
+    return startRootPartitionId <= other.startRootPartitionId && endRootPartitionId >= other.endRootPartitionId;
   }
 
-  @Override
-  public <T> T as(Class<T> clazz)
+  /**
+   * Wraps a {@link Segment} and closes reference to this segment, decrementing the counter instead of closing the
+   * segment itself
+   */
+  public final class ReferenceClosingSegment extends WrappedSegment
   {
-    if (isClosed()) {
-      return null;
+    private final Closeable referenceCloseable;
+    private boolean isClosed;
+
+    private ReferenceClosingSegment(Closeable referenceCloseable)
+    {
+      super(baseObject);
+      this.referenceCloseable = referenceCloseable;
     }
-    return baseObject.as(clazz);
-  }
 
-  @Override
-  public boolean isTombstone()
-  {
-    return baseObject.isTombstone();
-  }
+    @Nullable
+    @Override
+    public <T> T as(@Nonnull Class<T> clazz)
+    {
+      return baseObject.as(clazz);
+    }
 
-  @Override
-  public String asString()
-  {
-    return baseObject.asString();
+    @Override
+    public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+    {
+      // a segment cannot directly have any policies, so use the enforcer directly
+      policyEnforcer.validateOrElseThrow(this, null);
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      if (isClosed) {
+        return;
+      }
+      referenceCloseable.close();
+      isClosed = true;
+    }
+
+    @VisibleForTesting
+    public ReferenceCountedSegmentProvider getProvider()
+    {
+      return ReferenceCountedSegmentProvider.this;
+    }
   }
 }

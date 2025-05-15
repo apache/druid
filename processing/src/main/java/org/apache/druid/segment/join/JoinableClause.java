@@ -20,7 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.ReferenceCountedObject;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 
 import java.io.Closeable;
 import java.util.List;
@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  * <p>
  * Created from {@link org.apache.druid.query.planning.PreJoinableClause}.
  */
-public class JoinableClause implements ReferenceCountedObject
+public class JoinableClause implements ReferenceCountedObjectProvider<Closeable>
 {
   private final String prefix;
   private final Joinable joinable;
@@ -151,8 +151,8 @@ public class JoinableClause implements ReferenceCountedObject
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
-    return joinable.acquireReferences();
+    return joinable.acquireReference();
   }
 }

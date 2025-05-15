@@ -393,7 +393,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     if (parsedExpression.get().isIdentifier()) {
       final ColumnCapabilities baseCapabilities =
-          inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
+          inspector.getColumnCapabilities(parsedExpression.get().getIdentifierIfIdentifier());
 
       if (expression.outputType == null) {
         // No desired output type. Anything from the source is fine.
