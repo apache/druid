@@ -35,7 +35,7 @@ Druid uses the following resource types:
 
 * DATASOURCE &ndash; Each Druid table (i.e., `tables` in the `druid` schema in SQL) is a resource.
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
-* EXTERNAL &ndash; External data read through the [EXTERN function](../multi-stage-query/concepts.md#extern) in SQL.
+* EXTERNAL &ndash; External data read through the [EXTERN function](../multi-stage-query/concepts.md#read-external-data-with-extern) in SQL.
 * STATE &ndash; Cluster-wide state resources.
 * SYSTEM_TABLE &ndash; when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, then Druid uses this resource type to authorize the system tables in the `sys` schema in SQL.
 
@@ -105,7 +105,7 @@ There are two possible resource names for the "CONFIG" resource type, "CONFIG" a
 
 The EXTERNAL resource type only accepts the resource name "EXTERNAL".
 Granting a user access to EXTERNAL resources allows them to run queries that include
-the [EXTERN function](../multi-stage-query/concepts.md#extern) in SQL
+the [EXTERN function](../multi-stage-query/concepts.md#read-external-data-with-extern) in SQL
 to read external data.
 
 ### `STATE`
@@ -149,7 +149,7 @@ For information on what HTTP methods are supported on a particular request endpo
 
 Queries on Druid datasources require DATASOURCE READ permissions for the specified datasource.
 
-Queries to access external data through the [EXTERN function](../multi-stage-query/concepts.md#extern) require EXTERNAL READ permissions.
+Queries to access external data through the [EXTERN function](../multi-stage-query/concepts.md#read-external-data-with-extern) require EXTERNAL READ permissions.
 
 Queries on [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md#information-schema) return information about datasources that the caller has DATASOURCE READ access to. Other
 datasources are omitted.
