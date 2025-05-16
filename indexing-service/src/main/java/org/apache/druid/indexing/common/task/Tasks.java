@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.curator.shaded.com.google.common.base.Verify;
+import com.google.common.base.Verify;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;

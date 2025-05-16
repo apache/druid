@@ -20,10 +20,10 @@
 package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import com.google.inject.Injector;
-import org.apache.curator.shaded.com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;

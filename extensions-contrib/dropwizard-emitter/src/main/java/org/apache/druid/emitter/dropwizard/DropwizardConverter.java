@@ -22,9 +22,9 @@ package org.apache.druid.emitter.dropwizard;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import org.apache.curator.shaded.com.google.common.io.Closeables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -100,7 +100,7 @@ public class DropwizardConverter
       throw new ISE(e, "Failed to parse metric dimensions and types");
     }
     finally {
-      Closeables.closeQuietly(is);
+      CloseableUtils.closeAndSuppressExceptions(is, e -> log.warn(e, "Failed to close input stream"));
     }
   }
 }

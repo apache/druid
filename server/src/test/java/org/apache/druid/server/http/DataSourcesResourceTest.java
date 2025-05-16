@@ -29,7 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.curator.shaded.com.google.common.base.Charsets;
+import org.apache.commons.io.Charsets;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DataSourcesSnapshot;

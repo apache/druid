@@ -177,6 +177,11 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use org.apache.druid.java.util.common.logger.Logger instead"/>
     </module>
+    <module name="Regexp">
+      <property name="format" value='import org\.apache\.curator\.shaded\.'/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Avoid importing from 'org.apache.curator.shaded', use the regular dependency instead"/>
+    </module>
 
     <module name="Regexp">
       <!-- Couldn't check this in forbidden-apis, because javac replaces compile-time constants without refs. -->

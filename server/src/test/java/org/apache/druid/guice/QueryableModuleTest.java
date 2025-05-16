@@ -22,10 +22,10 @@ package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
