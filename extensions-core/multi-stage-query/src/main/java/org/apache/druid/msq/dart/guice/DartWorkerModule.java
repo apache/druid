@@ -56,6 +56,7 @@ import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.Engine;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -163,7 +164,7 @@ public class DartWorkerModule implements DruidModule
         new SimpleModule("DartModule").registerSubtypes(
             new NamedType(
                 DartQueryInfo.class,
-                "msq-dart"
+                Engine.MSQ_DART.toString()
             )
         )
     );

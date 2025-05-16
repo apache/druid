@@ -27,6 +27,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.query.Engine;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -54,7 +55,7 @@ public class NativeSqlEngine implements SqlEngine
       DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS
   );
 
-  private static final String NAME = "native";
+  private static final String NAME = Engine.NATIVE.toString();
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final ObjectMapper jsonMapper;

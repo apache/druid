@@ -131,7 +131,7 @@ public class DartControllerModule implements DruidModule
         new SimpleModule("DartModule").registerSubtypes(
             new NamedType(
                 DartQueryInfo.class,
-                "msq-dart"
+                Engine.MSQ_DART.toString()
             )
         )
     );
