@@ -53,6 +53,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.Engine;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -181,6 +182,7 @@ public class SqlResourceTest extends CalciteTestBase
   private NativeSqlEngine engine;
   private SqlStatementFactory sqlStatementFactory;
   private StubServiceEmitter stubServiceEmitter;
+  private NativeQueryManager nativeQueryManager;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -323,12 +325,12 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
+    nativeQueryManager = new NativeQueryManager(lifecycleManager, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig(),
+        Map.of(Engine.NATIVE, nativeQueryManager),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1632,8 +1634,6 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig()
         {
           @Override
@@ -1648,6 +1648,7 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
+        Map.of(Engine.NATIVE, nativeQueryManager),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1858,7 +1859,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertTrue(validateAndAuthorizeLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     Assert.assertTrue(lifecycleAddLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
     planLatch.countDown();
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
@@ -1891,7 +1892,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
     execLatch.countDown();
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
@@ -1919,7 +1920,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery("invalidQuery", makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery("invalidQuery", null, makeRequestForCancel());
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
@@ -1944,7 +1945,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(3, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
     Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
@@ -2091,7 +2092,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
-    Assert.assertNull(resource.doPost(query, req));
+    Assert.assertNull(resource.doPost(query, Engine.NATIVE.toString(), req));
 
     final Object actualQueryId = response.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = response.getHeader(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
@@ -2118,7 +2119,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
 
-    final Response response = resource.doPost(query, req);
+    final Response response = resource.doPost(query, Engine.NATIVE.toString(), req);
 
     final Object actualQueryId = getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);

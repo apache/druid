@@ -17,26 +17,42 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.controller.sql;
+package org.apache.druid.query;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.SqlResource;
-
-import javax.servlet.http.HttpServletRequest;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.error.InvalidInput;
 
 /**
- * Client for the {@link SqlResource} resource for Dart queries.
+ * Enum determining the engine used in executing the query.
  */
-public interface DartSqlClient
+public enum Engine
 {
-  /**
-   * Get information about all currently-running queries on this server.
-   *
-   * @param selfOnly true if only queries from this server should be returned; false if queries from all servers
-   *                 should be returned
-   *
-   * @see SqlResource#doGetRunningQueries(String, String, HttpServletRequest) the server side
-   */
-  ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly);
+  NATIVE("native"),
+  MSQ_TASK("msq-task"),
+  MSQ_DART("msq-dart");
+
+  private final String name;
+
+  Engine(String name)
+  {
+    this.name = name;
+  }
+
+  @JsonCreator
+  public static Engine fromString(String value)
+  {
+    for (Engine mode : values()) {
+      if (mode.toString().equals(value)) {
+        return mode;
+      }
+    }
+
+    throw InvalidInput.exception("Engine not supported:[%s]", value);
+  }
+
+  @Override
+  public String toString()
+  {
+    return name;
+  }
 }

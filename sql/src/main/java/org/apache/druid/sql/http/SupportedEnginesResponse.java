@@ -17,26 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.controller.sql;
+package org.apache.druid.sql.http;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.SqlResource;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.Engine;
 
-import javax.servlet.http.HttpServletRequest;
+import java.util.Set;
 
-/**
- * Client for the {@link SqlResource} resource for Dart queries.
- */
-public interface DartSqlClient
+public class SupportedEnginesResponse
 {
-  /**
-   * Get information about all currently-running queries on this server.
-   *
-   * @param selfOnly true if only queries from this server should be returned; false if queries from all servers
-   *                 should be returned
-   *
-   * @see SqlResource#doGetRunningQueries(String, String, HttpServletRequest) the server side
-   */
-  ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly);
+  private final Set<Engine> supportedEngines;
+
+  @JsonCreator
+  public SupportedEnginesResponse(@JsonProperty("supportedEngines")Set<Engine> supportedEngines)
+  {
+    this.supportedEngines = supportedEngines;
+  }
+
+  @JsonProperty
+  public Set<Engine> getSupportedEngines()
+  {
+    return supportedEngines;
+  }
 }

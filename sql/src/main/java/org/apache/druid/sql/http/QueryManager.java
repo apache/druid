@@ -17,26 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.controller.sql;
+package org.apache.druid.sql.http;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.SqlResource;
+import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.SqlLifecycleManager;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Response;
+import java.util.List;
+import java.util.function.Function;
 
-/**
- * Client for the {@link SqlResource} resource for Dart queries.
- */
-public interface DartSqlClient
+@ExtensionPoint
+public interface QueryManager
 {
-  /**
-   * Get information about all currently-running queries on this server.
-   *
-   * @param selfOnly true if only queries from this server should be returned; false if queries from all servers
-   *                 should be returned
-   *
-   * @see SqlResource#doGetRunningQueries(String, String, HttpServletRequest) the server side
-   */
-  ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly);
+  // TODO: change from response to something better
+  Response cancelQuery(
+      String sqlQueryId,
+      Function<List<SqlLifecycleManager.Cancelable>, AuthorizationResult> authFunction
+  );
+
+  List<QueryInfo> getRunningQueries(boolean selfOnly);
+
+  HttpStatement doPost(SqlQuery sqlQuery, HttpServletRequest req);
 }
