@@ -76,12 +76,12 @@ import java.util.stream.Collectors;
 public class SqlResource
 {
   public static final String PATH = "/druid/v2/sql/";
-
   public static final String SQL_QUERY_ID_RESPONSE_HEADER = "X-Druid-SQL-Query-Id";
   public static final String SQL_HEADER_RESPONSE_HEADER = "X-Druid-SQL-Header-Included";
   public static final String SQL_HEADER_VALUE = "yes";
+
   private static final Logger log = new Logger(SqlResource.class);
-  public static final SqlResourceQueryMetricCounter QUERY_METRIC_COUNTER = new SqlResourceQueryMetricCounter();
+  private static final SqlResourceQueryMetricCounter QUERY_METRIC_COUNTER = new SqlResourceQueryMetricCounter();
 
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
@@ -217,14 +217,7 @@ public class SqlResource
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
 
-    return queryManager.cancelQuery(sqlQueryId, cancelables -> {
-      if (cancelables.isEmpty()) {
-        AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
-        return null;
-      } else {
-        return authorizeCancellation(req, cancelables);
-      }
-    });
+    return queryManager.cancelQuery(sqlQueryId, cancelables -> authorizeCancellation(req, cancelables));
   }
 
   private QueryManager getQueryManager(final String engineString)

@@ -84,7 +84,9 @@ import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
+import org.apache.druid.sql.http.SupportedEnginesResponse;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,6 +101,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -108,7 +111,7 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
- * Functional test of {@link DartSqlResource}, {@link DartSqlEngine}, and {@link DartQueryMaker}.
+ * Functional test of {@link SqlResource}, {@link DartSqlEngine}, and {@link DartQueryMaker}.
  * Other classes are mocked when possible.
  */
 public class DartSqlResourceTest extends MSQTestBase
@@ -145,13 +148,13 @@ public class DartSqlResourceTest extends MSQTestBase
   // Mocks below this line.
 
   /**
-   * Mock for {@link DartSqlClients}, which is used in tests of {@link DartSqlResource#doGetRunningQueries}.
+   * Mock for {@link DartSqlClients}, which is used in tests of {@link SqlResource#doGetRunningQueries}.
    */
   @Mock
   private DartSqlClients dartSqlClients;
 
   /**
-   * Mock for {@link DartSqlClient}, which is used in tests of {@link DartSqlResource#doGetRunningQueries}.
+   * Mock for {@link DartSqlClient}, which is used in tests of {@link SqlResource#doGetRunningQueries}.
    */
   @Mock
   private DartSqlClient dartSqlClient;
@@ -285,12 +288,13 @@ public class DartSqlResourceTest extends MSQTestBase
   @Test
   public void test_getEnabled()
   {
-    // final Response response = sqlResource.doGetEnabled(httpServletRequest);
-    // Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Response response = sqlResource.getSupportedEngines(httpServletRequest);
+    Set<Engine> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getSupportedEngines();
+    Assert.assertTrue(supportedEngines.contains(Engine.MSQ_DART));
   }
 
   /**
-   * Test where a superuser calls {@link DartSqlResource#doGetRunningQueries} with selfOnly enabled.
+   * Test where a superuser calls {@link SqlResource#doGetRunningQueries} with selfOnly enabled.
    */
   @Test
   public void test_getRunningQueries_selfOnly_superUser()
@@ -310,7 +314,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
   /**
    * Test where {@link #REGULAR_USER_NAME} and {@link #DIFFERENT_REGULAR_USER_NAME} issue queries, and
-   * {@link #REGULAR_USER_NAME} calls {@link DartSqlResource#doGetRunningQueries} with selfOnly enabled.
+   * {@link #REGULAR_USER_NAME} calls {@link SqlResource#doGetRunningQueries} with selfOnly enabled.
    */
   @Test
   public void test_getRunningQueries_selfOnly_regularUser()
@@ -334,7 +338,7 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   /**
-   * Test where a superuser calls {@link DartSqlResource#doGetRunningQueries} with selfOnly disabled.
+   * Test where a superuser calls {@link SqlResource#doGetRunningQueries} with selfOnly disabled.
    */
   @Test
   public void test_getRunningQueries_global_superUser()
@@ -374,7 +378,7 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   /**
-   * Test where a superuser calls {@link DartSqlResource#doGetRunningQueries} with selfOnly disabled, and where the
+   * Test where a superuser calls {@link SqlResource#doGetRunningQueries} with selfOnly disabled, and where the
    * remote server has a problem.
    */
   @Test
@@ -402,7 +406,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
   /**
    * Test where {@link #REGULAR_USER_NAME} and {@link #DIFFERENT_REGULAR_USER_NAME} issue queries, and
-   * {@link #REGULAR_USER_NAME} calls {@link DartSqlResource#doGetRunningQueries} with selfOnly disabled.
+   * {@link #REGULAR_USER_NAME} calls {@link SqlResource#doGetRunningQueries} with selfOnly disabled.
    */
   @Test
   public void test_getRunningQueries_global_regularUser()
@@ -439,7 +443,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
   /**
    * Test where {@link #REGULAR_USER_NAME} and {@link #DIFFERENT_REGULAR_USER_NAME} issue queries, and
-   * {@link #DIFFERENT_REGULAR_USER_NAME} calls {@link DartSqlResource#doGetRunningQueries} with selfOnly disabled.
+   * {@link #DIFFERENT_REGULAR_USER_NAME} calls {@link SqlResource#doGetRunningQueries} with selfOnly disabled.
    */
   @Test
   public void test_getRunningQueries_global_differentRegularUser()
@@ -755,7 +759,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
   /**
    * Add a mock {@link ControllerHolder} to {@link #controllerRegistry}, with a query run by the given user.
-   * Used by methods that test {@link DartSqlResource#doGetRunningQueries}.
+   * Used by methods that test {@link SqlResource#doGetRunningQueries}.
    *
    * @return the mock holder
    */

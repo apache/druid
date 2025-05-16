@@ -20,14 +20,13 @@
 package org.apache.druid.msq.dart.controller.sql;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.SqlResource;
 
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Client for the {@link DartSqlResource} resource.
+ * Client for the {@link SqlResource} resource for Dart queries.
  */
 public interface DartSqlClient
 {

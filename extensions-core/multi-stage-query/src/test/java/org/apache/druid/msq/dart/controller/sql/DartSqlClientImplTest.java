@@ -27,6 +27,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
+import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.sql.http.GetQueriesResponse;
@@ -49,7 +50,7 @@ public class DartSqlClientImplTest
   @BeforeEach
   public void setup()
   {
-    jsonMapper = new DefaultObjectMapper();
+    jsonMapper = new DefaultObjectMapper().registerModules(new DartWorkerModule().getJacksonModules());
     serviceClient = new MockServiceClient();
     dartSqlClient = new DartSqlClientImpl(serviceClient, jsonMapper);
   }
@@ -79,7 +80,7 @@ public class DartSqlClientImplTest
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/?engine=msq-dart"),
+        new RequestBuilder(HttpMethod.GET, "/queries?engine=msq-dart"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(getQueriesResponse)
@@ -108,7 +109,7 @@ public class DartSqlClientImplTest
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/?engine=msq-dart&selfOnly"),
+        new RequestBuilder(HttpMethod.GET, "/queries?engine=msq-dart&selfOnly"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(getQueriesResponse)

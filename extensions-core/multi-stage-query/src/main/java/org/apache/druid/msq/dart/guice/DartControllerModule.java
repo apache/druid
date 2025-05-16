@@ -28,7 +28,6 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
@@ -45,7 +44,6 @@ import org.apache.druid.msq.dart.controller.DartMessageRelayFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelays;
 import org.apache.druid.msq.dart.controller.DartQueryManager;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactoryImpl;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
@@ -85,8 +83,6 @@ public class DartControllerModule implements DruidModule
     {
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".controller", DartControllerConfig.class);
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".query", DefaultQueryConfig.class, Dart.class);
-
-      Jerseys.addResource(binder, DartSqlResource.class);
 
       LifecycleModule.register(binder, DartSqlClients.class);
       LifecycleModule.register(binder, DartMessageRelays.class);

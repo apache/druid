@@ -22,7 +22,7 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
+import org.apache.druid.msq.dart.controller.DartQueryManager;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -44,7 +44,7 @@ public interface Controller
    * Unique task/query ID for the batch query run by this controller.
    *
    * Controller IDs must be globally unique. For tasks, this is the task ID from {@link MSQControllerTask#getId()}.
-   * For Dart, this is {@link QueryContexts#CTX_DART_QUERY_ID}, set by {@link DartSqlResource}.
+   * For Dart, this is {@link QueryContexts#CTX_DART_QUERY_ID}, set by {@link DartQueryManager}.
    */
   String queryId();
 

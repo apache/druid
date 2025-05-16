@@ -30,8 +30,8 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.sql.http.SqlResource;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collection;
@@ -41,7 +41,7 @@ import java.util.Map;
 
 /**
  * Keeps {@link DartSqlClient} for all servers except ourselves. Currently the purpose of this is to power
- * the "get all queries" API at {@link DartSqlResource#doGetRunningQueries(String, HttpServletRequest)}.
+ * the "get all queries" API at {@link SqlResource#doGetRunningQueries(String, String, HttpServletRequest)}.
  */
 @ManageLifecycle
 public class DartSqlClients implements DruidNodeDiscovery.Listener

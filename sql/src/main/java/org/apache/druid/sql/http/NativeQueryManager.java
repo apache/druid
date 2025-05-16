@@ -40,23 +40,23 @@ public class NativeQueryManager implements QueryManager
 
   @Inject
   public NativeQueryManager(
-      SqlLifecycleManager sqlLifecycleManager,
+      final SqlLifecycleManager sqlLifecycleManager,
       final @NativeQuery SqlStatementFactory sqlStatementFactory
   )
   {
-    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");;
-    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");;
+    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
   }
 
   @Override
   public Response cancelQuery(String sqlQueryId, Function<List<SqlLifecycleManager.Cancelable>, AuthorizationResult> authFunction)
   {
     List<SqlLifecycleManager.Cancelable> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
+
+    final AuthorizationResult authResult = authFunction.apply(lifecycles);
     if (lifecycles.isEmpty()) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
-
-    final AuthorizationResult authResult = authFunction.apply(lifecycles);
 
     if (authResult.allowAccessWithNoRestriction()) {
       // should remove only the lifecycles in the snapshot.

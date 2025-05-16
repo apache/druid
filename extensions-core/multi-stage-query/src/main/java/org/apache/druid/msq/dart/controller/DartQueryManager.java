@@ -27,7 +27,6 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.query.BaseQuery;
@@ -167,7 +166,7 @@ public class DartQueryManager implements QueryManager
 
     /**
      * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
-     * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
+     * or {@link BaseQuery#QUERY_ID}. Instead, we generate a UUID in this function, overriding whatever
      * the user may have provided. This becomes the {@link Controller#queryId()}.
      *
      * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
