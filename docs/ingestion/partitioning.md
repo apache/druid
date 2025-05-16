@@ -48,7 +48,7 @@ The following table describes how to configure time chunk partitioning.
 
 |Method|Configuration|
 |------|------------|
-|[SQL](../multi-stage-query/index.md)|[`PARTITIONED BY`](../multi-stage-query/concepts.md#partitioning)|
+|[SQL](../multi-stage-query/index.md)|[`PARTITIONED BY`](../multi-stage-query/concepts.md#partitioning-by-time)|
 |[Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md)|`segmentGranularity` inside the [`granularitySpec`](ingestion-spec.md#granularityspec)|
 |[Native batch](native-batch.md) or [Hadoop](hadoop.md)|`segmentGranularity` inside the [`granularitySpec`](ingestion-spec.md#granularityspec)|
 
@@ -65,7 +65,7 @@ The following table describes how to configure secondary partitioning.
 |Method|Configuration|
 |------|------------|
 |[SQL](../multi-stage-query/index.md)|[`CLUSTERED BY`](../multi-stage-query/concepts.md#clustering)|
-|[Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md)|Upstream partitioning defines how Druid partitions the datasource. You can also alter clustering using [`REPLACE`](../multi-stage-query/concepts.md#replace) (with `CLUSTERED BY`) or [compaction](../data-management/compaction.md) after initial ingestion.|
+|[Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md)|Upstream partitioning defines how Druid partitions the datasource. You can also alter clustering using [`REPLACE`](../multi-stage-query/concepts.md#overwrite-data-with-replace) (with `CLUSTERED BY`) or [compaction](../data-management/compaction.md) after initial ingestion.|
 |[Native batch](native-batch.md) or [Hadoop](hadoop.md)|[`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`|
 
 ## Sorting
@@ -80,7 +80,7 @@ The following table describes how to configure sorting.
 
 |Method|Configuration|
 |------|------------|
-|[SQL](../multi-stage-query/index.md)|Uses order of fields in [`CLUSTERED BY`](../multi-stage-query/concepts.md#clustering) or [`segmentSortOrder`](../multi-stage-query/reference.md#context) in the query context|
+|[SQL](../multi-stage-query/index.md)|Uses order of fields in [`CLUSTERED BY`](../multi-stage-query/concepts.md#clustering) or [`segmentSortOrder`](../multi-stage-query/reference.md#context-parameters) in the query context|
 |[Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md)|Uses order of fields in [`dimensionsSpec`](ingestion-spec.md#dimensionsspec)|
 |[Native batch](native-batch.md) or [Hadoop](hadoop.md)|Uses order of fields in [`dimensionsSpec`](ingestion-spec.md#dimensionsspec)|
 

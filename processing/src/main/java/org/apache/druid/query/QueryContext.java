@@ -732,4 +732,9 @@ public class QueryContext
     }
     return override(queryContext.asMap());
   }
+
+  public boolean isPrePlanned()
+  {
+    return getBoolean(QueryContexts.CTX_PREPLANNED, QueryContexts.DEFAULT_PREPLANNED);
+  }
 }

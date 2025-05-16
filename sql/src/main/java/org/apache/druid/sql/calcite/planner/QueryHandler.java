@@ -462,7 +462,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       objectNode.set("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
       objectNode.set(
           "columnMappings",
-          jsonMapper.convertValue(QueryUtils.buildColumnMappings(relRoot.fields, druidQuery), ArrayNode.class));
+          jsonMapper.convertValue(QueryUtils.buildColumnMappings(relRoot.fields, druidQuery.getOutputRowSignature()).getMappings(), ArrayNode.class));
       nativeQueriesArrayNode.add(objectNode);
     }
 
@@ -539,7 +539,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     );
     QueryValidations.validateLogicalQueryForDruid(handlerContext.plannerContext(), parameterized);
     CalcitePlanner planner = handlerContext.planner();
-
     final RelDataType rowType = prepareResult.getReturnedRowType();
 
     if (plannerContext.getPlannerConfig()
@@ -556,6 +555,12 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       );
 
       plannerContext.dispatchHook(DruidHook.DRUID_PLAN, newRoot);
+
+      if (queryMaker instanceof QueryMaker.FromDruidLogical) {
+        QueryMaker.FromDruidLogical logicalQueryMaker = (QueryMaker.FromDruidLogical) queryMaker;
+        QueryResponse<Object[]> response = logicalQueryMaker.runQuery((DruidLogicalNode) newRoot);
+        return new PlannerResult(() -> response, rowType);
+      }
 
       DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, (DruidLogicalNode) newRoot, rexBuilder);
       DruidQuery baseQuery = generator.buildQuery();

@@ -105,6 +105,38 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelect1024pow4()
+  {
+    // This case is here to document the current behavior and not to test it.
+    // The fact that the signature is the same for both of them is misleading -
+    // not sure if it could cause problems.
+    RowSignature signature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+    ScanQuery scanQuery = Druids.newScanQueryBuilder()
+        .dataSource(
+            InlineDataSource.fromIterable(
+                ImmutableList.of(new Object[] {1099511627776L}),
+                signature
+            )
+        )
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns(signature)
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .build();
+    testBuilder()
+        .sql("SELECT cast(1024 as bigint)*1024*1024*1024")
+        .expectedQuery(scanQuery)
+        .expectedSignature(signature)
+        .expectedResults(ImmutableList.of(new Object[] {1099511627776L}))
+        .run();
+    testBuilder()
+        .sql("SELECT 1024*1024*1024*1024")
+        .expectedQuery(scanQuery)
+        .expectedSignature(signature)
+        .expectedResults(ImmutableList.of(new Object[] {0}))
+        .run();
+  }
+
+  @Test
   public void testExpressionContainingNull()
   {
     testQuery(

@@ -309,6 +309,24 @@ public class ControllerImpl implements Controller
     this.queryKitSpecFactory = queryKitSpecFactory;
   }
 
+
+  public ControllerImpl(
+      final String queryId,
+      final QueryDefMSQSpec querySpec,
+      final ResultsContext resultsContext,
+      final ControllerContext controllerContext,
+      final QueryKitSpecFactory queryKitSpecFactory
+  )
+  {
+    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
+    this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
+    this.legacyQuery = null;
+    this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
+    this.context = Preconditions.checkNotNull(controllerContext, "controllerContext");
+    this.queryKitSpecFactory = queryKitSpecFactory;
+  }
+
+
   @Override
   public String queryId()
   {
@@ -655,8 +673,7 @@ public class ControllerImpl implements Controller
               QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),
               queryId,
               querySpec.getTuningConfig(),
-              querySpec.getContext(),
-              queryKernelConfig
+              querySpec.getContext()
           )
       );
       queryDef = qkPlanner.makeQueryDefinition();
