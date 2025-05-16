@@ -686,6 +686,7 @@ FROM test_json_cols;
           "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "useApproximateCountDistinct" : "false",
           "windowFunctionOperatorTransformation" : true
         },
@@ -780,6 +781,7 @@ FROM test_json_cols;
           "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "useApproximateCountDistinct" : "false",
           "windowFunctionOperatorTransformation" : true
         },
@@ -874,6 +876,7 @@ FROM test_json_cols;
           "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "useApproximateCountDistinct" : "false",
           "windowFunctionOperatorTransformation" : true
         },
