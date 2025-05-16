@@ -26,11 +26,11 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                               last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                      count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                            ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                      last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                 ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                    count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
 FROM
   (SELECT server_ip,
           client_ip,
@@ -46,12 +46,12 @@ WHERE client_ip IN ('107.13.54.103',
 +--------------+---------------+----------+---------------------+-------+------+-----+
 | server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
 +--------------+---------------+----------+---------------------+-------+------+-----+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   3 |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   3 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
 | 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
 | 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   6 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   6 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
 | 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
 | 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
 +--------------+---------------+----------+---------------------+-------+------+-----+
@@ -126,16 +126,21 @@ WHERE client_ip IN ('107.13.54.103',
         "postAggregations" : [ {
           "type" : "expression",
           "name" : "p0",
+          "expression" : "timestamp_floor(\"d3\",'PT12H',null,'UTC')",
+          "outputType" : "LONG"
+        }, {
+          "type" : "expression",
+          "name" : "p1",
           "expression" : "timestamp_format(timestamp_floor(\"d3\",'PT12H',null,'UTC'),'yyyy-MM-dd HH:mm:ss','UTC')",
           "outputType" : "STRING"
         }, {
           "type" : "expression",
-          "name" : "p1",
+          "name" : "p2",
           "expression" : "strlen(\"d0\")",
           "outputType" : "LONG"
         }, {
           "type" : "expression",
-          "name" : "p2",
+          "name" : "p3",
           "expression" : "(CAST(strlen(\"d0\"), 'DOUBLE') + 0.123)",
           "outputType" : "DOUBLE"
         } ],
@@ -255,16 +260,21 @@ WHERE client_ip IN ('107.13.54.103',
         "postAggregations" : [ {
           "type" : "expression",
           "name" : "p0",
+          "expression" : "timestamp_floor(\"d3\",'PT12H',null,'UTC')",
+          "outputType" : "LONG"
+        }, {
+          "type" : "expression",
+          "name" : "p1",
           "expression" : "timestamp_format(timestamp_floor(\"d3\",'PT12H',null,'UTC'),'yyyy-MM-dd HH:mm:ss','UTC')",
           "outputType" : "STRING"
         }, {
           "type" : "expression",
-          "name" : "p1",
+          "name" : "p2",
           "expression" : "strlen(\"d0\")",
           "outputType" : "LONG"
         }, {
           "type" : "expression",
-          "name" : "p2",
+          "name" : "p3",
           "expression" : "(CAST(strlen(\"d0\"), 'DOUBLE') + 0.123)",
           "outputType" : "DOUBLE"
         } ],
@@ -296,12 +306,15 @@ WHERE client_ip IN ('107.13.54.103',
       "type" : "LONG"
     }, {
       "name" : "p0",
-      "type" : "STRING"
-    }, {
-      "name" : "p1",
       "type" : "LONG"
     }, {
+      "name" : "p1",
+      "type" : "STRING"
+    }, {
       "name" : "p2",
+      "type" : "LONG"
+    }, {
+      "name" : "p3",
       "type" : "DOUBLE"
     } ],
     "shuffleSpec" : {
@@ -387,16 +400,21 @@ WHERE client_ip IN ('107.13.54.103',
             "postAggregations" : [ {
               "type" : "expression",
               "name" : "p0",
+              "expression" : "timestamp_floor(\"d3\",'PT12H',null,'UTC')",
+              "outputType" : "LONG"
+            }, {
+              "type" : "expression",
+              "name" : "p1",
               "expression" : "timestamp_format(timestamp_floor(\"d3\",'PT12H',null,'UTC'),'yyyy-MM-dd HH:mm:ss','UTC')",
               "outputType" : "STRING"
             }, {
               "type" : "expression",
-              "name" : "p1",
+              "name" : "p2",
               "expression" : "strlen(\"d0\")",
               "outputType" : "LONG"
             }, {
               "type" : "expression",
-              "name" : "p2",
+              "name" : "p3",
               "expression" : "(CAST(strlen(\"d0\"), 'DOUBLE') + 0.123)",
               "outputType" : "DOUBLE"
             } ],
@@ -436,7 +454,7 @@ WHERE client_ip IN ('107.13.54.103',
           "name" : "d2",
           "type" : "STRING"
         }, {
-          "name" : "p0",
+          "name" : "p1",
           "type" : "STRING"
         }, {
           "name" : "w0",
@@ -457,10 +475,16 @@ WHERE client_ip IN ('107.13.54.103',
             "column" : "d0",
             "direction" : "ASC"
           }, {
-            "column" : "p1",
+            "column" : "p2",
             "direction" : "ASC"
           }, {
-            "column" : "p2",
+            "column" : "p3",
+            "direction" : "ASC"
+          }, {
+            "column" : "d2",
+            "direction" : "ASC"
+          }, {
+            "column" : "p0",
             "direction" : "ASC"
           } ]
         }, {
@@ -485,7 +509,7 @@ WHERE client_ip IN ('107.13.54.103',
                 "type" : "groups",
                 "lowerOffset" : null,
                 "upperOffset" : 0,
-                "orderByColumns" : [ "d0", "p1", "p2" ]
+                "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
               },
               "aggregations" : [ {
                 "type" : "filtered",
@@ -523,10 +547,16 @@ WHERE client_ip IN ('107.13.54.103',
           "column" : "d0",
           "direction" : "ASC"
         }, {
-          "column" : "p1",
+          "column" : "p2",
           "direction" : "ASC"
         }, {
-          "column" : "p2",
+          "column" : "p3",
+          "direction" : "ASC"
+        }, {
+          "column" : "d2",
+          "direction" : "ASC"
+        }, {
+          "column" : "p0",
           "direction" : "ASC"
         } ]
       }, {
@@ -548,7 +578,7 @@ WHERE client_ip IN ('107.13.54.103',
               "type" : "groups",
               "lowerOffset" : null,
               "upperOffset" : 0,
-              "orderByColumns" : [ "d0", "p1", "p2" ]
+              "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
             },
             "aggregations" : [ {
               "type" : "filtered",
@@ -581,7 +611,7 @@ WHERE client_ip IN ('107.13.54.103',
         "name" : "d2",
         "type" : "STRING"
       }, {
-        "name" : "p0",
+        "name" : "p1",
         "type" : "STRING"
       }, {
         "name" : "w0",
@@ -609,7 +639,7 @@ WHERE client_ip IN ('107.13.54.103',
       "name" : "d2",
       "type" : "STRING"
     }, {
-      "name" : "p0",
+      "name" : "p1",
       "type" : "STRING"
     }, {
       "name" : "w0",
@@ -668,16 +698,18 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip ASC,
-                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC);
+                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+-------+------+-----+
 | server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
 +--------------+---------------+----------+---------------------+-------+------+-----+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   3 |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   3 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
 | 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
 | 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   6 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   6 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
 | 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
 | 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
 +--------------+---------------+----------+---------------------+-------+------+-----+
@@ -752,16 +784,21 @@ WHERE client_ip IN ('107.13.54.103',
         "postAggregations" : [ {
           "type" : "expression",
           "name" : "p0",
+          "expression" : "timestamp_floor(\"d3\",'PT12H',null,'UTC')",
+          "outputType" : "LONG"
+        }, {
+          "type" : "expression",
+          "name" : "p1",
           "expression" : "timestamp_format(timestamp_floor(\"d3\",'PT12H',null,'UTC'),'yyyy-MM-dd HH:mm:ss','UTC')",
           "outputType" : "STRING"
         }, {
           "type" : "expression",
-          "name" : "p1",
+          "name" : "p2",
           "expression" : "strlen(\"d0\")",
           "outputType" : "LONG"
         }, {
           "type" : "expression",
-          "name" : "p2",
+          "name" : "p3",
           "expression" : "(CAST(strlen(\"d0\"), 'DOUBLE') + 0.123)",
           "outputType" : "DOUBLE"
         } ],
@@ -881,16 +918,21 @@ WHERE client_ip IN ('107.13.54.103',
         "postAggregations" : [ {
           "type" : "expression",
           "name" : "p0",
+          "expression" : "timestamp_floor(\"d3\",'PT12H',null,'UTC')",
+          "outputType" : "LONG"
+        }, {
+          "type" : "expression",
+          "name" : "p1",
           "expression" : "timestamp_format(timestamp_floor(\"d3\",'PT12H',null,'UTC'),'yyyy-MM-dd HH:mm:ss','UTC')",
           "outputType" : "STRING"
         }, {
           "type" : "expression",
-          "name" : "p1",
+          "name" : "p2",
           "expression" : "strlen(\"d0\")",
           "outputType" : "LONG"
         }, {
           "type" : "expression",
-          "name" : "p2",
+          "name" : "p3",
           "expression" : "(CAST(strlen(\"d0\"), 'DOUBLE') + 0.123)",
           "outputType" : "DOUBLE"
         } ],
@@ -922,12 +964,15 @@ WHERE client_ip IN ('107.13.54.103',
       "type" : "LONG"
     }, {
       "name" : "p0",
-      "type" : "STRING"
-    }, {
-      "name" : "p1",
       "type" : "LONG"
     }, {
+      "name" : "p1",
+      "type" : "STRING"
+    }, {
       "name" : "p2",
+      "type" : "LONG"
+    }, {
+      "name" : "p3",
       "type" : "DOUBLE"
     } ],
     "shuffleSpec" : {
@@ -1013,16 +1058,21 @@ WHERE client_ip IN ('107.13.54.103',
             "postAggregations" : [ {
               "type" : "expression",
               "name" : "p0",
+              "expression" : "timestamp_floor(\"d3\",'PT12H',null,'UTC')",
+              "outputType" : "LONG"
+            }, {
+              "type" : "expression",
+              "name" : "p1",
               "expression" : "timestamp_format(timestamp_floor(\"d3\",'PT12H',null,'UTC'),'yyyy-MM-dd HH:mm:ss','UTC')",
               "outputType" : "STRING"
             }, {
               "type" : "expression",
-              "name" : "p1",
+              "name" : "p2",
               "expression" : "strlen(\"d0\")",
               "outputType" : "LONG"
             }, {
               "type" : "expression",
-              "name" : "p2",
+              "name" : "p3",
               "expression" : "(CAST(strlen(\"d0\"), 'DOUBLE') + 0.123)",
               "outputType" : "DOUBLE"
             } ],
@@ -1062,7 +1112,7 @@ WHERE client_ip IN ('107.13.54.103',
           "name" : "d2",
           "type" : "STRING"
         }, {
-          "name" : "p0",
+          "name" : "p1",
           "type" : "STRING"
         }, {
           "name" : "w0",
@@ -1083,10 +1133,16 @@ WHERE client_ip IN ('107.13.54.103',
             "column" : "d0",
             "direction" : "ASC"
           }, {
-            "column" : "p1",
+            "column" : "p2",
             "direction" : "ASC"
           }, {
-            "column" : "p2",
+            "column" : "p3",
+            "direction" : "ASC"
+          }, {
+            "column" : "d2",
+            "direction" : "ASC"
+          }, {
+            "column" : "p0",
             "direction" : "ASC"
           } ]
         }, {
@@ -1111,7 +1167,7 @@ WHERE client_ip IN ('107.13.54.103',
                 "type" : "groups",
                 "lowerOffset" : null,
                 "upperOffset" : 0,
-                "orderByColumns" : [ "d0", "p1", "p2" ]
+                "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
               },
               "aggregations" : [ {
                 "type" : "filtered",
@@ -1149,10 +1205,16 @@ WHERE client_ip IN ('107.13.54.103',
           "column" : "d0",
           "direction" : "ASC"
         }, {
-          "column" : "p1",
+          "column" : "p2",
           "direction" : "ASC"
         }, {
-          "column" : "p2",
+          "column" : "p3",
+          "direction" : "ASC"
+        }, {
+          "column" : "d2",
+          "direction" : "ASC"
+        }, {
+          "column" : "p0",
           "direction" : "ASC"
         } ]
       }, {
@@ -1174,7 +1236,7 @@ WHERE client_ip IN ('107.13.54.103',
               "type" : "groups",
               "lowerOffset" : null,
               "upperOffset" : 0,
-              "orderByColumns" : [ "d0", "p1", "p2" ]
+              "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
             },
             "aggregations" : [ {
               "type" : "filtered",
@@ -1207,7 +1269,7 @@ WHERE client_ip IN ('107.13.54.103',
         "name" : "d2",
         "type" : "STRING"
       }, {
-        "name" : "p0",
+        "name" : "p1",
         "type" : "STRING"
       }, {
         "name" : "w0",
@@ -1235,7 +1297,7 @@ WHERE client_ip IN ('107.13.54.103',
       "name" : "d2",
       "type" : "STRING"
     }, {
-      "name" : "p0",
+      "name" : "p1",
       "type" : "STRING"
     }, {
       "name" : "w0",
@@ -1279,11 +1341,11 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                               last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                      count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                            ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                      last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                 ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                    count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1294,12 +1356,12 @@ GROUP BY server_ip,
 +--------------+---------------+----------+---------------------+-------+------+-----+
 | server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
 +--------------+---------------+----------+---------------------+-------+------+-----+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   3 |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   3 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
 | 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
 | 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   6 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   6 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
 | 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
 | 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
 +--------------+---------------+----------+---------------------+-------+------+-----+
@@ -1710,6 +1772,12 @@ GROUP BY server_ip,
           }, {
             "column" : "p2",
             "direction" : "ASC"
+          }, {
+            "column" : "d2",
+            "direction" : "ASC"
+          }, {
+            "column" : "d3",
+            "direction" : "ASC"
           } ]
         }, {
           "type" : "naivePartition",
@@ -1733,7 +1801,7 @@ GROUP BY server_ip,
                 "type" : "groups",
                 "lowerOffset" : null,
                 "upperOffset" : 0,
-                "orderByColumns" : [ "d0", "p1", "p2" ]
+                "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
               },
               "aggregations" : [ {
                 "type" : "filtered",
@@ -1776,6 +1844,12 @@ GROUP BY server_ip,
         }, {
           "column" : "p2",
           "direction" : "ASC"
+        }, {
+          "column" : "d2",
+          "direction" : "ASC"
+        }, {
+          "column" : "d3",
+          "direction" : "ASC"
         } ]
       }, {
         "type" : "window",
@@ -1796,7 +1870,7 @@ GROUP BY server_ip,
               "type" : "groups",
               "lowerOffset" : null,
               "upperOffset" : 0,
-              "orderByColumns" : [ "d0", "p1", "p2" ]
+              "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
             },
             "aggregations" : [ {
               "type" : "filtered",
@@ -1911,16 +1985,18 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
-                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC);
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+-------+------+-----+
 | server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
 +--------------+---------------+----------+---------------------+-------+------+-----+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   3 |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   3 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
 | 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
 | 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   6 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   6 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
 | 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
 | 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
 +--------------+---------------+----------+---------------------+-------+------+-----+
@@ -2331,6 +2407,12 @@ GROUP BY server_ip,
           }, {
             "column" : "p2",
             "direction" : "ASC"
+          }, {
+            "column" : "d2",
+            "direction" : "ASC"
+          }, {
+            "column" : "d3",
+            "direction" : "ASC"
           } ]
         }, {
           "type" : "naivePartition",
@@ -2354,7 +2436,7 @@ GROUP BY server_ip,
                 "type" : "groups",
                 "lowerOffset" : null,
                 "upperOffset" : 0,
-                "orderByColumns" : [ "d0", "p1", "p2" ]
+                "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
               },
               "aggregations" : [ {
                 "type" : "filtered",
@@ -2397,6 +2479,12 @@ GROUP BY server_ip,
         }, {
           "column" : "p2",
           "direction" : "ASC"
+        }, {
+          "column" : "d2",
+          "direction" : "ASC"
+        }, {
+          "column" : "d3",
+          "direction" : "ASC"
         } ]
       }, {
         "type" : "window",
@@ -2417,7 +2505,7 @@ GROUP BY server_ip,
               "type" : "groups",
               "lowerOffset" : null,
               "upperOffset" : 0,
-              "orderByColumns" : [ "d0", "p1", "p2" ]
+              "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
             },
             "aggregations" : [ {
               "type" : "filtered",

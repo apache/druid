@@ -26,7 +26,7 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        row_number() OVER (PARTITION BY client_ip
-                          ORDER BY server_ip, timezone) AS c
+                          ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
 FROM
   (SELECT server_ip,
           client_ip,
@@ -64,7 +64,7 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        row_number() OVER (PARTITION BY client_ip
-                          ORDER BY server_ip, timezone) AS c
+                          ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -110,7 +110,8 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip,
-                                                        timezone);
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+---+
 | server_ip    | client_ip     | timezone | t                   | c |
 +--------------+---------------+----------+---------------------+---+
@@ -143,7 +144,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone);
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+---+
 | server_ip    | client_ip     | timezone | t                   | c |
 +--------------+---------------+----------+---------------------+---+
@@ -182,7 +184,8 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW 123 AS (PARTITION BY client_ip
                                                  ORDER BY server_ip,
-                                                          timezone);
+                                                          timezone,
+                                                          time_floor(__time, 'PT12H'));
 QueryInterruptedException
 !error
 
@@ -202,7 +205,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW 123 AS (PARTITION BY client_ip
                                                     ORDER BY server_ip,
-                                                             timezone);
+                                                             timezone,
+                                                             time_floor(__time, 'PT12H'));
 QueryInterruptedException
 !error
 
@@ -228,7 +232,8 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW "123" AS (PARTITION BY client_ip
                                                    ORDER BY server_ip,
-                                                            timezone);
+                                                            timezone,
+                                                            time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+---+
 | server_ip    | client_ip     | timezone | t                   | c |
 +--------------+---------------+----------+---------------------+---+
@@ -261,7 +266,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW "123" AS (PARTITION BY client_ip
                                                       ORDER BY server_ip,
-                                                               timezone);
+                                                               timezone,
+                                                               time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+---+
 | server_ip    | client_ip     | timezone | t                   | c |
 +--------------+---------------+----------+---------------------+---+
@@ -300,7 +306,8 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip,
-                                                        timezone);
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
 Window 'doesntexist' not found
 !error
 
@@ -320,7 +327,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone);
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
 Window 'doesntexist' not found
 !error
 
