@@ -40,9 +40,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.SqlSegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.segment.SegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.audit.AuditManagerConfig;
 import org.apache.druid.server.audit.AuditSerdeHelper;
 import org.apache.druid.server.audit.SQLAuditManager;
@@ -78,6 +76,7 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(IndexerMetadataStorageCoordinator.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageActionHandlerFactory.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentMetadataCache.class), defaultValue);
 
     configureAuditManager(binder);
   }
@@ -99,13 +98,6 @@ public class SQLMetadataStorageDruidModule implements Module
             .addBinding(type)
             .to(SQLMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
-
-    // SegmentMetadataCache is bound for all services but is used only by the Overlord and Coordinator
-    // similar to some other classes bound here, such as IndexerSQLMetadataStorageCoordinator
-    binder.bind(SegmentMetadataCache.class)
-          .to(HeapMemorySegmentMetadataCache.class)
-          .in(LazySingleton.class);
-    binder.bind(SegmentSchemaCache.class).in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SegmentMetadataTransactionFactory.class))
             .addBinding(type)

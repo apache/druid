@@ -31,7 +31,6 @@ import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.DateTimes;
@@ -107,6 +106,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private static final int MIN_SYNC_DELAY_MILLIS = 1000;
   private static final int MAX_IMMEDIATE_SYNC_RETRIES = 3;
 
+  /**
+   * Delta sync fetches only the updates made after {@code previousSyncStartTime - syncWindow}.
+   * This duration should be enough to account for transaction retries, server
+   * clocks not being perfectly synced or any other case that might cause past
+   * records to appear.
+   */
+  private static final Duration DELTA_SYNC_WINDOW = Duration.standardHours(1);
+
   private enum CacheState
   {
     STOPPED, FOLLOWER, LEADER_FIRST_SYNC_PENDING, LEADER_FIRST_SYNC_STARTED, LEADER_READY
@@ -143,12 +150,15 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final ConcurrentHashMap<String, HeapMemoryDatasourceSegmentCache>
       datasourceToSegmentCache = new ConcurrentHashMap<>();
 
-  private final AtomicReference<DateTime> syncFinishTime = new AtomicReference<>();
+  /**
+   * Start time of the previous delta sync. This can be used to roughly identify
+   * the latest updated timestamp that is present in the cache.
+   */
+  private final AtomicReference<DateTime> previousSyncStartTime = new AtomicReference<>();
   private final AtomicReference<DataSourcesSnapshot> datasourcesSnapshot = new AtomicReference<>(null);
 
   @Inject
   public HeapMemorySegmentMetadataCache(
-      Set<NodeRole> nodeRoles,
       ObjectMapper jsonMapper,
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
@@ -163,7 +173,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.cacheMode = config.get().getCacheUsageMode();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
     this.tablesConfig = tablesConfig.get();
-    this.useSchemaCache = schemaConfig.get().isEnabled() && nodeRoles.contains(NodeRole.COORDINATOR);
+    this.useSchemaCache = schemaConfig.get().isEnabled() && segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()
@@ -218,7 +228,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.forEach((datasource, cache) -> cache.stop());
         datasourceToSegmentCache.clear();
         datasourcesSnapshot.set(null);
-        syncFinishTime.set(null);
+        previousSyncStartTime.set(null);
 
         updateCacheState(CacheState.STOPPED, "Stopped sync with metadata store");
       }
@@ -278,9 +288,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   @Override
   public void awaitNextSync(long timeoutMillis)
   {
-    final DateTime lastSyncTime = syncFinishTime.get();
+    final DateTime lastSyncTime = previousSyncStartTime.get();
     final Supplier<Boolean> lastSyncTimeIsNotUpdated =
-        () -> Objects.equals(syncFinishTime.get(), lastSyncTime);
+        () -> Objects.equals(previousSyncStartTime.get(), lastSyncTime);
 
     waitForCacheToFinishSyncWhile(lastSyncTimeIsNotUpdated, timeoutMillis);
   }
@@ -514,15 +524,17 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * <p>
    * The following actions are performed in every sync:
    * <ul>
-   * <li>Retrieve all used and unused segment IDs along with their updated timestamps</li>
+   * <li>Retrieve all used segment IDs along with their updated timestamps.</li>
+   * <li>Sync segment IDs in the cache with the retrieved segment IDs.</li>
    * <li>Retrieve payloads of used segments which have been updated in the metadata
    * store but not in the cache</li>
-   * <li>Retrieve all pending segments and update the cache as needed</li>
-   * <li>Remove segments not present in the metadata store</li>
-   * <li>Reset the max unused partition IDs</li>
-   * <li>Change the cache state to ready if it is leader and waiting for first sync</li>
+   * <li>Retrieve all pending segments and update the cache as needed.</li>
+   * <li>If schema caching is enabled, retrieve segment schemas updated since
+   * the last sync and update them in the {@link SegmentSchemaCache}.</li>
+   * <li>Change the cache state to ready if it is leader and waiting for first sync.</li>
    * <li>Emit metrics</li>
    * </ul>
+   * </p>
    *
    * @return Time taken in milliseconds for the sync to finish
    */
@@ -543,7 +555,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
 
     // Fetch all used segments if this is the first sync
-    if (syncFinishTime.get() == null) {
+    if (previousSyncStartTime.get() == null) {
       retrieveAllUsedSegments(datasourceToSummary);
     } else {
       retrieveUsedSegmentIds(datasourceToSummary);
@@ -555,15 +567,22 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     retrieveAllPendingSegments(datasourceToSummary);
     updatePendingSegmentsInCache(datasourceToSummary, syncStartTime);
 
-    if (syncFinishTime.get() == null) {
-      retrieveUsedSegmentSchemasUpdatedAfter(DateTimes.COMPARE_DATE_AS_STRING_MIN, datasourceToSummary);
+    final DateTime fetchUpdatesAfter = previousSyncStartTime.get();
+    if (fetchUpdatesAfter == null) {
+      retrieveUsedSegmentSchemasUpdatedAfter(
+          DateTimes.COMPARE_DATE_AS_STRING_MIN,
+          datasourceToSummary
+      );
     } else {
-      retrieveUsedSegmentSchemasUpdatedAfter(syncStartTime, datasourceToSummary);
+      retrieveUsedSegmentSchemasUpdatedAfter(
+          fetchUpdatesAfter.minus(DELTA_SYNC_WINDOW),
+          datasourceToSummary
+      );
     }
 
     markCacheSynced(syncStartTime);
 
-    syncFinishTime.set(DateTimes.nowUtc());
+    previousSyncStartTime.set(syncStartTime);
     return totalSyncDuration.millisElapsed();
   }
 

@@ -94,6 +94,14 @@ public class SegmentSchemaCache
    */
   private final AtomicInteger cacheMissCount = new AtomicInteger(0);
 
+  /**
+   * @return true if this cache is enabled.
+   */
+  public boolean isEnabled()
+  {
+    return true;
+  }
+
   public void setInitialized()
   {
     if (!isInitialized()) {

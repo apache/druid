@@ -99,7 +99,6 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
     emitter = new StubServiceEmitter();
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
-        Set.of(NodeRole.OVERLORD),
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
         derbyConnectorRule.metadataTablesConfigSupplier(),
