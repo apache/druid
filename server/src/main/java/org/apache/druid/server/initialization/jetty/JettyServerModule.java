@@ -127,6 +127,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(ForbiddenExceptionMapper.class).in(LazySingleton.class);
     binder.bind(BadRequestExceptionMapper.class).in(LazySingleton.class);
     binder.bind(ServiceUnavailableExceptionMapper.class).in(LazySingleton.class);
+    binder.bind(HttpExceptionMapper.class).in(LazySingleton.class);
 
     serve("/*").with(GuiceContainer.class);
 
