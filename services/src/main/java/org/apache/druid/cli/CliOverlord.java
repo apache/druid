@@ -50,6 +50,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
@@ -108,21 +109,14 @@ import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManag
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.input.InputSourceModule;
-import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
-import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
-import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.http.RedirectFilter;
@@ -200,6 +194,7 @@ public class CliOverlord extends ServerRunnable
   protected List<? extends Module> getModules(final boolean standalone)
   {
     return ImmutableList.of(
+        standalone ? new MetadataManagerModule() : binder -> {},
         new Module()
         {
           @Override
@@ -215,17 +210,6 @@ public class CliOverlord extends ServerRunnable
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
 
               binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
-              binder.bind(SegmentsMetadataManager.class)
-                    .toProvider(SegmentsMetadataManagerProvider.class)
-                    .in(ManageLifecycle.class);
-              binder.bind(CoordinatorConfigManager.class).in(LazySingleton.class);
-
-              binder.bind(SegmentMetadataCache.class)
-                    .to(HeapMemorySegmentMetadataCache.class)
-                    .in(LazySingleton.class);
-              binder.bind(SegmentSchemaCache.class)
-                    .to(NoopSegmentSchemaCache.class)
-                    .in(LazySingleton.class);
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);

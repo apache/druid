@@ -44,7 +44,6 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 
@@ -84,7 +83,6 @@ public class SegmentSchemaCacheModule implements Module
           .in(LazySingleton.class);
     binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
     binder.bind(QuerySegmentWalker.class).to(SegmentMetadataQuerySegmentWalker.class).in(LazySingleton.class);
-    binder.bind(SegmentSchemaCache.class).in(LazySingleton.class);
 
     LifecycleModule.register(binder, CoordinatorSegmentMetadataCache.class);
   }

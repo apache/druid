@@ -57,7 +57,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
-import org.apache.druid.guice.NoopSegmentMetadataCacheModule;
+import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -88,7 +88,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProviderImpl;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -100,7 +99,6 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -222,6 +220,7 @@ public class CliPeon extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new MetadataManagerModule(), // needed here only to support druid.peon.mode=local
         new PeonProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -384,8 +383,7 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
         new ChatHandlerServerModule(properties),
-        new LookupModule(),
-        new NoopSegmentMetadataCacheModule()
+        new LookupModule()
     );
   }
 
@@ -503,9 +501,6 @@ public class CliPeon extends GuiceRunnable
     JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
     binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
     binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-    binder.bind(IndexerMetadataStorageCoordinator.class)
-          .to(IndexerSQLMetadataStorageCoordinator.class)
-          .in(LazySingleton.class);
     taskActionBinder
         .addBinding("remote")
         .to(RemoteTaskActionClientFactory.class)
