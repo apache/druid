@@ -57,7 +57,7 @@ You can perform manual compaction where you submit a one-time compaction task fo
 |`segmentGranularity`|Deprecated. Use `granularitySpec`.|No|
 |`tuningConfig`|[Tuning configuration](../ingestion/native-batch.md#tuningconfig) for parallel indexing. `awaitSegmentAvailabilityTimeoutMillis` value is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
 |`granularitySpec`|When set, the compaction task uses the specified `granularitySpec` rather than generating one from existing segments. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
-|`context`|[Task context](../ingestion/tasks.md#context)|No|
+|`context`|[Task context](../ingestion/tasks.md#context-parameters)|No|
 
 :::info
  Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.

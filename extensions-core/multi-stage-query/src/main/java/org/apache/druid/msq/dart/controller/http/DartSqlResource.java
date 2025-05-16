@@ -31,8 +31,6 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
-import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
@@ -63,6 +61,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
