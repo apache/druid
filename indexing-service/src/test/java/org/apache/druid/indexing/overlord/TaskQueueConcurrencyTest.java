@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -55,11 +56,8 @@ import java.util.function.Supplier;
  */
 public class TaskQueueConcurrencyTest extends IngestionTestBase
 {
-  private static final String THREAD_NAME_FORMAT = "TaskQueueConcurrencyTest-%s";
-
   private TaskQueue taskQueue;
 
-  private int threadId;
   private Map<String, CriticalUpdate> threadToCriticalUpdate;
 
   @Override
@@ -67,7 +65,6 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   {
     super.setUpIngestionTestBase();
 
-    threadId = 0;
     threadToCriticalUpdate = new HashMap<>();
 
     taskQueue = new TaskQueue(
@@ -93,7 +90,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
       @Override
       TaskEntry addOrUpdateTaskEntry(String taskId, Function<TaskEntry, TaskEntry> updateOperation)
       {
-        // Use a modified update for this thread
+        // Use a modified update so that we can track and control the progress
         final String threadName = Thread.currentThread().getName();
         final CriticalUpdate criticalUpdate = threadToCriticalUpdate.get(threadName);
 
@@ -246,10 +243,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
   private UpdateAction update(Action action)
   {
-    final UpdateAction updateAction = new UpdateAction(action);
-    threadToCriticalUpdate.put(StringUtils.format(THREAD_NAME_FORMAT, threadId++), updateAction.critical);
-
-    return updateAction;
+    return new UpdateAction(action, (k, v) -> threadToCriticalUpdate.put(k, v));
   }
 
   private static Task createTask(String id)
@@ -276,8 +270,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
   /**
    * Wrapper around a critical update action on a task in the {@link TaskQueue}.
-   * This class is used to identify the current state of the update and pause or
-   * resume it to force certain race conditions.
+   * This class contains latches to track and control the progress of the update
+   * and verify behaviour in race conditions.
    */
   private static class CriticalUpdate
   {
@@ -334,12 +328,15 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     final CountDownLatch finished = new NamedLatch("finished");
     final CriticalUpdate critical = new CriticalUpdate();
 
+    final BiConsumer<String, CriticalUpdate> mapThreadNameToUpdate;
+
     final Action action;
     Action verifyAction;
 
-    UpdateAction(Action action)
+    UpdateAction(Action action, BiConsumer<String, CriticalUpdate> mapThreadNameToUpdate)
     {
       this.action = action;
+      this.mapThreadNameToUpdate = mapThreadNameToUpdate;
     }
 
     UpdateAction withEndState(Action verifyAction)
@@ -350,6 +347,9 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
     void perform()
     {
+      // Map the thread name to the CriticalUpdate so that it can be invoked later in this thread
+      mapThreadNameToUpdate.accept(Thread.currentThread().getName(), critical);
+
       try {
         action.perform();
         finished.countDown();
