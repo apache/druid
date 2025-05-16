@@ -43,9 +43,6 @@ module.exports={
   "onBrokenMarkdownLinks": "throw",
   markdown: {
     mermaid: true,
-    mdx1Compat: {
-      admonitions: false,
-    },    
   },
   "presets": [
     [
