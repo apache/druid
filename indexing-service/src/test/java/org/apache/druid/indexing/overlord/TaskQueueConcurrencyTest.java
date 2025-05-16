@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestDataSource;
@@ -45,6 +46,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Unit tests to verify that operations performed on {@link TaskQueue} for a
@@ -99,7 +101,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
                ? super.addOrUpdateTaskEntry(taskId, updateOperation)
                : super.addOrUpdateTaskEntry(
                    taskId,
-                   existing -> criticalUpdate.apply(existing, updateOperation)
+                   existing -> criticalUpdate.perform(() -> updateOperation.apply(existing))
                );
       }
     };
@@ -114,15 +116,17 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     final Task task = createTask(taskId);
 
     ActionVerifier.verifyThat(
-        update(() -> taskQueue.add(task))
-            .withEndState(
-                () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
-            )
+        update(
+            () -> taskQueue.add(task)
+        ).withEndState(
+            () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
+        )
     ).blocks(
-        update(() -> taskQueue.syncFromStorage())
-            .withEndState(
-                () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
-            )
+        update(
+            () -> taskQueue.syncFromStorage()
+        ).withEndState(
+            () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
+        )
     );
   }
 
@@ -277,27 +281,28 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
    */
   private static class CriticalUpdate
   {
-    final CountDownLatch hasStarted = new NamedLatch("hasStarted");
-    final CountDownLatch resume = new NamedLatch("resume");
+    final CountDownLatch isReadyToStart = new NamedLatch("hasStarted");
+    final CountDownLatch start = new NamedLatch("resume");
 
     final CountDownLatch isReadyToFinish = new NamedLatch("isReadyToFinish");
     final CountDownLatch finish = new NamedLatch("finish");
 
-    TaskQueue.TaskEntry apply(
-        TaskQueue.TaskEntry existingEntry,
-        Function<TaskQueue.TaskEntry, TaskQueue.TaskEntry> updateOperation
-    )
+    synchronized <V> V perform(Supplier<V> updateComputation)
     {
-      hasStarted.countDown();
-      waitFor(resume);
+      if (isReadyToStart.getCount() == 0) {
+        throw new ISE("Update has already run on another thread");
+      }
+
+      isReadyToStart.countDown();
+      waitFor(start);
 
       // Actual update operation
-      final TaskQueue.TaskEntry updatedEntry = updateOperation.apply(existingEntry);
+      final V updatedValue = updateComputation.get();
 
       isReadyToFinish.countDown();
       waitFor(finish);
 
-      return updatedEntry;
+      return updatedValue;
     }
   }
 
@@ -385,7 +390,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
       // Start update 1 and wait for it to enter critical section
       executor.submit(update1::perform);
-      waitFor(update1.critical.hasStarted);
+      waitFor(update1.critical.isReadyToStart);
 
       executor.submit(update2::perform);
 
@@ -396,22 +401,22 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
       catch (Exception e) {
         throw new RuntimeException(e);
       }
-      Assert.assertEquals(1, update2.critical.hasStarted.getCount());
+      Assert.assertEquals(1, update2.critical.isReadyToStart.getCount());
 
-      update1.critical.resume.countDown();
+      update1.critical.start.countDown();
 
       // Wait for update 1 critical to reach finish
       // and verify that update 2 critical has not started yet
       waitFor(update1.critical.isReadyToFinish);
-      Assert.assertEquals(1, update2.critical.hasStarted.getCount());
+      Assert.assertEquals(1, update2.critical.isReadyToStart.getCount());
 
       // Finish update 1 and verify that update 2 critical has now started
       update1.critical.finish.countDown();
-      waitFor(update2.critical.hasStarted);
+      waitFor(update2.critical.isReadyToStart);
 
       update1.waitToFinishAndVerify();
 
-      update2.critical.resume.countDown();
+      update2.critical.start.countDown();
       waitFor(update2.critical.isReadyToFinish);
       update2.critical.finish.countDown();
 
