@@ -844,7 +844,7 @@
             <dependency>
                 <groupId>com.lmax</groupId>
                 <artifactId>disruptor</artifactId>
-                <version>3.3.6</version>
+                <version>4.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
