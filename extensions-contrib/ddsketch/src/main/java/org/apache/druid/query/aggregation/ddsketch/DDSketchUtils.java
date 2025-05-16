@@ -31,6 +31,8 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 public class DDSketchUtils
 {
+  private static final byte[] EMPTY_BYTES = new byte[0];
+
   // Class is not meant to be instantiated
   private DDSketchUtils()
   {
@@ -43,15 +45,13 @@ public class DDSketchUtils
         String str = (String) serializedSketch;
         byte[] bytes = StringUtils.decodeBase64(StringUtils.toUtf8(str));
         com.datadoghq.sketch.ddsketch.proto.DDSketch proto = com.datadoghq.sketch.ddsketch.proto.DDSketch.parseFrom(bytes);
-        DDSketch recovered = DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
-        return recovered;
+        return DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
       } else if (serializedSketch instanceof byte[]) {
         com.datadoghq.sketch.ddsketch.proto.DDSketch proto = com.datadoghq.sketch.ddsketch.proto.DDSketch.parseFrom((byte[]) serializedSketch);
-        DDSketch recovered = DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
-        return recovered;
-      } 
+        return DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
+      }
     }
-    catch (InvalidProtocolBufferException e) {
+    catch (InvalidProtocolBufferException | IllegalArgumentException e) {
       throw new IAE(
           "Object cannot be deserialized to a DDSketch Sketch: "
           + serializedSketch.getClass()
@@ -68,6 +68,14 @@ public class DDSketchUtils
 
   static byte[] toBytes(DDSketch sketch)
   {
+    if (sketch == null) {
+      return EMPTY_BYTES;
+    }
+
+    if (sketch.isEmpty()) {
+      return EMPTY_BYTES;
+    }
+
     return DDSketchProtoBinding.toProto(sketch).toByteArray();
   }
 
