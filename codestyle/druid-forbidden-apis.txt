@@ -53,6 +53,7 @@ org.apache.calcite.sql.type.OperandTypes#POSITIVE_INTEGER_LITERAL @ Use org.apac
 org.apache.calcite.sql.type.OperandTypes#UNIT_INTERVAL_NUMERIC_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
 org.apache.calcite.sql.type.OperandTypes#NUMERIC_UNIT_INTERVAL_NUMERIC_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
 org.apache.calcite.sql.type.OperandTypes#NULLABLE_LITERAL @ Create an instance of org.apache.calcite.sql.type.CastedLiteralOperandTypeChecker that allows nulls and use that instead
+org.apache.commons.io.Charsets @ Use java.nio.charset.StandardCharsets instead
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
 org.apache.commons.io.FileUtils#deleteDirectory(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils#deleteDirectory()
 org.apache.commons.io.FileUtils#forceMkdir(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
@@ -74,3 +75,4 @@ javax.annotation.concurrent.GuardedBy
 com.amazonaws.annotation.GuardedBy
 
 org.powermock.** @ Use Mockito instead of Powermock for compatibility with newer Java versions
+org.apache.curator.shaded.** @ Use regular classes, not shaded versions

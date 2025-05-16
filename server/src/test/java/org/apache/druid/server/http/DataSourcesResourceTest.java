@@ -29,7 +29,6 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.commons.io.Charsets;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DataSourcesSnapshot;
@@ -87,6 +86,7 @@ import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -737,7 +737,7 @@ public class DataSourcesResourceTest
 
     final StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
-        Charsets.UTF_8
+        StandardCharsets.UTF_8
     );
     EasyMock.expect(overlordClient.markSegmentAsUsed(segment.getId()))
             .andThrow(new RuntimeException(new HttpResponseException(responseHolder))).once();
