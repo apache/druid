@@ -85,6 +85,9 @@ public class LegacyMSQSpec extends MSQSpec
 
   public LegacyMSQSpec withOverriddenContext(Map<String, Object> contextOverride)
   {
+    if (contextOverride == null || contextOverride.isEmpty()) {
+      return this;
+    }
     return new LegacyMSQSpec(
         query.withOverriddenContext(contextOverride),
         getColumnMappings(),

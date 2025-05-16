@@ -56,7 +56,7 @@ public class NotYetSupportedUsageTest
 
   private Set<Method> getAnnotatedMethods()
   {
-    return new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())
+    return new Reflections("org.apache.druid", new MethodAnnotationsScanner())
         .getMethodsAnnotatedWith(NotYetSupported.class);
   }
 

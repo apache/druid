@@ -39,9 +39,11 @@ import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
+import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
+import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -50,14 +52,15 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
@@ -92,7 +95,7 @@ public class DartQueryMaker implements QueryMaker
 {
   private static final Logger log = new Logger(DartQueryMaker.class);
 
-  private final List<Entry<Integer, String>> fieldMapping;
+  final List<Entry<Integer, String>> fieldMapping;
   private final DartControllerContextFactory controllerContextFactory;
   private final PlannerContext plannerContext;
 
@@ -113,6 +116,8 @@ public class DartQueryMaker implements QueryMaker
   private final ExecutorService controllerExecutor;
   private final ServerConfig serverConfig;
 
+  final QueryKitSpecFactory queryKitSpecFactory;
+
   public DartQueryMaker(
       List<Entry<Integer, String>> fieldMapping,
       DartControllerContextFactory controllerContextFactory,
@@ -120,6 +125,7 @@ public class DartQueryMaker implements QueryMaker
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
       ExecutorService controllerExecutor,
+      QueryKitSpecFactory queryKitSpecFactory,
       ServerConfig serverConfig
   )
   {
@@ -129,48 +135,93 @@ public class DartQueryMaker implements QueryMaker
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
+    this.queryKitSpecFactory = queryKitSpecFactory;
     this.serverConfig = serverConfig;
   }
 
   @Override
   public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
-    final List<Pair<SqlTypeName, ColumnType>> types =
-        MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
-
-    final String dartQueryId = druidQuery.getQuery().context().getString(QueryContexts.CTX_DART_QUERY_ID);
-    final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
-    final ResultsContext resultsContext = new ResultsContext(
-        types.stream().map(p -> p.lhs).collect(Collectors.toList()),
-        SqlResults.Context.fromPlannerContext(plannerContext)
-    );
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
     final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
         null,
         druidQuery,
         finalizeTimeout(druidQuery.getQuery().context()),
-        fieldMapping,
+        columnMappings,
         plannerContext,
-        null // Only used for DML, which this isn't
+        null
     );
+
+
+    final ResultsContext resultsContext = MSQTaskQueryMaker.makeResultsContext(druidQuery, fieldMapping, plannerContext);
+
+    return runLegacyMSQSpec(querySpec, druidQuery.getQuery().context(), resultsContext);
+  }
+
+  public static ResultsContext makeResultsContext(DruidQuery druidQuery, List<Entry<Integer, String>> fieldMapping,
+      PlannerContext plannerContext)
+  {
+    final List<Pair<SqlTypeName, ColumnType>> types = MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
+    final ResultsContext resultsContext = new ResultsContext(
+        types.stream().map(p -> p.lhs).collect(Collectors.toList()),
+        SqlResults.Context.fromPlannerContext(plannerContext)
+    );
+    return resultsContext;
+  }
+
+  private ControllerImpl makeLegacyController(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final String dartQueryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
+    final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
 
     final ControllerImpl controller = new ControllerImpl(
         dartQueryId,
         querySpec,
         resultsContext,
         controllerContext,
-        new DartQueryKitSpecFactory()
-    );
+        queryKitSpecFactory
 
+    );
+    return controller;
+  }
+
+  private ControllerImpl makeQueryDefController(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final String dartQueryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
+    final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
+
+
+    final ControllerImpl controller = new ControllerImpl(
+        dartQueryId,
+        querySpec,
+        resultsContext,
+        controllerContext,
+        queryKitSpecFactory
+    );
+    return controller;
+  }
+
+  public QueryResponse<Object[]> runLegacyMSQSpec(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final ControllerImpl controller = makeLegacyController(querySpec, context, resultsContext);
+    return runController(controller, context.getFullReport());
+  }
+
+  public QueryResponse<Object[]> runQueryDefMSQSpec(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final ControllerImpl controller = makeQueryDefController(querySpec, context, resultsContext);
+    return runController(controller, context.getFullReport());
+  }
+
+  private QueryResponse<Object[]> runController(final ControllerImpl controller, final boolean fullReport)
+  {
     final ControllerHolder controllerHolder = new ControllerHolder(
         controller,
         plannerContext.getSqlQueryId(),
         plannerContext.getSql(),
-        controllerContext.selfNode().getHostAndPortToUse(),
         plannerContext.getAuthenticationResult(),
         DateTimes.nowUtc()
     );
-
-    final boolean fullReport = druidQuery.getQuery().context().getFullReport();
 
     // Register controller before submitting anything to controllerExeuctor, so it shows up in
     // "active controllers" lists.

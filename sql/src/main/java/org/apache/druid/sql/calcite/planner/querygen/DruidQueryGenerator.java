@@ -73,7 +73,7 @@ public class DruidQueryGenerator
    * Its main purpose is to provide access to parent nodes;
    * so that context sensitive logics can be formalized with it.
    */
-  static class DruidNodeStack
+  public static class DruidNodeStack
   {
     static class Entry
     {
@@ -109,7 +109,7 @@ public class DruidQueryGenerator
       return stack.size();
     }
 
-    public DruidLogicalNode peekNode()
+    public DruidLogicalNode getNode()
     {
       return stack.peek().node;
     }
@@ -142,7 +142,7 @@ public class DruidQueryGenerator
   {
     List<Vertex> newInputs = new ArrayList<>();
 
-    for (RelNode input : stack.peekNode().getInputs()) {
+    for (RelNode input : stack.getNode().getInputs()) {
       stack.push((DruidLogicalNode) input, newInputs.size());
       newInputs.add(buildVertexFor(stack));
       stack.pop();
@@ -153,7 +153,7 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(DruidNodeStack stack, List<Vertex> newInputs)
   {
-    DruidLogicalNode node = stack.peekNode();
+    DruidLogicalNode node = stack.getNode();
     if (node instanceof SourceDescProducer) {
       return vertexFactory.createVertex(stack, PartialDruidQuery.create(node), newInputs);
     }
@@ -386,7 +386,7 @@ public class DruidQueryGenerator
        */
       private Optional<PartialDruidQuery> extendPartialDruidQuery(DruidNodeStack stack)
       {
-        DruidLogicalNode parentNode = stack.peekNode();
+        DruidLogicalNode parentNode = stack.getNode();
         if (accepts(stack, Stage.WHERE_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
@@ -428,7 +428,7 @@ public class DruidQueryGenerator
 
       private boolean accepts(DruidNodeStack stack, Stage stage, Class<? extends RelNode> clazz)
       {
-        DruidLogicalNode currentNode = stack.peekNode();
+        DruidLogicalNode currentNode = stack.getNode();
         if (Project.class == clazz && stack.size() >= 2) {
           // peek at parent and postpone project for next query stage
           DruidLogicalNode parentNode = stack.parentNode();
