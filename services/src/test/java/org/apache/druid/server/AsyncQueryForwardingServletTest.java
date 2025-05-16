@@ -633,7 +633,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       @Override
       public HttpFields getHeaders()
       {
-        HttpFields httpFields = new HttpFields();
+        HttpFields.Mutable httpFields = HttpFields.build();
         if (isJDBCSql) {
           httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "jdbcDummy"));
         } else if (isNativeSql) {

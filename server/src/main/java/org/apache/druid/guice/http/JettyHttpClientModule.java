@@ -28,6 +28,8 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.dynamic.HttpClientTransportDynamic;
+import org.eclipse.jetty.io.ClientConnector;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
@@ -80,7 +82,9 @@ public class JettyHttpClientModule implements Module
       if (sslContextBinding != null) {
         final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
         sslContextFactory.setSslContext(sslContextBinding.getProvider().get());
-        httpClient = new HttpClient(sslContextFactory);
+        ClientConnector clientConnector = new ClientConnector();
+        clientConnector.setSslContextFactory(sslContextFactory);
+        httpClient = new HttpClient(new HttpClientTransportDynamic(clientConnector));
       } else {
         httpClient = new HttpClient();
       }

@@ -66,7 +66,7 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
-  private final HttpFields trailerFields;
+  private final HttpFields.Mutable trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
   private AsyncContext asyncContext;
@@ -91,7 +91,7 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
-    this.trailerFields = new HttpFields();
+    this.trailerFields = HttpFields.build();
   }
 
   /**

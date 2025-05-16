@@ -34,6 +34,8 @@ import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.util.compression.CompressionPool;
+import org.eclipse.jetty.util.compression.DeflaterPool;
 
 import javax.ws.rs.HttpMethod;
 
@@ -51,10 +53,8 @@ public class JettyServerInitUtils
     gzipHandler.setMinGzipSize(0);
     gzipHandler.setIncludedMethods(GZIP_METHODS);
     gzipHandler.setInflateBufferSize(inflateBufferSize);
-    gzipHandler.setCompressionLevel(compressionLevel);
+    gzipHandler.setDeflaterPool(new DeflaterPool(CompressionPool.DEFAULT_CAPACITY, compressionLevel, true));
 
-    // We don't actually have any precomputed .gz resources, and checking for them inside jars is expensive.
-    gzipHandler.setCheckGzExists(false);
     gzipHandler.setHandler(handler);
     return gzipHandler;
   }

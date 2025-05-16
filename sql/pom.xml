@@ -86,6 +86,11 @@
           <groupId>org.eclipse.jetty</groupId>
           <artifactId>jetty-http</artifactId>
         </exclusion>
+        <exclusion>
+          <!-- javax.servlet.* will be provided as core dependncy in this module -->
+          <groupId>javax.servlet</groupId>
+          <artifactId>javax.servlet-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

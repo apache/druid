@@ -363,7 +363,7 @@ public class JettyServerModule extends JerseyServletModule
     if (gracefulStop > 0) {
       server.setStopTimeout(gracefulStop);
     }
-    server.addLifeCycleListener(new LifeCycle.Listener()
+    server.addEventListener(new LifeCycle.Listener()
     {
       @Override
       public void lifeCycleStarting(LifeCycle event)

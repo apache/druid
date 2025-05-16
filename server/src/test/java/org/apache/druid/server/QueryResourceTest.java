@@ -477,13 +477,13 @@ public class QueryResourceTest
     Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
 
     final HttpFields fields = response.getTrailers().get();
-    Assert.assertTrue(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+    Assert.assertTrue(fields.contains(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
     Assert.assertEquals(
         fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
         "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query."
     );
 
-    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertTrue(fields.contains(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
     Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "false");
   }
 
@@ -522,9 +522,9 @@ public class QueryResourceTest
     Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
 
     final HttpFields fields = response.getTrailers().get();
-    Assert.assertFalse(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+    Assert.assertFalse(fields.contains(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
 
-    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertTrue(fields.contains(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
     Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
   }
 
