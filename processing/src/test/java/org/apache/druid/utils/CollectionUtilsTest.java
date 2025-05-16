@@ -29,6 +29,9 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class CollectionUtilsTest
@@ -94,5 +97,18 @@ public class CollectionUtilsTest
         () -> CollectionUtils.getOnlyElement(ImmutableList.of("a", "b"), xs -> new ISE("oops"))
     );
     MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("oops")));
+  }
+
+  @Test
+  public void test_toMap()
+  {
+    Assert.assertEquals(
+        Map.of("a", "A", "b", "B"),
+        CollectionUtils.toMap(
+            List.of("a", "b"),
+            entry -> entry,
+            entry -> entry.toUpperCase(Locale.ROOT)
+        )
+    );
   }
 }
