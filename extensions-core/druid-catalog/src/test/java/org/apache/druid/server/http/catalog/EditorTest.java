@@ -21,7 +21,7 @@ package org.apache.druid.server.http.catalog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.http.TableEditRequest;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
