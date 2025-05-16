@@ -109,4 +109,11 @@ public interface SqlEngine
       RelRoot relRoot,
       PlannerContext plannerContext
   ) throws ValidationException;
+
+  /**
+   * Enables the engine to make changes to the Context.
+   */
+  default void initContextMap(Map<String, Object> contextMap)
+  {
+  }
 }

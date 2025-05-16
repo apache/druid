@@ -30,8 +30,6 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
 
-import java.util.UUID;
-
 @SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
 public class CalciteDartTest extends BaseCalciteQueryTest
 {
@@ -41,7 +39,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .queryContext(
             ImmutableMap.<String, Object>builder()
-                .put(QueryContexts.CTX_DART_QUERY_ID, UUID.randomUUID().toString())
                 .put(QueryContexts.ENABLE_DEBUG, true)
                 .build()
         )
