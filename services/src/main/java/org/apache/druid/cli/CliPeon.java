@@ -57,7 +57,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
-import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -74,12 +73,9 @@ import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
-import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
-import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStorageShuffleClient;
@@ -87,10 +83,8 @@ import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProviderImpl;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
-import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
@@ -220,7 +214,6 @@ public class CliPeon extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
-        new MetadataManagerModule(), // needed here only to support druid.peon.mode=local
         new PeonProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -485,26 +478,9 @@ public class CliPeon extends GuiceRunnable
 
   private static void configureTaskActionClient(Binder binder)
   {
-    PolyBind.createChoice(
-        binder,
-        "druid.peon.mode",
-        Key.get(TaskActionClientFactory.class),
-        Key.get(RemoteTaskActionClientFactory.class)
-    );
-    final MapBinder<String, TaskActionClientFactory> taskActionBinder =
-        PolyBind.optionBinder(binder, Key.get(TaskActionClientFactory.class));
-    taskActionBinder
-        .addBinding("local")
-        .to(LocalTaskActionClientFactory.class)
-        .in(LazySingleton.class);
-    // all of these bindings are so that we can run the peon in local mode
-    JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
-    binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
-    binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-    taskActionBinder
-        .addBinding("remote")
-        .to(RemoteTaskActionClientFactory.class)
-        .in(LazySingleton.class);
+    binder.bind(TaskActionClientFactory.class)
+          .to(RemoteTaskActionClientFactory.class)
+          .in(LazySingleton.class);
 
     binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.PEON);
   }

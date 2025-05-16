@@ -47,6 +47,7 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentSchemaCacheModule;
@@ -141,7 +142,7 @@ public class CliCoordinator extends ServerRunnable
   {
     this.properties = properties;
     beOverlord = isOverlord(properties);
-    isSegmentSchemaCacheEnabled = isSegmentSchemaCacheEnabled(properties);
+    isSegmentSchemaCacheEnabled = MetadataConfigModule.isSegmentSchemaCacheEnabled(properties);
 
     if (beOverlord) {
       log.info("Coordinator is configured to act as Overlord as well (%s = true).", AS_OVERLORD_PROPERTY);

@@ -23,9 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -34,10 +31,6 @@ import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.query.DruidMetrics;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.TransactionStatus;
-
-import java.util.Set;
 
 /**
  * Factory for {@link SegmentMetadataTransaction}s. If the
@@ -56,21 +49,14 @@ import java.util.Set;
  * now, it continues to read directly from the metadata store for consistency
  * with older Druid versions.
  */
-public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTransactionFactory
+public class SqlSegmentMetadataTransactionFactory extends SqlSegmentMetadataReadOnlyTransactionFactory
 {
   private static final Logger log = new Logger(SqlSegmentMetadataTransactionFactory.class);
 
-  private static final int QUIET_RETRIES = 2;
-  private static final int MAX_RETRIES = 3;
-
-  private final ObjectMapper jsonMapper;
-  private final MetadataStorageTablesConfig tablesConfig;
   private final SQLMetadataConnector connector;
   private final DruidLeaderSelector leaderSelector;
   private final SegmentMetadataCache segmentMetadataCache;
   private final ServiceEmitter emitter;
-
-  private final boolean isNotOverlord;
 
   @Inject
   public SqlSegmentMetadataTransactionFactory(
@@ -78,24 +64,15 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
       MetadataStorageTablesConfig tablesConfig,
       SQLMetadataConnector connector,
       @IndexingService DruidLeaderSelector leaderSelector,
-      @Self Set<NodeRole> nodeRoles,
       SegmentMetadataCache segmentMetadataCache,
       ServiceEmitter emitter
   )
   {
-    this.jsonMapper = jsonMapper;
-    this.tablesConfig = tablesConfig;
+    super(jsonMapper, tablesConfig, connector);
     this.connector = connector;
     this.leaderSelector = leaderSelector;
     this.segmentMetadataCache = segmentMetadataCache;
     this.emitter = emitter;
-
-    this.isNotOverlord = !nodeRoles.contains(NodeRole.OVERLORD);
-  }
-
-  public int getMaxRetries()
-  {
-    return MAX_RETRIES;
   }
 
   @Override
@@ -109,10 +86,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
-          if (isNotOverlord) {
-            // Read directly from the metadata store if not Overlord
-            return executeReadAndClose(sqlTransaction, callback);
-          } else if (segmentMetadataCache.isSyncedForRead()) {
+          if (segmentMetadataCache.isSyncedForRead()) {
             // Use cache as it is already synced with the metadata store
             emitTransactionCount(Metric.READ_ONLY_TRANSACTIONS, dataSource);
             return segmentMetadataCache.readCacheForDataSource(dataSource, dataSourceCache -> {
@@ -124,7 +98,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
             return executeReadAndClose(sqlTransaction, callback);
           }
         },
-        QUIET_RETRIES,
+        getQuietRetries(),
         getMaxRetries()
     );
   }
@@ -135,10 +109,6 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
       SegmentMetadataTransaction.Callback<T> callback
   )
   {
-    if (isNotOverlord) {
-      throw DruidException.defensive("Only Overlord can perform write transactions on segment metadata.");
-    }
-
     return connector.retryTransaction(
         (handle, status) -> {
           final SegmentMetadataTransaction sqlTransaction
@@ -167,20 +137,8 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
             return executeWriteAndClose(sqlTransaction, callback);
           }
         },
-        QUIET_RETRIES,
+        getQuietRetries(),
         getMaxRetries()
-    );
-  }
-
-  private SegmentMetadataTransaction createSqlTransaction(
-      String dataSource,
-      Handle handle,
-      TransactionStatus transactionStatus
-  )
-  {
-    return new SqlSegmentMetadataTransaction(
-        dataSource,
-        handle, transactionStatus, connector, tablesConfig, jsonMapper
     );
   }
 
@@ -198,16 +156,6 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
     }
     finally {
       transaction.close();
-    }
-  }
-
-  private <T> T executeReadAndClose(
-      SegmentMetadataReadTransaction transaction,
-      SegmentMetadataReadTransaction.Callback<T> callback
-  ) throws Exception
-  {
-    try (transaction) {
-      return callback.inTransaction(transaction);
     }
   }
 

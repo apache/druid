@@ -162,7 +162,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       ObjectMapper jsonMapper,
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
-      Supplier<CentralizedDatasourceSchemaConfig> schemaConfig,
       SegmentSchemaCache segmentSchemaCache,
       SQLMetadataConnector connector,
       ScheduledExecutorFactory executorFactory,
@@ -173,7 +172,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.cacheMode = config.get().getCacheUsageMode();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
     this.tablesConfig = tablesConfig.get();
-    this.useSchemaCache = schemaConfig.get().isEnabled() && segmentSchemaCache.isEnabled();
+    this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()

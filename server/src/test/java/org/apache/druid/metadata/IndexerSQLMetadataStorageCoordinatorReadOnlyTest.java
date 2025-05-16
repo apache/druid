@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.segment.SegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataReadOnlyTransactionFactory;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
@@ -102,7 +103,6 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        () -> CentralizedDatasourceSchemaConfig.enabled(false),
         new SegmentSchemaCache(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
@@ -154,15 +154,23 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
       NodeRole nodeRole
   )
   {
-    final SegmentMetadataTransactionFactory transactionFactory = new SqlSegmentMetadataTransactionFactory(
-        mapper,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnector,
-        leaderSelector,
-        Set.of(nodeRole),
-        segmentMetadataCache,
-        emitter
-    );
+    final SegmentMetadataTransactionFactory transactionFactory;
+    if (nodeRole.equals(NodeRole.COORDINATOR)) {
+      transactionFactory = new SqlSegmentMetadataReadOnlyTransactionFactory(
+          mapper,
+          derbyConnectorRule.metadataTablesConfigSupplier().get(),
+          derbyConnector
+      );
+    } else {
+      transactionFactory = new SqlSegmentMetadataTransactionFactory(
+          mapper,
+          derbyConnectorRule.metadataTablesConfigSupplier().get(),
+          derbyConnector,
+          leaderSelector,
+          segmentMetadataCache,
+          emitter
+      );
+    }
 
     return new IndexerSQLMetadataStorageCoordinator(
         transactionFactory,

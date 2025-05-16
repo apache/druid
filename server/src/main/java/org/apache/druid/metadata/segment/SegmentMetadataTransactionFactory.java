@@ -41,29 +41,4 @@ public interface SegmentMetadataTransactionFactory
       String dataSource,
       SegmentMetadataTransaction.Callback<T> callback
   );
-
-  /**
-   * No-op instance of {@link SegmentMetadataTransactionFactory} which does not
-   * support any operation.
-   */
-  SegmentMetadataTransactionFactory NOOP = new SegmentMetadataTransactionFactory()
-  {
-    @Override
-    public <T> T inReadOnlyDatasourceTransaction(
-        String dataSource,
-        SegmentMetadataReadTransaction.Callback<T> callback
-    )
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T> T inReadWriteDatasourceTransaction(
-        String dataSource,
-        SegmentMetadataTransaction.Callback<T> callback
-    )
-    {
-      throw new UnsupportedOperationException();
-    }
-  };
 }

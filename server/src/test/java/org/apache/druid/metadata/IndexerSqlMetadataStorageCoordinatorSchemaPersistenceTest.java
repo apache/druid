@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
@@ -100,7 +99,6 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         new TestDruidLeaderSelector(),
-        Set.of(NodeRole.OVERLORD),
         NoopSegmentMetadataCache.instance(),
         NoopServiceEmitter.instance()
     );

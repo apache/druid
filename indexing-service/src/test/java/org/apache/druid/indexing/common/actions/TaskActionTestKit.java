@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -49,8 +48,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.rules.ExternalResource;
-
-import java.util.Set;
 
 public class TaskActionTestKit extends ExternalResource
 {
@@ -178,7 +175,6 @@ public class TaskActionTestKit extends ExternalResource
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
-        Suppliers.ofInstance(CentralizedDatasourceSchemaConfig.create()),
         new SegmentSchemaCache(),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
@@ -193,7 +189,6 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector,
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
         segmentMetadataCache,
         NoopServiceEmitter.instance()
     )
