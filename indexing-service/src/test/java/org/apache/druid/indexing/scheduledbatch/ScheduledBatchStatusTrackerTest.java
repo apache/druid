@@ -207,6 +207,7 @@ public class ScheduledBatchStatusTrackerTest
     final BatchSupervisorTaskReport report1 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report1);
 
+    // supervisor1 got task1 and task2 at the same time, the order should not matter, hence sort the tasks to make sure the result matches.
     List<TaskStatus> sortedActualStatues = report1.getRecentTasks()
                                                   .stream()
                                                   .map(BatchSupervisorTaskStatus::getTaskStatus)
