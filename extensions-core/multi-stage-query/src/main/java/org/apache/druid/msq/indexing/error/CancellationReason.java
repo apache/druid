@@ -54,7 +54,7 @@ public enum CancellationReason
   public static CancellationReason fromString(String value)
   {
     for (CancellationReason mode : values()) {
-      if (mode.toString().equals(value)) {
+      if (mode.name().equals(value)) {
         return mode;
       }
     }

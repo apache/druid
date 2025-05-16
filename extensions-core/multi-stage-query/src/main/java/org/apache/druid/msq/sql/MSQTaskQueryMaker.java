@@ -276,7 +276,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     }
 
     // Add the start time.
-    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, DateTimes.nowUtc());
+    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, DateTimes.nowUtc().toString());
 
     return nativeQueryContextOverrides;
   }
