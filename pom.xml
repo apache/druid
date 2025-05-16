@@ -99,7 +99,7 @@
         <guava.version>32.0.1-jre</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.54.v20240208</jetty.version>
+        <jetty.version>9.4.57.v20241219</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.12.7.20221012</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -114,7 +114,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
-        <hadoop.compile.version>3.4.0</hadoop.compile.version>
+        <hadoop.compile.version>3.4.1</hadoop.compile.version>
         <mockito.version>5.5.0</mockito.version>
         <!-- mockito-inline artifact was removed in mockito 5.3 (mockito 5.x is required for Java >17),
              however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11. We use the following property to pick the proper artifact based on Java version (see pre-java-11 profile) -->

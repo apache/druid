@@ -115,7 +115,7 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-core</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>jakarta.validation</groupId>
@@ -125,17 +125,17 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-batch</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client-api</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client</artifactId>
-      <version>6.7.2</version>
+      <version>6.8.0</version>
       <scope>runtime</scope>
     </dependency>
 
