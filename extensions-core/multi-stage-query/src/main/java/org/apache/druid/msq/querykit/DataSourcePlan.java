@@ -552,7 +552,7 @@ public class DataSourcePlan
   )
   {
     // This is done to prevent loss of generality since MSQ can plan any type of DataSource.
-    List<DataSource> children = unionDataSource.getDataSources();
+    List<DataSource> children = unionDataSource.getChildren();
 
     final QueryDefinitionBuilder subqueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
     final List<DataSource> newChildren = new ArrayList<>();
