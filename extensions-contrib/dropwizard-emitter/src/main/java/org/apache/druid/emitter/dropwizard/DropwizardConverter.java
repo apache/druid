@@ -24,10 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,24 +81,22 @@ public class DropwizardConverter
 
   private Map<String, DropwizardMetricSpec> readMap(ObjectMapper mapper, String dimensionMapPath)
   {
-    InputStream is = null;
-    try {
-      if (Strings.isNullOrEmpty(dimensionMapPath)) {
-        log.info("Using default metric dimension and types");
-        is = this.getClass().getClassLoader().getResourceAsStream("defaultMetricDimensions.json");
-      } else {
-        log.info("Using metric dimensions at types at [%s]", dimensionMapPath);
-        is = new FileInputStream(new File(dimensionMapPath));
-      }
-      return mapper.readerFor(new TypeReference<Map<String, DropwizardMetricSpec>>()
-      {
-      }).readValue(is);
+    try (final InputStream is = openDimensionMapFile(dimensionMapPath)) {
+      return mapper.readerFor(new TypeReference<Map<String, DropwizardMetricSpec>>() {}).readValue(is);
     }
     catch (IOException e) {
       throw new ISE(e, "Failed to parse metric dimensions and types");
     }
-    finally {
-      CloseableUtils.closeAndSuppressExceptions(is, e -> log.warn(e, "Failed to close input stream"));
+  }
+
+  private InputStream openDimensionMapFile(@Nullable String dimensionMapPath) throws IOException
+  {
+    if (Strings.isNullOrEmpty(dimensionMapPath)) {
+      log.info("Using default metric dimension and types");
+      return this.getClass().getClassLoader().getResourceAsStream("defaultMetricDimensions.json");
+    } else {
+      log.info("Using metric dimensions at types at [%s]", dimensionMapPath);
+      return new FileInputStream(dimensionMapPath);
     }
   }
 }
