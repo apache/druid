@@ -50,6 +50,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.NoopSegmentMetadataCacheModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
@@ -194,7 +195,8 @@ public class CliBroker extends ServerRunnable
                 .in(LazySingleton.class);
         },
         new LookupModule(),
-        new SqlModule()
+        new SqlModule(),
+        new NoopSegmentMetadataCacheModule()
     );
   }
 }

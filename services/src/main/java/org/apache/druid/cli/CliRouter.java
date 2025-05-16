@@ -33,6 +33,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.NoopSegmentMetadataCacheModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.RouterProcessingModule;
@@ -132,7 +133,8 @@ public class CliRouter extends ServerRunnable
                 .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("router"))
                 .in(LazySingleton.class);
         },
-        new LookupSerdeModule()
+        new LookupSerdeModule(),
+        new NoopSegmentMetadataCacheModule()
     );
   }
 }

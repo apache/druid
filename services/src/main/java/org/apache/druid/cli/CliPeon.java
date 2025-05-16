@@ -57,6 +57,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
+import org.apache.druid.guice.NoopSegmentMetadataCacheModule;
 import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -383,7 +384,8 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
         new ChatHandlerServerModule(properties),
-        new LookupModule()
+        new LookupModule(),
+        new NoopSegmentMetadataCacheModule()
     );
   }
 
