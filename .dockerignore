@@ -20,7 +20,14 @@
 **/*.jar
 **/*.class
 dist
-target
+
+**/target
+
+# To support building the docker image from the distribution file built on host machine,
+# we need to keep binary files under the target directory of distribution module.
+# This rule MUST be after above '**/target' rule
+!distribution/target/*-bin.tar.gz
+
 *.iml
 *.ipr
 *.iws
@@ -35,3 +42,4 @@ target
 *.DS_Store
 _site
 dependency-reduced-pom.xml
+**/node_modules
