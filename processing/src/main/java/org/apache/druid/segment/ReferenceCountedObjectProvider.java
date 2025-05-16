@@ -25,6 +25,8 @@ import java.util.Optional;
 /**
  * Interface for "checking out" a {@link Closeable} object as a tracked a reference. This can power anything that
  * wishes to provide this pattern of acquiring and releasing of a reference to the object when it is closed.
+ * Implementations of this class are expected to be thread-safe, but the object returned by {@link #acquireReference()}
+ * has no such guarantees.
  * <p>
  * For ease of implementation, {@link ReferenceCountingCloseableObject} can be used as a basis for implementing this
  * interface, using the {@link Closeable} from
@@ -35,7 +37,8 @@ public interface ReferenceCountedObjectProvider<T extends Closeable>
 {
   /**
    * This method increments a reference count and provides a {@link Closeable} that decrements the reference count when
-   * closed.
+   * closed. The object returned by this method is not required to be thread-safe, generally separate threads should
+   * check out their own references from this method.
    * <p>
    * IMPORTANT NOTE: to fulfill the contract of this method, implementors must return a closeable to indicate that the
    * reference can be acquired, even if there is nothing to close. Implementors should ideally avoid allowing this
