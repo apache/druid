@@ -23,22 +23,21 @@ import java.io.Closeable;
 import java.util.Optional;
 
 /**
- * Interface for "checking out" a {@link Closeable} object as a tracked a reference. This can power anything that
- * wishes to provide this pattern of acquiring and releasing of a reference to the object when it is closed.
+ * Interface to capture the pattern of providing tracked usage of some resource. Callers use {@link #acquireReference()}
+ * to check out a reference to this resource as a {@link Closeable} which releases the reference upon close.
  * Implementations of this class are expected to be thread-safe, but the object returned by {@link #acquireReference()}
- * has no such guarantees.
+ * has no such guarantees, so check with the implementation.
  * <p>
- * For ease of implementation, {@link ReferenceCountingCloseableObject} can be used as a basis for implementing this
- * interface, using the {@link Closeable} from
- * {@link ReferenceCountingCloseableObject#incrementReferenceAndDecrementOnceCloseable()} in the close method of the
- * returned object of {@link #acquireReference()} to release the references when closing the object.
+ * For ease of implementation, implementors may extend {@link ReferenceCountingCloseableObject}, using the
+ * {@link Closeable} from {@link ReferenceCountingCloseableObject#incrementReferenceAndDecrementOnceCloseable()} in the
+ * close method of the object returned by {@link #acquireReference()}.
  */
 public interface ReferenceCountedObjectProvider<T extends Closeable>
 {
   /**
    * This method increments a reference count and provides a {@link Closeable} that decrements the reference count when
-   * closed. The object returned by this method is not required to be thread-safe, generally separate threads should
-   * check out their own references from this method.
+   * closed. The object returned by this method may or may not be thread-safe, it is best to check with the
+   * implementation.
    * <p>
    * IMPORTANT NOTE: to fulfill the contract of this method, implementors must return a closeable to indicate that the
    * reference can be acquired, even if there is nothing to close. Implementors should ideally avoid allowing this

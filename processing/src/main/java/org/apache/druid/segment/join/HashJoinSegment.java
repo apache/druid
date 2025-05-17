@@ -60,9 +60,11 @@ public class HashJoinSegment implements Segment
 
   /**
    * @param baseSegment           The left-hand side base segment
+   * @param baseFilter            Filter for left-hand side base segment
    * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
    *                              duplicate prefixes or prefixes that shadow each other across the clauses
    * @param joinFilterPreAnalysis Pre-analysis for the query we expect to run on this segment
+   * @param referenceCloseable    Closeables for the right-hand side clauses
    */
   public HashJoinSegment(
       Segment baseSegment,

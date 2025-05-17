@@ -21,22 +21,28 @@ package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * {@link ReferenceCountedSegmentProvider} wraps a {@link Segment}, allowing query engines that operate directly on segments
- * to track references so that dropping a {@link Segment} can be done safely to ensure there are no in-flight queries.
+ * Helper object to assist in managing {@link Segment} storage lifecycle. Provides access to the {@link Segment} tracked
+ * with reference counting, releasing the reference on close. Closing this provider closes the underlying
+ * {@link Segment} once all references are returned, ensuring that a segment cannot be dropped while it is actively
+ * being used.
  * <p>
- * Extensions can extend this class for populating {@link org.apache.druid.timeline.VersionedIntervalTimeline} with
- * a custom implementation through SegmentLoader.
+ * This also implements {@link Overshadowable}, so the providers can be arranged in a
+ * {@link org.apache.druid.timeline.TimelineLookup}.
  */
 public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableObject<Segment>
     implements Overshadowable<ReferenceCountedSegmentProvider>, ReferenceCountedObjectProvider<Segment>
@@ -81,6 +87,14 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   )
   {
     super(baseSegment);
+    // ReferenceCountingSegment should not wrap another reference, because the inner reference would effectively
+    // be ignored.
+    if (baseSegment instanceof ReferenceClosingSegment) {
+      throw DruidException.defensive(
+          "Cannot use a SegmentReference[%s] as baseSegment for a ReferenceCountingSegment",
+          baseSegment.asString()
+      );
+    }
     this.startRootPartitionId = (short) startRootPartitionId;
     this.endRootPartitionId = (short) endRootPartitionId;
     this.minorVersion = minorVersion;
@@ -151,28 +165,56 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   }
 
   /**
-   * Wraps a {@link Segment} and closes reference to this segment, decrementing the counter instead of closing the
-   * segment itself
+   * Wraps a {@link Segment} and decrements reference to this segment of {@link ReferenceCountedSegmentProvider} on
+   * close (instead of closing the segment itself which is managed through the provider)
    */
-  public final class ReferenceClosingSegment extends WrappedSegment
+  public final class ReferenceClosingSegment implements Segment
   {
     private final Closeable referenceCloseable;
-    private boolean isClosed;
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
     private ReferenceClosingSegment(Closeable referenceCloseable)
     {
-      super(baseObject);
       this.referenceCloseable = referenceCloseable;
+    }
+
+    @Nullable
+    @Override
+    public SegmentId getId()
+    {
+      return baseObject.getId();
+    }
+
+    @Override
+    public Interval getDataInterval()
+    {
+      return baseObject.getDataInterval();
     }
 
     @Nullable
     @Override
     public <T> T as(@Nonnull Class<T> clazz)
     {
-      if (isClosed) {
-        return null;
+      if (isClosed.get()) {
+        throw DruidException.defensive(
+            "Segment[%s] reference is already released, cannot get[%s]",
+            baseObject.getId(),
+            clazz
+        );
       }
       return baseObject.as(clazz);
+    }
+
+    @Override
+    public boolean isTombstone()
+    {
+      return baseObject.isTombstone();
+    }
+
+    @Override
+    public String asString()
+    {
+      return baseObject.asString();
     }
 
     @Override
@@ -185,11 +227,14 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     @Override
     public void close() throws IOException
     {
-      if (isClosed) {
-        return;
+      if (isClosed.compareAndSet(false, true)) {
+        referenceCloseable.close();
+      } else {
+        throw DruidException.defensive(
+            "Segment[%s] reference is already released, cannot close again",
+            baseObject.getId()
+        );
       }
-      referenceCloseable.close();
-      isClosed = true;
     }
 
     @VisibleForTesting

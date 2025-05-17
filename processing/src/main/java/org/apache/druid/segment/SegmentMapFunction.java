@@ -24,15 +24,18 @@ import java.util.function.Function;
 
 /**
  * Functional interface that captures the process of acquiring a {@link Segment} from a
- * {@link ReferenceCountedObjectProvider <Segment>} and performing any transformations done on top of this leaf {@link Segment}
+ * {@link ReferenceCountedObjectProvider<Segment>} and performing any transformations done on top of this leaf {@link Segment}
  * before it is available to query processing engines.
  * <p>
  * The {@link Segment} returned by this method, if present, must always be closed to return the reference to the base
- * {@link ReferenceCountedObjectProvider <Segment>} that it came from.
+ * {@link ReferenceCountedObjectProvider<Segment>} that it came from.
  */
 @FunctionalInterface
 public interface SegmentMapFunction extends Function<ReferenceCountedObjectProvider<Segment>, Optional<Segment>>
 {
+  /**
+   * {@link SegmentMapFunction} that acuires a {@link Segment} from the {@link ReferenceCountedObjectProvider<Segment>}
+   */
   SegmentMapFunction IDENTITY = ReferenceCountedObjectProvider::acquireReference;
 
   /**
