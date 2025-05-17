@@ -37,7 +37,6 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.curator.CuratorTestBase;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -123,7 +122,6 @@ public class DatasourceOptimizerTest extends CuratorTestBase
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            Set.of(NodeRole.OVERLORD),
             NoopSegmentMetadataCache.instance(),
             NoopServiceEmitter.instance()
         ),

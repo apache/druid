@@ -1631,7 +1631,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private void persistSchema(
       final SegmentMetadataTransaction transaction,
       final Set<DataSegment> segments,
-      final SegmentSchemaMapping segmentSchemaMapping
+      final SegmentSchemaMapping segmentSchemaMapping,
+      final DateTime updateTime
   ) throws JsonProcessingException
   {
     if (segmentSchemaMapping.getSchemaVersion() != CentralizedDatasourceSchemaConfig.SCHEMA_VERSION) {
@@ -1650,7 +1651,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         transaction.getHandle(),
         dataSource,
         segmentSchemaMapping.getSchemaVersion(),
-        segmentSchemaMapping.getSchemaFingerprintToPayloadMap()
+        segmentSchemaMapping.getSchemaFingerprintToPayloadMap(),
+        updateTime
     );
   }
 
@@ -1662,10 +1664,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final Set<DataSegment> toInsertSegments = new HashSet<>();
     try {
+      final DateTime createdTime = DateTimes.nowUtc();
       boolean shouldPersistSchema = shouldPersistSchema(segmentSchemaMapping);
 
       if (shouldPersistSchema) {
-        persistSchema(transaction, segments, segmentSchemaMapping);
+        persistSchema(transaction, segments, segmentSchemaMapping, createdTime);
       }
 
       final Set<SegmentId> segmentIds = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
@@ -1678,7 +1681,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
       }
 
-      final DateTime createdTime = DateTimes.nowUtc();
       final Set<DataSegment> usedSegments = findNonOvershadowedSegments(segments);
 
       final Set<DataSegmentPlus> segmentPlusToInsert = toInsertSegments.stream().map(segment -> {
@@ -1881,8 +1883,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Map<String, String> upgradedFromSegmentIdMap
   ) throws Exception
   {
+    final DateTime createdTime = DateTimes.nowUtc();
     if (shouldPersistSchema(segmentSchemaMapping)) {
-      persistSchema(transaction, segments, segmentSchemaMapping);
+      persistSchema(transaction, segments, segmentSchemaMapping, createdTime);
     }
 
     // Do not insert segment IDs which already exist
@@ -1892,7 +1895,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         s -> !existingSegmentIds.contains(s.getId().toString())
     ).collect(Collectors.toSet());
 
-    final DateTime createdTime = DateTimes.nowUtc();
     final Set<DataSegmentPlus> segmentPlusToInsert = segmentsToInsert.stream().map(segment -> {
       SegmentMetadata segmentMetadata = getSegmentMetadataFromSchemaMappingOrUpgradeMetadata(
           segment.getId(),

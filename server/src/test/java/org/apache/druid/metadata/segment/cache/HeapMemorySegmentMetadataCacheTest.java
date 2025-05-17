@@ -34,6 +34,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -104,6 +105,7 @@ public class HeapMemorySegmentMetadataCacheTest
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopSegmentSchemaCache(),
         derbyConnector,
         executorFactory,
         serviceEmitter
@@ -435,7 +437,7 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyValue(Metric.SKIPPED_PENDING_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.CACHED_USED_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.PERSISTED_USED_SEGMENTS, 1L);
-    serviceEmitter.verifyValue(Metric.PERSISTED_PENDING_SEGMENTS, 0L);
+    serviceEmitter.verifyNotEmitted(Metric.PERSISTED_PENDING_SEGMENTS);
 
     Assert.assertEquals(
         segment.getDataSegment(),

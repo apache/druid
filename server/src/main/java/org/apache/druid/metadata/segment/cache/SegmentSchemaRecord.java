@@ -19,45 +19,29 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import org.apache.druid.timeline.SegmentId;
-
-import java.util.Set;
+import org.apache.druid.segment.SchemaPayload;
 
 /**
- * Result of syncing a datasource cache with segments polled from metadata store.
+ * Represents a single record in the druid_segmentSchemas table.
  */
-public class SegmentSyncResult
+public class SegmentSchemaRecord
 {
-  private final int deleted;
-  private final int updated;
-  private final Set<SegmentId> expiredIds;
-  private final Set<SegmentId> deletedIds;
+  private final String fingerprint;
+  private final SchemaPayload payload;
 
-  public SegmentSyncResult(int deleted, int updated, Set<SegmentId> expiredIds, Set<SegmentId> deletedIds)
+  public SegmentSchemaRecord(String fingerprint, SchemaPayload payload)
   {
-    this.deleted = deleted;
-    this.updated = updated;
-    this.expiredIds = expiredIds;
-    this.deletedIds = deletedIds;
+    this.fingerprint = fingerprint;
+    this.payload = payload;
   }
 
-  public int getDeleted()
+  public String getFingerprint()
   {
-    return deleted;
+    return fingerprint;
   }
 
-  public int getUpdated()
+  public SchemaPayload getPayload()
   {
-    return updated;
-  }
-
-  public Set<SegmentId> getExpiredIds()
-  {
-    return expiredIds;
-  }
-
-  public Set<SegmentId> getDeletedIds()
-  {
-    return deletedIds;
+    return payload;
   }
 }

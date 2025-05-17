@@ -34,7 +34,6 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.RegexParseSpec;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
@@ -87,6 +86,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -183,7 +183,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector(),
         () -> new SegmentsMetadataManagerConfig(null, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        CentralizedDatasourceSchemaConfig.create(),
+        CentralizedDatasourceSchemaConfig::create,
         NoopServiceEmitter.instance(),
         objectMapper
     );
@@ -325,6 +325,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopSegmentSchemaCache(),
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()
@@ -338,7 +339,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
         segmentMetadataCache,
         NoopServiceEmitter.instance()
     );

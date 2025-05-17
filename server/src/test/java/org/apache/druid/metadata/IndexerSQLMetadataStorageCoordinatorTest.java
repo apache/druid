@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -153,6 +153,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopSegmentSchemaCache(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
             nameFormat,
@@ -177,7 +178,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
         segmentMetadataCache,
         emitter
     )

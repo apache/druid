@@ -94,6 +94,15 @@ public class SegmentSchemaCache
    */
   private final AtomicInteger cacheMissCount = new AtomicInteger(0);
 
+  /**
+   * @return true if schema caching is enabled.
+   */
+  public boolean isEnabled()
+  {
+    // Always return true since this implementation is bound only when caching is enabled
+    return true;
+  }
+
   public void setInitialized()
   {
     if (!isInitialized()) {
@@ -258,12 +267,20 @@ public class SegmentSchemaCache
     return false;
   }
 
-  private Map<SegmentId, SegmentMetadata> getSegmentMetadataMap()
+  /**
+   * @return Immutable map from segment ID to {@link SegmentMetadata} for all
+   * published used segments currently present in this cache.
+   */
+  public Map<SegmentId, SegmentMetadata> getSegmentMetadataMap()
   {
     return publishedSegmentSchemas.get().segmentIdToMetadata;
   }
 
-  private Map<String, SchemaPayload> getSchemaPayloadMap()
+  /**
+   * @return Immutable map from schema fingerprint to {@link SchemaPayload} for
+   * all schema fingerprints currently present in this cache.
+   */
+  public Map<String, SchemaPayload> getSchemaPayloadMap()
   {
     return publishedSegmentSchemas.get().schemaFingerprintToPayload;
   }

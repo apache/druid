@@ -33,13 +33,13 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
@@ -53,9 +53,6 @@ import java.util.Set;
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
-  private static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED =
-      CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX + ".enabled";
-
   private static final EmittingLogger log = new EmittingLogger(ServerRunnable.class);
 
   public ServerRunnable(Logger log)
@@ -207,7 +204,7 @@ public abstract class ServerRunnable extends GuiceRunnable
 
   protected static void validateCentralizedDatasourceSchemaConfig(Properties properties)
   {
-    if (isSegmentSchemaCacheEnabled(properties)) {
+    if (MetadataConfigModule.isSegmentSchemaCacheEnabled(properties)) {
       String serverViewType = properties.getProperty(ServerViewModule.SERVERVIEW_TYPE_PROPERTY);
       if (serverViewType != null && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
         throw DruidException
@@ -221,15 +218,10 @@ public abstract class ServerRunnable extends GuiceRunnable
                     ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
                     serverViewType,
                     ServerViewModule.SERVERVIEW_TYPE_HTTP,
-                    CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
+                    MetadataConfigModule.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
                 )
             );
       }
     }
-  }
-
-  protected static boolean isSegmentSchemaCacheEnabled(Properties properties)
-  {
-    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }
 }
