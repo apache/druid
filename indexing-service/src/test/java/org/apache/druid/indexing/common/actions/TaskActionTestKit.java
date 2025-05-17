@@ -37,12 +37,9 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
-import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
@@ -124,17 +121,6 @@ public class TaskActionTestKit extends ExternalResource
         CentralizedDatasourceSchemaConfig.create()
     );
     taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
-    segmentSchemaCache = new SegmentSchemaCache();
-    segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
-        new NoopSegmentMetadataCache(),
-        new SegmentSchemaCache(),
-        testDerbyConnector,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(null, null)),
-        Suppliers.ofInstance(metadataStorageTablesConfig),
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance(),
-        objectMapper
-    );
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override
