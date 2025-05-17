@@ -30,8 +30,8 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -1143,7 +1143,7 @@ public class SegmentAllocateActionTest
   public void testSegmentIdMustNotBeReused()
   {
     final IndexerMetadataStorageCoordinator coordinator = taskActionTestKit.getMetadataStorageCoordinator();
-    final TaskLockbox lockbox = taskActionTestKit.getTaskLockbox();
+    final GlobalTaskLockbox lockbox = taskActionTestKit.getTaskLockbox();
     final Task task0 = NoopTask.ofPriority(25);
     lockbox.add(task0);
     final NoopTask task1 = NoopTask.ofPriority(50);

@@ -24,9 +24,9 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
@@ -56,7 +56,7 @@ public class TaskActionTestKit extends ExternalResource
   private final MetadataStorageTablesConfig metadataStorageTablesConfig = MetadataStorageTablesConfig.fromBase("druid");
 
   private TaskStorage taskStorage;
-  private TaskLockbox taskLockbox;
+  private GlobalTaskLockbox taskLockbox;
   private TestDerbyConnector testDerbyConnector;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskActionToolbox taskActionToolbox;
@@ -66,7 +66,7 @@ public class TaskActionTestKit extends ExternalResource
   private boolean useSegmentMetadataCache = false;
   private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
 
-  public TaskLockbox getTaskLockbox()
+  public GlobalTaskLockbox getTaskLockbox()
   {
     return taskLockbox;
   }
@@ -120,7 +120,7 @@ public class TaskActionTestKit extends ExternalResource
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override
