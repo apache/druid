@@ -55,6 +55,65 @@ public class SegmentGenerationMetrics
 
   private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
 
+  public static class MessageGapStats
+  {
+    long minMessageGap = Long.MAX_VALUE;
+    long maxMessageGap = Long.MIN_VALUE;
+    long numMessageGap = 0;
+    double totalMessageGap = 0;
+
+    public synchronized double avgMessageGap()
+    {
+      return totalMessageGap / numMessageGap;
+    }
+
+    public synchronized long getMinMessageGap()
+    {
+      return minMessageGap;
+    }
+
+    public synchronized long getMaxMessageGap()
+    {
+      return maxMessageGap;
+    }
+
+    public synchronized long getNumMessageGap()
+    {
+      return numMessageGap;
+    }
+
+    public synchronized void add(final long messageGap)
+    {
+      totalMessageGap += messageGap;
+      ++numMessageGap;
+      if (minMessageGap > messageGap) {
+        minMessageGap = messageGap;
+      }
+      if (maxMessageGap < messageGap) {
+        maxMessageGap = messageGap;
+      }
+    }
+
+    public MessageGapStats getAndReset()
+    {
+      final MessageGapStats copy = new MessageGapStats();
+      synchronized (this) {
+        copy.totalMessageGap = totalMessageGap;
+        copy.numMessageGap = numMessageGap;
+        copy.minMessageGap = minMessageGap;
+        copy.maxMessageGap = maxMessageGap;
+
+        totalMessageGap = 0;
+        numMessageGap = 0;
+        minMessageGap = Long.MAX_VALUE;
+        maxMessageGap = Long.MIN_VALUE;
+      }
+      return copy;
+    }
+  }
+
+  private final MessageGapStats messageGapStats = new MessageGapStats();
+
   public void incrementRowOutputCount(long numRows)
   {
     rowOutputCount.addAndGet(numRows);
@@ -105,14 +164,23 @@ public class SegmentGenerationMetrics
     this.sinkCount.set(sinkCount);
   }
 
+  public void reportMessageGap(final long messageGap)
+  {
+    messageGapStats.add(messageGap);
+  }
+
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
   {
-    this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
+    if (this.messageMaxTimestamp.get() < messageMaxTimestamp) {
+      this.messageMaxTimestamp.getAndAccumulate(messageMaxTimestamp, Math::max);
+    }
   }
 
   public void reportMaxSegmentHandoffTime(long maxSegmentHandoffTime)
   {
-    this.maxSegmentHandoffTime.set(Math.max(maxSegmentHandoffTime, this.maxSegmentHandoffTime.get()));
+    if (this.maxSegmentHandoffTime.get() < maxSegmentHandoffTime) {
+      this.maxSegmentHandoffTime.getAndAccumulate(maxSegmentHandoffTime, Math::max);
+    }
   }
 
   public void markProcessingDone()
@@ -170,6 +238,7 @@ public class SegmentGenerationMetrics
   {
     return pushedRows.get();
   }
+
   public long mergeTimeMillis()
   {
     return mergeTimeMillis.get();
@@ -193,6 +262,11 @@ public class SegmentGenerationMetrics
   public long sinkCount()
   {
     return sinkCount.get();
+  }
+
+  public MessageGapStats getMessageGapStats()
+  {
+    return messageGapStats.getAndReset();
   }
 
   public long messageGap()
@@ -220,19 +294,25 @@ public class SegmentGenerationMetrics
     retVal.persistCpuTime.set(persistCpuTime.get());
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
-    retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
     retVal.mergedRows.set(mergedRows.get());
     retVal.pushedRows.set(pushedRows.get());
 
     long messageGapSnapshot = 0;
-    final long maxTimestamp = retVal.messageMaxTimestamp.get();
+    final long maxTimestamp = messageMaxTimestamp.get();
+    retVal.messageMaxTimestamp.set(maxTimestamp);
     if (processingDone.get()) {
       messageGapSnapshot = NO_EMIT_MESSAGE_GAP;
     } else if (maxTimestamp > 0) {
       messageGapSnapshot = System.currentTimeMillis() - maxTimestamp;
     }
     retVal.messageGap.set(messageGapSnapshot);
+
+    final MessageGapStats gapStatsCopy = messageGapStats.getAndReset();
+    retVal.messageGapStats.totalMessageGap = gapStatsCopy.totalMessageGap;
+    retVal.messageGapStats.numMessageGap = gapStatsCopy.numMessageGap;
+    retVal.messageGapStats.maxMessageGap = gapStatsCopy.maxMessageGap;
+    retVal.messageGapStats.minMessageGap = gapStatsCopy.minMessageGap;
 
     reset();
 
