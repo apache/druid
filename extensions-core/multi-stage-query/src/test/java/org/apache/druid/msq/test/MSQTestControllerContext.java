@@ -61,12 +61,10 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
-import org.apache.druid.msq.querykit.QueryKit;
-import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -273,7 +271,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     {
       final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
-        worker.stop();
+        worker.stop(CancellationReason.TASK_SHUTDOWN);
       }
       return Futures.immediateFuture(null);
     }
@@ -283,23 +281,6 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
   {
     return IndexerControllerContext.makeQueryKernelConfig(querySpec, new ControllerMemoryParameters(100_000_000));
-  }
-
-  @Override
-  public QueryKitSpec makeQueryKitSpec(
-      final QueryKit<Query<?>> queryKit,
-      final String queryId,
-      final MSQSpec querySpec,
-      final ControllerQueryKernelConfig queryKernelConfig
-  )
-  {
-    return new QueryKitSpec(
-        queryKit,
-        queryId,
-        querySpec.getTuningConfig().getMaxNumWorkers(),
-        querySpec.getTuningConfig().getMaxNumWorkers(),
-        1
-    );
   }
 
   @Override

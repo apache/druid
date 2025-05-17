@@ -81,7 +81,7 @@ public class RestrictedDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(restrictedFooDataSource.isConcrete());
+    Assert.assertTrue(restrictedFooDataSource.isProcessable());
   }
 
   @Test
@@ -101,14 +101,6 @@ public class RestrictedDataSourceTest
 
     RestrictedDataSource newRestrictedDataSource = (RestrictedDataSource) restrictedFooDataSource.withChildren(
         ImmutableList.of(barDataSource));
-    Assert.assertEquals(newRestrictedDataSource.getBase(), barDataSource);
-  }
-
-  @Test
-  public void test_withUpdatedDataSource()
-  {
-    RestrictedDataSource newRestrictedDataSource = (RestrictedDataSource) restrictedFooDataSource.withUpdatedDataSource(
-        new TableDataSource("bar"));
     Assert.assertEquals(newRestrictedDataSource.getBase(), barDataSource);
   }
 

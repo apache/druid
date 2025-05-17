@@ -25,7 +25,7 @@ public class SqlQuidemTest extends DruidQuidemTestBase
 {
   public SqlQuidemTest()
   {
-    super();
+    super(new DruidQuidemCommandHandler());
   }
 
   @Override

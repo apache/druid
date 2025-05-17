@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.joda.time.Period;
 
 /**
@@ -36,21 +37,24 @@ public class SegmentsMetadataManagerConfig
   private final Period pollDuration;
 
   @JsonProperty
-  private final boolean useCache;
+  private final SegmentMetadataCache.UsageMode useIncrementalCache;
 
   @JsonCreator
   public SegmentsMetadataManagerConfig(
       @JsonProperty("pollDuration") Period pollDuration,
-      @JsonProperty("useCache") Boolean useCache
+      @JsonProperty("useIncrementalCache") SegmentMetadataCache.UsageMode useIncrementalCache
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.useCache = Configs.valueOrDefault(useCache, false);
+    this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.NEVER);
   }
 
-  public boolean isUseCache()
+  /**
+   * Usage mode of the incremental cache.
+   */
+  public SegmentMetadataCache.UsageMode getCacheUsageMode()
   {
-    return useCache;
+    return useIncrementalCache;
   }
 
   public Period getPollDuration()

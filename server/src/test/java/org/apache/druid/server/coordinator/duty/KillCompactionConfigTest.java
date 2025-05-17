@@ -24,14 +24,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -55,7 +56,7 @@ public class KillCompactionConfigTest
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
   @Mock
-  private SqlSegmentsMetadataManager mockSqlSegmentsMetadataManager;
+  private IndexerMetadataStorageCoordinator mockStorageCoordinator;
 
   @Mock
   private JacksonConfigManager mockJacksonConfigManager;
@@ -79,7 +80,8 @@ public class KillCompactionConfigTest
     coordinatorConfigManager = new CoordinatorConfigManager(
         mockJacksonConfigManager,
         mockConnector,
-        mockConnectorConfig
+        mockConnectorConfig,
+        null
     );
   }
 
@@ -90,11 +92,11 @@ public class KillCompactionConfigTest
         = new MetadataCleanupConfig(true, new Duration(Long.MAX_VALUE), null);
     killCompactionConfig = new KillCompactionConfig(
         config,
-        mockSqlSegmentsMetadataManager,
+        mockStorageCoordinator,
         coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verifyNoInteractions(mockStorageCoordinator);
     Mockito.verifyNoInteractions(mockJacksonConfigManager);
     Assert.assertEquals(0, runStats.rowCount());
   }
@@ -119,11 +121,11 @@ public class KillCompactionConfigTest
         = new MetadataCleanupConfig(true, new Duration("PT6S"), null);
     killCompactionConfig = new KillCompactionConfig(
         config,
-        mockSqlSegmentsMetadataManager,
+        mockStorageCoordinator,
         coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verifyNoInteractions(mockStorageCoordinator);
     Assert.assertTrue(runStats.hasStat(Stats.Kill.COMPACTION_CONFIGS));
     Assert.assertEquals(0, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
 
@@ -146,37 +148,27 @@ public class KillCompactionConfigTest
   {
     String inactiveDatasourceName = "inactive_datasource";
     String activeDatasourceName = "active_datasource";
-    DataSourceCompactionConfig inactiveDatasourceConfig = new DataSourceCompactionConfig(
-        inactiveDatasourceName,
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    DataSourceCompactionConfig inactiveDatasourceConfig =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(inactiveDatasourceName)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period(3600))
+                                              .withGranularitySpec(
+                                            new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                                        )
+                                              .withTaskContext(ImmutableMap.of("key", "val"))
+                                              .build();
 
-    DataSourceCompactionConfig activeDatasourceConfig = new DataSourceCompactionConfig(
-        activeDatasourceName,
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    DataSourceCompactionConfig activeDatasourceConfig
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(activeDatasourceName)
+                                                .withInputSegmentSizeBytes(500L)
+                                                .withSkipOffsetFromLatest(new Period(3600))
+                                                .withGranularitySpec(
+                                              new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                                          )
+                                                .withTaskContext(ImmutableMap.of("key", "val"))
+                                                .build();
     DruidCompactionConfig originalCurrentConfig = DruidCompactionConfig.empty().withDatasourceConfigs(
             ImmutableList.of(inactiveDatasourceConfig, activeDatasourceConfig)
     );
@@ -192,7 +184,7 @@ public class KillCompactionConfigTest
         ArgumentMatchers.eq(DruidCompactionConfig.class),
         ArgumentMatchers.eq(DruidCompactionConfig.empty()))
     ).thenReturn(originalCurrentConfig);
-    Mockito.when(mockSqlSegmentsMetadataManager.retrieveAllDataSourceNames()).thenReturn(ImmutableSet.of(activeDatasourceName));
+    Mockito.when(mockStorageCoordinator.retrieveAllDatasourceNames()).thenReturn(ImmutableSet.of(activeDatasourceName));
     final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
     final ArgumentCaptor<DruidCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(DruidCompactionConfig.class);
     Mockito.when(mockJacksonConfigManager.set(
@@ -206,7 +198,7 @@ public class KillCompactionConfigTest
         = new MetadataCleanupConfig(true, new Duration("PT6S"), null);
     killCompactionConfig = new KillCompactionConfig(
         config,
-        mockSqlSegmentsMetadataManager,
+        mockStorageCoordinator,
         coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
@@ -239,29 +231,24 @@ public class KillCompactionConfigTest
         ArgumentMatchers.any()
     );
     Mockito.verifyNoMoreInteractions(mockJacksonConfigManager);
-    Mockito.verify(mockSqlSegmentsMetadataManager).retrieveAllDataSourceNames();
-    Mockito.verifyNoMoreInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verify(mockStorageCoordinator).retrieveAllDatasourceNames();
+    Mockito.verifyNoMoreInteractions(mockStorageCoordinator);
   }
 
   @Test
   public void testRunRetryForRetryableException()
   {
     String inactiveDatasourceName = "inactive_datasource";
-    DataSourceCompactionConfig inactiveDatasourceConfig = new DataSourceCompactionConfig(
-        inactiveDatasourceName,
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    DataSourceCompactionConfig inactiveDatasourceConfig =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(inactiveDatasourceName)
+                                              .withInputSegmentSizeBytes(500L)
+                                              .withSkipOffsetFromLatest(new Period(3600))
+                                              .withGranularitySpec(
+                                            new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                                        )
+                                              .withTaskContext(ImmutableMap.of("key", "val"))
+                                              .build();
 
     DruidCompactionConfig originalCurrentConfig = DruidCompactionConfig.empty().withDatasourceConfigs(
         ImmutableList.of(inactiveDatasourceConfig)
@@ -278,7 +265,7 @@ public class KillCompactionConfigTest
         ArgumentMatchers.eq(DruidCompactionConfig.class),
         ArgumentMatchers.eq(DruidCompactionConfig.empty()))
     ).thenReturn(originalCurrentConfig);
-    Mockito.when(mockSqlSegmentsMetadataManager.retrieveAllDataSourceNames()).thenReturn(ImmutableSet.of());
+    Mockito.when(mockStorageCoordinator.retrieveAllDatasourceNames()).thenReturn(ImmutableSet.of());
     Mockito.when(mockJacksonConfigManager.set(
         ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY),
         ArgumentMatchers.any(byte[].class),
@@ -297,7 +284,7 @@ public class KillCompactionConfigTest
         = new MetadataCleanupConfig(true, new Duration("PT6S"), null);
     killCompactionConfig = new KillCompactionConfig(
         config,
-        mockSqlSegmentsMetadataManager,
+        mockStorageCoordinator,
         coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
@@ -327,7 +314,7 @@ public class KillCompactionConfigTest
     );
     Mockito.verifyNoMoreInteractions(mockJacksonConfigManager);
     // Should call retrieveAllDataSourceNames four times due to RetryableException when failed
-    Mockito.verify(mockSqlSegmentsMetadataManager, Mockito.times(4)).retrieveAllDataSourceNames();
-    Mockito.verifyNoMoreInteractions(mockSqlSegmentsMetadataManager);
+    Mockito.verify(mockStorageCoordinator, Mockito.times(4)).retrieveAllDatasourceNames();
+    Mockito.verifyNoMoreInteractions(mockStorageCoordinator);
   }
 }

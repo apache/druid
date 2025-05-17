@@ -67,6 +67,7 @@ import {
   changeByIndex,
   checkedCircleIcon,
   deepGet,
+  filterMap,
   formatByteRate,
   formatBytes,
   formatInteger,
@@ -333,9 +334,11 @@ export class SupervisorsView extends React.PureComponent<
 
           if (visibleColumns.shown('Stats')) {
             auxiliaryQueries.push(
-              ...supervisors.map(
-                (supervisor, i): AuxiliaryQueryFn<SupervisorQueryResultRow[]> =>
-                  async (rows, cancelToken) => {
+              ...filterMap(
+                supervisors,
+                (supervisor, i): AuxiliaryQueryFn<SupervisorQueryResultRow[]> | undefined => {
+                  if (oneOf(supervisor.type, 'autocompact', 'scheduled_batch')) return; // These supervisors do not report stats
+                  return async (rows, cancelToken) => {
                     const stats = (
                       await Api.instance.get(
                         `/druid/indexer/v1/supervisor/${Api.encodePath(
@@ -345,7 +348,8 @@ export class SupervisorsView extends React.PureComponent<
                       )
                     ).data;
                     return changeByIndex(rows, i, row => ({ ...row, stats }));
-                  },
+                  };
+                },
               ),
             );
           }
@@ -471,14 +475,12 @@ export class SupervisorsView extends React.PureComponent<
         icon: IconNames.STEP_BACKWARD,
         title: `Set ${type === 'kinesis' ? 'sequence numbers' : 'offsets'}`,
         onAction: () => this.setState({ resetOffsetsSupervisorInfo: { id: supervisor_id, type } }),
-        disabledReason: suspended ? undefined : `Supervisor must be suspended`,
       },
       {
         icon: IconNames.STEP_BACKWARD,
         title: 'Hard reset',
         intent: Intent.DANGER,
         onAction: () => this.setState({ resetSupervisorId: supervisor_id }),
-        disabledReason: suspended ? undefined : `Supervisor must be suspended`,
       },
       {
         icon: IconNames.CROSS,
@@ -662,17 +664,18 @@ export class SupervisorsView extends React.PureComponent<
   private renderSupervisorFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      >
-        {row.value}
-      </TableFilterableCell>
-    );
+    return function SupervisorFilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        >
+          {row.value}
+        </TableFilterableCell>
+      );
+    };
   }
 
   private onSupervisorDetail(supervisor: SupervisorQueryResultRow) {
@@ -731,7 +734,7 @@ export class SupervisorsView extends React.PureComponent<
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={supervisors.length >= SMALL_TABLE_PAGE_SIZE}
+        showPagination={supervisors.length >= SMALL_TABLE_PAGE_SIZE || page > 0}
         showPageJump={false}
         ofText=""
         columns={[
@@ -1169,6 +1172,7 @@ export class SupervisorsView extends React.PureComponent<
                 visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
+            onClose={this.fetchData}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>

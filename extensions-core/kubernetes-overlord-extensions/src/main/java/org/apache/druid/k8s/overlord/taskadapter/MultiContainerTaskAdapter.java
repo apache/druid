@@ -68,9 +68,15 @@ public class MultiContainerTaskAdapter extends K8sTaskAdapter
   }
 
   @Override
+  public String getAdapterType()
+  {
+    return TYPE;
+  }
+
+  @Override
   Job createJobFromPodSpec(PodSpec podSpec, Task task, PeonCommandContext context) throws IOException
   {
-    K8sTaskId k8sTaskId = new K8sTaskId(task.getId());
+    K8sTaskId k8sTaskId = new K8sTaskId(taskRunnerConfig.getK8sTaskPodNamePrefix(), task.getId());
 
     // get the container size from java_opts array
     long containerSize = getContainerMemory(context);

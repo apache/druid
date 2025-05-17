@@ -123,8 +123,8 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     log.info(
-        "LagBasedAutoScaler will collect lag every [%d] millis and will keep [%d] data points for the last [%d] millis for dataSource [%s]",
-        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), lagMetricsQueue.size(),
+        "LagBasedAutoScaler will collect lag every [%d] millis and will keep up to [%d] data points for the last [%d] millis for dataSource [%s]",
+        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), lagMetricsQueue.maxSize(),
         lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), dataSource
     );
   }

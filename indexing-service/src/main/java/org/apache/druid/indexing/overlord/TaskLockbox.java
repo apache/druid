@@ -1234,27 +1234,42 @@ public class TaskLockbox
         );
       }
 
-      // Clean up pending segments associated with an APPEND task
-      if (task instanceof PendingSegmentAllocatingTask) {
-        final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
-        if (activeAllocatorIdToTaskIds.containsKey(taskAllocatorId)) {
-          final Set<String> taskIdsForSameAllocator = activeAllocatorIdToTaskIds.get(taskAllocatorId);
-          taskIdsForSameAllocator.remove(task.getId());
-
-          if (taskIdsForSameAllocator.isEmpty()) {
-            final int pendingSegmentsDeleted = metadataStorageCoordinator
-                .deletePendingSegmentsForTaskAllocatorId(task.getDataSource(), taskAllocatorId);
-            log.info(
-                "Deleted [%d] entries from pendingSegments table for taskAllocatorId[%s].",
-                pendingSegmentsDeleted, taskAllocatorId
-            );
-          }
-          activeAllocatorIdToTaskIds.remove(taskAllocatorId);
-        }
-      }
+      cleanupPendingSegments(task);
     }
     catch (Exception e) {
       log.warn(e, "Failure cleaning up upgradeSegments or pendingSegments tables.");
+    }
+  }
+
+  /**
+   * Cleans up pending segments associated with an APPEND task.
+   */
+  protected void cleanupPendingSegments(Task task)
+  {
+    if (!(task instanceof PendingSegmentAllocatingTask)) {
+      return;
+    }
+
+    giant.lock();
+    try {
+      final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
+      if (activeAllocatorIdToTaskIds.containsKey(taskAllocatorId)) {
+        final Set<String> taskIdsForSameAllocator = activeAllocatorIdToTaskIds.get(taskAllocatorId);
+        taskIdsForSameAllocator.remove(task.getId());
+
+        if (taskIdsForSameAllocator.isEmpty()) {
+          final int pendingSegmentsDeleted = metadataStorageCoordinator
+              .deletePendingSegmentsForTaskAllocatorId(task.getDataSource(), taskAllocatorId);
+          log.info(
+              "Deleted [%d] entries from pendingSegments table for taskAllocatorId[%s].",
+              pendingSegmentsDeleted, taskAllocatorId
+          );
+        }
+        activeAllocatorIdToTaskIds.remove(taskAllocatorId);
+      }
+    }
+    finally {
+      giant.unlock();
     }
   }
 

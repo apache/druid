@@ -101,7 +101,7 @@ public class TimeBoundaryQueryRunnerFactory
 
     public TimeBoundaryQueryRunner(Segment segment)
     {
-      this.cursorFactory = segment.asCursorFactory();
+      this.cursorFactory = segment.as(CursorFactory.class);
       this.dataInterval = segment.getDataInterval();
       this.timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
     }

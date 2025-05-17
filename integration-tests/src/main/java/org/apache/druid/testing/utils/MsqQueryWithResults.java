@@ -32,9 +32,10 @@ public class MsqQueryWithResults extends AbstractQueryWithResults<String>
   @JsonCreator
   public MsqQueryWithResults(
       @JsonProperty("query") String query,
+      @JsonProperty("description") String description,
       @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
   )
   {
-    super(query, expectedResults, Collections.emptyList());
+    super(query, description, expectedResults, Collections.emptyList());
   }
 }

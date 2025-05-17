@@ -153,6 +153,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
   public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
   public static final String AUTOSCALER_REQUIRED_TASKS_METRIC = "task/autoScaler/requiredCount";
+  public static final String AUTOSCALER_SCALING_TIME_METRIC = "task/autoScaler/scaleActionTime";
 
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
@@ -282,6 +283,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     public String getBaseSequenceName()
     {
       return baseSequenceName;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "TaskGroup{" +
+             "groupId=" + groupId +
+             ", tasks=" + tasks +
+             '}';
     }
   }
 
@@ -461,7 +471,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               log.info(
                   "Skipping DynamicAllocationTasksNotice execution for datasource [%s] because following tasks are pending [%s]",
                   dataSource,
-                  pendingCompletionTaskGroups
+                  list
               );
               return;
             }
@@ -543,9 +553,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           desiredActiveTaskCount,
           dataSource
       );
+      final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
       gracefulShutdownInternal();
       changeTaskCountInIOConfig(desiredActiveTaskCount);
       clearAllocationInfo();
+      emitter.emit(ServiceMetricEvent.builder()
+                                     .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                     .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                     .setDimensionIfNotNull(
+                                         DruidMetrics.TAGS,
+                                         spec.getContextValue(DruidMetrics.TAGS)
+                                     )
+                                     .setMetric(
+                                         AUTOSCALER_SCALING_TIME_METRIC,
+                                         scaleActionStopwatch.millisElapsed()
+                                     ));
       log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
       return true;
     }
@@ -1697,7 +1719,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
-      log.warn(e, "Exception in supervisor run loop for dataSource [%s]", dataSource);
+      log.makeAlert(e, "Exception in supervisor run loop for dataSource [%s]", dataSource).emit();
     }
     finally {
       stateManager.markRunFinished();
@@ -4500,7 +4522,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       emitter.emit(
           ServiceMetricEvent.builder()
                             .setDimension("noticeType", noticeType)
-                            .setDimension("dataSource", dataSource)
+                            .setDimension(DruidMetrics.DATASOURCE, dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
                             .setMetric("ingest/notices/time", timeInMillis)
       );
@@ -4534,7 +4556,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     try {
       emitter.emit(
           ServiceMetricEvent.builder()
-                            .setDimension("dataSource", dataSource)
+                            .setDimension(DruidMetrics.DATASOURCE, dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
                             .setMetric("ingest/notices/queueSize", getNoticesQueueSize())
       );
@@ -4585,7 +4607,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
 
-        LagStats lagStats = computeLags(partitionLags);
+        final LagStats lagStats = aggregatePartitionLags(partitionLags);
         Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
         for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
           emitter.emit(
@@ -4638,17 +4660,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @param partitionLags lags per partition
    */
-  protected LagStats computeLags(Map<PartitionIdType, Long> partitionLags)
+  protected LagStats aggregatePartitionLags(Map<PartitionIdType, Long> partitionLags)
   {
-    long maxLag = 0, totalLag = 0, avgLag;
-    for (long lag : partitionLags.values()) {
-      if (lag > maxLag) {
-        maxLag = lag;
-      }
-      totalLag += lag;
-    }
-    avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
-    return new LagStats(maxLag, totalLag, avgLag);
+    return spec.getIoConfig().getLagAggregator().aggregate(partitionLags);
   }
 
   /**

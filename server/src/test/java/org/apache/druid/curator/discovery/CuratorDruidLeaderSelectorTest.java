@@ -21,11 +21,11 @@ package org.apache.druid.curator.discovery;
 
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.DruidNode;
-import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,10 +40,13 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 {
   private static final Logger logger = new Logger(CuratorDruidLeaderSelectorTest.class);
 
+  private final StubServiceEmitter emitter = new StubServiceEmitter();
+
   @Before
   public void setUp() throws Exception
   {
-    EmittingLogger.registerEmitter(EasyMock.createNiceMock(ServiceEmitter.class));
+    emitter.flush();
+    EmittingLogger.registerEmitter(emitter);
     setupServerAndCurator();
   }
 
@@ -77,7 +80,6 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
           public void stopBeingLeader()
           {
             logger.info("listener1.stopBeingLeader().");
-            throw new RuntimeException("I said I am Rogue.");
           }
         }
     );
@@ -115,7 +117,6 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
           public void stopBeingLeader()
           {
             logger.info("listener2.stopBeingLeader().");
-            throw new RuntimeException("I am broken.");
           }
         }
     );
@@ -161,6 +162,47 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     Assert.assertTrue(leaderSelector3.isLeader());
     Assert.assertEquals("http://h3:8080", leaderSelector1.getCurrentLeader());
     Assert.assertEquals(1, leaderSelector3.localTerm());
+  }
+
+  @Test(timeout = 10_000)
+  public void test_becomeLeader_triggersCleanup_onFailure() throws InterruptedException
+  {
+    curator.start();
+    curator.blockUntilConnected();
+
+    final CuratorDruidLeaderSelector leaderSelector = new CuratorDruidLeaderSelector(
+        curator,
+        new DruidNode("s1", "h1", false, 8080, null, true, false),
+        "/testLatchPath"
+    );
+
+    final AtomicInteger becomeLeaderCalled = new AtomicInteger();
+    final AtomicInteger stopBeingLeaderCalled = new AtomicInteger();
+    leaderSelector.registerListener(
+        new DruidLeaderSelector.Listener()
+        {
+          @Override
+          public void becomeLeader()
+          {
+            becomeLeaderCalled.incrementAndGet();
+            throw new ISE("Fail to become leader");
+          }
+
+          @Override
+          public void stopBeingLeader()
+          {
+            stopBeingLeaderCalled.incrementAndGet();
+          }
+        }
+    );
+
+    while (becomeLeaderCalled.get() == 0) {
+      logger.info("Waiting to become leader");
+      Thread.sleep(100);
+    }
+
+    Assert.assertEquals(1, becomeLeaderCalled.get());
+    Assert.assertEquals(1, stopBeingLeaderCalled.get());
   }
 
   @After

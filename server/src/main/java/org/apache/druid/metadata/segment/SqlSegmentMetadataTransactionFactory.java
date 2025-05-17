@@ -23,12 +23,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.segment.cache.DatasourceSegmentCache;
+import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.query.DruidMetrics;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionStatus;
+
+import java.util.Set;
 
 /**
  * Factory for {@link SegmentMetadataTransaction}s. If the
@@ -37,9 +46,20 @@ import org.skife.jdbi.v2.TransactionStatus;
  * <p>
  * This class serves as a wrapper over the {@link SQLMetadataConnector} to
  * perform transactions specific to segment metadata.
+ * <p>
+ * Only the Overlord can perform write operations on the metadata store or the
+ * cache via this transaction factory. The Coordinator performs read operations
+ * directly on the metadata store and uses the cache only to build the timeline
+ * in {@link SqlSegmentsMetadataManagerV2}. There is currently only one method
+ * called by the Coordinator that could benefit from reading from the cache,
+ * {@code MetadataResource.getUsedSegmentsInDataSourceForIntervals()}, but for
+ * now, it continues to read directly from the metadata store for consistency
+ * with older Druid versions.
  */
 public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTransactionFactory
 {
+  private static final Logger log = new Logger(SqlSegmentMetadataTransactionFactory.class);
+
   private static final int QUIET_RETRIES = 2;
   private static final int MAX_RETRIES = 3;
 
@@ -48,6 +68,9 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
   private final SQLMetadataConnector connector;
   private final DruidLeaderSelector leaderSelector;
   private final SegmentMetadataCache segmentMetadataCache;
+  private final ServiceEmitter emitter;
+
+  private final boolean isNotOverlord;
 
   @Inject
   public SqlSegmentMetadataTransactionFactory(
@@ -55,7 +78,9 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
       MetadataStorageTablesConfig tablesConfig,
       SQLMetadataConnector connector,
       @IndexingService DruidLeaderSelector leaderSelector,
-      SegmentMetadataCache segmentMetadataCache
+      @Self Set<NodeRole> nodeRoles,
+      SegmentMetadataCache segmentMetadataCache,
+      ServiceEmitter emitter
   )
   {
     this.jsonMapper = jsonMapper;
@@ -63,6 +88,9 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
     this.connector = connector;
     this.leaderSelector = leaderSelector;
     this.segmentMetadataCache = segmentMetadataCache;
+    this.emitter = emitter;
+
+    this.isNotOverlord = !nodeRoles.contains(NodeRole.OVERLORD);
   }
 
   public int getMaxRetries()
@@ -81,15 +109,19 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
-          if (segmentMetadataCache.isEnabled()) {
-            final DatasourceSegmentCache datasourceCache
-                = segmentMetadataCache.getDatasource(dataSource);
-            final SegmentMetadataReadTransaction cachedTransaction
-                = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
-
-            return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
+          if (isNotOverlord) {
+            // Read directly from the metadata store if not Overlord
+            return executeReadAndClose(sqlTransaction, callback);
+          } else if (segmentMetadataCache.isSyncedForRead()) {
+            // Use cache as it is already synced with the metadata store
+            emitTransactionCount(Metric.READ_ONLY_TRANSACTIONS, dataSource);
+            return segmentMetadataCache.readCacheForDataSource(dataSource, dataSourceCache -> {
+              final SegmentMetadataReadTransaction cachedTransaction
+                  = new CachedSegmentMetadataTransaction(sqlTransaction, dataSourceCache, leaderSelector, true);
+              return executeReadAndClose(cachedTransaction, callback);
+            });
           } else {
-            return executeReadAndClose(createSqlTransaction(dataSource, handle, status), callback);
+            return executeReadAndClose(sqlTransaction, callback);
           }
         },
         QUIET_RETRIES,
@@ -103,18 +135,34 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
       SegmentMetadataTransaction.Callback<T> callback
   )
   {
+    if (isNotOverlord) {
+      throw DruidException.defensive("Only Overlord can perform write transactions on segment metadata.");
+    }
+
     return connector.retryTransaction(
         (handle, status) -> {
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
           if (segmentMetadataCache.isEnabled()) {
-            final DatasourceSegmentCache datasourceCache
-                = segmentMetadataCache.getDatasource(dataSource);
-            final SegmentMetadataTransaction cachedTransaction
-                = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
+            final boolean isSynced = segmentMetadataCache.isSyncedForRead();
 
-            return datasourceCache.write(() -> executeWriteAndClose(cachedTransaction, callback));
+            if (isSynced) {
+              emitTransactionCount(Metric.READ_WRITE_TRANSACTIONS, dataSource);
+            } else {
+              log.warn(
+                  "Starting read-write transaction for datasource[%s]. Reads will be done"
+                  + " directly from metadata store since cache is not synced yet.",
+                  dataSource
+              );
+              emitTransactionCount(Metric.WRITE_ONLY_TRANSACTIONS, dataSource);
+            }
+
+            return segmentMetadataCache.writeCacheForDataSource(dataSource, dataSourceCache -> {
+              final SegmentMetadataTransaction cachedTransaction =
+                  new CachedSegmentMetadataTransaction(sqlTransaction, dataSourceCache, leaderSelector, isSynced);
+              return executeWriteAndClose(cachedTransaction, callback);
+            });
           } else {
             return executeWriteAndClose(sqlTransaction, callback);
           }
@@ -161,6 +209,15 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
     try (transaction) {
       return callback.inTransaction(transaction);
     }
+  }
+
+  private void emitTransactionCount(String metricName, String datasource)
+  {
+    emitter.emit(
+        ServiceMetricEvent.builder()
+                          .setDimension(DruidMetrics.DATASOURCE, datasource)
+                          .setMetric(metricName, 1L)
+    );
   }
 
 }

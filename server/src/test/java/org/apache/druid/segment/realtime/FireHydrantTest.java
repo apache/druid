@@ -21,9 +21,7 @@ package org.apache.druid.segment.realtime;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
@@ -37,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -191,15 +190,9 @@ public class FireHydrantTest extends InitializedNullHandlingTest
 
           @Nullable
           @Override
-          public QueryableIndex asQueryableIndex()
+          public <T> T as(@Nonnull Class<T> clazz)
           {
-            return incrementalIndexSegment.asQueryableIndex();
-          }
-
-          @Override
-          public CursorFactory asCursorFactory()
-          {
-            return incrementalIndexSegment.asCursorFactory();
+            return incrementalIndexSegment.as(clazz);
           }
 
           @Override

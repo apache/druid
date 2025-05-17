@@ -1,0 +1,680 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| __time                  | s_int | s_null | a_bool       | a_int        | a_float          | a_str          | a_null             | a_empty | a_mixed                  | a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A1_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_bool) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A1_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_bool) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A1_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_bool) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A2_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A2_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A2_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A3_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A3_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A3_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A4_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A4_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A4_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_str) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A5_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A5_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|  14 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A5_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A6_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A6_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A6_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A7_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A7_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A7_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A8_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A8_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A8_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A9_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A9_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A9_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A10_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A10_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   8 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A10_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A11_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A11_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A11_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A12_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u(c)
+   LIMIT 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A12_B4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u(c)
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|  14 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_limit_offset TEST_ID: A12_B6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u(c)
+   LIMIT 1
+   OFFSET 1);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+

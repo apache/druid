@@ -1,0 +1,921 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT string_agg(11.1111111, '|') AS col;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT string_agg(tab0f0, '|') AS col
+   FROM test_agg_funcs)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0f0, '|') AS col
+FROM test_agg_funcs
+WHERE tab0f0 IS NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A04
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT string_agg(tab0f0, '|') || '-3333333333' AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A05
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT '3333333333-' || string_agg(tab0f0, '|') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A06
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT string_agg(tab0f0, ',') || '-' || string_agg(tab0f0, '|') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A07
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT concat(string_agg(tab0f0, ','), '-', string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A08
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT textcat(string_agg(tab0f0, '|'), '-3333333333') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A09
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT textcat('3333333333-', string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A10
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT textcat(string_agg(tab0f0, ','), string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A11
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT string_format('%s-%s', string_agg(tab0f0, ','), string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A12
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT length(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A13
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT char_length(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A14
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT character_length(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A15
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT character_length(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A16
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT lower(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A17
+#-------------------------------------------------------------------------
+SELECT parse_long(string_agg(tab0f0, '|'), 16) AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A18
+#-------------------------------------------------------------------------
+SELECT position('1' IN string_agg(tab0f0, '|')) AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A19
+#-------------------------------------------------------------------------
+SELECT position('1' IN string_agg(tab0f0, '|')
+                FROM 2) AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A20
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT regexp_extract(string_agg(tab0f0, '|'), '13\.') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A21
+#-------------------------------------------------------------------------
+SELECT regexp_extract(string_agg(tab0f0, '|'), '14\.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A22
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(tab0f0, '|'), '13\.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A23
+#-------------------------------------------------------------------------
+SELECT regexp_like(string_agg(tab0f0, '|'), '14\.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A24
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(tab0f0, '|'), '11.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A25
+#-------------------------------------------------------------------------
+SELECT contains_string(string_agg(tab0f0, '|'), '22.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A26
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(tab0f0, '|'), '11.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A27
+#-------------------------------------------------------------------------
+SELECT icontains_string(string_agg(tab0f0, '|'), '22.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A28
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT replace(string_agg(tab0f0, '|'), '11.', '3333333333') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A29
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT replace(string_agg(tab0f0, '|'), '4444444444', '3333333333') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A30
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(tab0f0, '|'), '11.') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A31
+#-------------------------------------------------------------------------
+SELECT strpos(string_agg(tab0f0, '|'), '|4444444444') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A32
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT substring(string_agg(tab0f0, '|'), 1) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A33
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT substring(string_agg(tab0f0, '|'), 4, 100) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A34
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT trim(BOTH
+               FROM string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A35
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT trim(LEADING
+               FROM string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A36
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT trim(TRAILING
+               FROM string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A37
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT trim(BOTH '1'
+               FROM string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A38
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT trim(LEADING '1'
+               FROM string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A39
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT trim(TRAILING '1'
+               FROM string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A40
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT btrim(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A41
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT btrim(string_agg(tab0f0, '|'), '1') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A42
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT ltrim(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A43
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT ltrim(string_agg(tab0f0, '|'), '1') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A44
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT rtrim(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A45
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT rtrim(string_agg(tab0f0, '|'), '1') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A46
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT upper(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A47
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT reverse(string_agg(tab0f0, '|')) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A48
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0f0, '|'), -1) AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A49
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0f0, '|'), 0) AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+

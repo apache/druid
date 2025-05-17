@@ -253,7 +253,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             queryGranularity,
             true,
             intervals
-        )
+        ),
+        null
     );
   }
 
@@ -393,7 +394,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 true,
                 ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
-            )
+            ),
+            null
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
         Assert.assertSame(HashBasedNumberedShardSpec.class, segments.get(segmentIdx).getShardSpec().getClass());
@@ -807,7 +809,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Granularities.MINUTE,
             true,
             ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-        )
+        ),
+        null
     );
     Assert.assertEquals(
         expectedCompactionState,
@@ -866,7 +869,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Granularities.MINUTE,
             true,
             ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-        )
+        ),
+        null
     );
     Assert.assertEquals(
         expectedCompactionState,
@@ -2161,8 +2165,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final TaskConfig config = new TaskConfigBuilder()
         .build();
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+        = CentralizedDatasourceSchemaConfig.enabled(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskActionClient(createActionClient(task))

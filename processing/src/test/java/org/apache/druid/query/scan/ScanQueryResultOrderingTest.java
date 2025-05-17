@@ -39,7 +39,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
-import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.TestSegmentUtils.InMemoryTestSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -63,7 +63,7 @@ import java.util.stream.IntStream;
 
 /**
  * Tests the order in which Scan query results come back.
- *
+ * <p>
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
 @RunWith(Parameterized.class)
@@ -87,8 +87,8 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                                                                 .add(ID_COLUMN, ColumnType.LONG)
                                                                 .build();
 
-  private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
-      new RowBasedSegment<>(
+  private static final List<InMemoryTestSegment<Object[]>> SEGMENTS = ImmutableList.of(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(
@@ -105,7 +105,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
-      new RowBasedSegment<>(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
           Sequences.simple(
               ImmutableList.of(
@@ -122,7 +122,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
-      new RowBasedSegment<>(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(

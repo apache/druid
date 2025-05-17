@@ -169,7 +169,7 @@ public class MarkEternityTombstonesAsUnusedTest
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.copyOf(allUsedSegments);
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    final SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    final SegmentTimeline timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                             .getUsedSegmentsTimelinesPerDataSource()
                                                             .get(ds1);
 
@@ -195,7 +195,7 @@ public class MarkEternityTombstonesAsUnusedTest
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.copyOf(allUsedSegments);
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    final SegmentTimeline ds1Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    final SegmentTimeline ds1Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds1);
 
@@ -221,7 +221,7 @@ public class MarkEternityTombstonesAsUnusedTest
     );
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    SegmentTimeline timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get(ds1);
 
@@ -244,7 +244,7 @@ public class MarkEternityTombstonesAsUnusedTest
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of();
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    final SegmentTimeline ds1Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    final SegmentTimeline ds1Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds1);
 
@@ -270,7 +270,7 @@ public class MarkEternityTombstonesAsUnusedTest
 
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    SegmentTimeline timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get(ds1);
 
@@ -320,7 +320,7 @@ public class MarkEternityTombstonesAsUnusedTest
     );
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    SegmentTimeline ds1Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    SegmentTimeline ds1Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                          .getUsedSegmentsTimelinesPerDataSource()
                                                          .get(ds1);
     Assert.assertTrue(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
@@ -328,7 +328,7 @@ public class MarkEternityTombstonesAsUnusedTest
     Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
     Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
 
-    SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    SegmentTimeline ds2Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                          .getUsedSegmentsTimelinesPerDataSource()
                                                          .get(ds2);
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
@@ -358,7 +358,7 @@ public class MarkEternityTombstonesAsUnusedTest
     );
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
 
@@ -391,7 +391,7 @@ public class MarkEternityTombstonesAsUnusedTest
 
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
@@ -416,7 +416,7 @@ public class MarkEternityTombstonesAsUnusedTest
     );
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
 
@@ -440,7 +440,7 @@ public class MarkEternityTombstonesAsUnusedTest
     );
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
 
@@ -465,7 +465,7 @@ public class MarkEternityTombstonesAsUnusedTest
     final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDataSourcesSnapshot(
-            segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+            segmentsMetadataManager.getRecentDataSourcesSnapshot()
         )
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(
@@ -488,7 +488,9 @@ public class MarkEternityTombstonesAsUnusedTest
         (ds, segmentIds) -> segmentsMetadataManager.markSegmentsAsUnused(segmentIds)
     ).run(params);
 
-    final Set<DataSegment> actualUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
+    final Set<DataSegment> actualUsedSegments = Sets.newHashSet(
+        segmentsMetadataManager.getRecentDataSourcesSnapshot().iterateAllUsedSegmentsInSnapshot()
+    );
 
     Assert.assertEquals(expectedUsedSegments.size(), actualUsedSegments.size());
     Assert.assertTrue(actualUsedSegments.containsAll(expectedUsedSegments));

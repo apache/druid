@@ -43,6 +43,7 @@ public class DruidK8sConstants
   public static final String DRUID_HOST_ENV = "druid_host";
   public static final String DRUID_HOSTNAME_ENV = "HOSTNAME";
   public static final String LABEL_KEY = "druid.k8s.peons";
+  public static final String OVERLORD_NAMESPACE_KEY = "druid.overlord.namespace";
   public static final String DRUID_LABEL_PREFIX = "druid.";
   public static final String BASE_TEMPLATE_NAME = "base";
   public static final long MAX_ENV_VARIABLE_KBS = 130048; // 127 KB

@@ -44,8 +44,10 @@ import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
@@ -80,6 +82,7 @@ public class TaskToolboxFactory
   private final DruidNode taskExecutorNode;
   private final TaskActionClientFactory taskActionClientFactory;
   private final ServiceEmitter emitter;
+  private final PolicyEnforcer policyEnforcer;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
   private final DataSegmentMover dataSegmentMover;
@@ -88,6 +91,7 @@ public class TaskToolboxFactory
   private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
+  private final Provider<DruidProcessingConfig> processingConfigProvider;
   private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
   private final Provider<MonitorScheduler> monitorSchedulerProvider;
@@ -125,6 +129,7 @@ public class TaskToolboxFactory
       @Parent DruidNode taskExecutorNode,
       TaskActionClientFactory taskActionClientFactory,
       ServiceEmitter emitter,
+      PolicyEnforcer policyEnforcer,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
       DataSegmentMover dataSegmentMover,
@@ -133,6 +138,7 @@ public class TaskToolboxFactory
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
+      Provider<DruidProcessingConfig> processingConfigProvider,
       QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       Provider<MonitorScheduler> monitorSchedulerProvider,
@@ -167,6 +173,7 @@ public class TaskToolboxFactory
     this.taskExecutorNode = taskExecutorNode;
     this.taskActionClientFactory = taskActionClientFactory;
     this.emitter = emitter;
+    this.policyEnforcer = policyEnforcer;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
     this.dataSegmentMover = dataSegmentMover;
@@ -175,6 +182,7 @@ public class TaskToolboxFactory
     this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
+    this.processingConfigProvider = processingConfigProvider;
     this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.monitorSchedulerProvider = monitorSchedulerProvider;
@@ -223,6 +231,7 @@ public class TaskToolboxFactory
         .taskExecutorNode(taskExecutorNode)
         .taskActionClient(taskActionClientFactory.create(task))
         .emitter(emitter)
+        .policyEnforcer(policyEnforcer)
         .segmentPusher(segmentPusher)
         .dataSegmentKiller(dataSegmentKiller)
         .dataSegmentMover(dataSegmentMover)
@@ -231,6 +240,7 @@ public class TaskToolboxFactory
         .serverAnnouncer(serverAnnouncer)
         .handoffNotifierFactory(handoffNotifierFactory)
         .queryRunnerFactoryConglomerateProvider(queryRunnerFactoryConglomerateProvider)
+        .processingConfigProvider(processingConfigProvider)
         .queryProcessingPool(queryProcessingPool)
         .joinableFactory(joinableFactory)
         .monitorSchedulerProvider(monitorSchedulerProvider)

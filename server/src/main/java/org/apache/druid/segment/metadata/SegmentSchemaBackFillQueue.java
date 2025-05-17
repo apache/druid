@@ -29,10 +29,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.SegmentSchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.timeline.SegmentId;
 
@@ -87,7 +84,7 @@ public class SegmentSchemaBackFillQueue
     this.fingerprintGenerator = fingerprintGenerator;
     this.emitter = emitter;
     this.config = config;
-    this.executionPeriod = config.getBackFillPeriod();
+    this.executionPeriod = config.getBackFillPeriodInMillis();
     this.executor = isEnabled() ? scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s") : null;
   }
 
@@ -103,7 +100,12 @@ public class SegmentSchemaBackFillQueue
   public void onLeaderStart()
   {
     if (isEnabled()) {
-      scheduledFuture = executor.scheduleAtFixedRate(this::processBatchesDueSafely, executionPeriod, executionPeriod, TimeUnit.MILLISECONDS);
+      scheduledFuture = executor.scheduleAtFixedRate(
+          this::processBatchesDueSafely,
+          executionPeriod,
+          executionPeriod,
+          TimeUnit.MILLISECONDS
+      );
     }
   }
 
@@ -118,13 +120,9 @@ public class SegmentSchemaBackFillQueue
 
   public void add(
       SegmentId segmentId,
-      RowSignature rowSignature,
-      Map<String, AggregatorFactory> aggregators,
-      long numRows
+      SchemaPayloadPlus schemaMetadata
   )
   {
-    SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);
-    SchemaPayloadPlus schemaMetadata = new SchemaPayloadPlus(schemaPayload, numRows);
     queue.add(
         new SegmentSchemaMetadataPlus(
             segmentId,
@@ -181,12 +179,12 @@ public class SegmentSchemaBackFillQueue
         );
         // Mark the segments as published in the cache.
         for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
-          segmentSchemaCache.markMetadataQueryResultPublished(plus.getSegmentId());
+          segmentSchemaCache.markSchemaPersisted(plus.getSegmentId());
         }
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.DATASOURCE, entry.getKey())
-                              .setMetric("metadatacache/backfill/count", entry.getValue().size())
+                              .setMetric(Metric.SCHEMAS_BACKFILLED, entry.getValue().size())
         );
       }
       catch (Exception e) {
@@ -194,8 +192,10 @@ public class SegmentSchemaBackFillQueue
       }
     }
     emitter.emit(
-        ServiceMetricEvent.builder()
-                          .setMetric("metadatacache/backfill/time", stopwatch.millisElapsed())
+        ServiceMetricEvent.builder().setMetric(
+            Metric.BACKFILL_DURATION_MILLIS,
+            stopwatch.millisElapsed()
+        )
     );
   }
 }

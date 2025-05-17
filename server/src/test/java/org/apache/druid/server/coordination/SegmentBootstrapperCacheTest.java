@@ -27,6 +27,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -35,7 +36,6 @@ import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.TestSegmentUtils;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -219,12 +219,12 @@ public class SegmentBootstrapperCacheTest
 
     // Make sure adding segments beyond allowed size fails
     DataSegment newSegment = TestSegmentUtils.makeSegment("test", "new-segment", SEGMENT_SIZE);
-    loadDropHandler.addSegment(newSegment, null);
+    loadDropHandler.addSegment(newSegment, null, null);
     Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     // Clearing some segment should allow for new segments
     loadDropHandler.removeSegment(expectedSegments.get(0), null, false);
-    loadDropHandler.addSegment(newSegment, null);
+    loadDropHandler.addSegment(newSegment, null, null);
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     bootstrapper.stop();

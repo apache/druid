@@ -22,12 +22,14 @@ package org.apache.druid.client;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -35,16 +37,39 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An immutable snapshot of metadata information about used segments and overshadowed segments, coming from
- * {@link SqlSegmentsMetadataManager}.
+ * {@link SegmentsMetadataManager}.
  */
 public class DataSourcesSnapshot
 {
   public static DataSourcesSnapshot fromUsedSegments(Iterable<DataSegment> segments)
   {
     return fromUsedSegments(segments, DateTimes.nowUtc());
+  }
+
+  /**
+   * Creates a snapshot of all "used" segments that existed in the database at
+   * the {@code snapshotTime}.
+   */
+  public static DataSourcesSnapshot fromUsedSegments(
+      Map<String, Set<DataSegment>> datasourceToUsedSegments,
+      DateTime snapshotTime
+  )
+  {
+    final Map<String, String> properties = Map.of("created", snapshotTime.toString());
+
+    final Map<String, ImmutableDruidDataSource> dataSources = new HashMap<>();
+    datasourceToUsedSegments.forEach(
+        (dataSource, segments) -> dataSources.put(
+            dataSource,
+            new ImmutableDruidDataSource(dataSource, properties, segments)
+        )
+    );
+
+    return new DataSourcesSnapshot(snapshotTime, dataSources);
   }
 
   /**
@@ -118,6 +143,23 @@ public class DataSourcesSnapshot
   public ImmutableSet<DataSegment> getOvershadowedSegments()
   {
     return overshadowedSegments;
+  }
+
+  /**
+   * Gets all the used segments for the datasource that overlap with the given
+   * interval and are not completely overshadowed.
+   */
+  public Set<DataSegment> getAllUsedNonOvershadowedSegments(
+      String dataSource,
+      Interval interval
+  )
+  {
+    final SegmentTimeline timeline = usedSegmentsTimelinesPerDataSource.get(dataSource);
+    if (timeline == null) {
+      return Set.of();
+    }
+
+    return timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
   }
 
   /**

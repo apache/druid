@@ -52,6 +52,8 @@
     "replicas": 1,
     "taskDuration": "PT120S",
     "%%USE_EARLIEST_KEY%%": true,
-    "inputFormat" : %%INPUT_FORMAT%%
-  }
+    "inputFormat" : %%INPUT_FORMAT%%,
+    "lagAggregator": %%LAG_AGGREGATOR%%
+  },
+  "context": %%CONTEXT%%
 }

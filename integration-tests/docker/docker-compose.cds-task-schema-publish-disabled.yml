@@ -40,6 +40,7 @@ services:
       - druid_centralizedDatasourceSchema_backFillEnabled=true
       - druid_centralizedDatasourceSchema_backFillPeriod=15000
       - druid_coordinator_segmentMetadata_metadataRefreshPeriod=PT15S
+      - druid_manager_segments_useIncrementalCache=never
     depends_on:
       - druid-overlord
       - druid-metadata-storage
@@ -53,6 +54,7 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
       - druid_centralizedDatasourceSchema_enabled=true
       - druid_centralizedDatasourceSchema_taskSchemaPublishDisabled=true
+      - druid_manager_segments_useIncrementalCache=never
     depends_on:
       - druid-metadata-storage
       - druid-zookeeper-kafka

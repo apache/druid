@@ -206,12 +206,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       throw new ISE("Can plan a query only once.");
     }
     long planningStartNanos = System.nanoTime();
-    try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
-        sqlToolbox.engine,
-        queryPlus.sql(),
-        queryContext,
-        hook
-    )) {
+    try (DruidPlanner planner = createPlanner()) {
       validate(planner);
       authorize(planner, authorizer());
 
@@ -243,6 +238,17 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       reporter.failed(e);
       throw InvalidSqlInput.exception(e, "Calcite assertion violated: [%s]", e.getMessage());
     }
+  }
+
+  protected DruidPlanner createPlanner()
+  {
+    return sqlToolbox.plannerFactory.createPlanner(
+        sqlToolbox.engine,
+        queryPlus.sql(),
+        queryContext,
+        hook,
+        false
+    );
   }
 
   /**

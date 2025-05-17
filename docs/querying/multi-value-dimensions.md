@@ -252,7 +252,7 @@ results in:
 ```sql
 SELECT label, tags
 FROM "mvd_example_rollup"
-WHERE tags = 't3'
+WHERE label in ('row1','row2')
 GROUP BY 1,2
 ```
 

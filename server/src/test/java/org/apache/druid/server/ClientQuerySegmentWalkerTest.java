@@ -91,7 +91,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -1856,7 +1855,6 @@ public class ClientQuerySegmentWalkerTest
         SHARD_SPEC.createChunk(
             ReferenceCountingSegment.wrapSegment(
                 new RowBasedSegment<>(
-                    SegmentId.of(name, INTERVAL, VERSION, SHARD_SPEC.getPartitionNum()),
                     Sequences.simple(dataSource.getRows()),
                     dataSource.rowAdapter(),
                     dataSource.getRowSignature()

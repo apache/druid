@@ -31,6 +31,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -377,15 +378,13 @@ public class SegmentManagerTest
           segment.getInterval(),
           segment.getVersion(),
           segment.getShardSpec().createChunk(
-              ReferenceCountingSegment.wrapSegment(
                   ReferenceCountingSegment.wrapSegment(
                       new TestSegmentUtils.SegmentForTesting(
                           segment.getDataSource(),
                           (Interval) segment.getLoadSpec().get("interval"),
                           MapUtils.getString(segment.getLoadSpec(), "version")
-                  ), segment.getShardSpec()),
-                  segment.getShardSpec()
-              )
+                  ), segment.getShardSpec())
+              
           )
       );
     }

@@ -69,7 +69,7 @@ public class StringDimensionIndexerProcessBenchmark
       inputData[i] = (next < nullNumbers) ? null : ("abcd-" + next + "-efgh");
     }
 
-    fullIndexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false, false);
+    fullIndexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false);
     for (String data : inputData) {
       fullIndexer.processRowValsToUnsortedEncodedKeyComponent(data, true);
     }
@@ -83,7 +83,7 @@ public class StringDimensionIndexerProcessBenchmark
   @Setup(Level.Iteration)
   public void setupEmptyIndexer()
   {
-    emptyIndexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false, false);
+    emptyIndexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false);
   }
 
   @Setup(Level.Iteration)

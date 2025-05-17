@@ -48,35 +48,18 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   @Before
   public void setUp() throws Exception
   {
-    connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.seconds(3), false);
-
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    setUp(derbyConnectorRule);
+    segmentSchemaCache = new SegmentSchemaCache();
     segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
         connector
     );
-
-    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
-        jsonMapper,
-        Suppliers.ofInstance(config),
-        derbyConnectorRule.metadataTablesConfigSupplier(),
-        connector,
-        segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance()
-    );
-    sqlSegmentsMetadataManager.start();
-    storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
-
-    connector.createSegmentSchemasTable();
-    connector.createSegmentTable();
 
     publishSegment(segment1);
     publishSegment(segment2);
@@ -85,10 +68,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
   @After
   public void teardown()
   {
-    if (sqlSegmentsMetadataManager.isPollingDatabasePeriodically()) {
-      sqlSegmentsMetadataManager.stopPollingDatabasePeriodically();
-    }
-    sqlSegmentsMetadataManager.stop();
+    teardownManager();
   }
 
   @Test(timeout = 60_000)
@@ -127,9 +107,9 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
-    config = new SegmentsMetadataManagerConfig(Period.seconds(3), false);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+        = CentralizedDatasourceSchemaConfig.enabled(true);
+    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
@@ -141,7 +121,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     );
 
     sqlSegmentsMetadataManager.start();
-    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertNull(dataSourcesSnapshot);
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
     Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
@@ -159,11 +139,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     Assert.assertEquals(schemaMetadata1, segmentSchemaCache.getSchemaForSegment(segment1.getId()).get());
     Assert.assertEquals(schemaMetadata2, segmentSchemaCache.getSchemaForSegment(segment2.getId()).get());
 
-    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
-    Assert.assertEquals(
-        ImmutableSet.of("wikipedia"),
-        sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
-    );
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
@@ -215,9 +191,9 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, 0);
 
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
-    config = new SegmentsMetadataManagerConfig(Period.seconds(3), false);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+        = CentralizedDatasourceSchemaConfig.enabled(true);
+    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),

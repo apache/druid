@@ -1,0 +1,1360 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A4_W3_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(percent_rank() OVER w, 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip);
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A4_W3_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(percent_rank() OVER (PARTITION BY client_ip), 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A4_W3_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(percent_rank() OVER w, 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip);
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A4_W4_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(percent_rank() OVER (), 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A4_W4_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(percent_rank() OVER w, 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS ();
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A4_W4_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(percent_rank() OVER (), 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A4_W4_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(percent_rank() OVER w, 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS ();
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (PARTITION BY client_ip
+                               ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')), 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.17 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.33 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.67 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.83 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  1.0 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.17 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.33 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.67 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.83 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  1.0 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (PARTITION BY client_ip
+                               ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')), 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.17 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.33 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.67 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.83 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  1.0 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W1_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.17 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.33 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.67 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.83 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |  1.0 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W2_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (
+                               ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')), 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.13 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.25 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.38 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 0.88 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.63 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.75 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W2_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.13 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.25 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.38 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 0.88 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.63 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.75 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W2_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (
+                               ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')), 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.13 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.25 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.38 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 0.88 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.63 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.75 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W2_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+------+
+| server_ip    | client_ip     | timezone | t                   | c    |
++--------------+---------------+----------+---------------------+------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 0.13 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.25 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.38 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 0.88 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |  0.5 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 0.63 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 0.75 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |  1.0 |
++--------------+---------------+----------+---------------------+------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W3_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (PARTITION BY client_ip), 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W3_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip);
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W3_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (PARTITION BY client_ip), 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W3_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip);
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W4_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (), 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W4_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS ();
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W4_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER (), 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A5_W4_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       round(cume_dist() OVER w, 2) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS ();
+RANK or DENSE_RANK functions require ORDER BY clause in window specification
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER (PARTITION BY client_ip
+                      ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER (PARTITION BY client_ip
+                      ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W1_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W2_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER (
+                      ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W2_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W2_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER (
+                      ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W2_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W3_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER (PARTITION BY client_ip) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W3_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip);
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W3_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER (PARTITION BY client_ip) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W3_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip);
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W4_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER () AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W4_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS ();
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W4_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER () AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A6_W4_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(0) OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS ();
+numBuckets[0] must be greater than zero
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER (PARTITION BY client_ip
+                      ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER (PARTITION BY client_ip
+                      ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W1_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W2_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER (
+                      ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W2_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W2_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER (
+                      ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A7_W2_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(1) OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A8_W1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(10) OVER (PARTITION BY client_ip
+                       ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 2 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A8_W1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(10) OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 2 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_funcs TEST_ID: A8_W1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       ntile(10) OVER (PARTITION BY client_ip
+                       ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---+
+| server_ip    | client_ip     | timezone | t                   | c |
++--------------+---------------+----------+---------------------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | 2 |
++--------------+---------------+----------+---------------------+---+
+(8 rows)
+
+!ok
+

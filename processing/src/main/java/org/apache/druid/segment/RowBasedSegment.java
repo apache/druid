@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
  */
 public class RowBasedSegment<RowType> implements Segment
 {
-  private final SegmentId segmentId;
   private final Sequence<RowType> rowSequence;
   private final RowAdapter<RowType> rowAdapter;
   private final RowSignature rowSignature;
@@ -47,34 +46,30 @@ public class RowBasedSegment<RowType> implements Segment
    * this, and callers will expect it.
    *
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of
-   * {@link #asCursorFactory()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's
-   * cursor factory will allow creation of selectors on any field, using the {@link RowAdapter#columnFunction} for that
-   * field, even if it doesn't appear in "rowSignature".
+   * {@link #as(Class)} to get a {@link CursorFactory}. Note that the {@link ColumnSelectorFactory} implementation
+   * returned by this segment's cursor factory will allow creation of selectors on any field, using the
+   * {@link RowAdapter#columnFunction} for that field, even if it doesn't appear in "rowSignature".
    *
-   * @param segmentId    segment identifier; will be returned by {@link #getId()}
    * @param rowSequence  objects that comprise this segment. Must be re-iterable if support for {@link Cursor#reset()}
    *                     is required. Otherwise, does not need to be re-iterable.
    * @param rowAdapter   adapter used for reading these objects
    * @param rowSignature signature of the columns in these objects
    */
   public RowBasedSegment(
-      final SegmentId segmentId,
       final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
       final RowSignature rowSignature
   )
   {
-    this.segmentId = Preconditions.checkNotNull(segmentId, "segmentId");
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
     this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
     this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");
   }
 
   @Override
-  @Nonnull
   public SegmentId getId()
   {
-    return segmentId;
+    return null;
   }
 
   @Override
@@ -86,15 +81,12 @@ public class RowBasedSegment<RowType> implements Segment
 
   @Nullable
   @Override
-  public QueryableIndex asQueryableIndex()
+  public <T> T as(@Nonnull Class<T> clazz)
   {
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) new RowBasedCursorFactory<>(rowSequence, rowAdapter, rowSignature);
+    }
     return null;
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new RowBasedCursorFactory<>(rowSequence, rowAdapter, rowSignature);
   }
 
   @Override

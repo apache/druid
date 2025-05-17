@@ -78,7 +78,8 @@ EXPLAIN PLAN statements return:
 
 Example 1: EXPLAIN PLAN for a `SELECT` query on the `wikipedia` datasource:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -93,7 +94,8 @@ GROUP BY channel
 
 The above EXPLAIN PLAN query returns the following result:
 
-<details><summary>Show the result</summary>
+<details>
+<summary>Show the result</summary>
 
 ```json
 [
@@ -235,7 +237,8 @@ The above EXPLAIN PLAN query returns the following result:
 
 Example 2: EXPLAIN PLAN for an `INSERT` query that inserts data into the `wikipedia` datasource:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -263,7 +266,8 @@ PARTITIONED BY ALL
 
 The above EXPLAIN PLAN returns the following result:
 
-<details><summary>Show the result</summary>
+<details>
+<summary>Show the result</summary>
 
 ```json
 [
@@ -452,7 +456,8 @@ The above EXPLAIN PLAN returns the following result:
 Example 3: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource with a `DAY`
 time partitioning, and `cityName` and `countryName` as the clustering columns:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -482,7 +487,8 @@ CLUSTERED BY cityName, countryName
 
 The above EXPLAIN PLAN query returns the following result:
 
-<details><summary>Show the result</summary>
+<details>
+<summary>Show the result</summary>
 
 ```json
 [

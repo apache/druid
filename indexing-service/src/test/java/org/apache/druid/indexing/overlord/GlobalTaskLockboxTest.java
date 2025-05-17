@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
@@ -62,6 +63,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
@@ -135,7 +137,9 @@ public class GlobalTaskLockboxTest
             tablesConfig,
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            Set.of(NodeRole.OVERLORD),
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         objectMapper,
         tablesConfig,
@@ -476,7 +480,9 @@ public class GlobalTaskLockboxTest
             derby.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            Set.of(NodeRole.OVERLORD),
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),

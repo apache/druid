@@ -65,6 +65,7 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
+  public static final String CLONE_QUERY_MODE = "cloneQueryMode";
   // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
@@ -125,12 +126,19 @@ public class QueryContexts
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
+  // Dart
+  public static final String CTX_DART_QUERY_ID = "dartQueryId";
+  public static final String CTX_FULL_REPORT = "fullReport";
+
   // SQL statement resource specific keys
   public static final String CTX_EXECUTION_MODE = "executionMode";
 
   public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
+
+  public static final String CTX_PREPLANNED = "prePlanned";
+  public static final boolean DEFAULT_PREPLANNED = true;
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
@@ -149,6 +157,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  public static final CloneQueryMode DEFAULT_CLONE_QUERY_MODE = CloneQueryMode.EXCLUDECLONES;
   public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = true;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
@@ -162,6 +171,7 @@ public class QueryContexts
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
   public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+  public static final boolean DEFAULT_CTX_FULL_REPORT = false;
 
 
   @SuppressWarnings("unused") // Used by Jackson serialization

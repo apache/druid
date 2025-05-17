@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexing.common.TestUtils;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
@@ -85,7 +87,7 @@ public class DruidPeonClientIntegrationTest
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
-    k8sClient = new DruidKubernetesClient();
+    k8sClient = new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build());
     peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
     druidNode = new DruidNode(
         "test",
@@ -136,7 +138,7 @@ public class DruidPeonClientIntegrationTest
     List<Job> jobs = peonClient.getPeonJobs();
     assertEquals(1, jobs.size());
 
-    K8sTaskId taskId = new K8sTaskId(task.getId());
+    K8sTaskId taskId = new K8sTaskId(null, task.getId());
     InputStream peonLogs = peonClient.getPeonLogs(taskId).get();
     List<Integer> expectedLogs = IntStream.range(1, 1001).boxed().collect(Collectors.toList());
     List<Integer> actualLogs = new ArrayList<>();

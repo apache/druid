@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
@@ -58,6 +59,9 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
   @JsonProperty
   private Duration durationToRetain;
 
+  @JsonProperty
+  private Duration rollPeriod = new Period("P1D").toStandardDuration();
+
   @Override
   public RequestLogger get()
   {
@@ -66,7 +70,8 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
         factory.create(1, "RequestLogger-%s"),
         dir,
         filePattern,
-        durationToRetain
+        durationToRetain,
+        rollPeriod
     );
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;

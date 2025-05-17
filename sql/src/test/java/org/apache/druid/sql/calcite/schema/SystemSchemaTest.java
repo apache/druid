@@ -288,7 +288,8 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       null,
       MAPPER.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class),
-      MAPPER.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class)
+      MAPPER.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class),
+      null
   );
 
   private final DataSegment publishedCompactedSegment1 = new DataSegment(

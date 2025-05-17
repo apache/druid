@@ -1,0 +1,131 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C17_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[5]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C18_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][5]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C19_D1
+#-------------------------------------------------------------------------
+SELECT nvl(a_mixed, ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C20_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[6]' RETURNING varchar array), ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C21_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][6]' RETURNING varchar array), ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C22_D1
+#-------------------------------------------------------------------------
+SELECT nvl(a_nested, ARRAY['FILLER']) AS col
+FROM test_array;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C23_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C24_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][7]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
++----------+
+(4 rows)
+
+!ok
+

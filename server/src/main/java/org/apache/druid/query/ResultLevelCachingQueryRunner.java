@@ -106,6 +106,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
+        // Call accumulate on the sequence to ensure that all Wrapper/Closer/Baggage/etc. get called
+        resultFromClient.accumulate(null, (accumulated, in) -> accumulated);
         return deserializeResults(cachedResultSet, strategy, existingResultSetId);
       } else {
         @Nullable

@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.KafkaAdminClient;
@@ -55,6 +56,8 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
       String parserType,
       String parserOrInputFormat,
       List<String> dimensions,
+      Map<String, Object> context,
+      LagAggregator lagAggregator,
       IntegrationTestingConfig config
   )
   {
@@ -128,6 +131,16 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
             spec,
             "%%DIMENSIONS%%",
             jsonMapper.writeValueAsString(dimensions)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%CONTEXT%%",
+            jsonMapper.writeValueAsString(context)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%LAG_AGGREGATOR%%",
+            jsonMapper.writeValueAsString(lagAggregator)
         );
         return StringUtils.replace(
             spec,

@@ -30,6 +30,7 @@ import './contains-filter-control.scss';
 
 export interface ContainsFilterControlProps {
   querySource: QuerySource;
+  extraFilter: SqlExpression;
   filter: SqlExpression;
   filterPattern: ContainsFilterPattern;
   setFilterPattern(filterPattern: ContainsFilterPattern): void;
@@ -39,7 +40,7 @@ export interface ContainsFilterControlProps {
 export const ContainsFilterControl = React.memo(function ContainsFilterControl(
   props: ContainsFilterControlProps,
 ) {
-  const { querySource, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
+  const { querySource, extraFilter, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
   const { column, negated, contains } = filterPattern;
 
   const previewQuery = useMemo(
@@ -47,6 +48,7 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
       querySource
         .getInitQuery(
           SqlExpression.and(
+            extraFilter,
             filter,
             contains ? filterPatternToExpression(filterPattern) : undefined,
           ),
@@ -56,7 +58,7 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
         .changeLimitValue(101)
         .toString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- exclude 'makePattern' from deps
-    [querySource.query, filter, column, contains, negated],
+    [querySource.query, extraFilter, filter, column, contains, negated],
   );
 
   const [previewState] = useQueryManager<string, string[]>({

@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class FrameCursorFactoryTest
@@ -106,7 +107,7 @@ public class FrameCursorFactoryTest
 
       queryableCursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
       frameSegment = FrameTestUtil.cursorFactoryToFrameSegment(queryableCursorFactory, frameType);
-      frameCursorFactory = frameSegment.asCursorFactory();
+      frameCursorFactory = Objects.requireNonNull(frameSegment.as(CursorFactory.class));
     }
 
     @After
@@ -283,7 +284,7 @@ public class FrameCursorFactoryTest
     {
       queryableCursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
       frameSegment = FrameTestUtil.cursorFactoryToFrameSegment(queryableCursorFactory, frameType);
-      frameCursorFactory = frameSegment.asCursorFactory();
+      frameCursorFactory = Objects.requireNonNull(frameSegment.as(CursorFactory.class));
     }
 
     @After

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -56,6 +57,9 @@ public class DataSourceMSQDestination implements MSQDestination
   @Nullable
   private final Map<String, DimensionSchema> dimensionSchemas;
 
+  @Nullable
+  private final List<AggregateProjectionSpec> projections;
+
   @JsonCreator
   public DataSourceMSQDestination(
       @JsonProperty("dataSource") String dataSource,
@@ -63,6 +67,7 @@ public class DataSourceMSQDestination implements MSQDestination
       @JsonProperty("segmentSortOrder") @Nullable List<String> segmentSortOrder,
       @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks,
       @JsonProperty("dimensionSchemas") @Nullable Map<String, DimensionSchema> dimensionSchemas,
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @JsonProperty("terminalStageSpec") @Nullable TerminalStageSpec terminalStageSpec
   )
   {
@@ -71,6 +76,7 @@ public class DataSourceMSQDestination implements MSQDestination
     this.segmentSortOrder = segmentSortOrder != null ? segmentSortOrder : Collections.emptyList();
     this.replaceTimeChunks = replaceTimeChunks;
     this.dimensionSchemas = dimensionSchemas;
+    this.projections = projections;
     this.terminalStageSpec = terminalStageSpec != null ? terminalStageSpec : SegmentGenerationStageSpec.instance();
 
     if (replaceTimeChunks != null) {
@@ -158,6 +164,14 @@ public class DataSourceMSQDestination implements MSQDestination
     return dimensionSchemas;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
+  }
+
   /**
    * Whether this object is in replace-existing-time-chunks mode.
    */
@@ -193,13 +207,14 @@ public class DataSourceMSQDestination implements MSQDestination
            && Objects.equals(segmentSortOrder, that.segmentSortOrder)
            && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
            && Objects.equals(dimensionSchemas, that.dimensionSchemas)
+           && Objects.equals(projections, that.projections)
            && Objects.equals(terminalStageSpec, that.terminalStageSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas, terminalStageSpec);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas, projections, terminalStageSpec);
   }
 
   @Override
@@ -211,6 +226,7 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
            ", dimensionSchemas=" + dimensionSchemas +
+           ", projections=" + projections +
            ", terminalStageSpec=" + terminalStageSpec +
            '}';
   }

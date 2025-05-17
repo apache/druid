@@ -19,8 +19,17 @@
 
 package org.apache.druid.metadata.segment.cache;
 
+import org.apache.druid.client.DataSourcesSnapshot;
+
 public class NoopSegmentMetadataCache implements SegmentMetadataCache
 {
+  private static final NoopSegmentMetadataCache INSTANCE = new NoopSegmentMetadataCache();
+
+  public static NoopSegmentMetadataCache instance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public void start()
   {
@@ -52,7 +61,31 @@ public class NoopSegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public DatasourceSegmentCache getDatasource(String dataSource)
+  public boolean isSyncedForRead()
+  {
+    return false;
+  }
+
+  @Override
+  public void awaitNextSync(long timeoutMillis)
+  {
+
+  }
+
+  @Override
+  public DataSourcesSnapshot getDataSourcesSnapshot()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <T> T readCacheForDataSource(String dataSource, Action<T> readAction)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <T> T writeCacheForDataSource(String dataSource, Action<T> writeAction)
   {
     throw new UnsupportedOperationException();
   }

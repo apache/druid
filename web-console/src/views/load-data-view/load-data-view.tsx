@@ -46,7 +46,7 @@ import type { JSX } from 'react';
 import React from 'react';
 
 import {
-  ArrayModeSwitch,
+  ArrayIngestModeSwitch,
   AutoForm,
   CenterMessage,
   ClearableInput,
@@ -58,7 +58,7 @@ import {
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
 import type {
-  ArrayMode,
+  ArrayIngestMode,
   DimensionSpec,
   DruidFilter,
   FlattenField,
@@ -83,7 +83,7 @@ import {
   computeFlattenPathsForData,
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
-  DEFAULT_ARRAY_MODE,
+  DEFAULT_ARRAY_INGEST_MODE,
   DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
   DEFAULT_SCHEMA_MODE,
   DIMENSION_SPEC_FIELDS,
@@ -92,7 +92,7 @@ import {
   FILTER_FIELDS,
   FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
-  getArrayMode,
+  getArrayIngestMode,
   getDimensionSpecName,
   getFlattenSpec,
   getForceSegmentSortByTime,
@@ -132,7 +132,7 @@ import {
   possibleDruidFormatForValues,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
-  showArrayModeToggle,
+  showArrayIngestModeToggle,
   splitFilter,
   STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
@@ -323,7 +323,7 @@ function initializeSchemaWithSampleIfNeeded(
     sample,
     DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
     DEFAULT_SCHEMA_MODE,
-    DEFAULT_ARRAY_MODE,
+    DEFAULT_ARRAY_INGEST_MODE,
     getRollup(spec, false),
   );
 }
@@ -410,7 +410,7 @@ export interface LoadDataViewState {
   newRollup?: boolean;
   newForceSegmentSortByTime?: boolean;
   newSchemaMode?: SchemaMode;
-  newArrayMode?: ArrayMode;
+  newArrayIngestMode?: ArrayIngestMode;
 
   // welcome
   overlordModules?: string[];
@@ -2387,7 +2387,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
     const forceSegmentSortByTime = getForceSegmentSortByTime(spec);
     const schemaMode = getSchemaMode(spec);
-    const arrayMode = getArrayMode(spec);
+    const arrayMode = getArrayIngestMode(spec);
 
     let mainFill: JSX.Element | string;
     if (schemaQueryState.isInit()) {
@@ -2496,12 +2496,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   label="Explicitly specify schema"
                 />
               </FormGroupWithInfo>
-              {showArrayModeToggle(spec) && (
-                <ArrayModeSwitch
-                  arrayMode={arrayMode}
-                  changeArrayMode={newArrayMode => {
+              {showArrayIngestModeToggle(spec) && (
+                <ArrayIngestModeSwitch
+                  arrayIngestMode={arrayMode}
+                  changeArrayIngestMode={newArrayIngestMode => {
                     this.setState({
-                      newArrayMode,
+                      newArrayIngestMode: newArrayIngestMode,
                     });
                   }}
                 />
@@ -2635,7 +2635,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderChangeForceSegmentSortByTime()}
           {this.renderChangeRollupAction()}
           {this.renderChangeSchemaModeAction()}
-          {this.renderChangeArrayModeAction()}
+          {this.renderChangeArrayIngestModeAction()}
         </div>
         {this.renderNextBar({
           disabled: !schemaQueryState.data,
@@ -2739,7 +2739,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               sampleResponse,
               newForceSegmentSortByTime,
               getSchemaMode(spec),
-              getArrayMode(spec),
+              getArrayIngestMode(spec),
               getRollup(spec),
               true,
             ),
@@ -2777,7 +2777,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               sampleResponse,
               getForceSegmentSortByTime(spec),
               getSchemaMode(spec),
-              getArrayMode(spec),
+              getArrayIngestMode(spec),
               newRollup,
               true,
             ),
@@ -2814,7 +2814,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               sampleResponse,
               getForceSegmentSortByTime(spec),
               newSchemaMode,
-              getArrayMode(spec),
+              getArrayIngestMode(spec),
               getRollup(spec),
             ),
           );
@@ -2867,10 +2867,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderChangeArrayModeAction() {
-    const { newArrayMode, spec, cacheRows } = this.state;
-    if (!newArrayMode || !cacheRows) return;
-    const multiValues = newArrayMode === 'multi-values';
+  renderChangeArrayIngestModeAction() {
+    const { newArrayIngestMode, spec, cacheRows } = this.state;
+    if (!newArrayIngestMode || !cacheRows) return;
+    const multiValues = newArrayIngestMode === 'mvd';
 
     return (
       <AsyncActionDialog
@@ -2886,7 +2886,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               sampleResponse,
               getForceSegmentSortByTime(spec),
               getSchemaMode(spec),
-              newArrayMode,
+              newArrayIngestMode,
               getRollup(spec),
             ),
           );
@@ -2895,7 +2895,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         successText={`Array mode changed to ${multiValues ? 'multi-values' : 'arrays'}.`}
         failText="Could not change array mode"
         intent={Intent.WARNING}
-        onClose={() => this.setState({ newArrayMode: undefined })}
+        onClose={() => this.setState({ newArrayIngestMode: undefined })}
       >
         <p>
           {multiValues

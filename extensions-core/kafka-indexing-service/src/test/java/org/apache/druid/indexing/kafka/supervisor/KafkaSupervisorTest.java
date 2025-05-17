@@ -311,6 +311,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT1H"),
         consumerProperties,
         OBJECT_MAPPER.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -1365,6 +1366,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(
         "org.apache.druid.java.util.common.ISE",
         supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
+    );
+    AlertEvent alert = serviceEmitter.getAlerts().get(0);
+    Assert.assertEquals(
+        "Exception in supervisor run loop for dataSource [testDS]",
+        alert.getDescription()
     );
   }
 
@@ -3580,6 +3586,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
+
+    AlertEvent alert = serviceEmitter.getAlerts().get(0);
+    Assert.assertEquals(
+        "Exception in supervisor run loop for dataSource [testDS]",
+        alert.getDescription()
+    );
   }
 
   @Test
@@ -5286,6 +5298,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period(duration),
         consumerProperties,
         null,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -5400,6 +5413,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
@@ -5518,6 +5532,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),

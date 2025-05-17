@@ -30,23 +30,27 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexer.report.TaskReport.ReportMap;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.joda.time.DateTime;
 
@@ -56,6 +60,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class MSQTestOverlordServiceClient extends NoopOverlordClient
 {
   private final Injector injector;
@@ -63,15 +69,53 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private final TaskActionClient taskActionClient;
   private final WorkerMemoryParameters workerMemoryParameters;
   private final List<ImmutableSegmentLoadInfo> loadedSegmentMetadata;
-  private final Map<String, Controller> inMemoryControllers = new HashMap<>();
-  private final Map<String, TaskReport.ReportMap> reports = new HashMap<>();
-  private final Map<String, MSQControllerTask> inMemoryControllerTask = new HashMap<>();
-  private final Map<String, TaskStatus> inMemoryTaskStatus = new HashMap<>();
+
+  private final Map<String, MSQTestTaskDetails> taskDetailsByTaskId = new HashMap<>();
+  private final Map<String, MSQTestTaskDetails> taskDetailsByQueryId = new HashMap<>();
 
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   public static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
 
   public static final long DURATION = 100L;
+
+
+  public class MSQTestTaskDetails implements AutoCloseable
+  {
+    private String taskId;
+    public MSQControllerTask controllerTask;
+    private ControllerImpl controller;
+    private TaskStatus taskStatus;
+    public ReportMap report;
+
+    MSQTestTaskDetails(String taskId)
+    {
+      this.taskId = taskId;
+    }
+
+    public void addController(ControllerImpl controller)
+    {
+      if (this.controller != null) {
+        throw DruidException.defensive("Attempt to register a second controller!");
+      }
+      this.controller = controller;
+      registerController(controller.queryId(), this);
+    }
+
+    public ControllerImpl getController(String queryId)
+    {
+      if (controller.queryId().equals(queryId)) {
+        return controller;
+      }
+      return null;
+    }
+
+    @Override
+    public void close()
+    {
+      taskDetailsByTaskId.remove(taskId);
+      taskDetailsByQueryId.remove(controller.queryId());
+    }
+  }
 
   public MSQTestOverlordServiceClient(
       ObjectMapper objectMapper,
@@ -94,6 +138,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     TestQueryListener queryListener = null;
     ControllerImpl controller = null;
     MSQTestControllerContext msqTestControllerContext;
+    MSQTestTaskDetails testTaskDetails = registerTestTask(taskId);
     try {
       MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
 
@@ -107,16 +152,18 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
           cTask.getQuerySpec().getContext()
       );
 
-      inMemoryControllerTask.put(cTask.getId(), cTask);
+      assertEquals(taskId, cTask.getId());
+      testTaskDetails.controllerTask = cTask;
 
       controller = new ControllerImpl(
           cTask.getId(),
           cTask.getQuerySpec(),
           new ResultsContext(cTask.getSqlTypeNames(), cTask.getSqlResultsContext()),
-          msqTestControllerContext
+          msqTestControllerContext,
+          injector.getInstance(MSQTaskQueryKitSpecFactory.class)
       );
 
-      inMemoryControllers.put(controller.queryId(), controller);
+      testTaskDetails.addController(controller);
 
       queryListener =
           new TestQueryListener(
@@ -126,10 +173,10 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
       try {
         controller.run(queryListener);
-        inMemoryTaskStatus.put(taskId, queryListener.getStatusReport().toTaskStatus(cTask.getId()));
+        testTaskDetails.taskStatus = queryListener.getStatusReport().toTaskStatus(cTask.getId());
       }
       catch (Exception e) {
-        inMemoryTaskStatus.put(taskId, TaskStatus.failure(cTask.getId(), e.toString()));
+        testTaskDetails.taskStatus = TaskStatus.failure(cTask.getId(), e.toString());
       }
       return Futures.immediateFuture(null);
     }
@@ -138,16 +185,49 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     }
     finally {
       if (queryListener != null && queryListener.reportMap != null) {
-        reports.put(controller.queryId(), queryListener.getReportMap());
+        testTaskDetails.report = queryListener.getReportMap();
       }
     }
+  }
+
+  private static final Logger LOG = new Logger(MSQTestOverlordServiceClient.class);
+
+
+  private MSQTestTaskDetails registerTestTask(String taskId)
+  {
+    MSQTestTaskDetails details = taskDetailsByTaskId.get(taskId);
+    if (details != null) {
+      LOG.warn("There is an un-closed taskId which will be overwritten; closing implicitly");
+      details.close();
+    }
+    details = new MSQTestTaskDetails(taskId);
+    taskDetailsByTaskId.put(taskId, details);
+    return details;
+  }
+
+  private void registerController(String queryId, MSQTestTaskDetails msqTestTaskDetails)
+  {
+    MSQTestTaskDetails old = taskDetailsByQueryId.get(queryId);
+    if (old != null) {
+      throw DruidException.defensive("There is an existing queryId {}!", queryId);
+    }
+    taskDetailsByQueryId.put(queryId, msqTestTaskDetails);
   }
 
   @Override
   public ListenableFuture<Void> cancelTask(String taskId)
   {
-    inMemoryControllers.get(taskId).stop();
+    getControllerForQueryId(taskId).stop(CancellationReason.TASK_SHUTDOWN);
     return Futures.immediateFuture(null);
+  }
+
+  private ControllerImpl getControllerForQueryId(String queryId)
+  {
+    MSQTestTaskDetails details = taskDetailsByQueryId.get(queryId);
+    if (details == null) {
+      return null;
+    }
+    return details.getController(queryId);
   }
 
   @Override
@@ -168,7 +248,8 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
   {
     SettableFuture<TaskStatusResponse> future = SettableFuture.create();
-    TaskStatus taskStatus = inMemoryTaskStatus.get(taskId);
+    MSQTestTaskDetails details = taskDetailsByTaskId.get(taskId);
+    TaskStatus taskStatus = details.taskStatus;
     future.set(new TaskStatusResponse(taskId, new TaskStatusPlus(
         taskId,
         null,
@@ -190,13 +271,15 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   @Nullable
   public TaskReport.ReportMap getReportForTask(String id)
   {
-    return reports.get(id);
+    MSQTestTaskDetails details = taskDetailsByQueryId.get(id);
+    return details.report;
   }
 
   @Nullable
   MSQControllerTask getMSQControllerTask(String id)
   {
-    return inMemoryControllerTask.get(id);
+    MSQTestTaskDetails details = taskDetailsByTaskId.get(id);
+    return details.controllerTask;
   }
 
   /**
@@ -289,5 +372,11 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       final MSQTaskReport taskReport = (MSQTaskReport) Iterables.getOnlyElement(getReportMap().values());
       return taskReport.getPayload().getStatus();
     }
+  }
+
+  public void closeTask(String taskId)
+  {
+
+    taskDetailsByTaskId.get(taskId).close();
   }
 }

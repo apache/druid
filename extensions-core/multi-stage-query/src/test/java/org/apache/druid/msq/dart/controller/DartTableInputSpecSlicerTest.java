@@ -28,6 +28,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.StringTuple;
@@ -214,7 +215,8 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
       final IntList segmentServers = entry.getValue();
       final ServerSelector serverSelector = new ServerSelector(
           dataSegment,
-          new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+          new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+          HistoricalFilter.IDENTITY_FILTER
       );
       for (int serverNumber : segmentServers) {
         final DruidServerMetadata serverMetadata = SERVERS.get(serverNumber);

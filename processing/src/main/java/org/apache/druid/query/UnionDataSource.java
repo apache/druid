@@ -26,11 +26,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.utils.CollectionUtils;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -38,11 +35,11 @@ import java.util.stream.Collectors;
 
 /**
  * Reperesents a UNION ALL of two or more datasources.
- *
+ * <p>
  * Native engine can only work with table datasources that are scans or simple mappings (column rename without any
  * expression applied on top). Therefore, it uses methods like {@link #getTableNames()} and
- * {@link #getDataSourcesAsTableDataSources()} to assert that the children were TableDataSources.
- *
+ * {@link #isTableBased()} to assert that the children were TableDataSources.
+ * <p>
  * MSQ should be able to plan and work with arbitrary datasources.  It also needs to replace the datasource with the
  * InputNumberDataSource while preparing the query plan.
  */
@@ -62,45 +59,31 @@ public class UnionDataSource implements DataSource
     this.dataSources = dataSources;
   }
 
-  public List<DataSource> getDataSources()
-  {
-    return dataSources;
-  }
-
-
   /**
    * Asserts that the children of the union are all table data sources before returning the table names
    */
   @Override
   public Set<String> getTableNames()
   {
+    if (!isTableBased()) {
+      throw DruidException.defensive("contains non-table based datasource");
+    }
     return dataSources
         .stream()
-        .map(input -> {
-          if (!(input instanceof TableDataSource)) {
-            throw DruidException.defensive("should be table");
-          }
-          return CollectionUtils.getOnlyElement(
-              input.getTableNames(),
-              xs -> DruidException.defensive("Expected only single table name in TableDataSource")
-          );
-        })
+        .map(DataSource::getTableNames)
+        .flatMap(Set::stream)
         .collect(Collectors.toSet());
   }
 
   /**
-   * Asserts that the children of the union are all table data sources
+   * Returns true if this datasource can be ran by the native engine, i.e. all the children of the union are table
+   * datasource or restricted datasource.
    */
-  public List<TableDataSource> getDataSourcesAsTableDataSources()
+  public boolean isTableBased()
   {
     return dataSources.stream()
-                      .map(input -> {
-                        if (!(input instanceof TableDataSource)) {
-                          throw DruidException.defensive("should be table");
-                        }
-                        return (TableDataSource) input;
-                      })
-                      .collect(Collectors.toList());
+                      .allMatch(dataSource -> dataSource instanceof TableDataSource
+                                              || dataSource instanceof RestrictedDataSource);
   }
 
   @Override
@@ -137,33 +120,26 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
-    return dataSources.stream().allMatch(DataSource::isConcrete);
+    return dataSources.stream().allMatch(DataSource::isProcessable);
   }
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
+    for (DataSource dataSource : dataSources) {
+      if (!dataSource.getChildren().isEmpty()) {
+        throw new ISE("Union datasource with non-leaf inputs is not supported [%s]!", dataSources);
+      }
+    }
     return Function.identity();
-  }
-
-  @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return newSource;
   }
 
   @Override
   public byte[] getCacheKey()
   {
     return null;
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
   }
 
   @Override

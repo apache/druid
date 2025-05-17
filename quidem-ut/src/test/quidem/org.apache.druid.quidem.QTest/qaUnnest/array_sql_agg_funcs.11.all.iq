@@ -1,0 +1,682 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C5_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C6_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C6_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C7_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_or(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C7_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_or(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C8_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_or(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C8_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_or(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C9_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_or(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C9_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_or(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C10_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_or(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C10_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_or(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C1_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C1_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C2_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C2_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C3_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C3_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C4_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C4_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C5_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C5_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C6_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C6_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C7_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_xor(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C7_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_xor(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C8_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_xor(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C8_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_xor(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C9_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_xor(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C9_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_xor(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C10_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_xor(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C10_D2
+#-------------------------------------------------------------------------
+SELECT bit_xor(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_xor(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+

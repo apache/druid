@@ -195,4 +195,9 @@ public class SqlQuery
            ", parameters=" + parameters +
            '}';
   }
+
+  public SqlQuery withQueryContext(Map<String, Object> newContext)
+  {
+    return new SqlQuery(query, resultFormat, header, typesHeader, sqlTypesHeader, newContext, parameters);
+  }
 }

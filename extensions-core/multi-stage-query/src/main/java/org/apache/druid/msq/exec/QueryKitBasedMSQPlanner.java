@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -37,7 +36,6 @@ import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
@@ -60,13 +58,10 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
 
-import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
-  private final ControllerContext context;
   private final MSQSpec querySpec;
   private final ResultsContext resultsContext;
   private final QueryKitSpec queryKitSpec;
@@ -78,26 +73,26 @@ public class QueryKitBasedMSQPlanner
   private final Query<?> query;
 
 
-  public QueryKitBasedMSQPlanner(ControllerContext context, MSQSpec querySpec, ResultsContext resultsContext,
-      ControllerQueryKernelConfig queryKernelConfig, String queryId)
+  public QueryKitBasedMSQPlanner(
+      MSQSpec querySpec,
+      ResultsContext resultsContext,
+      Query<?> query,
+      ObjectMapper jsonMapper,
+      QueryKitSpec queryKitSpec)
   {
-    this.context = context;
     this.querySpec = querySpec;
-    this.jsonMapper = context.jsonMapper();
+    this.jsonMapper = jsonMapper;
     this.tuningConfig = querySpec.getTuningConfig();
     this.columnMappings = querySpec.getColumnMappings();
     this.destination = querySpec.getDestination();
     this.queryContext = querySpec.getContext();
-    this.query = querySpec.getQuery();
+    this.query = query;
     this.resultsContext = resultsContext;
-    this.queryKitSpec = context.makeQueryKitSpec(
-        makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()), queryId, querySpec,
-        queryKernelConfig
-    );
+    this.queryKitSpec = queryKitSpec;
   }
 
   @SuppressWarnings("rawtypes")
-  static QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext, ObjectMapper jsonMapper)
+  public static QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext, ObjectMapper jsonMapper)
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
@@ -116,16 +111,11 @@ public class QueryKitBasedMSQPlanner
   }
 
   @SuppressWarnings("unchecked")
-  QueryDefinition makeQueryDefinition()
+  public QueryDefinition makeQueryDefinition()
   {
-    boolean ingestion = MSQControllerTask.isIngestion(destination);
     final Query<?> queryToPlan;
-    final ShuffleSpecFactory resultShuffleSpecFactory;
 
-    if (ingestion) {
-      resultShuffleSpecFactory = destination
-          .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
-
+    if (MSQControllerTask.isIngestion(destination)) {
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
         // are unique for INSERT and REPLACE statements (i.e. anything where MSQControllerTask.isIngestion would
@@ -148,19 +138,21 @@ public class QueryKitBasedMSQPlanner
         queryToPlan = query;
       }
     } else {
-      resultShuffleSpecFactory =
-          destination
-                   .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(query.context()));
       queryToPlan = query;
     }
 
+    return makeQueryDefinitionInternal(queryToPlan).withOverriddenContext(queryToPlan.getContext());
+  }
+
+  private QueryDefinition makeQueryDefinitionInternal(final Query<?> queryToPlan)
+  {
     final QueryDefinition queryDef;
 
     try {
       queryDef = queryKitSpec.getQueryKit().makeQueryDefinition(
           queryKitSpec,
           queryToPlan,
-          resultShuffleSpecFactory,
+          makeResultShuffleSpecFacory(),
           0
       );
     }
@@ -172,7 +164,7 @@ public class QueryKitBasedMSQPlanner
       throw new MSQException(e, QueryNotSupportedFault.INSTANCE);
     }
 
-    if (ingestion) {
+    if (MSQControllerTask.isIngestion(destination)) {
       // Find the stage that provides shuffled input to the final segment-generation stage.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
 
@@ -205,7 +197,8 @@ public class QueryKitBasedMSQPlanner
                                    .constructFinalStage(
                                        queryDef,
                                        querySpec,
-                                       jsonMapper
+                                       jsonMapper,
+                                       query
                                    )
                     )
                     .build();
@@ -233,8 +226,6 @@ public class QueryKitBasedMSQPlanner
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) destination;
       final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
 
-      ensureExportLocationEmpty(context, destination);
-
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
       final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
       builder.addAll(queryDef);
@@ -257,32 +248,12 @@ public class QueryKitBasedMSQPlanner
     }
   }
 
-  public static void ensureExportLocationEmpty(final ControllerContext context, final MSQDestination destination)
+  private ShuffleSpecFactory makeResultShuffleSpecFacory()
   {
-    if (MSQControllerTask.isExport(destination)) {
-      final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) destination;
-      final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
-
-      try {
-        // Check that the export destination is empty as a sanity check. We want
-        // to avoid modifying any other files with export.
-        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(context.taskTempDir())
-            .listDir("");
-        if (filesIterator.hasNext()) {
-          throw DruidException.forPersona(DruidException.Persona.USER)
-              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-              .build(
-                  "Found files at provided export destination[%s]. Export is only allowed to "
-                      + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
-                  exportStorageProvider.getBasePath()
-              );
-        }
-      }
-      catch (IOException e) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-            .build(e, "Exception occurred while connecting to export destination.");
-      }
+    if (MSQControllerTask.isIngestion(destination)) {
+      return destination.getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
+    } else {
+      return destination.getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(query.context()));
     }
   }
 }

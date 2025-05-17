@@ -19,9 +19,7 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -41,13 +39,14 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
-import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.DartDruidMeta;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -68,6 +67,12 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     properties.put(DartModules.DART_ENABLED_PROPERTY, "true");
   }
 
+  @Override
+  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+  {
+    walker.add(TestDataSet.NUMBERS, getTempDirProducer().newTempFolder("tmp_numbers"));
+    return super.addSegmentsToWalker(walker);
+  }
   @Override
   public DruidModule getCoreModule()
   {
@@ -90,12 +95,9 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
   }
 
   @Override
-  public SqlEngine createEngine(
-      QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper,
-      Injector injector)
+  public Class<? extends SqlEngine> getSqlEngineClass()
   {
-    return injector.getInstance(DartSqlEngine.class);
+    return DartSqlEngine.class;
   }
 
   static class DartTestCoreModule implements DruidModule

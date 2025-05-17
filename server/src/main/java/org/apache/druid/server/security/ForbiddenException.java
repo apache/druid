@@ -34,7 +34,7 @@ public class ForbiddenException extends RuntimeException implements SanitizableE
 {
   public ForbiddenException()
   {
-    super(Access.DEFAULT_ERROR_MESSAGE);
+    this(Access.DEFAULT_ERROR_MESSAGE);
   }
 
   @JsonCreator

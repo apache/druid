@@ -1,0 +1,943 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B29_C5
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B29_C6
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B29_C7
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING array_concat_agg(c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B29_C8
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING array_concat_agg(c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B29_C9
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING array_concat_agg(c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B29_C10
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING array_concat_agg(c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C1
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C2
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C3
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C4
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C5
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C6
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C7
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING array_concat_agg(DISTINCT c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C8
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING array_concat_agg(DISTINCT c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C9
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING array_concat_agg(DISTINCT c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B30_C10
+#-------------------------------------------------------------------------
+SELECT array_concat_agg(DISTINCT c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING array_concat_agg(DISTINCT c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C1
+#-------------------------------------------------------------------------
+SELECT string_agg(c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++----------------------+
+| col                  |
++----------------------+
+| |1|2|3||1|2|3||1|2|3 |
++----------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C2
+#-------------------------------------------------------------------------
+SELECT string_agg(c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-------------------------------+
+| col                           |
++-------------------------------+
+| 0|0|0|0|0|1|1|1|1|1|2|2|2|2|2 |
++-------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C3
+#-------------------------------------------------------------------------
+SELECT string_agg(c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-------+
+| col   |
++-------+
+| 1|1|1 |
+| 2|2|2 |
+| 3|3|3 |
+| ||    |
+|       |
++-------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C4
+#-------------------------------------------------------------------------
+SELECT string_agg(c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++--------+
+| col    |
++--------+
+| |1|2|3 |
+| |1|2|3 |
+| |1|2|3 |
++--------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C5
+#-------------------------------------------------------------------------
+SELECT string_agg(c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-------+
+| col   |
++-------+
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
++-------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C6
+#-------------------------------------------------------------------------
+SELECT string_agg(c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----------+
+| col       |
++-----------+
+| 0|0|0|0|0 |
+| 1|1|1|1|1 |
+| 2|2|2|2|2 |
++-----------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C7
+#-------------------------------------------------------------------------
+SELECT string_agg(c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING string_agg(c, '|') IS NOT NULL;
++-------+
+| col   |
++-------+
+| 1|1|1 |
+| 2|2|2 |
+| 3|3|3 |
+| ||    |
++-------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C8
+#-------------------------------------------------------------------------
+SELECT string_agg(c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING string_agg(c, '|') IS NOT NULL;
++--------+
+| col    |
++--------+
+| |1|2|3 |
+| |1|2|3 |
+| |1|2|3 |
++--------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C9
+#-------------------------------------------------------------------------
+SELECT string_agg(c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING string_agg(c_long, '|') IS NOT NULL;
++-------+
+| col   |
++-------+
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
++-------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C10
+#-------------------------------------------------------------------------
+SELECT string_agg(c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING string_agg(c_long, '|') IS NOT NULL;
++-----------+
+| col       |
++-----------+
+| 0|0|0|0|0 |
+| 1|1|1|1|1 |
+| 2|2|2|2|2 |
++-----------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++--------+
+| col    |
++--------+
+| |1|2|3 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-------+
+| col   |
++-------+
+| 0|1|2 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C3
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+|     |
+| 1   |
+| 2   |
+| 3   |
+|     |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C4
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++--------+
+| col    |
++--------+
+| |1|2|3 |
+| |1|2|3 |
+| |1|2|3 |
++--------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C5
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-------+
+| col   |
++-------+
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
++-------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C6
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+| 0   |
+| 1   |
+| 2   |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C7
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING string_agg(DISTINCT c, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+|     |
+| 1   |
+| 2   |
+| 3   |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C8
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING string_agg(DISTINCT c, '|') IS NOT NULL;
++--------+
+| col    |
++--------+
+| |1|2|3 |
+| |1|2|3 |
+| |1|2|3 |
++--------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C9
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING string_agg(DISTINCT c_long, '|') IS NOT NULL;
++-------+
+| col   |
++-------+
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
+| 0|1|2 |
++-------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C10
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING string_agg(DISTINCT c_long, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 0   |
+| 1   |
+| 2   |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C1
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C2
+#-------------------------------------------------------------------------
+SELECT bit_and(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C3
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|     |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C4
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C5
+#-------------------------------------------------------------------------
+SELECT bit_and(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C6
+#-------------------------------------------------------------------------
+SELECT bit_and(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C7
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING bit_and(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C8
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING bit_and(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C9
+#-------------------------------------------------------------------------
+SELECT bit_and(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING bit_and(c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C10
+#-------------------------------------------------------------------------
+SELECT bit_and(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING bit_and(c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C1
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C2
+#-------------------------------------------------------------------------
+SELECT bit_or(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C3
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
+|   3 |
+|     |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C4
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+

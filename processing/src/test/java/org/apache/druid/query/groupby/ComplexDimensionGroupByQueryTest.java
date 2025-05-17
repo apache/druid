@@ -35,7 +35,6 @@ import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -91,7 +90,6 @@ public class ComplexDimensionGroupByQueryTest
 
     this.segments = Collections.singletonList(
         new RowBasedSegment<>(
-            SegmentId.dummy("dummy"),
             rows,
             columnName -> {
               final int columnNumber = rowSignature.indexOf(columnName);

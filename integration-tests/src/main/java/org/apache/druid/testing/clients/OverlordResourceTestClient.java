@@ -52,7 +52,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 public class OverlordResourceTestClient
 {
@@ -352,32 +351,18 @@ public class OverlordResourceTestClient
     }
   }
 
-  public void waitUntilTaskCompletes(final String taskID)
+  public void waitUntilTaskCompletes(final String taskId)
   {
-    waitUntilTaskCompletes(taskID, ITRetryUtil.DEFAULT_RETRY_SLEEP, ITRetryUtil.DEFAULT_RETRY_COUNT);
-  }
-
-  public void waitUntilTaskCompletes(final String taskID, final long millisEach, final int numTimes)
-  {
-    ITRetryUtil.retryUntil(
-        new Callable<>()
-        {
-          @Override
-          public Boolean call()
-          {
-            TaskState status = getTaskStatus(taskID).getStatusCode();
-            if (status == TaskState.FAILED) {
-              LOG.error("Task failed: %s", taskID);
-              LOG.error("Message: %s", getTaskErrorMessage(taskID));
-              throw new ISE("Indexer task FAILED");
-            }
-            return status == TaskState.SUCCESS;
+    ITRetryUtil.retryUntilEquals(
+        () -> {
+          TaskState status = getTaskStatus(taskId).getStatusCode();
+          if (status == TaskState.FAILED) {
+            throw new ISE("Task[%s] failed with error[%s]", taskId, getTaskErrorMessage(taskId));
           }
+          return status;
         },
-        true,
-        millisEach,
-        numTimes,
-        taskID
+        TaskState.SUCCESS,
+        StringUtils.format("Status of task[%s]", taskId)
     );
   }
 
@@ -387,25 +372,20 @@ public class OverlordResourceTestClient
   }
 
 
-  public void waitUntilTaskFails(final String taskID, final long millisEach, final int numTimes)
+  public void waitUntilTaskFails(final String taskId, final long millisEach, final int numTimes)
   {
-    ITRetryUtil.retryUntil(
-        new Callable<>()
-        {
-          @Override
-          public Boolean call()
-          {
-            TaskState status = getTaskStatus(taskID).getStatusCode();
-            if (status == TaskState.SUCCESS) {
-              throw new ISE("Indexer task SUCCEED");
-            }
-            return status == TaskState.FAILED;
+    ITRetryUtil.retryUntilEquals(
+        () -> {
+          TaskState status = getTaskStatus(taskId).getStatusCode();
+          if (status == TaskState.SUCCESS) {
+            throw new ISE("Task[%s] has SUCCEEDED. It was expected to fail.", taskId);
           }
+          return status;
         },
-        true,
+        TaskState.FAILED,
         millisEach,
         numTimes,
-        taskID
+        StringUtils.format("Status of task[%s]", taskId)
     );
   }
 
@@ -534,6 +514,13 @@ public class OverlordResourceTestClient
 
   public SupervisorStateManager.BasicState getSupervisorStatus(String id)
   {
+    final String state = (String) getFullSupervisorStatus(id).get("state");
+    LOG.debug("Supervisor id[%s] has state [%s]", id, state);
+    return SupervisorStateManager.BasicState.valueOf(state);
+  }
+
+  public Map<String, Object> getFullSupervisorStatus(String id)
+  {
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
@@ -557,13 +544,10 @@ public class OverlordResourceTestClient
           response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
 
-      Map<String, Object> payload = jsonMapper.convertValue(
+      return jsonMapper.convertValue(
           responseData.get("payload"),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
-      String state = (String) payload.get("state");
-      LOG.debug("Supervisor id[%s] has state [%s]", id, state);
-      return SupervisorStateManager.BasicState.valueOf(state);
     }
     catch (ISE e) {
       throw e;

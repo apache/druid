@@ -63,6 +63,11 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
     );
   }
 
+  public static DruidExceptionMatcher forbidden()
+  {
+    return new DruidExceptionMatcher(DruidException.Persona.USER, DruidException.Category.FORBIDDEN, "general");
+  }
+
   public static DruidExceptionMatcher defensive()
   {
     return new DruidExceptionMatcher(

@@ -31,7 +31,6 @@ import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
@@ -45,7 +44,6 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
 
   private final InputSource inputSource;
   private final RowSignature signature;
-  public static final String SEGMENT_ID = "__external";
 
   /**
    * @param inputSource       {@link InputSource} that the segment is a representation of
@@ -67,7 +65,6 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
   )
   {
     super(
-        SegmentId.dummy(SEGMENT_ID),
         new BaseSequence<>(
             new BaseSequence.IteratorMaker<InputRow, CloseableIterator<InputRow>>()
             {

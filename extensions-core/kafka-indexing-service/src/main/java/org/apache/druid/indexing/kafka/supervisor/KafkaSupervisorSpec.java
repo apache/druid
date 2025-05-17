@@ -24,14 +24,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -174,6 +178,35 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         rowIngestionMetersFactory,
         supervisorStateManagerConfig
     );
+  }
+
+  /**
+   * Extends {@link SeekableStreamSupervisorSpec#validateSpecUpdateTo} to ensure that the proposed spec and current spec are either both multi-topic or both single-topic.
+   * <p>
+   * getSource() returns the same string (exampleTopic) for "topicPattern=exampleTopic" and "topic=exampleTopic".
+   * This override prevents this case from being considered a valid update.
+   * </p>
+   * @param proposedSpec the proposed supervisor spec
+   * @throws DruidException if the proposed spec is not a Kafka spec or if the proposed spec changes from multi-topic to single-topic or vice versa
+   */
+  @Override
+  public void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+  {
+    if (!(proposedSpec instanceof KafkaSupervisorSpec)) {
+      throw InvalidInput.exception(
+          "Cannot change spec from type[%s] to type[%s]", getClass().getSimpleName(), proposedSpec.getClass().getSimpleName()
+      );
+    }
+    KafkaSupervisorSpec other = (KafkaSupervisorSpec) proposedSpec;
+    if (this.getSpec().getIOConfig().isMultiTopic() != other.getSpec().getIOConfig().isMultiTopic()) {
+      throw InvalidInput.exception(
+          SeekableStreamSupervisorSpec.ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE,
+          StringUtils.format("(%s) %s", this.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic", this.getSource()),
+          StringUtils.format("(%s) %s", other.getSpec().getIOConfig().isMultiTopic() ? "multi-topic" : "single-topic", other.getSource())
+      );
+    }
+
+    super.validateSpecUpdateTo(proposedSpec);
   }
 
   @Override

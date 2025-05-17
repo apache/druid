@@ -1,0 +1,486 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B1
+#-------------------------------------------------------------------------
+
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c);
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_unnest",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "unnest",
+          "base" : {
+            "type" : "inputNumber",
+            "inputNumber" : 0
+          },
+          "virtualColumn" : {
+            "type" : "expression",
+            "name" : "j0.unnest",
+            "expression" : "\"c_mv_complex\"",
+            "outputType" : "STRING"
+          },
+          "unnestFilter" : null
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "j0.unnest" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "j0.unnest",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B2
+#-------------------------------------------------------------------------
+
+SELECT *
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c));
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+-------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val | c           |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+-------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | 1           |
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | [2]         |
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | [3, [4, 5]] |
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | my_empty    |
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | my_null     |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | 1           |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | [2]         |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | [3, [4, 5]] |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | my_empty    |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | my_null     |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | 1           |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | [2]         |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | [3, [4, 5]] |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | my_empty    |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | my_null     |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | 1           |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | [2]         |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | [3, [4, 5]] |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | my_empty    |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      | my_null     |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | 1           |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | [2]         |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | [3, [4, 5]] |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | my_empty    |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      | my_null     |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+-------------+
+(25 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_unnest",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "unnest",
+          "base" : {
+            "type" : "inputNumber",
+            "inputNumber" : 0
+          },
+          "virtualColumn" : {
+            "type" : "expression",
+            "name" : "j0.unnest",
+            "expression" : "\"c_mv_complex\"",
+            "outputType" : "STRING"
+          },
+          "unnestFilter" : null
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "__time", "c_str", "c_long", "c_float", "c_double", "c_mv_complex", "c_mv_num", "c_mv_complex_with_null_and_empty_val", "c_mv_num_with_null_and_empty_val", "c_mv_complex_with_null_and_empty_row", "c_mv_num_with_null_and_empty_row", "c_mv_all_null_and_empty_val", "j0.unnest" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"c_str\",\"type\":\"STRING\"},{\"name\":\"c_long\",\"type\":\"LONG\"},{\"name\":\"c_float\",\"type\":\"FLOAT\"},{\"name\":\"c_double\",\"type\":\"DOUBLE\"},{\"name\":\"c_mv_complex\",\"type\":\"STRING\"},{\"name\":\"c_mv_num\",\"type\":\"STRING\"},{\"name\":\"c_mv_complex_with_null_and_empty_val\",\"type\":\"STRING\"},{\"name\":\"c_mv_num_with_null_and_empty_val\",\"type\":\"STRING\"},{\"name\":\"c_mv_complex_with_null_and_empty_row\",\"type\":\"STRING\"},{\"name\":\"c_mv_num_with_null_and_empty_row\",\"type\":\"STRING\"},{\"name\":\"c_mv_all_null_and_empty_val\",\"type\":\"STRING\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "LONG", "STRING", "LONG", "FLOAT", "DOUBLE", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "__time",
+      "type" : "LONG"
+    }, {
+      "name" : "c_str",
+      "type" : "STRING"
+    }, {
+      "name" : "c_long",
+      "type" : "LONG"
+    }, {
+      "name" : "c_float",
+      "type" : "FLOAT"
+    }, {
+      "name" : "c_double",
+      "type" : "DOUBLE"
+    }, {
+      "name" : "c_mv_complex",
+      "type" : "STRING"
+    }, {
+      "name" : "c_mv_num",
+      "type" : "STRING"
+    }, {
+      "name" : "c_mv_complex_with_null_and_empty_val",
+      "type" : "STRING"
+    }, {
+      "name" : "c_mv_num_with_null_and_empty_val",
+      "type" : "STRING"
+    }, {
+      "name" : "c_mv_complex_with_null_and_empty_row",
+      "type" : "STRING"
+    }, {
+      "name" : "c_mv_num_with_null_and_empty_row",
+      "type" : "STRING"
+    }, {
+      "name" : "c_mv_all_null_and_empty_val",
+      "type" : "STRING"
+    }, {
+      "name" : "j0.unnest",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B3
+#-------------------------------------------------------------------------
+
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+GROUP BY c;
++-------------+-----+
+| c           | cnt |
++-------------+-----+
+| 1           |   5 |
+| [2]         |   5 |
+| [3, [4, 5]] |   5 |
+| my_empty    |   5 |
+| my_null     |   5 |
++-------------+-----+
+(5 rows)
+
+!ok
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "test_unnest",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "groupByPreShuffle",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "unnest",
+          "base" : {
+            "type" : "inputNumber",
+            "inputNumber" : 0
+          },
+          "virtualColumn" : {
+            "type" : "expression",
+            "name" : "j0.unnest",
+            "expression" : "\"c_mv_complex\"",
+            "outputType" : "STRING"
+          },
+          "unnestFilter" : null
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "j0.unnest",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        }
+      }
+    },
+    "signature" : [ {
+      "name" : "d0",
+      "type" : "STRING"
+    }, {
+      "name" : "a0",
+      "type" : "LONG"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "d0",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1,
+      "aggregate" : true
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 1,
+  "definition" : {
+    "id" : "<taskId>_1",
+    "input" : [ {
+      "type" : "stage",
+      "stage" : 0
+    } ],
+    "processor" : {
+      "type" : "groupByPostShuffle",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "unnest",
+          "base" : {
+            "type" : "inputNumber",
+            "inputNumber" : 0
+          },
+          "virtualColumn" : {
+            "type" : "expression",
+            "name" : "j0.unnest",
+            "expression" : "\"c_mv_complex\"",
+            "outputType" : "STRING"
+          },
+          "unnestFilter" : null
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "j0.unnest",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
+          "useApproximateCountDistinct" : "false",
+          "windowFunctionOperatorTransformation" : true
+        }
+      }
+    },
+    "signature" : [ {
+      "name" : "d0",
+      "type" : "STRING"
+    }, {
+      "name" : "a0",
+      "type" : "LONG"
+    } ],
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+} ]
+!msqPlan
+

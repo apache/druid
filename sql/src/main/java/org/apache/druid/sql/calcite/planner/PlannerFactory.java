@@ -40,6 +40,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -81,6 +82,7 @@ public class PlannerFactory extends PlannerToolbox
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final CatalogResolver catalog,
       final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
       final DruidHookDispatcher hookDispatcher
   )
   {
@@ -96,18 +98,23 @@ public class PlannerFactory extends PlannerToolbox
         calciteRuleManager,
         authorizerMapper,
         authConfig,
+        policyEnforcer,
         hookDispatcher
     );
   }
 
   /**
-   * Create a Druid query planner from an initial query context
+   * Create a Druid query planner from an initial query context. If allowSetStatementsToBuildContext is set to true,
+   * the parser is allowed to parse multi-part SQL statements where all statements in the list except the last one are
+   * SET statements, for example 'SET x = 'y'; SET foo = 123; SELECT ...', where these values will be added to the
+   * {@link org.apache.druid.query.QueryContext} of the final statement.
    */
   public DruidPlanner createPlanner(
       final SqlEngine engine,
       final String sql,
       final Map<String, Object> queryContext,
-      final PlannerHook hook
+      final PlannerHook hook,
+      boolean allowSetStatementsToBuildContext
   )
   {
     final PlannerContext context = PlannerContext.create(
@@ -119,7 +126,7 @@ public class PlannerFactory extends PlannerToolbox
     );
     context.dispatchHook(DruidHook.SQL, sql);
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
+    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook, allowSetStatementsToBuildContext);
   }
 
   /**
@@ -133,7 +140,7 @@ public class PlannerFactory extends PlannerToolbox
       final Map<String, Object> queryContext
   )
   {
-    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null);
+    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null, true);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     thePlanner.validate();

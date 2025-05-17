@@ -79,14 +79,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -291,24 +288,11 @@ public class CalciteTests
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return QueryFrameworkUtils.createMockQueryLifecycleFactory(walker, conglomerate);
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory
-  )
-  {
-    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig());
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory,
-      final AuthConfig authConfig
-  )
-  {
-    return QueryFrameworkUtils.createSqlStatementFactory(engine, plannerFactory, authConfig);
+    return QueryFrameworkUtils.createMockQueryLifecycleFactory(
+        walker,
+        conglomerate,
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
   }
 
   public static ObjectMapper getJsonMapper()
@@ -394,6 +378,15 @@ public class CalciteTests
         )
     );
     return provider;
+  }
+
+  public static SystemSchema createMockSystemSchema(
+      final DruidSchema druidSchema,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    return createMockSystemSchema(druidSchema, new TestTimelineServerView(walker.getSegments()), authorizerMapper);
   }
 
   public static SystemSchema createMockSystemSchema(
