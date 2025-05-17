@@ -437,7 +437,7 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyValue(Metric.SKIPPED_PENDING_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.CACHED_USED_SEGMENTS, 1L);
     serviceEmitter.verifyValue(Metric.PERSISTED_USED_SEGMENTS, 1L);
-    serviceEmitter.verifyValue(Metric.PERSISTED_PENDING_SEGMENTS, 0L);
+    serviceEmitter.verifyNotEmitted(Metric.PERSISTED_PENDING_SEGMENTS);
 
     Assert.assertEquals(
         segment.getDataSegment(),
