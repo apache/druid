@@ -99,6 +99,7 @@ public class SegmentSchemaCache
    */
   public boolean isEnabled()
   {
+    // Always return true since this implementation is bound only when caching is enabled
     return true;
   }
 

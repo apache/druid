@@ -27,7 +27,8 @@ import org.apache.druid.timeline.SegmentId;
 import java.util.Map;
 
 /**
- * Noop implementation of {@link SegmentSchemaCache}.
+ * No-op implementation of {@link SegmentSchemaCache} that always returns false
+ * for {@link #isEnabled()} and {@link #isInitialized()}.
  */
 public class NoopSegmentSchemaCache extends SegmentSchemaCache
 {

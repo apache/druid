@@ -34,7 +34,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -105,7 +105,7 @@ public class HeapMemorySegmentMetadataCacheTest
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        new SegmentSchemaCache(),
+        new NoopSegmentSchemaCache(),
         derbyConnector,
         executorFactory,
         serviceEmitter
