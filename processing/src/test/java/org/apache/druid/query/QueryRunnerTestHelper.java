@@ -63,9 +63,9 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.SegmentId;
@@ -81,6 +81,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -559,14 +560,14 @@ public class QueryRunnerTestHelper
   )
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
-    final SegmentReference segmentReference = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance())
-        .apply(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
-    return makeQueryRunner(factory, segmentReference, runnerName);
+    final Optional<Segment> segmentReference = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance())
+                                                 .apply(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(adapter));
+    return makeQueryRunner(factory, segmentReference.orElseThrow(), runnerName);
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
-      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
+      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
@@ -580,11 +581,10 @@ public class QueryRunnerTestHelper
                 segments.addAll(timeline.lookup(interval));
               }
               List<Sequence<T>> sequences = new ArrayList<>();
-              for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(
+              for (TimelineObjectHolder<String, ReferenceCountedSegmentProvider> holder : toolChest.filterSegments(
                   query,
                   segments
               )) {
-                Segment segment = holder.getObject().getChunk(0).getObject();
                 QueryPlus queryPlusRunning = queryPlus.withQuery(
                     queryPlus.getQuery().withQuerySegmentSpec(
                         new SpecificSegmentSpec(
@@ -596,7 +596,11 @@ public class QueryRunnerTestHelper
                         )
                     )
                 );
-                sequences.add(factory.createRunner(segment).run(queryPlusRunning, responseContext));
+                final QueryRunner<?> runner = new ReferenceCountingSegmentQueryRunner<>(
+                    factory,
+                    SegmentMapFunction.IDENTITY.apply(holder.getObject().getChunk(0).getObject()).orElseThrow()
+                );
+                sequences.add(runner.run(queryPlusRunning, responseContext));
               }
               return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
             },

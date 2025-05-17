@@ -72,7 +72,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
@@ -87,7 +87,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -117,7 +116,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       @Nullable final AtomicLong runningCountForLimit,
       final ObjectMapper jsonMapper,
       final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final SegmentMapFunction segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
@@ -254,7 +253,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null) {
       final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
 
-      final Segment mappedSegment = mapSegment(segmentHolder.get().getSegment());
+      final Segment mappedSegment = closer.register(mapSegment(segmentHolder.get().getSegment()).orElseThrow());
       final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
       if (cursorFactory == null) {
         throw new ISE(
@@ -314,7 +313,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
 
-        final Segment mappedSegment = mapSegment(frameSegment);
+        final Segment mappedSegment = mapSegment(frameSegment).orElseThrow();
         final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
         if (cursorFactory == null) {
           throw new ISE(

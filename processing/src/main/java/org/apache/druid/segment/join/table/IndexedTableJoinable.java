@@ -185,8 +185,8 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
-    return table.acquireReferences();
+    return table.acquireReference();
   }
 }

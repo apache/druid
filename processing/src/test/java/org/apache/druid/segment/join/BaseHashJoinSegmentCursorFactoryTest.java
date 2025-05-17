@@ -27,7 +27,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -232,10 +232,11 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
   protected HashJoinSegment makeFactToCountrySegment(JoinType joinType)
   {
     return new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
         null,
         ImmutableList.of(factToCountryOnIsoCode(joinType)),
-        null
+        null,
+        () -> {}
     );
   }
 

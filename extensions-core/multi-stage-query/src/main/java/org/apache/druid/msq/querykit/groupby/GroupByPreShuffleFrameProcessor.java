@@ -56,7 +56,8 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -90,7 +91,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final GroupingEngine groupingEngine,
       final NonBlockingPool<ByteBuffer> bufferPool,
       final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final SegmentMapFunction segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
@@ -154,7 +155,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     if (resultYielder == null) {
       final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
-      final SegmentReference mappedSegment = mapSegment(segmentHolder.get().getSegment());
+      final Segment mappedSegment = closer.register(mapSegment(segmentHolder.get().getSegment()).orElseThrow());
 
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
@@ -189,7 +190,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
-        final SegmentReference mappedSegment = mapSegment(frameSegment);
+        final Segment mappedSegment = mapSegment(frameSegment).orElseThrow();
 
         final Sequence<ResultRow> rowSequence =
             groupingEngine.process(

@@ -22,42 +22,26 @@ package org.apache.druid.query;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
 
 public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunnerFactory<T, Query<T>> factory;
-  private final SegmentReference segment;
-  private final SegmentDescriptor descriptor;
+  private final Segment segment;
 
   public ReferenceCountingSegmentQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
-      SegmentReference segment,
-      SegmentDescriptor descriptor
+      Segment segment
   )
   {
     this.factory = factory;
     this.segment = segment;
-    this.descriptor = descriptor;
   }
 
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    return segment.acquireReferences().map(closeable -> {
-      try {
-        final Sequence<T> baseSequence = factory.createRunner(segment).run(queryPlus, responseContext);
-        return Sequences.withBaggage(baseSequence, closeable);
-      }
-      catch (Throwable t) {
-        try {
-          closeable.close();
-        }
-        catch (Exception e) {
-          t.addSuppressed(e);
-        }
-        throw t;
-      }
-    }).orElseGet(() -> new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(queryPlus, responseContext));
+    final Sequence<T> baseSequence = factory.createRunner(segment).run(queryPlus, responseContext);
+    return Sequences.withBaggage(baseSequence, segment);
   }
 }

@@ -35,7 +35,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 import org.joda.time.DateTimeZone;
@@ -261,7 +261,7 @@ public class UnionQuery implements Query<Object>
     }
 
     @Override
-    public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+    public SegmentMapFunction createSegmentMapFunction(Query query)
     {
       throw methodNotSupported();
     }

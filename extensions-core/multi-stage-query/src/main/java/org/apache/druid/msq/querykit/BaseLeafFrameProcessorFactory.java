@@ -50,7 +50,7 @@ import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.ExecutionVertex;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -131,7 +131,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
 
 
     // SegmentMapFn processor, if needed. May be null.
-    final FrameProcessor<Function<SegmentReference, SegmentReference>> segmentMapFnProcessor =
+    final FrameProcessor<SegmentMapFunction> segmentMapFnProcessor =
         makeSegmentMapFnProcessor(
             stageDefinition,
             inputSlices,
@@ -142,8 +142,8 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
         );
 
     // Function to generate a processor manger for the regular processors, which run after the segmentMapFnProcessor.
-    final Function<List<Function<SegmentReference, SegmentReference>>, ProcessorManager<Object, Long>> processorManagerFn = segmentMapFnList -> {
-      final Function<SegmentReference, SegmentReference> segmentMapFunction =
+    final Function<List<SegmentMapFunction>, ProcessorManager<Object, Long>> processorManagerFn = segmentMapFnList -> {
+      final SegmentMapFunction segmentMapFunction =
           CollectionUtils.getOnlyElement(segmentMapFnList, throwable -> DruidException.defensive("Only one segment map function expected"));
       return createBaseLeafProcessorManagerWithHandoff(
           stageDefinition,
@@ -162,8 +162,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     final ProcessorManager processorManager;
 
     if (segmentMapFnProcessor == null) {
-      final Function<SegmentReference, SegmentReference> segmentMapFn = ExecutionVertex.of(query)
-                                                                                       .createSegmentMapFunction(frameContext.policyEnforcer());
+      final SegmentMapFunction segmentMapFn = ExecutionVertex.of(query).createSegmentMapFunction(frameContext.policyEnforcer());
       processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
       processorManager = new ChainedProcessorManager<>(ProcessorManagers.of(() -> segmentMapFnProcessor), processorManagerFn);
@@ -179,7 +178,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final InputSliceReader inputSliceReader,
       final CounterTracker counters,
       final Consumer<Throwable> warningPublisher,
-      final Function<SegmentReference, SegmentReference> segmentMapFunction,
+      final SegmentMapFunction segmentMapFunction,
       final Queue<FrameWriterFactory> frameWriterFactoryQueue,
       final Queue<WritableFrameChannel> channelQueue,
       final FrameContext frameContext
@@ -231,7 +230,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
 
   protected abstract FrameProcessor<Object> makeProcessor(
       ReadableInput baseInput,
-      Function<SegmentReference, SegmentReference> segmentMapFn,
+      SegmentMapFunction segmentMapFn,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,
       ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       FrameContext providerThingy
@@ -319,7 +318,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
    * processors being run. Returns null if a dedicated segmentMapFn processor is unnecessary.
    */
   @Nullable
-  private FrameProcessor<Function<SegmentReference, SegmentReference>> makeSegmentMapFnProcessor(
+  private FrameProcessor<SegmentMapFunction> makeSegmentMapFnProcessor(
       StageDefinition stageDefinition,
       List<InputSlice> inputSlices,
       InputSliceReader inputSliceReader,

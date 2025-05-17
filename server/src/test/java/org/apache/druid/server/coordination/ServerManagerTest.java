@@ -84,7 +84,7 @@ import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
@@ -318,17 +318,17 @@ public class ServerManagerTest
 
     factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(1, factory.getSegmentReferences().size());
+    Assert.assertEquals(1, factory.getReferenceProviders().size());
 
-    for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
+    for (ReferenceCountedSegmentProvider referenceCountingSegment : factory.getReferenceProviders()) {
       Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
     }
 
     factory.waitYieldLatch.countDown();
 
-    Assert.assertEquals(1, factory.getAdapters().size());
+    Assert.assertEquals(1, factory.getSegments().size());
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertFalse(segment.isClosed());
     }
 
@@ -337,7 +337,7 @@ public class ServerManagerTest
 
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertTrue(segment.isClosed());
     }
   }
@@ -357,30 +357,30 @@ public class ServerManagerTest
 
     factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(1, factory.getSegmentReferences().size());
+    Assert.assertEquals(1, factory.getReferenceProviders().size());
 
-    for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
+    for (ReferenceCountedSegmentProvider referenceCountingSegment : factory.getReferenceProviders()) {
       Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
     }
 
     factory.waitYieldLatch.countDown();
 
-    Assert.assertEquals(1, factory.getAdapters().size());
+    Assert.assertEquals(1, factory.getSegments().size());
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertFalse(segment.isClosed());
     }
 
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertFalse(segment.isClosed());
     }
 
     factory.waitLatch.countDown();
     future.get();
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertTrue(segment.isClosed());
     }
   }
@@ -400,31 +400,31 @@ public class ServerManagerTest
 
     factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(1, factory.getSegmentReferences().size());
+    Assert.assertEquals(1, factory.getReferenceProviders().size());
 
-    for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
+    for (ReferenceCountedSegmentProvider referenceCountingSegment : factory.getReferenceProviders()) {
       Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
     }
 
     factory.waitYieldLatch.countDown();
 
-    Assert.assertEquals(1, factory.getAdapters().size());
+    Assert.assertEquals(1, factory.getSegments().size());
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertFalse(segment.isClosed());
     }
 
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertFalse(segment.isClosed());
     }
 
     factory.waitLatch.countDown();
     future.get();
 
-    for (TestSegmentUtils.SegmentForTesting segment : factory.getAdapters()) {
+    for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
       Assert.assertTrue(segment.isClosed());
     }
   }
@@ -458,17 +458,17 @@ public class ServerManagerTest
     );
 
     Assert.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
-    Assert.assertEquals(1, factory.getSegmentReferences().size());
+    Assert.assertEquals(1, factory.getReferenceProviders().size());
     // Expect 2 references here: 1 for query and 1 for queryOnRestricted
-    Assert.assertEquals(2, factory.getSegmentReferences().get(0).getNumReferences());
+    Assert.assertEquals(2, factory.getReferenceProviders().get(0).getNumReferences());
 
     factory.waitYieldLatch.countDown();
     factory.waitLatch.countDown();
     future.get();
     futureOnRestricted.get();
-    Assert.assertEquals(1, factory.getSegmentReferences().size());
+    Assert.assertEquals(1, factory.getReferenceProviders().size());
     // no references since both query are finished
-    Assert.assertEquals(0, factory.getSegmentReferences().get(0).getNumReferences());
+    Assert.assertEquals(0, factory.getReferenceProviders().get(0).getNumReferences());
   }
 
   @Test
@@ -558,18 +558,18 @@ public class ServerManagerTest
   {
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
+    final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> maybeTimeline = segmentManager
         .getTimeline(ExecutionVertex.of(query).getBaseTableDataSource());
     Assume.assumeTrue(maybeTimeline.isPresent());
     // close all segments in interval
-    final List<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = maybeTimeline.get().lookup(interval);
+    final List<TimelineObjectHolder<String, ReferenceCountedSegmentProvider>> holders = maybeTimeline.get().lookup(interval);
     final List<SegmentDescriptor> closedSegments = new ArrayList<>();
-    for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : holders) {
-      for (PartitionChunk<ReferenceCountingSegment> chunk : holder.getObject()) {
-        final ReferenceCountingSegment segment = chunk.getObject();
-        Assert.assertNotNull(segment.getId());
+    for (TimelineObjectHolder<String, ReferenceCountedSegmentProvider> holder : holders) {
+      for (PartitionChunk<ReferenceCountedSegmentProvider> chunk : holder.getObject()) {
+        final ReferenceCountedSegmentProvider segment = chunk.getObject();
+        Assert.assertNotNull(segment.getBaseSegment().getId());
         closedSegments.add(
-            new SegmentDescriptor(segment.getDataInterval(), segment.getVersion(), segment.getId().getPartitionNum())
+            new SegmentDescriptor(segment.getBaseSegment().getDataInterval(), segment.getVersion(), segment.getBaseSegment().getId().getPartitionNum())
         );
         segment.close();
       }
@@ -645,7 +645,7 @@ public class ServerManagerTest
       factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
       factory.waitLatch.countDown();
       future.get();
-      factory.clearAdapters();
+      factory.clearSegments();
     }
     catch (Exception e) {
       throw new RuntimeException(e.getCause());
@@ -709,7 +709,7 @@ public class ServerManagerTest
         () -> {
           Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query));
           seq.toList();
-          Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
+          Iterator<SegmentForTesting> adaptersIter = factory.getSegments().iterator();
 
           while (expectedIter.hasNext() && adaptersIter.hasNext()) {
             Pair<String, Interval> expectedVals = expectedIter.next();
@@ -748,9 +748,8 @@ public class ServerManagerTest
     private final CountDownLatch waitLatch;
     private final CountDownLatch waitYieldLatch;
     private final CountDownLatch notifyLatch;
-    private final List<TestSegmentUtils.SegmentForTesting> adapters = new ArrayList<>();
-    private final List<ReferenceCountingSegment> segmentReferences = new ArrayList<>();
-
+    private final List<TestSegmentUtils.SegmentForTesting> segments = new ArrayList<>();
+    private final List<ReferenceCountedSegmentProvider> referenceProviders = new ArrayList<>();
 
     public MyQueryRunnerFactory(
         CountDownLatch waitLatch,
@@ -764,22 +763,21 @@ public class ServerManagerTest
     }
 
     @Override
-    public QueryRunner<Result<SearchResultValue>> createRunner(Segment adapter)
+    public QueryRunner<Result<SearchResultValue>> createRunner(Segment segment)
     {
-      final ReferenceCountingSegment segment;
-      if (this.adapters.stream()
+      if (this.segments.stream()
                        .map(SegmentForTesting::getId)
-                       .anyMatch(segmentId -> adapter.getId().equals(segmentId))) {
+                       .anyMatch(segmentId -> segment.getId().equals(segmentId))) {
         // Already have adapter for this segment, skip.
         // For RestrictedSegment, we don't have access to RestrictedSegment.delegate, but it'd be recorded in segmentReferences.
         // This means we can't test adapter and segmentReference unless there's already a ReferenceCountingSegment.
-      } else if (adapter instanceof ReferenceCountingSegment) {
-        segment = (ReferenceCountingSegment) adapter;
-        Assert.assertTrue(segment.getNumReferences() > 0);
-        segmentReferences.add(segment);
-        adapters.add((SegmentForTesting) segment.getBaseSegment());
+      } else if (segment instanceof ReferenceCountedSegmentProvider.ReferenceClosingSegment) {
+        final ReferenceCountedSegmentProvider provider =
+            ((ReferenceCountedSegmentProvider.ReferenceClosingSegment) segment).getProvider();
+        referenceProviders.add(provider);
+        segments.add((SegmentForTesting) provider.getBaseSegment());
       } else {
-        throw new IAE("Unsupported segment instance: [%s]", adapter.getClass());
+        throw new IAE("Unsupported segment instance: [%s]", segment.getClass());
       }
 
       return new BlockingQueryRunner<>(new NoopQueryRunner<>(), waitLatch, waitYieldLatch, notifyLatch);
@@ -800,19 +798,19 @@ public class ServerManagerTest
       return new NoopQueryToolChest<>();
     }
 
-    public List<SegmentForTesting> getAdapters()
+    public List<SegmentForTesting> getSegments()
     {
-      return adapters;
+      return segments;
     }
 
-    public List<ReferenceCountingSegment> getSegmentReferences()
+    public List<ReferenceCountedSegmentProvider> getReferenceProviders()
     {
-      return segmentReferences;
+      return referenceProviders;
     }
 
-    public void clearAdapters()
+    public void clearSegments()
     {
-      adapters.clear();
+      segments.clear();
     }
   }
 

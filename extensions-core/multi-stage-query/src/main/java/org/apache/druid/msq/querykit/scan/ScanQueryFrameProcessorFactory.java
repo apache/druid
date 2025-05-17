@@ -31,11 +31,10 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 @JsonTypeName("scan")
 public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactory
@@ -68,7 +67,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   @Override
   protected FrameProcessor<Object> makeProcessor(
       ReadableInput baseInput,
-      Function<SegmentReference, SegmentReference> segmentMapFn,
+      SegmentMapFunction segmentMapFn,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,
       ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       FrameContext frameContext

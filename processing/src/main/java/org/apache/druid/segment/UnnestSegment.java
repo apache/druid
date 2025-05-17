@@ -24,14 +24,14 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class UnnestSegment extends WrappedSegmentReference
+public class UnnestSegment extends WrappedSegment
 {
   private final VirtualColumn unnestColumn;
   @Nullable
   private final DimFilter filter;
 
   public UnnestSegment(
-      SegmentReference delegate,
+      Segment delegate,
       VirtualColumn unnestColumn,
       @Nullable DimFilter filter
   )
