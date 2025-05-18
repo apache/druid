@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Shorts;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
@@ -47,11 +48,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableObject<Segment>
     implements Overshadowable<ReferenceCountedSegmentProvider>, ReferenceCountedObjectProvider<Segment>
 {
-  private final short startRootPartitionId;
-  private final short endRootPartitionId;
-  private final short minorVersion;
-  private final short atomicUpdateGroupSize;
-
   public static ReferenceCountedSegmentProvider wrapRootGenerationSegment(Segment baseSegment)
   {
     int partitionNum = baseSegment.getId() == null ? 0 : baseSegment.getId().getPartitionNum();
@@ -63,6 +59,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
         (short) 1
     );
   }
+
 
   public static ReferenceCountedSegmentProvider wrapSegment(
       Segment baseSegment,
@@ -78,6 +75,35 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     );
   }
 
+  /**
+   * Returns a {@link ReferenceCountedObjectProvider<Segment>} that simply returns a wrapper around the supplied
+   * {@link Segment} that prevents closing the segment, and does not provide any reference tracking functionality.
+   * Useful for participating in the interface in cases where the lifecycle of the segment is managed externally.
+   */
+  public static ReferenceCountedObjectProvider<Segment> wrapUnmanaged(Segment unmanagedObject)
+  {
+    return () -> Optional.of(new WrappedSegment(unmanagedObject)
+    {
+      @Nullable
+      @Override
+      public <T> T as(@Nonnull Class<T> clazz)
+      {
+        return unmanagedObject.as(clazz);
+      }
+
+      @Override
+      public void close()
+      {
+        // do not close it, the object lifecycle is managed externally
+      }
+    });
+  }
+
+  private final short startRootPartitionId;
+  private final short endRootPartitionId;
+  private final short minorVersion;
+  private final short atomicUpdateGroupSize;
+
   private ReferenceCountedSegmentProvider(
       Segment baseSegment,
       int startRootPartitionId,
@@ -91,12 +117,12 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     // be ignored.
     if (baseSegment instanceof ReferenceClosingSegment) {
       throw DruidException.defensive(
-          "Cannot use a SegmentReference[%s] as baseSegment for a ReferenceCountingSegment",
+          "Cannot use a ReferenceClosingSegment[%s] as baseSegment for a ReferenceCountedSegmentProvider",
           baseSegment.asString()
       );
     }
-    this.startRootPartitionId = (short) startRootPartitionId;
-    this.endRootPartitionId = (short) endRootPartitionId;
+    this.startRootPartitionId = Shorts.checkedCast(startRootPartitionId);;
+    this.endRootPartitionId = Shorts.checkedCast(endRootPartitionId);
     this.minorVersion = minorVersion;
     this.atomicUpdateGroupSize = atomicUpdateGroupSize;
   }

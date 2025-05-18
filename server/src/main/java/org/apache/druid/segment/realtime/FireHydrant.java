@@ -53,11 +53,12 @@ public class FireHydrant
     this.count = count;
   }
 
-  public FireHydrant(Segment segmentReferenceProvider, int count)
+  public FireHydrant(Segment segment, int count)
   {
     this.index = null;
-    this.segmentReferenceProvider = new AtomicReference<>(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
-        segmentReferenceProvider));
+    this.segmentReferenceProvider = new AtomicReference<>(
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment)
+    );
     this.count = count;
   }
 

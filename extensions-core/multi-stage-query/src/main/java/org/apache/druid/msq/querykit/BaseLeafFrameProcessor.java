@@ -132,6 +132,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
    */
   protected Optional<Segment> mapSegment(final Segment segment)
   {
-    return segmentMapFn.apply(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment));
+    return segmentMapFn.apply(ReferenceCountedSegmentProvider.wrapUnmanaged(segment));
   }
 }
