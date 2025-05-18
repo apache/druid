@@ -46,7 +46,6 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -629,7 +628,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     );
   }
 
-  private static @NotNull String getSegmentInsertSql(boolean includeSchema, String table, TestDerbyConnector connector)
+  private static String getSegmentInsertSql(boolean includeSchema, String table, TestDerbyConnector connector)
   {
     final String sql;
     if (includeSchema) {
