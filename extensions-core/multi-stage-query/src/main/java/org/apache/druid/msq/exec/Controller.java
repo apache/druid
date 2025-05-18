@@ -25,6 +25,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
@@ -57,7 +58,7 @@ public interface Controller
    * Terminate the controller upon a cancellation request. Causes a concurrently-running {@link #run} method in
    * a separate thread to cancel all outstanding work and exit.
    */
-  void stop();
+  void stop(CancellationReason reason);
 
   // Worker-to-controller messages
 

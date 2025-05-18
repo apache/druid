@@ -62,7 +62,7 @@ For example, to delete records where `userName` is `'bob'` with native batch ind
 [`transformSpec`](../ingestion/ingestion-spec.md#transformspec) with filter `{"type": "not", "field": {"type":
 "selector", "dimension": "userName", "value": "bob"}}`.
 
-To delete the same records using SQL, use [REPLACE](../multi-stage-query/concepts.md#replace) with `WHERE userName <> 'bob'`.
+To delete the same records using SQL, use [REPLACE](../multi-stage-query/concepts.md#overwrite-data-with-replace) with `WHERE userName <> 'bob'`.
 
 To reindex using [native batch](../ingestion/native-batch.md), use the [`druid` input
 source](../ingestion/input-sources.md#druid-input-source). If needed,

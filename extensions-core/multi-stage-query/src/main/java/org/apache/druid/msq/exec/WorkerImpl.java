@@ -49,6 +49,7 @@ import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -130,7 +131,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<IntObjectPair<StageId>, CounterTracker> stageCounters = new ConcurrentHashMap<>();
 
   /**
-   * Atomic that is set to true when {@link #run()} starts (or when {@link #stop()} is called before {@link #run()}).
+   * Atomic that is set to true when {@link #run()} starts (or when {@link #stop(CancellationReason reason)} is called before {@link #run()}).
    */
   private final AtomicBoolean didRun = new AtomicBoolean();
 
@@ -140,7 +141,7 @@ public class WorkerImpl implements Worker
   private final SettableFuture<Void> runFuture = SettableFuture.create();
 
   /**
-   * Set once in {@link #run} and never reassigned. This is in a field so {@link #doCancel()} can close it.
+   * Set once in {@link #run} and never reassigned. This is in a field so {@link #doCancel(CancellationReason reason)} can close it.
    */
   private volatile ControllerClient controllerClient;
 
@@ -519,7 +520,7 @@ public class WorkerImpl implements Worker
   }
 
   @Override
-  public void stop()
+  public void stop(CancellationReason reason)
   {
     // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
     log.info("Worker id[%s] canceled.", context.workerId());
@@ -528,7 +529,7 @@ public class WorkerImpl implements Worker
       // run() hasn't been called yet. Set runFuture so awaitStop() still works.
       runFuture.set(null);
     } else {
-      doCancel();
+      doCancel(reason);
     }
   }
 
@@ -546,7 +547,7 @@ public class WorkerImpl implements Worker
         task != null ? task.getControllerTaskId() : null,
         id()
     );
-    doCancel();
+    doCancel(CancellationReason.TASK_SHUTDOWN);
   }
 
   @Override
@@ -977,10 +978,10 @@ public class WorkerImpl implements Worker
   }
 
   /**
-   * Called by {@link #stop()} (task canceled, or containing process shut down) and
+   * Called by {@link #stop(CancellationReason reason)} (task canceled, or containing process shut down) and
    * {@link #controllerFailed()}.
    */
-  private void doCancel()
+  private void doCancel(CancellationReason reason)
   {
     // Set controllerAlive = false so we don't try to contact the controller after being canceled. If it canceled us,
     // it doesn't need to know that we were canceled. If we were canceled by something else, the controller will
@@ -1001,7 +1002,7 @@ public class WorkerImpl implements Worker
     kernelManipulationQueue.clear();
     kernelManipulationQueue.add(
         kernel -> {
-          throw new MSQException(CanceledFault.INSTANCE);
+          throw new MSQException(new CanceledFault(reason));
         }
     );
   }

@@ -325,6 +325,13 @@ public class SingleTaskBackgroundRunnerTest
             0,
             null
         )
+        {
+          @Override
+          public boolean waitForCleanupToFinish()
+          {
+            return true;
+          }
+        }
     );
 
     Assert.assertTrue(runLatch.await(1, TimeUnit.SECONDS));

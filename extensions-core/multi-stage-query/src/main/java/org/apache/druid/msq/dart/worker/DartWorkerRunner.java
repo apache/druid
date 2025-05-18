@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.http.DartWorkerInfo;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.msq.rpc.WorkerResource;
@@ -173,7 +174,7 @@ public class DartWorkerRunner
     }
 
     if (holder != null) {
-      holder.worker.stop();
+      holder.worker.stop(CancellationReason.USER_REQUEST);
     }
   }
 
@@ -234,7 +235,7 @@ public class DartWorkerRunner
       final Collection<WorkerHolder> holders = workerMap.values();
 
       for (final WorkerHolder holder : holders) {
-        holder.worker.stop();
+        holder.worker.stop(CancellationReason.TASK_SHUTDOWN);
       }
 
       for (final WorkerHolder holder : holders) {

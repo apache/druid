@@ -54,6 +54,16 @@ public class UnionDataSourceTest
       )
   );
 
+  private final UnionDataSource tableAndInlineUniondataSource = new UnionDataSource(
+      ImmutableList.of(
+          new TableDataSource("foo"),
+          InlineDataSource.fromIterable(
+              Collections.emptyList(),
+              RowSignature.empty()
+          )
+      )
+  );
+
   @Test
   public void test_constructor_empty()
   {
@@ -73,6 +83,15 @@ public class UnionDataSourceTest
     Assert.assertTrue(UnionDataSource.isCompatibleDataSource(tableDataSource));
     Assert.assertTrue(UnionDataSource.isCompatibleDataSource(inlineDataSource));
     Assert.assertFalse(UnionDataSource.isCompatibleDataSource(new NoopDataSource()));
+  }
+
+  @Test
+  public void test_isTableBased()
+  {
+    Assert.assertTrue(unionDataSource.isTableBased());
+    Assert.assertTrue(unionDataSourceWithDuplicates.isTableBased());
+
+    Assert.assertFalse(tableAndInlineUniondataSource.isTableBased());
   }
 
   @Test

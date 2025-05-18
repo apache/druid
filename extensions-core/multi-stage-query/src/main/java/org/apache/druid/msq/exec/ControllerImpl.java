@@ -105,6 +105,7 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
 import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
@@ -162,6 +163,7 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.IndexSpec;
@@ -186,7 +188,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -205,6 +206,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -309,6 +311,24 @@ public class ControllerImpl implements Controller
     this.queryKitSpecFactory = queryKitSpecFactory;
   }
 
+
+  public ControllerImpl(
+      final String queryId,
+      final QueryDefMSQSpec querySpec,
+      final ResultsContext resultsContext,
+      final ControllerContext controllerContext,
+      final QueryKitSpecFactory queryKitSpecFactory
+  )
+  {
+    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
+    this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
+    this.legacyQuery = null;
+    this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
+    this.context = Preconditions.checkNotNull(controllerContext, "controllerContext");
+    this.queryKitSpecFactory = queryKitSpecFactory;
+  }
+
+
   @Override
   public String queryId()
   {
@@ -327,7 +347,7 @@ public class ControllerImpl implements Controller
   }
 
   @Override
-  public void stop()
+  public void stop(CancellationReason reason)
   {
     final QueryDefinition queryDef = queryDefRef.get();
 
@@ -337,7 +357,7 @@ public class ControllerImpl implements Controller
     stopExternalFetchers();
     addToKernelManipulationQueue(
         kernel -> {
-          throw new MSQException(CanceledFault.INSTANCE);
+          throw new MSQException(new CanceledFault(reason));
         }
     );
 
@@ -655,8 +675,7 @@ public class ControllerImpl implements Controller
               QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),
               queryId,
               querySpec.getTuningConfig(),
-              querySpec.getContext(),
-              queryKernelConfig
+              querySpec.getContext()
           )
       );
       queryDef = qkPlanner.makeQueryDefinition();
@@ -2197,6 +2216,11 @@ public class ControllerImpl implements Controller
       startTaskLauncher();
 
       boolean runAgain;
+      final DateTime queryFailDeadline = getQueryDeadline(querySpec.getContext());
+
+      // The timeout could have already elapsed while waiting for the controller to start, check it now.
+      checkTimeout(queryFailDeadline);
+
       while (!queryKernel.isDone()) {
         startStages();
         fetchStatsFromWorkers();
@@ -2208,8 +2232,10 @@ public class ControllerImpl implements Controller
         checkForErrorsInSketchFetcher();
 
         if (!runAgain) {
-          runKernelCommands();
+          runKernelCommands(queryFailDeadline);
         }
+
+        checkTimeout(queryFailDeadline);
       }
 
       if (!queryKernel.isSuccess()) {
@@ -2219,6 +2245,30 @@ public class ControllerImpl implements Controller
       updateLiveReportMaps();
       cleanUpEffectivelyFinishedStages();
       return Pair.of(queryKernel, workerTaskLauncherFuture);
+    }
+
+    /**
+     * Retrieves the timeout and start time from the query context and calculates the timeout deadline.
+     */
+    private DateTime getQueryDeadline(QueryContext queryContext)
+    {
+      // Fetch the timeout, but don't use default server configured timeout if the user has not specified one.
+      final long timeout = queryContext.getTimeout(QueryContexts.NO_TIMEOUT);
+      // Not using QueryContexts.hasTimeout(), as this considers the default timeout as timeout being set.
+      if (timeout == QueryContexts.NO_TIMEOUT) {
+        return DateTimes.MAX;
+      }
+      return MultiStageQueryContext.getStartTime(queryContext).plus(timeout);
+    }
+
+    /**
+     * Checks the queryFailDeadline and fails the query with a {@link CanceledFault} if it has passed.
+     */
+    private void checkTimeout(DateTime queryFailDeadline)
+    {
+      if (queryFailDeadline.isBeforeNow()) {
+        throw new MSQException(CanceledFault.timeout());
+      }
     }
 
     private void checkForErrorsInSketchFetcher()
@@ -2304,11 +2354,17 @@ public class ControllerImpl implements Controller
     /**
      * Run at least one command from {@link #kernelManipulationQueue}, waiting for it if necessary.
      */
-    private void runKernelCommands() throws InterruptedException
+    private void runKernelCommands(DateTime queryFailDeadline) throws InterruptedException
     {
       if (!queryKernel.isDone()) {
-        // Run the next command, waiting for it if necessary.
-        Consumer<ControllerQueryKernel> command = kernelManipulationQueue.take();
+        // Run the next command, waiting till timeout for it if necessary.
+        Consumer<ControllerQueryKernel> command = kernelManipulationQueue.poll(
+            queryFailDeadline.getMillis() - DateTimes.nowUtc().getMillis(),
+            TimeUnit.MILLISECONDS
+        );
+        if (command == null) {
+          return;
+        }
         command.accept(queryKernel);
 
         // Run all pending commands after that one. Helps avoid deep queues.

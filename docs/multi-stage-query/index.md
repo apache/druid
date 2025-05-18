@@ -32,7 +32,7 @@ description: Introduces multi-stage query architecture and its task engine
 
 Apache Druid supports SQL-based ingestion using the bundled [`druid-multi-stage-query` extension](#load-the-extension).
 This extension adds a [multi-stage query task engine for SQL](concepts.md#multi-stage-query-task-engine) that allows running SQL
-[INSERT](concepts.md#insert) and [REPLACE](concepts.md#replace) statements as batch tasks. As an experimental feature,
+[INSERT](concepts.md#load-data-with-insert) and [REPLACE](concepts.md#overwrite-data-with-replace) statements as batch tasks. As an experimental feature,
 the task engine also supports running `SELECT` queries as batch tasks.
 
 Nearly all `SELECT` capabilities are available in the multi-stage query (MSQ) task engine, with certain exceptions listed on the [Known

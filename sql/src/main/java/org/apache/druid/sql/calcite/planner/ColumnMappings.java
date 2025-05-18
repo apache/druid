@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
@@ -197,5 +198,10 @@ public class ColumnMappings
     return "ColumnMappings{" +
            "mappings=" + mappings +
            '}';
+  }
+
+  public Iterable<String> getOutputColumns()
+  {
+    return Iterables.transform(mappings, ColumnMapping::getOutputColumn);
   }
 }
