@@ -168,9 +168,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
       // Remove unknown segments from cache
       final Set<SegmentId> persistedSegmentIds
           = persistedSegments.stream().map(SegmentRecord::getSegmentId).collect(Collectors.toSet());
-      final Set<SegmentId> segmentIdsRemoved = removeUnpersistedSegments(persistedSegmentIds, syncStartTime);
+      final int numSegmentsRemoved = removeUnpersistedSegments(persistedSegmentIds, syncStartTime);
 
-      return new SegmentSyncResult(segmentIdsRemoved.size(), 0, usedSegmentIdsToRefresh, segmentIdsRemoved);
+      return new SegmentSyncResult(numSegmentsRemoved, 0, usedSegmentIdsToRefresh);
     });
   }
 
@@ -198,7 +198,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
       final Set<String> persistedSegmentIds
           = persistedPendingSegments.stream().map(s -> s.getId().toString()).collect(Collectors.toSet());
       final int numSegmentsRemoved = removeUnpersistedPendingSegments(persistedSegmentIds, syncStartTime);
-      return new SegmentSyncResult(numSegmentsRemoved, numSegmentsUpdated, Set.of(), Set.of());
+      return new SegmentSyncResult(numSegmentsRemoved, numSegmentsUpdated, Set.of());
     });
   }
 
@@ -224,9 +224,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
    *
    * @param persistedSegmentIds Segment IDs present in the metadata store
    * @param syncStartTime       Start time of the current sync
-   * @return Set of unpersisted segment IDs removed from the cache.
+   * @return Number of unpersisted segment IDs removed from the cache.
    */
-  private Set<SegmentId> removeUnpersistedSegments(Set<SegmentId> persistedSegmentIds, DateTime syncStartTime)
+  private int removeUnpersistedSegments(Set<SegmentId> persistedSegmentIds, DateTime syncStartTime)
   {
     return withWriteLock(() -> {
       final Set<SegmentId> unpersistedSegmentIds = new HashSet<>();
@@ -243,9 +243,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
         ).map(Map.Entry::getKey).forEach(unpersistedSegmentIds::add);
       }
 
-      deleteSegments(unpersistedSegmentIds);
-
-      return unpersistedSegmentIds;
+      return deleteSegments(unpersistedSegmentIds);
     });
   }
 

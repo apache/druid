@@ -611,18 +611,34 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
+   * Retrieves all used schema fingerprints present in the metadata store.
+   */
+  public Set<String> retrieveAllUsedSegmentSchemaFingerprints()
+  {
+    final String sql = StringUtils.format(
+        "SELECT fingerprint FROM %s WHERE version = %s AND used = true",
+        dbTables.getSegmentSchemasTable(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
+    return Set.copyOf(
+        handle.createQuery(sql)
+              .setFetchSize(connector.getStreamingFetchSize())
+              .mapTo(String.class)
+              .list()
+    );
+  }
+
+  /**
    * Retrieves all used segment schemas present in the metadata store irrespective
    * of their last updated time.
    */
   public List<SegmentSchemaRecord> retrieveAllUsedSegmentSchemas()
   {
-    return retrieveValidSchemaRecordsWithSql(
-        StringUtils.format(
-            "SELECT fingerprint, payload FROM %s"
-            + " WHERE version = %s AND used = true",
-            dbTables.getSegmentSchemasTable(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
-        )
+    final String sql = StringUtils.format(
+        "SELECT fingerprint, payload FROM %s"
+        + " WHERE version = %s AND used = true",
+        dbTables.getSegmentSchemasTable(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
     );
+    return retrieveValidSchemaRecordsWithQuery(handle.createQuery(sql));
   }
 
   /**
@@ -650,29 +666,33 @@ public class SqlSegmentsMetadataQuery
   /**
    * Retrieves a batch of segment schema records for the given fingerprints.
    */
-  private List<SegmentSchemaRecord> retrieveBatchOfSegmentSchemas(List<String> schemaFingerprint)
+  private List<SegmentSchemaRecord> retrieveBatchOfSegmentSchemas(List<String> schemaFingerprints)
   {
-    return retrieveValidSchemaRecordsWithSql(
-        StringUtils.format(
-            "SELECT fingerprint, payload FROM %s"
-            + " WHERE version = %s AND used = true"
-            + " %s",
-            dbTables.getSegmentSchemasTable(),
-            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
-            getParameterizedInConditionForColumn("fingerprint", schemaFingerprint)
-        )
+    final String sql = StringUtils.format(
+        "SELECT fingerprint, payload FROM %s"
+        + " WHERE version = %s AND used = true"
+        + " %s",
+        dbTables.getSegmentSchemasTable(),
+        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
+        getParameterizedInConditionForColumn("fingerprint", schemaFingerprints)
     );
+
+    final Query<Map<String, Object>> query = handle.createQuery(sql);
+    bindColumnValuesToQueryWithInCondition("fingerprint", schemaFingerprints, query);
+
+    return retrieveValidSchemaRecordsWithQuery(query);
   }
 
-  private List<SegmentSchemaRecord> retrieveValidSchemaRecordsWithSql(String sql)
+  private List<SegmentSchemaRecord> retrieveValidSchemaRecordsWithQuery(
+      Query<Map<String, Object>> query
+  )
   {
-    return handle.createQuery(sql)
-                 .setFetchSize(connector.getStreamingFetchSize())
-                 .map((index, r, ctx) -> mapToSchemaRecord(r))
-                 .list()
-                 .stream()
-                 .filter(Objects::nonNull)
-                 .collect(Collectors.toList());
+    return query.setFetchSize(connector.getStreamingFetchSize())
+                .map((index, r, ctx) -> mapToSchemaRecord(r))
+                .list()
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
   }
 
   /**

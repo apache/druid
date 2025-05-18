@@ -90,7 +90,7 @@ public class NoopSegmentSchemaCache extends SegmentSchemaCache
   }
 
   @Override
-  public Map<SegmentId, SegmentMetadata> getSegmentMetadataMap()
+  public Map<SegmentId, SegmentMetadata> getPublishedSegmentMetadataMap()
   {
     throw new UnsupportedOperationException();
   }
@@ -102,7 +102,7 @@ public class NoopSegmentSchemaCache extends SegmentSchemaCache
   }
 
   @Override
-  public Map<String, SchemaPayload> getSchemaPayloadMap()
+  public Map<String, SchemaPayload> getPublishedSchemaPayloadMap()
   {
     throw new UnsupportedOperationException();
   }

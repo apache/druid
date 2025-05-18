@@ -46,10 +46,12 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
+import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.skife.jdbi.v2.PreparedBatch;
+import org.skife.jdbi.v2.PreparedBatchPart;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
@@ -578,11 +580,12 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       );
     }
 
-    insertSegments(usedSegments, derbyConnectorRule, jsonMapper);
+    insertSegments(usedSegments, false, derbyConnectorRule, jsonMapper);
   }
 
   public static void insertSegments(
       Set<DataSegmentPlus> dataSegments,
+      boolean includeSchema,
       TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
       ObjectMapper jsonMapper
   )
@@ -590,23 +593,15 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     final TestDerbyConnector connector = derbyConnectorRule.getConnector();
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
 
+    final String sql = getSegmentInsertSql(includeSchema, table, connector);
     connector.retryWithHandle(
         handle -> {
-          PreparedBatch preparedBatch = handle.prepareBatch(
-              StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
-                  + " used, payload, used_status_last_updated, upgraded_from_segment_id) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
-                  + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
-                  table,
-                  connector.getQuoteString()
-              )
-          );
+          PreparedBatch preparedBatch = handle.prepareBatch(sql);
           for (DataSegmentPlus segmentPlus : dataSegments) {
             final DataSegment segment = segmentPlus.getDataSegment();
             String id = segment.getId().toString();
-            preparedBatch.add()
-                         .bind("id", id)
+            final PreparedBatchPart segmentRecord = preparedBatch.add();
+            segmentRecord.bind("id", id)
                          .bind("dataSource", segment.getDataSource())
                          .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
                          .bind("start", segment.getInterval().getStart().toString())
@@ -617,6 +612,11 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                          .bind("payload", jsonMapper.writeValueAsBytes(segment))
                          .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
                          .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
+
+            if (includeSchema) {
+              segmentRecord.bind("num_rows", segmentPlus.getNumRows())
+                           .bind("schema_fingerprint", segmentPlus.getSchemaFingerprint());
+            }
           }
 
           final int[] affectedRows = preparedBatch.execute();
@@ -627,6 +627,31 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
           return true;
         }
     );
+  }
+
+  private static @NotNull String getSegmentInsertSql(boolean includeSchema, String table, TestDerbyConnector connector)
+  {
+    final String sql;
+    if (includeSchema) {
+      sql = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
+          + " used, payload, used_status_last_updated, upgraded_from_segment_id, num_rows, schema_fingerprint) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
+          + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id, :num_rows, :schema_fingerprint)",
+          table,
+          connector.getQuoteString()
+      );
+    } else {
+      sql = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
+          + " used, payload, used_status_last_updated, upgraded_from_segment_id) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
+          + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
+          table,
+          connector.getQuoteString()
+      );
+    }
+    return sql;
   }
 
   @Nullable

@@ -31,14 +31,12 @@ public class SegmentSyncResult
   private final int deleted;
   private final int updated;
   private final Set<SegmentId> expiredIds;
-  private final Set<SegmentId> deletedIds;
 
-  public SegmentSyncResult(int deleted, int updated, Set<SegmentId> expiredIds, Set<SegmentId> deletedIds)
+  public SegmentSyncResult(int deleted, int updated, Set<SegmentId> expiredIds)
   {
     this.deleted = deleted;
     this.updated = updated;
     this.expiredIds = expiredIds;
-    this.deletedIds = deletedIds;
   }
 
   public int getDeleted()
@@ -54,10 +52,5 @@ public class SegmentSyncResult
   public Set<SegmentId> getExpiredIds()
   {
     return expiredIds;
-  }
-
-  public Set<SegmentId> getDeletedIds()
-  {
-    return deletedIds;
   }
 }
