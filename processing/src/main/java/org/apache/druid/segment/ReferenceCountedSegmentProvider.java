@@ -75,30 +75,6 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     );
   }
 
-  /**
-   * Returns a {@link ReferenceCountedObjectProvider<Segment>} that simply returns a wrapper around the supplied
-   * {@link Segment} that prevents closing the segment, and does not provide any reference tracking functionality.
-   * Useful for participating in the interface in cases where the lifecycle of the segment is managed externally.
-   */
-  public static ReferenceCountedObjectProvider<Segment> wrapUnmanaged(Segment unmanagedObject)
-  {
-    return () -> Optional.of(new WrappedSegment(unmanagedObject)
-    {
-      @Nullable
-      @Override
-      public <T> T as(@Nonnull Class<T> clazz)
-      {
-        return unmanagedObject.as(clazz);
-      }
-
-      @Override
-      public void close()
-      {
-        // do not close it, the object lifecycle is managed externally
-      }
-    });
-  }
-
   private final short startRootPartitionId;
   private final short endRootPartitionId;
   private final short minorVersion;
@@ -121,7 +97,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
           baseSegment.asString()
       );
     }
-    this.startRootPartitionId = Shorts.checkedCast(startRootPartitionId);;
+    this.startRootPartitionId = Shorts.checkedCast(startRootPartitionId);
     this.endRootPartitionId = Shorts.checkedCast(endRootPartitionId);
     this.minorVersion = minorVersion;
     this.atomicUpdateGroupSize = atomicUpdateGroupSize;

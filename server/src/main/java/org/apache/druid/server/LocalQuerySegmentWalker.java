@@ -95,7 +95,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     // matter, but at least some or all will be in a future PR
     final Iterable<ReferenceCountedObjectProvider<Segment>> segments =
         FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(ev.getBaseDataSource(), intervals))
-                          .transform(ReferenceCountedSegmentProvider::wrapUnmanaged);
+                          .transform(ReferenceCountedSegmentProvider::wrapRootGenerationSegment);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
