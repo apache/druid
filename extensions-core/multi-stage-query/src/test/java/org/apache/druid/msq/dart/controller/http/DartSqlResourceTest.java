@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.java.util.common.DateTimes;
@@ -41,13 +42,16 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -76,6 +80,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
+import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.sql.http.ResultFormat;
@@ -91,7 +96,6 @@ import org.mockito.MockitoAnnotations;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -200,7 +204,9 @@ public class DartSqlResourceTest extends MSQTestBase
         controllerExecutor = Execs.multiThreaded(
             MAX_CONTROLLERS,
             StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
-        )
+        ),
+        new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
+        new ServerConfig()
     );
 
     final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
@@ -598,6 +604,47 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   @Test
+  public void test_doPost_queryTimeout() throws Exception
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT 1 + 1",
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true, QueryContexts.TIMEOUT_KEY, 1),
+        Collections.emptyList()
+    );
+
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
+
+    final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
+        asyncResponse.baos.toByteArray(),
+        new TypeReference<>()
+        {
+        }
+    );
+
+    Assertions.assertEquals(1, reportMaps.size());
+    final MSQTaskReport report =
+        (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
+    final MSQStatusReport statusReport = report.getPayload().getStatus();
+
+    Assertions.assertEquals(TaskState.FAILED, statusReport.getStatus());
+    Assertions.assertEquals(CanceledFault.timeout(), statusReport.getErrorReport().getFault());
+  }
+
+  @Test
   public void test_doPost_regularUser_runtimeError_fullReport() throws Exception
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();
@@ -731,7 +778,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals("Canceled", e.get("errorCode"));
     Assertions.assertEquals("CANCELED", e.get("category"));
     Assertions.assertEquals(
-        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.instance()),
+        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.userRequest()),
         e.get("errorMessage")
     );
   }
@@ -755,14 +802,16 @@ public class DartSqlResourceTest extends MSQTestBase
   private ControllerHolder setUpMockRunningQuery(final String identity)
   {
     final Controller controller = Mockito.mock(Controller.class);
+    final ControllerContext controllerContext = Mockito.mock(ControllerContext.class);
     Mockito.when(controller.queryId()).thenReturn("did_" + identity);
+    Mockito.when(controller.getControllerContext()).thenReturn(controllerContext);
+    Mockito.when(controllerContext.selfNode()).thenReturn(Mockito.mock(DruidNode.class));
 
     final AuthenticationResult authenticationResult = makeAuthenticationResult(identity);
     final ControllerHolder holder = new ControllerHolder(
         controller,
         "sid",
         "SELECT 1",
-        "localhost:1001",
         authenticationResult,
         DateTimes.of("2000")
     );

@@ -34,7 +34,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone NULLS FIRST);
+                                                           timezone NULLS FIRST,
+                                                           time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+---+
 | server_ip    | client_ip     | timezone | t                   | c |
 +--------------+---------------+----------+---------------------+---+
@@ -67,7 +68,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone NULLS LAST);
+                                                           timezone NULLS LAST,
+                                                           time_floor(__time, 'PT12H'));
 ASCENDING ordering with NULLS LAST is not supported
 !error
 
@@ -87,7 +89,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone ASC NULLS FIRST);
+                                                           timezone ASC NULLS FIRST,
+                                                           time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+---+
 | server_ip    | client_ip     | timezone | t                   | c |
 +--------------+---------------+----------+---------------------+---+
@@ -120,7 +123,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone ASC NULLS LAST);
+                                                           timezone ASC NULLS LAST,
+                                                           time_floor(__time, 'PT12H'));
 ASCENDING ordering with NULLS LAST is not supported
 !error
 
@@ -140,7 +144,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone DESC NULLS FIRST);
+                                                           timezone DESC NULLS FIRST,
+                                                           time_floor(__time, 'PT12H'));
 DESCENDING ordering with NULLS FIRST is not supported
 !error
 
@@ -160,7 +165,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip,
-                                                           timezone DESC NULLS LAST);
+                                                           timezone DESC NULLS LAST,
+                                                           time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+---+
 | server_ip    | client_ip     | timezone | t                   | c |
 +--------------+---------------+----------+---------------------+---+

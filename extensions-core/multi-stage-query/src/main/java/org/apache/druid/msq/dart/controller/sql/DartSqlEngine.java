@@ -32,9 +32,12 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
+import org.apache.druid.msq.exec.QueryKitSpecFactory;
+import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -55,19 +58,25 @@ public class DartSqlEngine implements SqlEngine
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
   private final ExecutorService controllerExecutor;
+  private final ServerConfig serverConfig;
+  private final QueryKitSpecFactory queryKitSpecFactory;
 
   @Inject
   public DartSqlEngine(
       DartControllerContextFactory controllerContextFactory,
       DartControllerRegistry controllerRegistry,
-      DartControllerConfig controllerConfig
+      DartControllerConfig controllerConfig,
+      DartQueryKitSpecFactory queryKitSpecFactory,
+      ServerConfig serverConfig
   )
   {
     this(
         controllerContextFactory,
         controllerRegistry,
         controllerConfig,
-        Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
+        Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s"),
+        queryKitSpecFactory,
+        serverConfig
     );
   }
 
@@ -75,13 +84,17 @@ public class DartSqlEngine implements SqlEngine
       DartControllerContextFactory controllerContextFactory,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
-      ExecutorService controllerExecutor
+      ExecutorService controllerExecutor,
+      QueryKitSpecFactory queryKitSpecFactory,
+      ServerConfig serverConfig
   )
   {
     this.controllerContextFactory = controllerContextFactory;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
+    this.queryKitSpecFactory = queryKitSpecFactory;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -159,14 +172,20 @@ public class DartSqlEngine implements SqlEngine
   @Override
   public QueryMaker buildQueryMakerForSelect(RelRoot relRoot, PlannerContext plannerContext)
   {
-    return new DartQueryMaker(
+    DartQueryMaker dartQueryMaker = new DartQueryMaker(
         relRoot.fields,
         controllerContextFactory,
         plannerContext,
         controllerRegistry,
         controllerConfig,
-        controllerExecutor
+        controllerExecutor,
+        queryKitSpecFactory,
+        serverConfig
     );
+    if (plannerContext.queryContext().isPrePlanned()) {
+      return new PrePlannedDartQueryMaker(plannerContext, dartQueryMaker);
+    }
+    return dartQueryMaker;
   }
 
   @Override

@@ -29,7 +29,7 @@ import TabItem from '@theme/TabItem';
 
 This topic describes the status and configuration API endpoints for [automatic compaction using Coordinator duties](../data-management/automatic-compaction.md#auto-compaction-using-coordinator-duties) in Apache Druid. You can configure automatic compaction in the Druid web console or API.
 
-:::info Experimental
+:::info[Experimental]
 
 Instead of the automatic compaction API, you can use the supervisor API to submit auto-compaction jobs using compaction supervisors. For more information, see [Auto-compaction using compaction supervisors](../data-management/automatic-compaction.md#auto-compaction-using-compaction-supervisors).
 

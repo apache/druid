@@ -175,9 +175,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -216,7 +216,8 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY server_ip,
+                                               ORDER BY client_ip,
+                                                        server_ip,
                                                         time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
@@ -229,9 +230,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -258,7 +259,8 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY server_ip,
+                                                  ORDER BY client_ip,
+                                                           server_ip,
                                                            time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
@@ -271,9 +273,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -312,7 +314,8 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY server_ip,
+                                               ORDER BY client_ip,
+                                                        server_ip,
                                                         time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
@@ -325,9 +328,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -354,7 +357,8 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY server_ip,
+                                                  ORDER BY client_ip,
+                                                           server_ip,
                                                            time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
@@ -367,9 +371,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -410,7 +414,8 @@ WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip ASC,
                                                         length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                               timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -422,9 +427,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -453,7 +458,8 @@ GROUP BY server_ip,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
                                                            length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                                  timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -465,9 +471,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -508,7 +514,8 @@ WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip DESC,
                                                         length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -520,9 +527,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -551,7 +558,8 @@ GROUP BY server_ip,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip DESC,
                                                            length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                   timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                                   timezone,
+                                                                                   time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -563,9 +571,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -605,8 +613,10 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
                                                ORDER BY server_ip ASC,
+                                                        server_ip,
                                                         length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                               timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -618,9 +628,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -648,8 +658,10 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
                                                   ORDER BY server_ip ASC,
+                                                           server_ip,
                                                            length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                                  timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -661,9 +673,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -703,8 +715,10 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
                                                ORDER BY server_ip DESC,
+                                                        server_ip,
                                                         length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -716,9 +730,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
+                                   ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
+                                  ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -746,8 +760,10 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
                                                   ORDER BY server_ip DESC,
+                                                           server_ip,
                                                            length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                   timezone ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
+                                                                                   timezone,
+                                                                                   time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND CURRENT ROW);
 QueryInterruptedException
 !error
 
@@ -935,9 +951,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
+                                   ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
+                                  ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -977,7 +993,8 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip ASC,
-                                                        timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
 QueryInterruptedException
 !error
 
@@ -989,9 +1006,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
+                                   ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
+                                  ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1019,7 +1036,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
-                                                           timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
 QueryInterruptedException
 !error
 
@@ -1031,9 +1049,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
+                                   ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip DESC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
+                                  ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1073,7 +1091,8 @@ FROM
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip DESC,
-                                                        timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
 QueryInterruptedException
 !error
 
@@ -1085,9 +1104,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
+                                   ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
        last_value(timezone) OVER (PARTITION BY client_ip
-                                  ORDER BY server_ip DESC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
+                                  ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1115,7 +1134,8 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip DESC,
-                                                           timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
 QueryInterruptedException
 !error
 
@@ -1127,9 +1147,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1168,8 +1188,10 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY server_ip ASC,
-                                                        timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+                                               ORDER BY client_ip,
+                                                        server_ip ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING);
 QueryInterruptedException
 !error
 
@@ -1181,9 +1203,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (
-                                   ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
+                                   ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) first_val,
        last_value(timezone) OVER (
-                                  ORDER BY server_ip ASC, timezone ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
+                                  ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) last_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')

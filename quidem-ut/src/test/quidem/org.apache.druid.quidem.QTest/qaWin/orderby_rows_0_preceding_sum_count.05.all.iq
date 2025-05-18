@@ -18,7 +18,9 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
-                                                  ORDER BY length(server_ip) DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                  ORDER BY server_ip,
+                                                           length(server_ip) DESC, timezone,
+                                                                                   time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -43,9 +45,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY length(server_ip) ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY length(server_ip) ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -97,7 +99,10 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY length(server_ip) ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        length(server_ip) ASC, timezone,
+                                                                               time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -122,9 +127,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY length(server_ip) ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY length(server_ip) ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -164,7 +169,10 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY length(server_ip) ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           length(server_ip) ASC, timezone,
+                                                                                  time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -189,9 +197,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY length(server_ip) DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY length(server_ip) DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -243,7 +251,10 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY length(server_ip) DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        length(server_ip) DESC, timezone,
+                                                                                time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -268,9 +279,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY length(server_ip) DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY length(server_ip) DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -310,7 +321,10 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY length(server_ip) DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           length(server_ip) DESC, timezone,
+                                                                                   time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -335,9 +349,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -389,8 +403,10 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                        timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                               ORDER BY server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -415,9 +431,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -457,8 +473,10 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                           timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                  ORDER BY server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -483,9 +501,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -537,8 +555,10 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                        timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                               ORDER BY server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -563,9 +583,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -605,8 +625,10 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                           timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                  ORDER BY server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -631,9 +653,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -685,8 +707,11 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                        timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -711,9 +736,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -753,8 +778,11 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                           timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -779,9 +807,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -833,8 +861,11 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                        timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -859,9 +890,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -901,8 +932,11 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                           timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -1223,9 +1257,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1277,7 +1311,8 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY server_ip,
+                                               ORDER BY client_ip,
+                                                        server_ip,
                                                         time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
@@ -1303,9 +1338,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1345,7 +1380,8 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY server_ip,
+                                                  ORDER BY client_ip,
+                                                           server_ip,
                                                            time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
@@ -1371,9 +1407,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1425,7 +1461,8 @@ FROM
             time_floor(__time, 'PT12H'))
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (
-                                               ORDER BY server_ip,
+                                               ORDER BY client_ip,
+                                                        server_ip,
                                                         time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
@@ -1451,9 +1488,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1493,7 +1530,8 @@ GROUP BY server_ip,
          client_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (
-                                                  ORDER BY server_ip,
+                                                  ORDER BY client_ip,
+                                                           server_ip,
                                                            time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
@@ -1519,9 +1557,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1575,7 +1613,8 @@ WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip ASC,
                                                         length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                               timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -1600,9 +1639,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1644,7 +1683,8 @@ GROUP BY server_ip,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
                                                            length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
-                                                                                  timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -1669,9 +1709,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
@@ -1725,7 +1765,8 @@ WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                ORDER BY server_ip DESC,
                                                         length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -1750,9 +1791,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (PARTITION BY client_ip
-                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM test_win
 WHERE client_ip IN ('107.13.54.103',
                     '99.9.55.22')
@@ -1794,7 +1835,8 @@ GROUP BY server_ip,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip DESC,
                                                            length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
-                                                                                   timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
+                                                                                   timezone,
+                                                                                   time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING);
 +--------------+---------------+----------+---------------------+---------+---------+
 | server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
 +--------------+---------------+----------+---------------------+---------+---------+
@@ -1819,9 +1861,9 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        sum(length(timezone)) OVER (
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
+                                   ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) "sum_val",
        count(timezone) OVER (
-                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
+                             ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 PRECEDING) cnt_val
 FROM
   (SELECT server_ip,
           client_ip,
