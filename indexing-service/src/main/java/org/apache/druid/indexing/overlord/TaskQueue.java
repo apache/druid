@@ -199,7 +199,8 @@ public class TaskQueue
     startStopLock.writeLock().lock();
     try {
       this.active = active;
-    } finally {
+    }
+    finally {
       startStopLock.writeLock().unlock();
     }
   }
