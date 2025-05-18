@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Metrics for segment generation.
@@ -55,64 +56,50 @@ public class SegmentGenerationMetrics
 
   private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
 
+  /**
+   * {@code MessageGapStats} tracks message gap statistics but is not thread-safe.
+   */
   public static class MessageGapStats
   {
-    long minMessageGap = Long.MAX_VALUE;
-    long maxMessageGap = Long.MIN_VALUE;
-    long numMessageGap = 0;
-    double totalMessageGap = 0;
+    private long min = Long.MAX_VALUE;
+    private long max = Long.MIN_VALUE;
+    private long count = 0;
+    private double total = 0;
 
-    public synchronized double avgMessageGap()
+    public double avg()
     {
-      return totalMessageGap / numMessageGap;
+      return total / count;
     }
 
-    public synchronized long getMinMessageGap()
+    public long min()
     {
-      return minMessageGap;
+      return min;
     }
 
-    public synchronized long getMaxMessageGap()
+    public long max()
     {
-      return maxMessageGap;
+      return max;
     }
 
-    public synchronized long getNumMessageGap()
+    public long count()
     {
-      return numMessageGap;
+      return count;
     }
 
-    public synchronized void add(final long messageGap)
+    public void add(final long messageGap)
     {
-      totalMessageGap += messageGap;
-      ++numMessageGap;
-      if (minMessageGap > messageGap) {
-        minMessageGap = messageGap;
+      total += messageGap;
+      ++count;
+      if (min > messageGap) {
+        min = messageGap;
       }
-      if (maxMessageGap < messageGap) {
-        maxMessageGap = messageGap;
+      if (max < messageGap) {
+        max = messageGap;
       }
-    }
-
-    public MessageGapStats getAndReset()
-    {
-      final MessageGapStats copy = new MessageGapStats();
-      synchronized (this) {
-        copy.totalMessageGap = totalMessageGap;
-        copy.numMessageGap = numMessageGap;
-        copy.minMessageGap = minMessageGap;
-        copy.maxMessageGap = maxMessageGap;
-
-        totalMessageGap = 0;
-        numMessageGap = 0;
-        minMessageGap = Long.MAX_VALUE;
-        maxMessageGap = Long.MIN_VALUE;
-      }
-      return copy;
     }
   }
 
-  private final MessageGapStats messageGapStats = new MessageGapStats();
+  private final AtomicReference<MessageGapStats> messageGapStats = new AtomicReference<>(new MessageGapStats());
 
   public void incrementRowOutputCount(long numRows)
   {
@@ -166,7 +153,7 @@ public class SegmentGenerationMetrics
 
   public void reportMessageGap(final long messageGap)
   {
-    messageGapStats.add(messageGap);
+    messageGapStats.get().add(messageGap);
   }
 
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
@@ -264,9 +251,12 @@ public class SegmentGenerationMetrics
     return sinkCount.get();
   }
 
+  /**
+   * See {@code MessageGapStats} for current gaurantees on thread-safety.
+   */
   public MessageGapStats getMessageGapStats()
   {
-    return messageGapStats.getAndReset();
+    return messageGapStats.get();
   }
 
   public long messageGap()
@@ -307,12 +297,7 @@ public class SegmentGenerationMetrics
       messageGapSnapshot = System.currentTimeMillis() - maxTimestamp;
     }
     retVal.messageGap.set(messageGapSnapshot);
-
-    final MessageGapStats gapStatsCopy = messageGapStats.getAndReset();
-    retVal.messageGapStats.totalMessageGap = gapStatsCopy.totalMessageGap;
-    retVal.messageGapStats.numMessageGap = gapStatsCopy.numMessageGap;
-    retVal.messageGapStats.maxMessageGap = gapStatsCopy.maxMessageGap;
-    retVal.messageGapStats.minMessageGap = gapStatsCopy.minMessageGap;
+    retVal.messageGapStats.set(messageGapStats.getAndSet(new MessageGapStats()));
 
     reset();
 

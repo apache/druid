@@ -48,10 +48,10 @@ public class SegmentGenerationMetricsTest
 
     Assert.assertTrue(snapshot.messageGap() >= 20L);
     final SegmentGenerationMetrics.MessageGapStats messageGapStats = snapshot.getMessageGapStats();
-    Assert.assertEquals(20L, messageGapStats.getMinMessageGap());
-    Assert.assertEquals(20L, messageGapStats.getMaxMessageGap());
-    Assert.assertEquals(messageGapStats.getMinMessageGap(), messageGapStats.getMaxMessageGap());
-    Assert.assertEquals(20L, messageGapStats.avgMessageGap(), 0);
+    Assert.assertEquals(20L, messageGapStats.min());
+    Assert.assertEquals(20L, messageGapStats.max());
+    Assert.assertEquals(messageGapStats.min(), messageGapStats.max());
+    Assert.assertEquals(20L, messageGapStats.avg(), 0);
     Assert.assertEquals(7, snapshot.maxSegmentHandoffTime());
   }
 
@@ -72,10 +72,10 @@ public class SegmentGenerationMetricsTest
     Assert.assertEquals(-1, snapshot.messageGap());
 
     final SegmentGenerationMetrics.MessageGapStats messageGapStats = snapshot.getMessageGapStats();
-    Assert.assertEquals(0, messageGapStats.getNumMessageGap());
-    Assert.assertEquals(Long.MIN_VALUE, messageGapStats.getMaxMessageGap());
-    Assert.assertEquals(Long.MAX_VALUE, messageGapStats.getMinMessageGap());
-    Assert.assertEquals(Double.NaN, messageGapStats.avgMessageGap(), 0);
+    Assert.assertEquals(0, messageGapStats.count());
+    Assert.assertEquals(Long.MIN_VALUE, messageGapStats.max());
+    Assert.assertEquals(Long.MAX_VALUE, messageGapStats.min());
+    Assert.assertEquals(Double.NaN, messageGapStats.avg(), 0);
     // value must be invalid
     Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
@@ -96,10 +96,10 @@ public class SegmentGenerationMetricsTest
     Assert.assertEquals(-1, snapshot.messageGap());
 
     final SegmentGenerationMetrics.MessageGapStats messageGapStats = snapshot.getMessageGapStats();
-    Assert.assertEquals(5, messageGapStats.getNumMessageGap());
-    Assert.assertEquals(0, messageGapStats.getMinMessageGap());
-    Assert.assertEquals(120, messageGapStats.getMaxMessageGap());
-    Assert.assertEquals(60.0, messageGapStats.avgMessageGap(), 0);
+    Assert.assertEquals(5, messageGapStats.count());
+    Assert.assertEquals(0, messageGapStats.min());
+    Assert.assertEquals(120, messageGapStats.max());
+    Assert.assertEquals(60.0, messageGapStats.avg(), 0);
 
     Assert.assertEquals(7L, snapshot.maxSegmentHandoffTime());
   }
@@ -107,9 +107,9 @@ public class SegmentGenerationMetricsTest
   private static void assertMessageGapAggregateMetricsReset(final SegmentGenerationMetrics metrics)
   {
     final SegmentGenerationMetrics.MessageGapStats messageGapStats = metrics.getMessageGapStats();
-    Assert.assertEquals(0, messageGapStats.getNumMessageGap());
-    Assert.assertEquals(Long.MIN_VALUE, messageGapStats.getMaxMessageGap());
-    Assert.assertEquals(Long.MAX_VALUE, messageGapStats.getMinMessageGap());
-    Assert.assertEquals(Double.NaN, messageGapStats.avgMessageGap(), 0);
+    Assert.assertEquals(0, messageGapStats.count());
+    Assert.assertEquals(Long.MIN_VALUE, messageGapStats.max());
+    Assert.assertEquals(Long.MAX_VALUE, messageGapStats.min());
+    Assert.assertEquals(Double.NaN, messageGapStats.avg(), 0);
   }
 }
