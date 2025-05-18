@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Shorts;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
@@ -97,8 +96,8 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
           baseSegment.asString()
       );
     }
-    this.startRootPartitionId = Shorts.checkedCast(startRootPartitionId);
-    this.endRootPartitionId = Shorts.checkedCast(endRootPartitionId);
+    this.startRootPartitionId = (short) startRootPartitionId;
+    this.endRootPartitionId = (short) endRootPartitionId;
     this.minorVersion = minorVersion;
     this.atomicUpdateGroupSize = atomicUpdateGroupSize;
   }
