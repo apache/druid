@@ -41,11 +41,11 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -58,14 +58,14 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 {
   private TaskQueue taskQueue;
 
-  private Map<String, CriticalUpdate> threadToCriticalUpdate;
+  private Map<String, UpdateAction> threadToUpdateAction;
 
   @Override
   public void setUpIngestionTestBase() throws IOException
   {
     super.setUpIngestionTestBase();
 
-    threadToCriticalUpdate = new HashMap<>();
+    threadToUpdateAction = new HashMap<>();
 
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
@@ -90,25 +90,87 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
       @Override
       TaskEntry addOrUpdateTaskEntry(String taskId, Function<TaskEntry, TaskEntry> updateOperation)
       {
-        // Use a modified update so that we can track and control the progress
+        // Override this critical action so that we can track and control progress
         final String threadName = Thread.currentThread().getName();
-        final CriticalUpdate criticalUpdate = threadToCriticalUpdate.get(threadName);
+        final UpdateAction updateAction = threadToUpdateAction.remove(threadName);
 
-        return criticalUpdate == null
+        return updateAction == null
                ? super.addOrUpdateTaskEntry(taskId, updateOperation)
                : super.addOrUpdateTaskEntry(
                    taskId,
-                   existing -> criticalUpdate.perform(() -> updateOperation.apply(existing))
+                   existing -> updateAction.critical.perform(() -> updateOperation.apply(existing))
                );
       }
-    };
 
-    taskQueue.setActive();
+      @Override
+      void setActive(boolean active)
+      {
+        // Override this critical action so that we can track and control progress
+        final String threadName = Thread.currentThread().getName();
+        final UpdateAction updateAction = threadToUpdateAction.remove(threadName);
+
+        if (updateAction == null) {
+          super.setActive(active);
+        } else {
+          updateAction.critical.perform(() -> {
+            super.setActive(active);
+            return 0;
+          });
+        }
+      }
+    };
+  }
+
+  @Test
+  public void test_start_blocks_add_forAnyTaskId()
+  {
+    // Add task1 to storage and mark it as running
+    final Task task1 = createTask("t1");
+    getTaskStorage().insert(task1, TaskStatus.running(task1.getId()));
+
+    final Task task2 = createTask("t2");
+
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.start()
+        ).withEndState(
+            () -> Assert.assertEquals(List.of(task1), taskQueue.getTasks())
+        )
+    ).blocks(
+        update(
+            () -> taskQueue.add(task2)
+        ).withEndState(
+            () -> Assert.assertEquals(List.of(task1, task2), taskQueue.getTasks())
+        )
+    );
+  }
+
+  @Test
+  public void test_add_blocks_stop()
+  {
+    taskQueue.setActive(true);
+
+    final Task task = createTask("t1");
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.add(task)
+        ).withEndState(
+            () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(task.getId()))
+        )
+    ).blocks(
+        update(
+            () -> taskQueue.stop()
+        ).withEndState(
+            () -> Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task.getId()))
+        )
+    );
   }
 
   @Test
   public void test_add_blocks_syncFromStorage_forSameTaskId()
   {
+    taskQueue.setActive(true);
+
     final String taskId = "t2";
     final Task task = createTask(taskId);
 
@@ -134,6 +196,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     final Task task = createTask(taskId);
 
     // Add the task to queue and storage
+    taskQueue.setActive(true);
     taskQueue.add(task);
     Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId));
     Assert.assertEquals(Optional.of(task), getTaskStorage().getTask(taskId));
@@ -163,6 +226,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     final String taskId = "t2";
     final Task task = createTask(taskId);
 
+    taskQueue.setActive(true);
     taskQueue.add(task);
     Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId));
 
@@ -190,6 +254,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   @Test(timeout = 20_000L)
   public void test_add_blocks_shutdownWithSuccess_forSameTaskId()
   {
+    taskQueue.setActive(true);
+
     final String taskId = "t2";
     final Task task = createTask(taskId);
 
@@ -217,6 +283,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   @Test(timeout = 20_000L)
   public void test_add_blocks_shutdown_forSameTaskId()
   {
+    taskQueue.setActive(true);
+
     final String taskId = "t1";
     final Task task = createTask(taskId);
 
@@ -243,7 +311,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
   private UpdateAction update(Action action)
   {
-    return new UpdateAction(action, (k, v) -> threadToCriticalUpdate.put(k, v));
+    return new UpdateAction(action, threadToUpdateAction::put);
   }
 
   private static Task createTask(String id)
@@ -268,15 +336,21 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     void perform();
   }
 
+  @FunctionalInterface
+  private interface UpdateStartNotifier
+  {
+    void onUpdateStart(String threadName, UpdateAction action);
+  }
+
   /**
-   * Wrapper around a critical update action on a task in the {@link TaskQueue}.
+   * Wrapper around the critical part of an update action.
    * This class contains latches to track and control the progress of the update
    * and verify behaviour in race conditions.
    */
   private static class CriticalUpdate
   {
-    final CountDownLatch isReadyToStart = new NamedLatch("hasStarted");
-    final CountDownLatch start = new NamedLatch("resume");
+    final CountDownLatch isReadyToStart = new NamedLatch("isReadyToStart");
+    final CountDownLatch start = new NamedLatch("start");
 
     final CountDownLatch isReadyToFinish = new NamedLatch("isReadyToFinish");
     final CountDownLatch finish = new NamedLatch("finish");
@@ -284,7 +358,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     synchronized <V> V perform(Supplier<V> updateComputation)
     {
       if (isReadyToStart.getCount() == 0) {
-        throw new ISE("Update has already run on another thread");
+        throw new ISE("Critical update has already run on another thread");
       }
 
       isReadyToStart.countDown();
@@ -328,15 +402,15 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     final CountDownLatch finished = new NamedLatch("finished");
     final CriticalUpdate critical = new CriticalUpdate();
 
-    final BiConsumer<String, CriticalUpdate> mapThreadNameToUpdate;
-
     final Action action;
+    final UpdateStartNotifier startNotifier;
+
     Action verifyAction;
 
-    UpdateAction(Action action, BiConsumer<String, CriticalUpdate> mapThreadNameToUpdate)
+    UpdateAction(Action action, UpdateStartNotifier startNotifier)
     {
       this.action = action;
-      this.mapThreadNameToUpdate = mapThreadNameToUpdate;
+      this.startNotifier = startNotifier;
     }
 
     UpdateAction withEndState(Action verifyAction)
@@ -347,8 +421,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
     void perform()
     {
-      // Map the thread name to the CriticalUpdate so that it can be invoked later in this thread
-      mapThreadNameToUpdate.accept(Thread.currentThread().getName(), critical);
+      startNotifier.onUpdateStart(Thread.currentThread().getName(), this);
 
       try {
         action.perform();

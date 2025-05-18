@@ -139,7 +139,7 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
   }
 
   @Test
@@ -240,7 +240,7 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    maxPayloadTaskQueue.setActive();
+    maxPayloadTaskQueue.setActive(true);
 
     // 1 MB is not too large
     char[] context = new char[1024 * 1024];
@@ -416,7 +416,7 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
     taskQueue.add(task);
     taskQueue.manageQueuedTasks();
@@ -504,7 +504,7 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
 
     Assert.assertEquals(TaskStatus.running(newTask), taskQueue.getTaskStatus(newTask).get());
     Assert.assertEquals(TaskStatus.running(waitingTask), taskQueue.getTaskStatus(waitingTask).get());

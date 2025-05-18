@@ -194,9 +194,14 @@ public class TaskQueue
   }
 
   @VisibleForTesting
-  void setActive()
+  void setActive(boolean active)
   {
-    this.active = true;
+    startStopLock.writeLock().lock();
+    try {
+      this.active = active;
+    } finally {
+      startStopLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -209,7 +214,7 @@ public class TaskQueue
 
     try {
       Preconditions.checkState(!active, "queue must be stopped");
-      active = true;
+      setActive(true);
       syncFromStorage();
       // Mark these tasks as failed as they could not reacuire the lock
       // Clean up needs to happen after tasks have been synced from storage
@@ -285,8 +290,8 @@ public class TaskQueue
     startStopLock.writeLock().lock();
 
     try {
+      setActive(false);
       activeTasks.clear();
-      active = false;
       managerExec.shutdownNow();
       storageSyncExec.shutdownNow();
       requestManagement();
