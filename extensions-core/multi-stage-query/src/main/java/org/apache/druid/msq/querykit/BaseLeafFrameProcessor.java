@@ -132,6 +132,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
    */
   protected Optional<Segment> mapSegment(final Segment segment)
   {
+    // we use wrapUnmanaged here because segment reference tracking and lifecycle management happens elsewhere, so all
+    // we need to be able to do here is apply a segment map function since we don't care about the provider
     return segmentMapFn.apply(ReferenceCountedSegmentProvider.wrapUnmanaged(segment));
   }
 }
