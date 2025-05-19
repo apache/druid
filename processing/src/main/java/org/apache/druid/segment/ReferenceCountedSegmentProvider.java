@@ -74,6 +74,12 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     );
   }
 
+  /**
+   * Returns a {@link ReferenceCountedObjectProvider<Segment>} that simply returns a wrapper around the supplied
+   * {@link Segment} that prevents closing the segment, and does not provide any reference tracking functionality.
+   * Useful for participating in places that require the interface (such as {@link SegmentMapFunction}) in cases where
+   * the lifecycle of the segment is managed externally.
+   */
   public static ReferenceCountedObjectProvider<Segment> wrapUnmanaged(Segment segment)
   {
     return () -> Optional.of(new UnmanagedReference(segment));
