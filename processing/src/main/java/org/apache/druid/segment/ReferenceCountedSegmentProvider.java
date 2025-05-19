@@ -219,7 +219,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
     {
       // a segment cannot directly have any policies, so use the enforcer directly
-      policyEnforcer.validateOrElseThrow(this, null);
+      policyEnforcer.validateOrElseThrow(baseSegment, null);
     }
   }
 
