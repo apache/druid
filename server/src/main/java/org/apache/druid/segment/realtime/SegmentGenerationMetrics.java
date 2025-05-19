@@ -97,7 +97,7 @@ public class SegmentGenerationMetrics
       }
     }
 
-    public MessageGapStats getAndReset()
+    public MessageGapStats copyAndReset()
     {
       final MessageGapStats copy = new MessageGapStats();
       synchronized (this) {
@@ -314,7 +314,7 @@ public class SegmentGenerationMetrics
     }
     retVal.messageGap.set(messageGapSnapshot);
 
-    final MessageGapStats messageGapStatsSnapshot = messageGapStats.getAndReset();
+    final MessageGapStats messageGapStatsSnapshot = messageGapStats.copyAndReset();
     retVal.messageGapStats.total = messageGapStatsSnapshot.total;
     retVal.messageGapStats.count = messageGapStatsSnapshot.count;
     retVal.messageGapStats.max = messageGapStatsSnapshot.max;
