@@ -282,9 +282,9 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
-      // close nothing, this segments lifecycle isn't managed by the provider
+      // close nothing, the lifecycle of the wrapped segment isn't managed by a provider
     }
   }
 }
