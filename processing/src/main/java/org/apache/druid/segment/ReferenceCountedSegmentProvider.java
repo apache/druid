@@ -74,6 +74,11 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     );
   }
 
+  public static ReferenceCountedObjectProvider<Segment> wrapUnmanaged(Segment segment)
+  {
+    return () -> Optional.of(new UnmanagedReference(segment));
+  }
+
   private final short startRootPartitionId;
   private final short endRootPartitionId;
   private final short minorVersion;
@@ -166,10 +171,21 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   }
 
   /**
+   * Common interface for to mark {@link Segment} returned by {@link ReferenceCountedObjectProvider<Segment>} as 'leaf'
+   * segments, to distinguish from other transformations which can be done on top of the {@link Segment} such as by
+   * {@link SegmentMapFunction}
+   */
+  public interface LeafReference extends Segment
+  {
+
+  }
+
+
+  /**
    * Wraps a {@link Segment} and decrements reference to this segment of {@link ReferenceCountedSegmentProvider} on
    * close (instead of closing the segment itself which is managed through the provider)
    */
-  public final class ReferenceClosingSegment implements Segment
+  public final class ReferenceClosingSegment implements LeafReference
   {
     private final Closeable referenceCloseable;
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
@@ -242,6 +258,27 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     public ReferenceCountedSegmentProvider getProvider()
     {
       return ReferenceCountedSegmentProvider.this;
+    }
+  }
+
+  public static final class UnmanagedReference extends WrappedSegment implements LeafReference
+  {
+    public UnmanagedReference(Segment delegate)
+    {
+      super(delegate);
+    }
+
+    @Nullable
+    @Override
+    public <T> T as(@Nonnull Class<T> clazz)
+    {
+      return delegate.as(clazz);
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      // close nothing, this segments lifecycle isn't managed by the provider
     }
   }
 }

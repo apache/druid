@@ -49,8 +49,8 @@ public class RestrictedSegment implements Segment
   {
     // This is a sanity check, a restricted data source should alway wrap a druid table directly.
     Preconditions.checkArgument(
-        delegate instanceof ReferenceCountedSegmentProvider.ReferenceClosingSegment,
-        "delegate must be a Segment checked out from a ReferenceCountingSegment"
+        delegate instanceof ReferenceCountedSegmentProvider.LeafReference,
+        "delegate must be a Segment checked out from a ReferenceCountingObjectProvider"
     );
     this.delegate = delegate;
     this.policy = policy;
