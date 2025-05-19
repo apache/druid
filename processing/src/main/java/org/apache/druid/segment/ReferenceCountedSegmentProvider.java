@@ -181,7 +181,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
    * to distinguish from other transformations which can be done on top of this segment, such as by
    * {@link SegmentMapFunction}
    */
-  public static abstract class LeafReference implements Segment
+  public abstract static class LeafReference implements Segment
   {
     protected final Segment baseSegment;
 
