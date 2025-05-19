@@ -39,7 +39,7 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
   private final ServiceEmitter serviceEmitter;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentMetadataCache segmentMetadataCache;
-  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+  private final Supplier<CentralizedDatasourceSchemaConfig> centralizedDatasourceSchemaConfig;
 
   @Inject
   public SqlSegmentsMetadataManagerProvider(
@@ -50,7 +50,7 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
       SQLMetadataConnector connector,
       Lifecycle lifecycle,
       SegmentSchemaCache segmentSchemaCache,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      Supplier<CentralizedDatasourceSchemaConfig> centralizedDatasourceSchemaConfig,
       ServiceEmitter serviceEmitter
   )
   {
