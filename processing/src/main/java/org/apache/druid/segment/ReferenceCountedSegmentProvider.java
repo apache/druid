@@ -177,13 +177,50 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   }
 
   /**
-   * Common interface for to mark {@link Segment} returned by {@link ReferenceCountedObjectProvider<Segment>} as 'leaf'
-   * segments, to distinguish from other transformations which can be done on top of the {@link Segment} such as by
+   * Base type to mark {@link Segment} returned by {@link ReferenceCountedObjectProvider<Segment>} as 'leaf' segments,
+   * to distinguish from other transformations which can be done on top of this segment, such as by
    * {@link SegmentMapFunction}
    */
-  public interface LeafReference extends Segment
+  public static abstract class LeafReference implements Segment
   {
+    protected final Segment baseSegment;
 
+    public LeafReference(Segment baseSegment)
+    {
+      this.baseSegment = baseSegment;
+    }
+
+    @Nullable
+    @Override
+    public SegmentId getId()
+    {
+      return baseSegment.getId();
+    }
+
+    @Override
+    public Interval getDataInterval()
+    {
+      return baseSegment.getDataInterval();
+    }
+
+    @Override
+    public boolean isTombstone()
+    {
+      return baseSegment.isTombstone();
+    }
+
+    @Override
+    public String asString()
+    {
+      return baseSegment.asString();
+    }
+
+    @Override
+    public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+    {
+      // a segment cannot directly have any policies, so use the enforcer directly
+      policyEnforcer.validateOrElseThrow(this, null);
+    }
   }
 
 
@@ -191,27 +228,15 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
    * Wraps a {@link Segment} and decrements reference to this segment of {@link ReferenceCountedSegmentProvider} on
    * close (instead of closing the segment itself which is managed through the provider)
    */
-  public final class ReferenceClosingSegment implements LeafReference
+  public final class ReferenceClosingSegment extends LeafReference
   {
     private final Closeable referenceCloseable;
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
     private ReferenceClosingSegment(Closeable referenceCloseable)
     {
+      super(baseObject);
       this.referenceCloseable = referenceCloseable;
-    }
-
-    @Nullable
-    @Override
-    public SegmentId getId()
-    {
-      return baseObject.getId();
-    }
-
-    @Override
-    public Interval getDataInterval()
-    {
-      return baseObject.getDataInterval();
     }
 
     @Nullable
@@ -226,25 +251,6 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
         );
       }
       return baseObject.as(clazz);
-    }
-
-    @Override
-    public boolean isTombstone()
-    {
-      return baseObject.isTombstone();
-    }
-
-    @Override
-    public String asString()
-    {
-      return baseObject.asString();
-    }
-
-    @Override
-    public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
-    {
-      // a segment cannot directly have any policies, so use the enforcer directly
-      policyEnforcer.validateOrElseThrow(this, null);
     }
 
     @Override
@@ -267,7 +273,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     }
   }
 
-  public static final class UnmanagedReference extends WrappedSegment implements LeafReference
+  public static final class UnmanagedReference extends LeafReference
   {
     public UnmanagedReference(Segment delegate)
     {
@@ -278,7 +284,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     @Override
     public <T> T as(@Nonnull Class<T> clazz)
     {
-      return delegate.as(clazz);
+      return baseSegment.as(clazz);
     }
 
     @Override
