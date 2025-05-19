@@ -86,7 +86,6 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -136,6 +135,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SupervisorManager supervisorManager;
   private TestDataSegmentKiller dataSegmentKiller;
   private SegmentMetadataCache segmentMetadataCache;
+  private SegmentSchemaCache segmentSchemaCache;
   protected File reportsFile;
 
   protected IngestionTestBase()
@@ -168,6 +168,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector()
     );
 
+    segmentSchemaCache = new SegmentSchemaCache();
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         createTransactionFactory(),
         objectMapper,
@@ -176,7 +177,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache();
     segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
         segmentMetadataCache,
         segmentSchemaCache,
@@ -325,7 +325,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        new NoopSegmentSchemaCache(),
+        segmentSchemaCache,
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()
