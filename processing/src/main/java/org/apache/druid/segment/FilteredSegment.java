@@ -49,4 +49,10 @@ public class FilteredSegment extends WrappedSegment
     }
     return null;
   }
+
+  @Override
+  public String getDebugString()
+  {
+    return "filtered->" + delegate.getDebugString();
+  }
 }

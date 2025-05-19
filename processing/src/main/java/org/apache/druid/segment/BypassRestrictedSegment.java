@@ -53,4 +53,10 @@ class BypassRestrictedSegment extends WrappedSegment
   {
     return delegate.as(clazz);
   }
+
+  @Override
+  public String getDebugString()
+  {
+    return "bypassrestricted->" + delegate.getDebugString();
+  }
 }

@@ -52,4 +52,10 @@ public class UnnestSegment extends WrappedSegment
     }
     return null;
   }
+
+  @Override
+  public String getDebugString()
+  {
+    return "unnest->" + delegate.getDebugString();
+  }
 }

@@ -83,7 +83,11 @@ public interface Segment extends Closeable
     return false;
   }
 
-  default String asString()
+  /**
+   * Developer friendly string suitable to use in internal error messages and provide some additional information about
+   * what kind of segment was involved in a problem
+   */
+  default String getDebugString()
   {
     return getClass().toString();
   }

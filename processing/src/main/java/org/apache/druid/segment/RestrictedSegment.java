@@ -111,8 +111,8 @@ public class RestrictedSegment implements Segment
   }
 
   @Override
-  public String asString()
+  public String getDebugString()
   {
-    return delegate.asString();
+    return "restricted->" + delegate.getDebugString();
   }
 }

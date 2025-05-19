@@ -134,6 +134,12 @@ public class HashJoinSegment implements Segment
   }
 
   @Override
+  public String getDebugString()
+  {
+    return "join->" + baseSegment.getDebugString();
+  }
+
+  @Override
   public void close() throws IOException
   {
     baseSegment.close();

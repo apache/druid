@@ -69,11 +69,5 @@ public abstract class WrappedSegment implements Segment
   {
     delegate.close();
   }
-
-  @Override
-  public String asString()
-  {
-    return delegate.asString();
-  }
 }
 

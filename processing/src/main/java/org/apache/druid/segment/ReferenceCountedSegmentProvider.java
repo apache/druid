@@ -104,7 +104,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     if (baseSegment instanceof ReferenceClosingSegment) {
       throw DruidException.defensive(
           "Cannot use a ReferenceClosingSegment[%s] as baseSegment for a ReferenceCountedSegmentProvider",
-          baseSegment.asString()
+          baseSegment.getDebugString()
       );
     }
     this.startRootPartitionId = (short) startRootPartitionId;
@@ -210,9 +210,9 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     }
 
     @Override
-    public String asString()
+    public String getDebugString()
     {
-      return baseSegment.asString();
+      return baseSegment.getDebugString();
     }
 
     @Override
