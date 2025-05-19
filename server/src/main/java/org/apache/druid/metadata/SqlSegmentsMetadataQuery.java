@@ -39,6 +39,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.segment.cache.SegmentSchemaRecord;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
@@ -605,6 +608,91 @@ public class SqlSegmentsMetadataQuery
     }
 
     return CloseableIterators.wrap(resultIterator, resultIterator);
+  }
+
+  /**
+   * Retrieves all used schema fingerprints present in the metadata store.
+   */
+  public Set<String> retrieveAllUsedSegmentSchemaFingerprints()
+  {
+    final String sql = StringUtils.format(
+        "SELECT fingerprint FROM %s WHERE version = %s AND used = true",
+        dbTables.getSegmentSchemasTable(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
+    return Set.copyOf(
+        handle.createQuery(sql)
+              .setFetchSize(connector.getStreamingFetchSize())
+              .mapTo(String.class)
+              .list()
+    );
+  }
+
+  /**
+   * Retrieves all used segment schemas present in the metadata store irrespective
+   * of their last updated time.
+   */
+  public List<SegmentSchemaRecord> retrieveAllUsedSegmentSchemas()
+  {
+    final String sql = StringUtils.format(
+        "SELECT fingerprint, payload FROM %s"
+        + " WHERE version = %s AND used = true",
+        dbTables.getSegmentSchemasTable(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
+    return retrieveValidSchemaRecordsWithQuery(handle.createQuery(sql));
+  }
+
+  /**
+   * Retrieves segment schemas from the metadata store for the given fingerprints.
+   */
+  public List<SegmentSchemaRecord> retrieveUsedSegmentSchemasForFingerprints(
+      Set<String> schemaFingerprints
+  )
+  {
+    final List<List<String>> fingerprintBatches = Lists.partition(
+        List.copyOf(schemaFingerprints),
+        MAX_INTERVALS_PER_BATCH
+    );
+
+    final List<SegmentSchemaRecord> records = new ArrayList<>();
+    for (List<String> fingerprintBatch : fingerprintBatches) {
+      records.addAll(
+          retrieveBatchOfSegmentSchemas(fingerprintBatch)
+      );
+    }
+
+    return records;
+  }
+
+  /**
+   * Retrieves a batch of segment schema records for the given fingerprints.
+   */
+  private List<SegmentSchemaRecord> retrieveBatchOfSegmentSchemas(List<String> schemaFingerprints)
+  {
+    final String sql = StringUtils.format(
+        "SELECT fingerprint, payload FROM %s"
+        + " WHERE version = %s AND used = true"
+        + " %s",
+        dbTables.getSegmentSchemasTable(),
+        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
+        getParameterizedInConditionForColumn("fingerprint", schemaFingerprints)
+    );
+
+    final Query<Map<String, Object>> query = handle.createQuery(sql);
+    bindColumnValuesToQueryWithInCondition("fingerprint", schemaFingerprints, query);
+
+    return retrieveValidSchemaRecordsWithQuery(query);
+  }
+
+  private List<SegmentSchemaRecord> retrieveValidSchemaRecordsWithQuery(
+      Query<Map<String, Object>> query
+  )
+  {
+    return query.setFetchSize(connector.getStreamingFetchSize())
+                .map((index, r, ctx) -> mapToSchemaRecord(r))
+                .list()
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
   }
 
   /**
@@ -1463,6 +1551,28 @@ public class SqlSegmentsMetadataQuery
     }
     catch (Throwable t) {
       log.error(t, "Could not read an interval of datasource[%s]", dataSource);
+      return null;
+    }
+  }
+
+  /**
+   * Tries to parse the fields of the result set into a {@link SegmentSchemaRecord}.
+   *
+   * @return null if an error occurred while parsing the result
+   */
+  @Nullable
+  private SegmentSchemaRecord mapToSchemaRecord(ResultSet resultSet)
+  {
+    String fingerprint = null;
+    try {
+      fingerprint = resultSet.getString("fingerprint");
+      return new SegmentSchemaRecord(
+          fingerprint,
+          jsonMapper.readValue(resultSet.getBytes("payload"), SchemaPayload.class)
+      );
+    }
+    catch (Throwable t) {
+      log.error(t, "Could not read segment schema with fingerprint[%s]", fingerprint);
       return null;
     }
   }

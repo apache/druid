@@ -229,7 +229,8 @@ public class KillUnreferencedSegmentSchemaTest
               handle,
               "foo",
               CentralizedDatasourceSchemaConfig.SCHEMA_VERSION,
-              Collections.singletonMap(fingerprint, schemaPayload)
+              Collections.singletonMap(fingerprint, schemaPayload),
+              DateTimes.nowUtc()
           );
           return null;
         }
@@ -304,7 +305,8 @@ public class KillUnreferencedSegmentSchemaTest
               handle,
               "foo",
               0,
-              Collections.singletonMap(fingerprintOldVersion, schemaPayload)
+              Collections.singletonMap(fingerprintOldVersion, schemaPayload),
+              DateTimes.nowUtc()
           );
           return null;
         }
@@ -316,7 +318,8 @@ public class KillUnreferencedSegmentSchemaTest
               handle,
               "foo",
               1,
-              Collections.singletonMap(fingerprintNewVersion, schemaPayload)
+              Collections.singletonMap(fingerprintNewVersion, schemaPayload),
+              DateTimes.nowUtc()
           );
           return null;
         }

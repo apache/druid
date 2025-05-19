@@ -17,19 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.metadata.segment.cache;
 
-public enum ExecutionMode
+import org.apache.druid.segment.SchemaPayload;
+
+/**
+ * Represents a single record in the druid_segmentSchemas table.
+ */
+public class SegmentSchemaRecord
 {
+  private final String fingerprint;
+  private final SchemaPayload payload;
 
-  /**
-   * This mode executes the query in a blocking way. The results are returned as part of the original post query call. Current sql/native endpoints are sync execution.
-   */
-  SYNC,
+  public SegmentSchemaRecord(String fingerprint, SchemaPayload payload)
+  {
+    this.fingerprint = fingerprint;
+    this.payload = payload;
+  }
 
-  /**
-   * This mode executes the query in a non-blocking way. The results are returned as part of subsequent get results call. Currently, the msq engine uses this mode of execution.
-   */
-  ASYNC
+  public String getFingerprint()
+  {
+    return fingerprint;
+  }
 
+  public SchemaPayload getPayload()
+  {
+    return payload;
+  }
 }

@@ -336,6 +336,9 @@ public class StreamAppenderator implements Appenderator
       throw e;
     }
 
+    final long currTs = System.currentTimeMillis();
+    metrics.reportMessageGap(currTs - row.getTimestampFromEpoch());
+
     if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
@@ -359,11 +362,11 @@ public class StreamAppenderator implements Appenderator
       persist = true;
       persistReasons.add("No more rows can be appended to sink");
     }
-    if (System.currentTimeMillis() > nextFlush) {
+    if (currTs > nextFlush) {
       persist = true;
       persistReasons.add(StringUtils.format(
           "current time[%d] is greater than nextFlush[%d]",
-          System.currentTimeMillis(),
+          currTs,
           nextFlush
       ));
     }

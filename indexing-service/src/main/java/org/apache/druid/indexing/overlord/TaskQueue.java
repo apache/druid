@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -51,6 +51,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelI
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -64,11 +65,11 @@ import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,9 +80,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -101,20 +106,11 @@ public class TaskQueue
   // 60 MB warning threshold since 64 MB is the default max_allowed_packet size in MySQL 8+
   private static final long TASK_SIZE_WARNING_THRESHOLD = 1024 * 1024 * 60;
 
-  // Task ID -> Task, for tasks that are active in some way (submitted, running, or finished and to-be-cleaned-up).
-  @GuardedBy("giant")
-  private final LinkedHashMap<String, Task> tasks = new LinkedHashMap<>();
-
-  // Task ID -> Future from the TaskRunner
-  @GuardedBy("giant")
-  private final Map<String, ListenableFuture<TaskStatus>> taskFutures = new HashMap<>();
-
   /**
-   * Tasks that have recently completed and are being cleaned up. These tasks
-   * should not be relaunched by task management.
+   * Tasks being managed by this queue. This includes tasks that are currently
+   * active i.e. submitted, running or recently completed (pending clean up).
    */
-  @GuardedBy("giant")
-  private final Set<String> recentlyCompletedTasks = new HashSet<>();
+  private final ConcurrentHashMap<String, TaskEntry> activeTasks = new ConcurrentHashMap<>();
 
   private final TaskLockConfig lockConfig;
   private final TaskQueueConfig config;
@@ -127,7 +123,13 @@ public class TaskQueue
   private final ObjectMapper passwordRedactingMapper;
   private final TaskContextEnricher taskContextEnricher;
 
-  private final ReentrantLock giant = new ReentrantLock(true);
+  /**
+   * Lock used to ensure that {@link #start} and {@link #stop} do not run while
+   * queue management is in progress. {@link #start} and {@link #stop} methods
+   * acquire a WRITE lock whereas all other operations acquire a READ lock.
+   */
+  private final ReentrantReadWriteLock startStopLock = new ReentrantReadWriteLock(true);
+
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private final BlockingQueue<Object> managementMayBeNecessary = new ArrayBlockingQueue<>(8);
   private final ExecutorService managerExec = Executors.newSingleThreadExecutor(
@@ -192,9 +194,15 @@ public class TaskQueue
   }
 
   @VisibleForTesting
-  void setActive()
+  void setActive(boolean active)
   {
-    this.active = true;
+    startStopLock.writeLock().lock();
+    try {
+      this.active = active;
+    }
+    finally {
+      startStopLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -203,11 +211,11 @@ public class TaskQueue
   @LifecycleStart
   public void start()
   {
-    giant.lock();
+    startStopLock.writeLock().lock();
 
     try {
       Preconditions.checkState(!active, "queue must be stopped");
-      active = true;
+      setActive(true);
       syncFromStorage();
       // Mark these tasks as failed as they could not reacuire the lock
       // Clean up needs to happen after tasks have been synced from storage
@@ -270,7 +278,7 @@ public class TaskQueue
       }
     }
     finally {
-      giant.unlock();
+      startStopLock.writeLock().unlock();
     }
   }
 
@@ -280,18 +288,17 @@ public class TaskQueue
   @LifecycleStop
   public void stop()
   {
-    giant.lock();
+    startStopLock.writeLock().lock();
 
     try {
-      tasks.clear();
-      taskFutures.clear();
-      active = false;
+      setActive(false);
+      activeTasks.clear();
       managerExec.shutdownNow();
       storageSyncExec.shutdownNow();
       requestManagement();
     }
     finally {
-      giant.unlock();
+      startStopLock.writeLock().unlock();
     }
   }
 
@@ -302,11 +309,11 @@ public class TaskQueue
 
   /**
    * Request management from the management thread. Non-blocking.
-   *
+   * <p>
    * Other callers (such as notifyStatus) should trigger activity on the
    * TaskQueue thread by requesting management here.
    */
-  void requestManagement()
+  private void requestManagement()
   {
     // use a BlockingQueue since the offer/poll/wait behaviour is simple
     // and very easy to reason about
@@ -321,26 +328,21 @@ public class TaskQueue
 
   /**
    * Await for an event to manage.
-   *
+   * <p>
    * This should only be called from the management thread to wait for activity.
-   *
-   * @param nanos
-   * @throws InterruptedException
    */
   @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED", justification = "using queue as notification mechanism, result has no value")
-  void awaitManagementNanos(long nanos) throws InterruptedException
+  private void awaitManagement() throws InterruptedException
   {
     // mitigate a busy loop, it can get pretty busy when there are a lot of start/stops
-    try {
-      Thread.sleep(MIN_WAIT_TIME_MS);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    Thread.sleep(MIN_WAIT_TIME_MS);
 
     // wait for an item, if an item arrives (or is already available), complete immediately
     // (does not actually matter what the item is)
-    managementMayBeNecessary.poll(nanos - (TimeUnit.MILLISECONDS.toNanos(MIN_WAIT_TIME_MS)), TimeUnit.NANOSECONDS);
+    managementMayBeNecessary.poll(
+        TaskQueue.MANAGEMENT_WAIT_TIMEOUT_NANOS - TimeUnit.MILLISECONDS.toNanos(MIN_WAIT_TIME_MS),
+        TimeUnit.NANOSECONDS
+    );
 
     // there may have been multiple requests, clear them all
     managementMayBeNecessary.clear();
@@ -351,74 +353,78 @@ public class TaskQueue
    */
   private void manage() throws InterruptedException
   {
-    log.info("Beginning management in %s.", config.getStartDelay());
+    log.info("Beginning management in [%s].", config.getStartDelay());
     Thread.sleep(config.getStartDelay().getMillis());
 
-    // Ignore return value- we'll get the IDs and futures from getKnownTasks later.
+    // Ignore return value - we'll get the IDs and futures from getKnownTasks later.
     taskRunner.restore();
 
     while (active) {
-      manageInternal();
+      manageQueuedTasks();
 
-      // awaitNanos because management may become necessary without this condition signalling,
-      // due to e.g. tasks becoming ready when other folks mess with the TaskLockbox.
-      awaitManagementNanos(MANAGEMENT_WAIT_TIMEOUT_NANOS);
+      // wait because management may become necessary without this condition signalling,
+      // e.g., due to tasks becoming ready when other folks mess with the TaskLockbox.
+      awaitManagement();
     }
   }
 
   @VisibleForTesting
-  void manageInternal()
+  void manageQueuedTasks()
   {
-    Set<String> knownTaskIds = new HashSet<>();
-    Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = new HashMap<>();
-
-    giant.lock();
-
+    startStopLock.readLock().lock();
     try {
-      manageInternalCritical(knownTaskIds, runnerTaskFutures);
+      startPendingTasksOnRunner();
     }
     finally {
-      giant.unlock();
+      startStopLock.readLock().unlock();
     }
-
-    manageInternalPostCritical(knownTaskIds, runnerTaskFutures);
   }
 
 
   /**
-   * Management loop critical section tasks.
-   *
-   * @param knownTaskIds will be modified - filled with known task IDs
-   * @param runnerTaskFutures will be modified - filled with futures related to getting the running tasks
+   * Starts pending tasks on the {@link #taskRunner}.
+   * Cleans up tasks present on the {@link #taskRunner} but not present in
+   * {@link #activeTasks} anymore.
    */
-  @GuardedBy("giant")
-  private void manageInternalCritical(
-      final Set<String> knownTaskIds,
-      final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures
-  )
+  @GuardedBy("startStopLock")
+  private void startPendingTasksOnRunner()
   {
-    // Task futures available from the taskRunner
-    for (final TaskRunnerWorkItem workItem : taskRunner.getKnownTasks()) {
-      if (!recentlyCompletedTasks.contains(workItem.getTaskId())) {
-        // Don't do anything with tasks that have recently finished; notifyStatus will handle it.
-        runnerTaskFutures.put(workItem.getTaskId(), workItem.getResult());
-      }
+    final Set<String> unknownTaskIds = new HashSet<>();
+
+    // Get all task futures from the taskRunner and shutdown tasks not in queue anymore
+    final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = new HashMap<>();
+    for (final TaskRunnerWorkItem workItem : List.copyOf(taskRunner.getKnownTasks())) {
+      final String taskId = workItem.getTaskId();
+      updateTaskEntry(taskId, entry -> {
+        if (entry == null) {
+          unknownTaskIds.add(taskId);
+          shutdownUnknownTaskOnRunner(taskId);
+        } else {
+          runnerTaskFutures.put(taskId, workItem.getResult());
+        }
+      });
     }
+    log.info("Cleaned up [%,d] tasks on task runner with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
+
     // Attain futures for all active tasks (assuming they are ready to run).
     // Copy tasks list, as notifyStatus may modify it.
-    for (final Task task : ImmutableList.copyOf(tasks.values())) {
-      if (recentlyCompletedTasks.contains(task.getId())) {
-        // Don't do anything with tasks that have recently finished; notifyStatus will handle it.
-        continue;
-      }
+    for (final String queuedTaskId : List.copyOf(activeTasks.keySet())) {
+      updateTaskEntry(
+          queuedTaskId,
+          entry -> startPendingTaskOnRunner(entry, runnerTaskFutures.get(queuedTaskId))
+      );
+    }
+  }
 
-      knownTaskIds.add(task.getId());
+  @GuardedBy("startStopLock")
+  private void startPendingTaskOnRunner(TaskEntry entry, ListenableFuture<TaskStatus> runnerTaskFuture)
+  {
+    // Don't do anything with tasks that have recently finished; notifyStatus will handle it.
+    if (entry != null && !entry.isComplete) {
+      final Task task = entry.task;
 
-      if (!taskFutures.containsKey(task.getId())) {
-        final ListenableFuture<TaskStatus> runnerTaskFuture;
-        if (runnerTaskFutures.containsKey(task.getId())) {
-          runnerTaskFuture = runnerTaskFutures.get(task.getId());
-        } else {
+      if (entry.future == null) {
+        if (runnerTaskFuture == null) {
           // Task should be running, so run it.
           final boolean taskIsReady;
           try {
@@ -436,8 +442,8 @@ public class TaskQueue
               );
             }
             TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
-            notifyStatus(task, taskStatus, taskStatus.getErrorMsg());
-            continue;
+            notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
+            return;
           }
           if (taskIsReady) {
             log.info("Asking taskRunner to run task[%s]", task.getId());
@@ -446,11 +452,11 @@ public class TaskQueue
             // Task.isReady() can internally lock intervals or segments.
             // We should release them if the task is not ready.
             taskLockbox.unlockAll(task);
-            continue;
+            return;
           }
         }
         attachCallbacks(task, runnerTaskFuture);
-        taskFutures.put(task.getId(), runnerTaskFuture);
+        entry.future = runnerTaskFuture;
       } else if (isTaskPending(task)) {
         // if the taskFutures contain this task and this task is pending, also let the taskRunner
         // to run it to guarantee it will be assigned to run
@@ -460,32 +466,13 @@ public class TaskQueue
     }
   }
 
-  @VisibleForTesting
-  private void manageInternalPostCritical(
-      final Set<String> knownTaskIds,
-      final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures
-  )
+  private void shutdownUnknownTaskOnRunner(String taskId)
   {
-    // Kill tasks that shouldn't be running
-    final Set<String> tasksToKill = Sets.difference(runnerTaskFutures.keySet(), knownTaskIds);
-    if (!tasksToKill.isEmpty()) {
-      log.info("Asking taskRunner to clean up [%,d] tasks.", tasksToKill.size());
-
-      // On large installations running several thousands of tasks,
-      // concatenating the list of known task ids can be compupationally expensive.
-      final boolean logKnownTaskIds = log.isDebugEnabled();
-      final String reason = logKnownTaskIds
-              ? StringUtils.format("Task is not in knownTaskIds[%s]", knownTaskIds)
-              : "Task is not in knownTaskIds";
-
-      for (final String taskId : tasksToKill) {
-        try {
-          taskRunner.shutdown(taskId, reason);
-        }
-        catch (Exception e) {
-          log.warn(e, "TaskRunner failed to clean up task[%s].", taskId);
-        }
-      }
+    try {
+      taskRunner.shutdown(taskId, "Task is not present in queue anymore.");
+    }
+    catch (Exception e) {
+      log.warn(e, "TaskRunner failed to clean up task[%s].", taskId);
     }
   }
 
@@ -525,58 +512,88 @@ public class TaskQueue
 
     taskContextEnricher.enrichContext(task);
 
-    giant.lock();
+    startStopLock.readLock().lock();
 
     try {
       Preconditions.checkState(active, "Queue is not active!");
       Preconditions.checkNotNull(task, "task");
-      if (tasks.size() >= config.getMaxSize()) {
+      if (activeTasks.size() >= config.getMaxSize()) {
         throw DruidException.forPersona(DruidException.Persona.ADMIN)
                             .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
                             .build(
                                 "Task queue already contains [%d] tasks."
                                 + " Retry later or increase 'druid.indexer.queue.maxSize'[%d].",
-                                tasks.size(), config.getMaxSize()
+                                activeTasks.size(), config.getMaxSize()
                             );
       }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue. So don't catch it.
+      final DateTime insertTime = DateTimes.nowUtc();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
-      addTaskInternal(task);
+      addTaskInternal(task, insertTime);
       requestManagement();
       return true;
     }
     finally {
-      giant.unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
-  @GuardedBy("giant")
-  private void addTaskInternal(final Task task)
+  @GuardedBy("startStopLock")
+  private void addTaskInternal(final Task task, final DateTime updateTime)
   {
-    final Task existingTask = tasks.putIfAbsent(task.getId(), task);
+    final AtomicBoolean added = new AtomicBoolean(false);
+    final TaskEntry entry = addOrUpdateTaskEntry(
+        task.getId(),
+        prevEntry -> {
+          if (prevEntry == null) {
+            added.set(true);
+            return new TaskEntry(task);
+          } else if (prevEntry.lastUpdatedTime.isBefore(updateTime)) {
+            prevEntry.lastUpdatedTime = updateTime;
+          }
 
-    if (existingTask == null) {
+          return prevEntry;
+        }
+    );
+
+    if (added.get()) {
       taskLockbox.add(task);
-    } else if (!existingTask.equals(task)) {
+    } else if (!entry.task.equals(task)) {
       throw new ISE("Cannot add task ID [%s] with same ID as task that has already been added", task.getId());
     }
   }
 
   /**
-   * Removes a task from {@link #tasks} and {@link #taskLockbox}, if it exists. Returns whether the task was
-   * removed or not.
+   * Removes a task from {@link #activeTasks} and {@link #taskLockbox}, if required.
+   * <p>
+   * This method must be called only from {@link #syncFromStorage()} to avoid
+   * race conditions. For example, if a task finishes and is removed from
+   * {@link #activeTasks} while a sync is in progress, the polled results from
+   * the DB would still have the task as RUNNING and {@link #syncFromStorage()}
+   * might add it back to the queue, thus causing a duplicate run of the task.
    */
-  @GuardedBy("giant")
-  private boolean removeTaskInternal(final String taskId)
+  @GuardedBy("startStopLock")
+  private void removeTaskInternal(final String taskId, final DateTime deleteTime)
   {
-    final Task task = tasks.remove(taskId);
-    if (task != null) {
-      taskLockbox.remove(task);
-      return true;
-    } else {
-      return false;
+    final AtomicReference<Task> removedTask = new AtomicReference<>();
+
+    addOrUpdateTaskEntry(
+        taskId,
+        prevEntry -> {
+          // Remove the task only if it doesn't have a more recent update
+          if (prevEntry != null && prevEntry.lastUpdatedTime.isBefore(deleteTime)) {
+            removedTask.set(prevEntry.task);
+          }
+
+          // Remove this taskId from activeTasks by mapping it to null
+          return null;
+        }
+    );
+
+    if (removedTask.get() != null) {
+      removeTaskLock(removedTask.get());
     }
   }
 
@@ -589,38 +606,43 @@ public class TaskQueue
    */
   public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
-    giant.lock();
-
+    Preconditions.checkNotNull(taskId, "taskId");
+    startStopLock.readLock().lock();
     try {
-      final Task task = tasks.get(Preconditions.checkNotNull(taskId, "taskId"));
-      if (task != null) {
-        notifyStatus(task, TaskStatus.failure(taskId, StringUtils.format(reasonFormat, args)), reasonFormat, args);
-      }
+      updateTaskEntry(
+          taskId,
+          entry -> notifyStatus(
+              entry,
+              TaskStatus.failure(taskId, StringUtils.format(reasonFormat, args)),
+              reasonFormat,
+              args
+          )
+      );
     }
     finally {
-      giant.unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
   /**
    * Shuts down a task, but records the task status as a success, unike {@link #shutdown(String, String, Object...)}
    *
-   * @param taskId task to shutdown
+   * @param taskId task to shut down
    * @param reasonFormat A format string indicating the shutdown reason
    * @param args arguments for reasonFormat
    */
   public void shutdownWithSuccess(final String taskId, String reasonFormat, Object... args)
   {
-    giant.lock();
-
+    Preconditions.checkNotNull(taskId, "taskId");
+    startStopLock.readLock().lock();
     try {
-      final Task task = tasks.get(Preconditions.checkNotNull(taskId, "taskId"));
-      if (task != null) {
-        notifyStatus(task, TaskStatus.success(taskId), reasonFormat, args);
-      }
+      updateTaskEntry(
+          taskId,
+          entry -> notifyStatus(entry, TaskStatus.success(taskId), reasonFormat, args)
+      );
     }
     finally {
-      giant.unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
@@ -628,15 +650,15 @@ public class TaskQueue
    * Notifies this queue that the given task has an updated status. If this update
    * is valid and task is now complete, the following operations are performed:
    * <ul>
-   * <li>Add task to {@link #recentlyCompletedTasks} to prevent re-launching them</li>
+   * <li>Mark task as completed to prevent re-launching it</li>
    * <li>Persist new status in the metadata storage to safeguard against crashes
    * and leader re-elections</li>
    * <li>Request {@link #taskRunner} to shutdown task (synchronously)</li>
    * <li>Remove all locks for task from metadata storage</li>
-   * <li>Remove task entry from {@link #tasks} and {@link #taskFutures}</li>
-   * <li>Remove task from {@link #recentlyCompletedTasks}</li>
    * <li>Request task management</li>
    * </ul>
+   * This method does not remove the task from {@link #activeTasks} to avoid
+   * race conditions with {@link #syncFromStorage()}.
    * <p>
    * Since this operation involves DB updates and synchronous remote calls, it
    * must be invoked on a dedicated executor so that task runner and worker sync
@@ -645,9 +667,16 @@ public class TaskQueue
    * @throws NullPointerException     if task or status is null
    * @throws IllegalArgumentException if the task ID does not match the status ID
    * @throws IllegalStateException    if this queue is currently shut down
+   * @see #removeTaskInternal
    */
-  private void notifyStatus(final Task task, final TaskStatus taskStatus, String reasonFormat, Object... args)
+  private void notifyStatus(final TaskEntry entry, final TaskStatus taskStatus, String reasonFormat, Object... args)
   {
+    // Don't do anything if the task has no entry in activeTasks
+    if (entry == null) {
+      return;
+    }
+
+    final Task task = entry.task;
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(taskStatus, "status");
     Preconditions.checkState(active, "Queue is not active!");
@@ -663,14 +692,8 @@ public class TaskQueue
       return;
     }
 
-    // Critical section: add this task to recentlyCompletedTasks, so it isn't managed while being cleaned up.
-    giant.lock();
-    try {
-      recentlyCompletedTasks.add(task.getId());
-    }
-    finally {
-      giant.unlock();
-    }
+    // Mark this task as complete, so it isn't managed while being cleaned up.
+    entry.isComplete = true;
 
     final TaskLocation taskLocation = taskRunner.getTaskLocation(task.getId());
 
@@ -705,21 +728,8 @@ public class TaskQueue
       log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
     }
 
-    // Critical section: remove this task from all of our tracking data structures.
-    giant.lock();
-    try {
-      if (removeTaskInternal(task.getId())) {
-        taskFutures.remove(task.getId());
-      } else {
-        log.warn("Unknown task[%s] completed", task.getId());
-      }
-
-      recentlyCompletedTasks.remove(task.getId());
-      requestManagement();
-    }
-    finally {
-      giant.unlock();
-    }
+    removeTaskLock(task);
+    requestManagement();
   }
 
   /**
@@ -776,7 +786,10 @@ public class TaskQueue
                 return;
               }
 
-              notifyStatus(task, status, "notified status change from task");
+              updateTaskEntry(
+                  task.getId(),
+                  entry -> notifyStatus(entry, status, "notified status change from task")
+              );
 
               // Emit event and log, if the task is done
               if (status.isComplete()) {
@@ -816,40 +829,37 @@ public class TaskQueue
    * Resync the contents of this task queue with our storage facility. Useful to make sure our in-memory state
    * corresponds to the storage facility even if the latter is manually modified.
    */
-  private void syncFromStorage()
+  @VisibleForTesting
+  void syncFromStorage()
   {
-    giant.lock();
+    startStopLock.readLock().lock();
+    final DateTime syncStartTime = DateTimes.nowUtc();
 
     try {
       if (active) {
-        final Map<String, Task> newTasks = toTaskIDMap(taskStorage.getActiveTasks());
-        final int tasksSynced = newTasks.size();
-        final Map<String, Task> oldTasks = new HashMap<>(tasks);
+        final Map<String, Task> newTasks =
+            CollectionUtils.toMap(taskStorage.getActiveTasks(), Task::getId, Function.identity());
+        final Map<String, Task> oldTasks =
+            CollectionUtils.mapValues(activeTasks, entry -> entry.task);
 
-        // Calculate differences on IDs instead of Task Objects.
-        Set<String> commonIds = Sets.newHashSet(Sets.intersection(newTasks.keySet(), oldTasks.keySet()));
-        for (String taskID : commonIds) {
-          newTasks.remove(taskID);
-          oldTasks.remove(taskID);
-        }
-        Collection<Task> addedTasks = newTasks.values();
-        Collection<Task> removedTasks = oldTasks.values();
+        // Identify the tasks that have been added or removed from the storage
+        final MapDifference<String, Task> mapDifference = Maps.difference(oldTasks, newTasks);
+        final Collection<Task> addedTasks = mapDifference.entriesOnlyOnRight().values();
+        final Collection<Task> removedTasks = mapDifference.entriesOnlyOnLeft().values();
 
-        // Clean up removed Tasks
+        // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
         for (Task task : removedTasks) {
-          removeTaskInternal(task.getId());
+          removeTaskInternal(task.getId(), syncStartTime);
         }
 
-        // Add newly Added tasks to the queue
+        // Add new tasks present in metadata store if their lastUpdatedTime is before syncStartTime
         for (Task task : addedTasks) {
-          addTaskInternal(task);
+          addTaskInternal(task, syncStartTime);
         }
 
         log.info(
-            "Synced %d tasks from storage (%d tasks added, %d tasks removed).",
-            tasksSynced,
-            addedTasks.size(),
-            removedTasks.size()
+            "Synced [%d] tasks from storage (%d tasks added, %d tasks removed).",
+            newTasks.size(), addedTasks.size(), removedTasks.size()
         );
         requestManagement();
       } else {
@@ -861,7 +871,7 @@ public class TaskQueue
       throw new RuntimeException(e);
     }
     finally {
-      giant.unlock();
+      startStopLock.readLock().unlock();
     }
   }
 
@@ -876,9 +886,14 @@ public class TaskQueue
 
   private Map<String, Long> getDeltaValues(Map<String, Long> total, Map<String, Long> prev)
   {
-    return total.entrySet()
-                .stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue() - prev.getOrDefault(e.getKey(), 0L)));
+    final Map<String, Long> deltaValues = new HashMap<>();
+    total.forEach(
+        (dataSource, totalCount) -> deltaValues.put(
+            dataSource,
+            totalCount - prev.getOrDefault(dataSource, 0L)
+        )
+    );
+    return deltaValues;
   }
 
   public Map<String, Long> getSuccessfulTaskCount()
@@ -901,15 +916,11 @@ public class TaskQueue
     }
   }
 
-  Map<String, String> getCurrentTaskDatasources()
+  private Map<String, String> getCurrentTaskDatasources()
   {
-    giant.lock();
-    try {
-      return tasks.values().stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
-    }
-    finally {
-      giant.unlock();
-    }
+    return activeTasks.values().stream()
+                      .map(entry -> entry.task)
+                      .collect(Collectors.toMap(Task::getId, Task::getDataSource));
   }
 
   public Map<String, Long> getRunningTaskCount()
@@ -943,14 +954,10 @@ public class TaskQueue
                                                .map(TaskRunnerWorkItem::getTaskId)
                                                .collect(Collectors.toSet());
 
-    giant.lock();
-    try {
-      return tasks.values().stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
-                  .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
-    }
-    finally {
-      giant.unlock();
-    }
+    return activeTasks.values().stream()
+                      .map(entry -> entry.task)
+                      .filter(task -> !runnerKnownTaskIds.contains(task.getId()))
+                      .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
   }
 
   /**
@@ -988,18 +995,16 @@ public class TaskQueue
    */
   public Optional<Task> getActiveTask(String id)
   {
-    Task task;
-    giant.lock();
-    try {
-      task = tasks.get(id);
+    final TaskEntry entry = activeTasks.get(id);
+    if (entry == null) {
+      return Optional.absent();
     }
-    finally {
-      giant.unlock();
-    }
+
+    Task task = entry.task;
     if (task != null) {
       try {
         // Write and read the value using a mapper with password redaction mixin.
-        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(task), Task.class);
+        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(entry.task), Task.class);
       }
       catch (JsonProcessingException e) {
         log.error(e, "Failed to serialize or deserialize task with id [%s].", task.getId());
@@ -1017,43 +1022,22 @@ public class TaskQueue
    */
   public List<Task> getTasks()
   {
-    giant.lock();
-    try {
-      return List.copyOf(tasks.values());
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  /**
-   * IDs of tasks that have recently completed and are being cleaned up.
-   */
-  private Set<String> getRecentlyCompletedTaskIds()
-  {
-    giant.lock();
-    try {
-      return Set.copyOf(recentlyCompletedTasks);
-    }
-    finally {
-      giant.unlock();
-    }
+    return activeTasks.values().stream().map(entry -> entry.task).collect(Collectors.toList());
   }
 
   /**
    * Returns the list of currently active tasks for the given datasource.
    */
-  public List<Task> getActiveTasksForDatasource(String datasource)
+  public Map<String, Task> getActiveTasksForDatasource(String datasource)
   {
-    // This method is called very frequently by streaming supervisors.
-    // To reduce contention, perform filtration outside the lock
-    final List<Task> allTasks = getTasks();
-    final Set<String> completedTaskIds = getRecentlyCompletedTaskIds();
-
-    return allTasks.stream().filter(
-        task -> task.getDataSource().equals(datasource)
-                && !completedTaskIds.contains(task.getId())
-    ).collect(Collectors.toList());
+    return activeTasks.values().stream().filter(
+        entry -> !entry.isComplete
+                 && entry.task.getDataSource().equals(datasource)
+    ).map(
+        entry -> entry.task
+    ).collect(
+        Collectors.toMap(Task::getId, Function.identity())
+    );
   }
 
   private void validateTaskPayload(Task task)
@@ -1083,6 +1067,64 @@ public class TaskQueue
       throw DruidException.defensive(
           "Failed to parse task payload for validation"
       );
+    }
+  }
+
+  /**
+   * Performs a thread-safe update on the task entry for the given task ID,
+   * and sets the {@link TaskEntry#lastUpdatedTime} to now.
+   */
+  private void updateTaskEntry(String taskId, Consumer<TaskEntry> updateOperation)
+  {
+    addOrUpdateTaskEntry(
+        taskId,
+        existingEntry -> {
+          updateOperation.accept(existingEntry);
+          if (existingEntry != null) {
+            existingEntry.lastUpdatedTime = DateTimes.nowUtc();
+          }
+          return existingEntry;
+        }
+    );
+  }
+
+  /**
+   * Performs a thread-safe upsert operation on the task entry for the given task ID.
+   */
+  TaskEntry addOrUpdateTaskEntry(String taskId, Function<TaskEntry, TaskEntry> updateOperation)
+  {
+    startStopLock.readLock().lock();
+    try {
+      return activeTasks.compute(
+          taskId,
+          (id, existingEntry) -> updateOperation.apply(existingEntry)
+      );
+    }
+    finally {
+      startStopLock.readLock().unlock();
+    }
+  }
+
+  private void removeTaskLock(Task task)
+  {
+    taskLockbox.remove(task);
+  }
+
+  /**
+   * Represents an entry in this task queue.
+   */
+  static class TaskEntry
+  {
+    private final Task task;
+
+    private DateTime lastUpdatedTime;
+    private ListenableFuture<TaskStatus> future = null;
+    private boolean isComplete = false;
+
+    TaskEntry(Task task)
+    {
+      this.task = task;
+      this.lastUpdatedTime = DateTimes.nowUtc();
     }
   }
 }

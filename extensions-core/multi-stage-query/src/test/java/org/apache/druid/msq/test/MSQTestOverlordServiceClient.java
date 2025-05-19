@@ -45,6 +45,7 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
@@ -54,7 +55,6 @@ import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -217,7 +217,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   @Override
   public ListenableFuture<Void> cancelTask(String taskId)
   {
-    getControllerForQueryId(taskId).stop();
+    getControllerForQueryId(taskId).stop(CancellationReason.TASK_SHUTDOWN);
     return Futures.immediateFuture(null);
   }
 

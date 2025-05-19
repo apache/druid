@@ -61,6 +61,8 @@ public class CreateDataSegments
   private Boolean used;
   private DateTime lastUpdatedTime;
   private String upgradedFromSegmentId;
+  private String schemaFingerprint;
+  private Long numRows;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -106,6 +108,18 @@ public class CreateDataSegments
   public CreateDataSegments withVersion(String version)
   {
     this.version = version;
+    return this;
+  }
+
+  public CreateDataSegments withNumRows(Long numRows)
+  {
+    this.numRows = numRows;
+    return this;
+  }
+
+  public CreateDataSegments withSchemaFingerprint(String schemaFingerprint)
+  {
+    this.schemaFingerprint = schemaFingerprint;
     return this;
   }
 
@@ -186,8 +200,8 @@ public class CreateDataSegments
         DateTimes.nowUtc(),
         lastUpdatedTime,
         used,
-        null,
-        null,
+        schemaFingerprint,
+        numRows,
         upgradedFromSegmentId
     );
   }
