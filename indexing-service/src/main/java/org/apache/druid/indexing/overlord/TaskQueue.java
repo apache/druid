@@ -118,7 +118,7 @@ public class TaskQueue
   private final TaskStorage taskStorage;
   private final TaskRunner taskRunner;
   private final TaskActionClientFactory taskActionClientFactory;
-  private final TaskLockbox taskLockbox;
+  private final GlobalTaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
   private final ObjectMapper passwordRedactingMapper;
   private final TaskContextEnricher taskContextEnricher;
@@ -170,7 +170,7 @@ public class TaskQueue
       TaskStorage taskStorage,
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       ServiceEmitter emitter,
       ObjectMapper mapper,
       TaskContextEnricher taskContextEnricher

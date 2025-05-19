@@ -64,7 +64,7 @@ public class TaskLockBoxConcurrencyTest
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
   private ExecutorService service;
   private TaskStorage taskStorage;
-  private TaskLockbox lockbox;
+  private GlobalTaskLockbox lockbox;
   private SegmentSchemaManager segmentSchemaManager;
 
   @Before
@@ -83,7 +83,7 @@ public class TaskLockBoxConcurrencyTest
     );
 
     segmentSchemaManager = new SegmentSchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
-    lockbox = new TaskLockbox(
+    lockbox = new GlobalTaskLockbox(
         taskStorage,
         new IndexerSQLMetadataStorageCoordinator(
             new SqlSegmentMetadataTransactionFactory(

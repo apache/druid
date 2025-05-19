@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -33,7 +33,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 public class TaskActionToolbox
 {
-  private final TaskLockbox taskLockbox;
+  private final GlobalTaskLockbox taskLockbox;
   private final TaskStorage taskStorage;
   private final SegmentAllocationQueue segmentAllocationQueue;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
@@ -44,7 +44,7 @@ public class TaskActionToolbox
 
   @Inject
   public TaskActionToolbox(
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       SegmentAllocationQueue segmentAllocationQueue,
@@ -63,7 +63,7 @@ public class TaskActionToolbox
   }
 
   public TaskActionToolbox(
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       ServiceEmitter emitter,
@@ -82,7 +82,7 @@ public class TaskActionToolbox
     );
   }
 
-  public TaskLockbox getTaskLockbox()
+  public GlobalTaskLockbox getTaskLockbox()
   {
     return taskLockbox;
   }
