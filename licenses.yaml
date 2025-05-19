@@ -227,7 +227,6 @@ version: 2.18.4
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
-  - com.fasterxml.jackson.core: jackson-databind
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
   - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
   - com.fasterxml.jackson.dataformat: jackson-dataformat-xml
@@ -257,6 +256,32 @@ notice: |
 
   ## Credits
 
+  A list of contributors may be found from CREDITS file, which is included
+  in some artifacts (usually source distributions); but is always available
+  from the source code management (SCM) system project uses.
+
+---
+
+name: Jackson
+license_category: binary
+module: extensions-contrib/druid-deltalake-extensions
+license_name: Apache License version 2.0
+version: 2.18.4
+libraries:
+  - com.fasterxml.jackson.core: jackson-databind
+notice: |
+  # Jackson JSON processor
+  Jackson is a high-performance, Free/Open Source JSON processing library.
+  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+  been in development since 2007.
+  It is currently developed by a community of developers, as well as supported
+  commercially by FasterXML.com.
+  ## Licensing
+  Jackson core and extension components may licensed under different licenses.
+  To find the details that apply to this artifact see the accompanying LICENSE file.
+  For more information, including possible other licensing options, contact
+  FasterXML.com (http://fasterxml.com).
+  ## Credits
   A list of contributors may be found from CREDITS file, which is included
   in some artifacts (usually source distributions); but is always available
   from the source code management (SCM) system project uses.
@@ -857,7 +882,7 @@ name: vertx
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.5.8
+version: 4.5.14
 libraries:
   - io.vertx: vertx-auth-common
   - io.vertx: vertx-core
@@ -1034,7 +1059,7 @@ name: org.snakeyaml snakeyaml-engine
 license_category: binary
 module: extensions-core/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.7
+version: 2.9
 libraries:
   - org.snakeyaml: snakeyaml-engine
 
@@ -1044,7 +1069,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 1.33
+version: 2.3
 libraries:
   - org.yaml: snakeyaml
 
@@ -2829,7 +2854,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.12.7
+version: 2.18.4
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -5043,6 +5068,18 @@ version: 3.0.4
 license_file_path: licenses/bin/jakarta.el.EPL2
 libraries:
   - org.glassfish: jakarta.el
+
+---
+
+name:
+license_category: binary
+module: extensions-contrib/ambari-metrics-emitter
+license_name: CDDL 1.1
+copyright: Oracle and/or its affiliates.
+license_file_path: licenses/bin/javax.CDDL11
+version: 2.2.12
+libraries:
+  - javax.xml.bind: jaxb-api
 
 ---
 
