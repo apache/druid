@@ -107,6 +107,18 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private static final int MIN_SYNC_DELAY_MILLIS = 1000;
   private static final int MAX_IMMEDIATE_SYNC_RETRIES = 3;
 
+  /**
+   * Buffer duration for which entries are kept in the cache even if the
+   * metadata store does not have them. In other words, a segment entry is
+   * removed from cache if the entry is not present in metadata store and has a
+   * {@code lastUpdatedTime < now - bufferWindow}.
+   * <p>
+   * This is primarily needed to handle a race condition between insert and sync
+   * where an entry with an updated time just before the sync start is added to
+   * the cache just after the sync has started.
+   */
+  private static final Duration SYNC_BUFFER_DURATION = Duration.standardMinutes(10);
+
   private enum CacheState
   {
     STOPPED, FOLLOWER, LEADER_FIRST_SYNC_PENDING, LEADER_FIRST_SYNC_STARTED, LEADER_READY
@@ -548,13 +560,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       retrieveAllUsedSegments(datasourceToSummary);
     } else {
       retrieveUsedSegmentIds(datasourceToSummary);
-      updateSegmentIdsInCache(datasourceToSummary, syncStartTime);
+      updateSegmentIdsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
       retrieveUsedSegmentPayloads(datasourceToSummary);
     }
 
     updateUsedSegmentPayloadsInCache(datasourceToSummary);
     retrieveAllPendingSegments(datasourceToSummary);
-    updatePendingSegmentsInCache(datasourceToSummary, syncStartTime);
+    updatePendingSegmentsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
 
     if (useSchemaCache) {
       retrieveAndResetUsedSegmentSchemas(datasourceToSummary);

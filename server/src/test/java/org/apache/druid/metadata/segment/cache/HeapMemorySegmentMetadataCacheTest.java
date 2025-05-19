@@ -579,7 +579,7 @@ public class HeapMemorySegmentMetadataCacheTest
         TestDataSource.WIKI,
         wikiCache -> wikiCache.markSegmentAsUnused(
             unpersistedSegmentPlus.getDataSegment().getId(),
-            now.minusMinutes(1)
+            now.minusHours(1)
         )
     );
 
