@@ -116,8 +116,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * This is primarily needed to handle a race condition between insert and sync
    * where an entry with an updated time just before the sync start is added to
    * the cache just after the sync has started.
+   * <p>
+   * This means that non-leader Overlord and all Coordinators will continue to
+   * consider a segment as used if it was marked as unused within the buffer period
+   * of a previous update (e.g. segment created, marked used or schema info updated).
    */
-  private static final Duration SYNC_BUFFER_DURATION = Duration.standardMinutes(10);
+  private static final Duration SYNC_BUFFER_DURATION = Duration.standardSeconds(10);
 
   private enum CacheState
   {
