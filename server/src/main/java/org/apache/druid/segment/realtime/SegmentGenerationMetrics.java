@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Metrics for segment generation.
@@ -54,6 +55,51 @@ public class SegmentGenerationMetrics
   private final AtomicBoolean processingDone = new AtomicBoolean(false);
 
   private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
+
+  /**
+   * {@code MessageGapStats} tracks message gap statistics but is not thread-safe.
+   */
+  public static class MessageGapStats
+  {
+    private long min = Long.MAX_VALUE;
+    private long max = Long.MIN_VALUE;
+    private long count = 0;
+    private double total = 0;
+
+    public double avg()
+    {
+      return total / count;
+    }
+
+    public long min()
+    {
+      return min;
+    }
+
+    public long max()
+    {
+      return max;
+    }
+
+    public long count()
+    {
+      return count;
+    }
+
+    public void add(final long messageGap)
+    {
+      total += messageGap;
+      ++count;
+      if (min > messageGap) {
+        min = messageGap;
+      }
+      if (max < messageGap) {
+        max = messageGap;
+      }
+    }
+  }
+
+  private final AtomicReference<MessageGapStats> messageGapStats = new AtomicReference<>(new MessageGapStats());
 
   public void incrementRowOutputCount(long numRows)
   {
@@ -105,14 +151,23 @@ public class SegmentGenerationMetrics
     this.sinkCount.set(sinkCount);
   }
 
+  public void reportMessageGap(final long messageGap)
+  {
+    messageGapStats.get().add(messageGap);
+  }
+
   public void reportMessageMaxTimestamp(long messageMaxTimestamp)
   {
-    this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
+    if (this.messageMaxTimestamp.get() < messageMaxTimestamp) {
+      this.messageMaxTimestamp.getAndAccumulate(messageMaxTimestamp, Math::max);
+    }
   }
 
   public void reportMaxSegmentHandoffTime(long maxSegmentHandoffTime)
   {
-    this.maxSegmentHandoffTime.set(Math.max(maxSegmentHandoffTime, this.maxSegmentHandoffTime.get()));
+    if (this.maxSegmentHandoffTime.get() < maxSegmentHandoffTime) {
+      this.maxSegmentHandoffTime.getAndAccumulate(maxSegmentHandoffTime, Math::max);
+    }
   }
 
   public void markProcessingDone()
@@ -170,6 +225,7 @@ public class SegmentGenerationMetrics
   {
     return pushedRows.get();
   }
+
   public long mergeTimeMillis()
   {
     return mergeTimeMillis.get();
@@ -193,6 +249,14 @@ public class SegmentGenerationMetrics
   public long sinkCount()
   {
     return sinkCount.get();
+  }
+
+  /**
+   * See {@code MessageGapStats} for current gaurantees on thread-safety.
+   */
+  public MessageGapStats getMessageGapStats()
+  {
+    return messageGapStats.get();
   }
 
   public long messageGap()
@@ -220,19 +284,20 @@ public class SegmentGenerationMetrics
     retVal.persistCpuTime.set(persistCpuTime.get());
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
-    retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
     retVal.mergedRows.set(mergedRows.get());
     retVal.pushedRows.set(pushedRows.get());
 
     long messageGapSnapshot = 0;
-    final long maxTimestamp = retVal.messageMaxTimestamp.get();
+    final long maxTimestamp = messageMaxTimestamp.get();
+    retVal.messageMaxTimestamp.set(maxTimestamp);
     if (processingDone.get()) {
       messageGapSnapshot = NO_EMIT_MESSAGE_GAP;
     } else if (maxTimestamp > 0) {
       messageGapSnapshot = System.currentTimeMillis() - maxTimestamp;
     }
     retVal.messageGap.set(messageGapSnapshot);
+    retVal.messageGapStats.set(messageGapStats.getAndSet(new MessageGapStats()));
 
     reset();
 
