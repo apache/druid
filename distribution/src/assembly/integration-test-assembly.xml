@@ -36,6 +36,14 @@
         </fileSet>
 
         <fileSet>
+            <directory>${project.build.directory}/commonDeps</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>lib</outputDirectory>
+        </fileSet>
+
+        <fileSet>
             <directory>${project.build.directory}/hadoop-dependencies</directory>
             <includes>
                 <include>*/*/*</include>

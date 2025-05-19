@@ -185,6 +185,9 @@
                                         <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions
                                         </argument>
                                         <argument>
+                                            -Ddruid.extensions.commonDependenciesDir=${project.build.directory}/commonDeps
+                                        </argument>
+                                        <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
                                         <argument>org.apache.druid.cli.Main</argument>
@@ -388,6 +391,9 @@
                                         <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions
                                         </argument>
                                         <argument>
+                                            -Ddruid.extensions.commonDependenciesDir=${project.build.directory}/commonDeps
+                                        </argument>
+                                        <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
                                         <argument>org.apache.druid.cli.Main</argument>
@@ -494,6 +500,9 @@
                                         <classpath />
                                         <argument>-Ddruid.extensions.loadList=[]</argument>
                                         <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions
+                                        </argument>
+                                        <argument>
+                                            -Ddruid.extensions.commonDependenciesDir=${project.build.directory}/commonDeps
                                         </argument>
                                         <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
