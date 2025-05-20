@@ -35,7 +35,6 @@ import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.Engine;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -53,7 +52,7 @@ import java.util.concurrent.ExecutorService;
 @LazySingleton
 public class DartSqlEngine implements SqlEngine
 {
-  private static final String NAME = Engine.MSQ_DART.toString();
+  public static final String NAME = "msq-dart";
 
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;

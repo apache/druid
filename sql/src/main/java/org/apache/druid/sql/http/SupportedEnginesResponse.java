@@ -21,22 +21,21 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.Engine;
 
 import java.util.Set;
 
 public class SupportedEnginesResponse
 {
-  private final Set<Engine> supportedEngines;
+  private final Set<String> supportedEngines;
 
   @JsonCreator
-  public SupportedEnginesResponse(@JsonProperty("supportedEngines")Set<Engine> supportedEngines)
+  public SupportedEnginesResponse(@JsonProperty("supportedEngines")Set<String> supportedEngines)
   {
     this.supportedEngines = supportedEngines;
   }
 
   @JsonProperty
-  public Set<Engine> getSupportedEngines()
+  public Set<String> getSupportedEngines()
   {
     return supportedEngines;
   }

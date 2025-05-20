@@ -33,7 +33,6 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.Engine;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.sql.SqlLifecycleManager;
@@ -130,8 +129,8 @@ public class SqlModule implements Module
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
 
     // Bind the native query manager.
-    MapBinder.newMapBinder(binder, Engine.class, QueryManager.class)
-             .addBinding(Engine.NATIVE)
+    MapBinder.newMapBinder(binder, String.class, QueryManager.class)
+             .addBinding(NativeSqlEngine.NAME)
              .to(NativeQueryManager.class)
              .in(LazySingleton.class);
   }

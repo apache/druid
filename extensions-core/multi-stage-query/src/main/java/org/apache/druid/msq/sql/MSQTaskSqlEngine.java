@@ -49,7 +49,6 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.Engine;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -88,7 +87,7 @@ public class MSQTaskSqlEngine implements SqlEngine
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
-  private static final String NAME = Engine.MSQ_TASK.toString();
+  public static final String NAME = "msq-task";
 
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;

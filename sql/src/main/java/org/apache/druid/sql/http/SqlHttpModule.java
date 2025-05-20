@@ -21,6 +21,7 @@ package org.apache.druid.sql.http;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
 
@@ -33,6 +34,7 @@ public class SqlHttpModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(SqlResource.class).in(LazySingleton.class);
+    MapBinder.newMapBinder(binder, String.class, QueryManager.class);
     Jerseys.addResource(binder, SqlResource.class);
   }
 }

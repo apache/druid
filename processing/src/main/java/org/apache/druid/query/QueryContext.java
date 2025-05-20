@@ -568,15 +568,6 @@ public class QueryContext
     );
   }
 
-  public Engine getEngine()
-  {
-    return getEnum(
-        QueryContexts.ENGINE,
-        Engine.class,
-        QueryContexts.DEFAULT_ENGINE
-    );
-  }
-
   public boolean getEnableRewriteJoinToFilter()
   {
     return getBoolean(

@@ -56,7 +56,6 @@ import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.Engine;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -266,7 +265,7 @@ public class DartSqlResourceTest extends MSQTestBase
         objectMapper,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig() /* currently only used for error transform strategy */,
-        Map.of(Engine.MSQ_DART, dartQueryManager),
+        Map.of(DartSqlEngine.NAME, dartQueryManager),
         ResponseContextConfig.newConfig(false),
         SELF_NODE
     );
@@ -296,8 +295,8 @@ public class DartSqlResourceTest extends MSQTestBase
   public void test_getEnabled()
   {
     Response response = sqlResource.getSupportedEngines(httpServletRequest);
-    Set<Engine> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getSupportedEngines();
-    Assert.assertTrue(supportedEngines.contains(Engine.MSQ_DART));
+    Set<String> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getSupportedEngines();
+    Assert.assertTrue(supportedEngines.contains(DartSqlEngine.NAME));
   }
 
   /**
@@ -313,7 +312,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals(
         new GetQueriesResponse(Collections.singletonList(DartQueryInfo.fromControllerHolder(holder))),
-        sqlResource.doGetRunningQueries("", Engine.MSQ_DART.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -337,7 +336,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries("", Engine.MSQ_DART.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -378,7 +377,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 remoteQueryInfo
             )
         ),
-        sqlResource.doGetRunningQueries(null, Engine.MSQ_DART.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -405,7 +404,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // were able to fetch.)
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
-        sqlResource.doGetRunningQueries(null, Engine.MSQ_DART.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -442,7 +441,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, Engine.MSQ_DART.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -478,7 +477,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(remoteQueryInfo.withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, Engine.MSQ_DART.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -506,7 +505,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, Engine.MSQ_DART.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
     Assertions.assertEquals("[[2]]\n", StringUtils.fromUtf8(asyncResponse.baos.toByteArray()));
   }
@@ -535,7 +534,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertThrows(
         ForbiddenException.class,
-        () -> sqlResource.doPost(sqlQuery, Engine.MSQ_DART.toString(), httpServletRequest)
+        () -> sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest)
     );
   }
 
@@ -561,7 +560,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, Engine.MSQ_DART.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
     Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
 
     final Map<String, Object> e = objectMapper.readValue(
@@ -596,7 +595,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, Engine.MSQ_DART.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -637,7 +636,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -678,7 +677,7 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, Engine.MSQ_DART.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -757,11 +756,11 @@ public class DartSqlResourceTest extends MSQTestBase
       // 1) The controllerExecutor thread, which is blocked up by sleepFuture.
       // 2) The doPostExec thread, which has a doPost in there, blocking on controllerExecutor.
       // 3) The current main test thread, which continues on and which will issue the cancellation request.
-      doPostFuture = doPostExec.submit(() -> sqlResource.doPost(sqlQuery, Engine.MSQ_DART.toString(), httpServletRequest));
+      doPostFuture = doPostExec.submit(() -> sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
       controllerRegistered.await();
 
       // Issue cancellation request.
-      final Response cancellationResponse = sqlResource.cancelQuery(sqlQueryId, Engine.MSQ_DART.toString(), httpServletRequest2);
+      final Response cancellationResponse = sqlResource.cancelQuery(sqlQueryId, DartSqlEngine.NAME.toString(), httpServletRequest2);
       Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), cancellationResponse.getStatus());
 
       // Now that the cancellation request has been accepted, we can cancel the sleepFuture and allow the
@@ -801,7 +800,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
-    final Response cancellationResponse = sqlResource.cancelQuery("nonexistent", Engine.MSQ_DART.toString(), httpServletRequest);
+    final Response cancellationResponse = sqlResource.cancelQuery("nonexistent", DartSqlEngine.NAME.toString(), httpServletRequest);
     Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), cancellationResponse.getStatus());
   }
 

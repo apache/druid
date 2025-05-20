@@ -53,7 +53,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.Engine;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -330,7 +329,7 @@ public class SqlResourceTest extends CalciteTestBase
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig(),
-        Map.of(Engine.NATIVE, nativeQueryManager),
+        Map.of(NativeSqlEngine.NAME, nativeQueryManager),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1648,7 +1647,7 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
-        Map.of(Engine.NATIVE, nativeQueryManager),
+        Map.of(NativeSqlEngine.NAME, nativeQueryManager),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -2092,7 +2091,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
-    Assert.assertNull(resource.doPost(query, Engine.NATIVE.toString(), req));
+    Assert.assertNull(resource.doPost(query, NativeSqlEngine.NAME.toString(), req));
 
     final Object actualQueryId = response.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = response.getHeader(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
@@ -2119,7 +2118,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
 
-    final Response response = resource.doPost(query, Engine.NATIVE.toString(), req);
+    final Response response = resource.doPost(query, NativeSqlEngine.NAME.toString(), req);
 
     final Object actualQueryId = getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);

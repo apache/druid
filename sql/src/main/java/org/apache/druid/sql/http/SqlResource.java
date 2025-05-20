@@ -27,7 +27,6 @@ import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.Engine;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycle;
@@ -88,7 +87,7 @@ public class SqlResource
   private final ServerConfig serverConfig;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
-  private final Map<Engine, QueryManager> queryManagers;
+  private final Map<String, QueryManager> queryManagers;
 
   @VisibleForTesting
   @Inject
@@ -96,7 +95,7 @@ public class SqlResource
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
       final ServerConfig serverConfig,
-      final Map<Engine, QueryManager> queryManagers,
+      final Map<String, QueryManager> queryManagers,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode
   )
@@ -123,7 +122,7 @@ public class SqlResource
    * API to list all running queries, for an engine that supports such listings.
    *
    * @param selfOnly if true, return queries running on this server. If false, return queries running on all servers.
-   * @param engineString engine string.
+   * @param engine engine name.
    * @param request  http request.
    */
   @GET
@@ -131,7 +130,7 @@ public class SqlResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetRunningQueries(
       @QueryParam("selfOnly") final String selfOnly,
-      @QueryParam("engine") @Nullable final String engineString,
+      @QueryParam("engine") @Nullable final String engine,
       @Context final HttpServletRequest request
   )
   {
@@ -142,7 +141,7 @@ public class SqlResource
         authorizerMapper
     );
 
-    QueryManager queryManager = getQueryManager(engineString);
+    QueryManager queryManager = getQueryManager(engine);
     if (queryManager == null) {
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
@@ -220,15 +219,9 @@ public class SqlResource
     return queryManager.cancelQuery(sqlQueryId, cancelables -> authorizeCancellation(req, cancelables));
   }
 
-  private QueryManager getQueryManager(final String engineString)
+  private QueryManager getQueryManager(final String engine)
   {
-    final Engine engine;
-    if (engineString == null) {
-      engine = QueryContexts.DEFAULT_ENGINE;
-    } else {
-      engine = Engine.fromString(engineString);
-    }
-    return queryManagers.getOrDefault(engine, null);
+    return queryManagers.getOrDefault(engine == null ? QueryContexts.DEFAULT_ENGINE : engine, null);
   }
 
   /**
