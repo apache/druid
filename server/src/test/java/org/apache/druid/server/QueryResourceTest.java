@@ -41,10 +41,32 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.*;
+import org.apache.druid.java.util.common.guava.Accumulator;
+import org.apache.druid.java.util.common.guava.BaseSequence;
+import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.*;
+import org.apache.druid.query.BadJsonQueryException;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.Result;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
@@ -60,15 +82,21 @@ import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy;
-import org.apache.druid.server.security.*;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authorizer;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
-import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.HttpOutput;
-import org.eclipse.jetty.server.Request;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
@@ -88,12 +116,16 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -501,10 +533,11 @@ public class QueryResourceTest
   }
 
   @Test
-  public void testResponseWithTrailerHeader_whenMissingSegmentAddedAfterInitialization() throws IOException
+  public void testResponseContextContainsMissingSegments_whenLastSegmentIsMissing() throws IOException
   {
-    AtomicBoolean isSequenceClosed = new AtomicBoolean(false);
-    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2025-01-01/P1D"), "0", 1);
+    final SegmentDescriptor missingSegDesc = new SegmentDescriptor(
+        Intervals.of("2025-01-01/P1D"), "0", 1
+    );
 
     queryResource = new QueryResource(
             new QueryLifecycleFactory(
@@ -514,7 +547,7 @@ public class QueryResourceTest
                       @Override
                       public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
                       {
-                        QueryRunner<T> delayedMissingSegmentRunner = (queryPlus, responseContext) -> new BaseSequence<>(
+                        return (queryPlus, responseContext) -> new BaseSequence<>(
                                 new BaseSequence.IteratorMaker<T, Iterator<T>>() {
                                   @Override
                                   public Iterator<T> make() {
@@ -529,8 +562,8 @@ public class QueryResourceTest
                                         if (realIterator.hasNext()) {
                                           return true;
                                         } else if (!done) {
-                                          // Now simulate segment failure AFTER the row is emitted and initialize() has run
-                                          responseContext.addMissingSegments(ImmutableList.of(segmentDescriptor));
+                                          // Simulate a segment failure in the end after initialize() has run
+                                          responseContext.addMissingSegments(ImmutableList.of(missingSegDesc));
                                           done = true;
                                         }
                                         return false;
@@ -544,13 +577,11 @@ public class QueryResourceTest
                                   }
 
                                   @Override
-                                  public void cleanup(Iterator<T> iterFromMake) {
-                                    isSequenceClosed.set(true);
+                                  public void cleanup(Iterator<T> iterFromMake)
+                                  {
                                   }
                                 }
                         );
-
-                        return delayedMissingSegmentRunner;
                       }
 
                       @Override
@@ -587,21 +618,18 @@ public class QueryResourceTest
             testServletRequest
     ));
 
-    // Validate trailer headers were written
-    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
-    Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
 
-    final HttpFields fields = response.getTrailers().get();
+    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertEquals(QueryResultPusher.RESULT_TRAILER_HEADERS, response.getHeader(HttpHeader.TRAILER.toString()));
+
+    final HttpFields observedFields = response.getTrailers().get();
 
     Assert.assertTrue(response.containsHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
-    DataServerResponse dataServerResponse = new DataServerResponse(ImmutableList.of(segmentDescriptor));
-    Assert.assertEquals(jsonMapper.writeValueAsString(dataServerResponse), response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
+    final DataServerResponse expectedResponse = new DataServerResponse(ImmutableList.of(missingSegDesc));
+    Assert.assertEquals(jsonMapper.writeValueAsString(expectedResponse), response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
 
-
-    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
-    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
-
-    Assert.assertTrue(isSequenceClosed.get());
+    Assert.assertTrue(observedFields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals("true", observedFields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
   }
 
 
@@ -1694,41 +1722,26 @@ public class QueryResourceTest
 
   private org.eclipse.jetty.server.Response jettyResponseforRequest(MockHttpServletRequest req) throws IOException
   {
-    // Create mocks
-    HttpChannel channelMock = EasyMock.createNiceMock(HttpChannel.class);
+    HttpChannel channelMock = EasyMock.mock(HttpChannel.class);
     HttpOutput outputMock = EasyMock.mock(HttpOutput.class);
-    Request requestMock = EasyMock.createNiceMock(Request.class);
-
-    // Stub the call to getHttpVersion() to avoid NPE inside Jetty internals
-    EasyMock.expect(requestMock.getHttpVersion()).andStubReturn(HttpVersion.HTTP_1_1);
-
-    // Stub HttpChannel to return the mocked Request
-    EasyMock.expect(channelMock.getRequest()).andStubReturn(requestMock);
-
-    // Optional: you can also stub isSendError / isCommitted if your test depends on it
-    // EasyMock.expect(channelMock.isSendError()).andStubReturn(false);
-    // EasyMock.expect(channelMock.isCommitted()).andStubReturn(true);
-
-    // Create response object using channelMock and outputMock
     org.eclipse.jetty.server.Response response = new org.eclipse.jetty.server.Response(channelMock, outputMock);
 
-    // Setup expectations for outputMock (writing and closing the response body)
-    outputMock.write(EasyMock.anyObject(byte[].class), EasyMock.anyInt(), EasyMock.anyInt());
-    EasyMock.expectLastCall().andVoid();
+    EasyMock.expect(channelMock.isSendError()).andReturn(false);
+    EasyMock.expect(channelMock.isCommitted()).andReturn(true);
 
     outputMock.close();
     EasyMock.expectLastCall().andVoid();
 
-    // Replay mocks
-    EasyMock.replay(requestMock, channelMock, outputMock);
+    outputMock.write(EasyMock.anyObject(byte[].class), EasyMock.anyInt(), EasyMock.anyInt());
+    EasyMock.expectLastCall().andVoid();
 
-    // Wire in the mocked response
+    EasyMock.replay(outputMock, channelMock);
+
     req.newAsyncContext(() -> {
       final MockAsyncContext retVal = new MockAsyncContext();
       retVal.response = response;
       return retVal;
     });
-
     return response;
   }
 }
