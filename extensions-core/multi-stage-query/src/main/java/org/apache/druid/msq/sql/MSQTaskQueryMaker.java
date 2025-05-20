@@ -35,6 +35,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -87,7 +88,6 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -269,7 +269,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (isReindex) {
       nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
     }
-
     nativeQueryContextOverrides.putAll(sqlQueryContext.asMap());
 
     // adding user
@@ -279,6 +278,10 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (msqMode != null) {
       MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
     }
+
+    // Add the start time.
+    nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, DateTimes.nowUtc().toString());
+
     return nativeQueryContextOverrides;
   }
 

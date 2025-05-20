@@ -25,11 +25,11 @@ SELECT server_ip,
        timezone,
        cast(time_floor(__time, 'PT12H') AS char) t,
        first_value(timezone) OVER (PARTITION BY client_ip
-                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                               last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                      count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                            ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                      last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                 ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                    count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
 FROM
   (SELECT *
    FROM test_win
@@ -44,12 +44,12 @@ GROUP BY server_ip,
 +--------------+---------------+----------+---------------------+-------+------+-----+
 | server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
 +--------------+---------------+----------+---------------------+-------+------+-----+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   3 |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   3 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
 | 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
 | 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   6 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   6 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
 | 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
 | 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
 +--------------+---------------+----------+---------------------+-------+------+-----+
@@ -79,16 +79,18 @@ GROUP BY server_ip,
          timezone,
          time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
-                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC);
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H'));
 +--------------+---------------+----------+---------------------+-------+------+-----+
 | server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
 +--------------+---------------+----------+---------------------+-------+------+-----+
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   3 |
-| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   3 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
 | 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
 | 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   6 |
-| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   6 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
 | 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
 | 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
 +--------------+---------------+----------+---------------------+-------+------+-----+
@@ -106,11 +108,11 @@ FROM
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM
      (SELECT server_ip,
              client_ip,
@@ -129,11 +131,11 @@ UNION ALL
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM
      (SELECT server_ip,
              client_ip,
@@ -159,11 +161,11 @@ FROM
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM
      (SELECT server_ip,
              client_ip,
@@ -197,7 +199,9 @@ UNION ALL
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
-                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC));
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
 Query could not be planned.
 !error
 
@@ -226,18 +230,20 @@ FROM
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
-                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC))
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')))
 UNION ALL
   (SELECT server_ip,
           client_ip,
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM
      (SELECT server_ip,
              client_ip,
@@ -278,7 +284,9 @@ FROM
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
-                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC))
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')))
 UNION ALL
   (SELECT server_ip,
           client_ip,
@@ -300,7 +308,9 @@ UNION ALL
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
                                                   ORDER BY server_ip ASC,
-                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC));
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
 Query could not be planned.
 !error
 
@@ -314,11 +324,11 @@ FROM
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM test_win
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22')
@@ -332,11 +342,11 @@ UNION ALL
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM test_win
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22')
@@ -357,11 +367,11 @@ FROM
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM test_win
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22')
@@ -385,7 +395,9 @@ UNION ALL
             timezone,
             time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                      ORDER BY server_ip ASC,
-                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC));
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
 Query could not be planned.
 !error
 
@@ -409,18 +421,20 @@ FROM
             timezone,
             time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                      ORDER BY server_ip ASC,
-                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC))
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')))
 UNION ALL
   (SELECT server_ip,
           client_ip,
           timezone,
           cast(time_floor(__time, 'PT12H') AS char) t,
           first_value(timezone) OVER (PARTITION BY client_ip
-                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) FIRST,
-                                                                                                                                  last_value(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) LAST,
-                                                                                                                                                                                                                                                         count(timezone) OVER (PARTITION BY client_ip
-                                                                                                                                                                                                                                                                               ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC) cnt
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
    FROM test_win
    WHERE client_ip IN ('107.13.54.103',
                        '99.9.55.22')
@@ -451,7 +465,9 @@ FROM
             timezone,
             time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                      ORDER BY server_ip ASC,
-                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC))
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')))
 UNION ALL
   (SELECT server_ip,
           client_ip,
@@ -468,7 +484,9 @@ UNION ALL
             timezone,
             time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
                                                      ORDER BY server_ip ASC,
-                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC));
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
 Query could not be planned.
 !error
 

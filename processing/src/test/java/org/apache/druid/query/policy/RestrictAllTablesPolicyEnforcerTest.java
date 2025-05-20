@@ -23,13 +23,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -95,6 +99,35 @@ public class RestrictAllTablesPolicyEnforcerTest
         e2.getMessage()
     );
     policyEnforcer.validateOrElseThrow(segment, policy);
+  }
+
+  @Test
+  public void test_validate_allowNonTableSegments() throws Exception
+  {
+    final RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+
+    // Test validate segment, success for inline segment
+    final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(ImmutableList.of(), RowSignature.empty());
+
+    final Segment inlineSegment = new RowBasedSegment<>(
+        Sequences.simple(inlineDataSource.getRows()),
+        inlineDataSource.rowAdapter(),
+        inlineDataSource.getRowSignature()
+    );
+    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(inlineSegment);
+
+    policyEnforcer.validateOrElseThrow(segment, null);
+  }
+
+  @Test
+  public void test_validate_closedSegment() throws Exception
+  {
+    final RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
+    Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
+    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    segment.close();
+
+    policyEnforcer.validateOrElseThrow(segment, null);
   }
 
   @Test

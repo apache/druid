@@ -224,7 +224,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
    *
    * @param persistedSegmentIds Segment IDs present in the metadata store
    * @param syncStartTime       Start time of the current sync
-   * @return Number of unpersisted segments removed from cache.
+   * @return Number of unpersisted segment IDs removed from the cache.
    */
   private int removeUnpersistedSegments(Set<SegmentId> persistedSegmentIds, DateTime syncStartTime)
   {
@@ -723,12 +723,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
       return idToPendingSegment.isEmpty()
              && idToUsedSegment.isEmpty()
              && unusedSegmentIdToUpdatedTime.isEmpty();
-    }
-
-    private boolean isSegmentIdCached(SegmentId id)
-    {
-      return idToUsedSegment.containsKey(id)
-             || unusedSegmentIdToUpdatedTime.containsKey(id);
     }
 
     /**
