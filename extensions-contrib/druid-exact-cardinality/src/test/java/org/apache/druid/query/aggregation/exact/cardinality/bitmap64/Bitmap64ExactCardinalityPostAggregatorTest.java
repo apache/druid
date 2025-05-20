@@ -74,7 +74,7 @@ public class Bitmap64ExactCardinalityPostAggregatorTest
 
     Map<String, Object> combinedAggregators = ImmutableMap.of(FIELD_NAME, counter);
     Assertions.assertEquals(3L, postAggregator.compute(combinedAggregators));
-    
+
     Bitmap64Counter emptyCounter = new RoaringBitmap64Counter();
     Map<String, Object> combinedAggregatorsEmpty = ImmutableMap.of(FIELD_NAME, emptyCounter);
     Assertions.assertEquals(0L, postAggregator.compute(combinedAggregatorsEmpty));
@@ -83,7 +83,7 @@ public class Bitmap64ExactCardinalityPostAggregatorTest
   @Test
   public void testGetType()
   {
-    Assertions.assertEquals(ColumnType.LONG, postAggregator.getType(null)); 
+    Assertions.assertEquals(ColumnType.LONG, postAggregator.getType(null));
   }
 
   @Test
@@ -100,24 +100,42 @@ public class Bitmap64ExactCardinalityPostAggregatorTest
         .build();
     Assertions.assertArrayEquals(expectedKey, postAggregator.getCacheKey());
 
-    Bitmap64ExactCardinalityPostAggregator postAggregator2 = new Bitmap64ExactCardinalityPostAggregator(NAME, FIELD_NAME);
+    Bitmap64ExactCardinalityPostAggregator postAggregator2 = new Bitmap64ExactCardinalityPostAggregator(
+        NAME,
+        FIELD_NAME
+    );
     Assertions.assertArrayEquals(postAggregator.getCacheKey(), postAggregator2.getCacheKey());
 
-    Bitmap64ExactCardinalityPostAggregator postAggregatorDiffFieldName = new Bitmap64ExactCardinalityPostAggregator(NAME, FIELD_NAME + "_diff");
+    Bitmap64ExactCardinalityPostAggregator postAggregatorDiffFieldName = new Bitmap64ExactCardinalityPostAggregator(
+        NAME,
+        FIELD_NAME
+        + "_diff"
+    );
     Assertions.assertFalse(Arrays.equals(postAggregator.getCacheKey(), postAggregatorDiffFieldName.getCacheKey()));
-    
-    Bitmap64ExactCardinalityPostAggregator postAggregatorDiffName = new Bitmap64ExactCardinalityPostAggregator(NAME + "_diff", FIELD_NAME);
+
+    Bitmap64ExactCardinalityPostAggregator postAggregatorDiffName = new Bitmap64ExactCardinalityPostAggregator(
+        NAME
+        + "_diff",
+        FIELD_NAME
+    );
     // Cache key for PostAggregator does not include its own name, only dependent fieldName
-    Assertions.assertArrayEquals(postAggregator.getCacheKey(), postAggregatorDiffName.getCacheKey()); 
+    Assertions.assertArrayEquals(postAggregator.getCacheKey(), postAggregatorDiffName.getCacheKey());
   }
-  
+
   @Test
   public void testEqualsAndHashCode()
   {
     Bitmap64ExactCardinalityPostAggregator pa1 = new Bitmap64ExactCardinalityPostAggregator(NAME, FIELD_NAME);
     Bitmap64ExactCardinalityPostAggregator pa2 = new Bitmap64ExactCardinalityPostAggregator(NAME, FIELD_NAME);
-    Bitmap64ExactCardinalityPostAggregator paDiffName = new Bitmap64ExactCardinalityPostAggregator(NAME + "_diff", FIELD_NAME);
-    Bitmap64ExactCardinalityPostAggregator paDiffFieldName = new Bitmap64ExactCardinalityPostAggregator(NAME, FIELD_NAME + "_diff");
+    Bitmap64ExactCardinalityPostAggregator paDiffName = new Bitmap64ExactCardinalityPostAggregator(
+        NAME + "_diff",
+        FIELD_NAME
+    );
+    Bitmap64ExactCardinalityPostAggregator paDiffFieldName = new Bitmap64ExactCardinalityPostAggregator(
+        NAME,
+        FIELD_NAME
+        + "_diff"
+    );
 
     Assertions.assertEquals(pa1, pa2);
     Assertions.assertEquals(pa1.hashCode(), pa2.hashCode());

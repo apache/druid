@@ -92,14 +92,26 @@ public class Bitmap64ExactCardinalityBuildAggregatorFactoryTest
   {
     Assertions.assertEquals(ColumnType.LONG, factory.getResultType());
   }
-  
+
   @Test
   public void testEqualsAndHashCode()
   {
-    Bitmap64ExactCardinalityBuildAggregatorFactory factory1 = new Bitmap64ExactCardinalityBuildAggregatorFactory(NAME, FIELD_NAME);
-    Bitmap64ExactCardinalityBuildAggregatorFactory factory2 = new Bitmap64ExactCardinalityBuildAggregatorFactory(NAME, FIELD_NAME);
-    Bitmap64ExactCardinalityBuildAggregatorFactory factoryDiffName = new Bitmap64ExactCardinalityBuildAggregatorFactory(NAME + "_diff", FIELD_NAME);
-    Bitmap64ExactCardinalityBuildAggregatorFactory factoryDiffFieldName = new Bitmap64ExactCardinalityBuildAggregatorFactory(NAME, FIELD_NAME + "_diff");
+    Bitmap64ExactCardinalityBuildAggregatorFactory factory1 = new Bitmap64ExactCardinalityBuildAggregatorFactory(
+        NAME,
+        FIELD_NAME
+    );
+    Bitmap64ExactCardinalityBuildAggregatorFactory factory2 = new Bitmap64ExactCardinalityBuildAggregatorFactory(
+        NAME,
+        FIELD_NAME
+    );
+    Bitmap64ExactCardinalityBuildAggregatorFactory factoryDiffName = new Bitmap64ExactCardinalityBuildAggregatorFactory(
+        NAME + "_diff",
+        FIELD_NAME
+    );
+    Bitmap64ExactCardinalityBuildAggregatorFactory factoryDiffFieldName = new Bitmap64ExactCardinalityBuildAggregatorFactory(
+        NAME,
+        FIELD_NAME + "_diff"
+    );
 
     Assertions.assertEquals(factory1, factory2);
     Assertions.assertEquals(factory1.hashCode(), factory2.hashCode());

@@ -33,7 +33,7 @@ public class Bitmap64ExactCardinalityModuleTest
     ComplexMetrics.unregisterSerde(Bitmap64ExactCardinalityModule.BUILD_TYPE_NAME);
     ComplexMetrics.unregisterSerde(Bitmap64ExactCardinalityModule.MERGE_TYPE_NAME);
 
-    Bitmap64ExactCardinalityModule.registerSerde(); 
+    Bitmap64ExactCardinalityModule.registerSerde();
 
     ComplexMetricSerde typeNameSerde = ComplexMetrics.getSerdeForType(Bitmap64ExactCardinalityModule.TYPE_NAME);
     Assertions.assertNotNull(typeNameSerde);
@@ -42,7 +42,7 @@ public class Bitmap64ExactCardinalityModuleTest
     ComplexMetricSerde buildTypeNameSerde = ComplexMetrics.getSerdeForType(Bitmap64ExactCardinalityModule.BUILD_TYPE_NAME);
     Assertions.assertNotNull(buildTypeNameSerde);
     Assertions.assertInstanceOf(Bitmap64ExactCardinalityBuildComplexMetricSerde.class, buildTypeNameSerde);
-    
+
     ComplexMetricSerde mergeTypeNameSerde = ComplexMetrics.getSerdeForType(Bitmap64ExactCardinalityModule.MERGE_TYPE_NAME);
     Assertions.assertNotNull(mergeTypeNameSerde);
     Assertions.assertInstanceOf(Bitmap64ExactCardinalityMergeComplexMetricSerde.class, mergeTypeNameSerde);

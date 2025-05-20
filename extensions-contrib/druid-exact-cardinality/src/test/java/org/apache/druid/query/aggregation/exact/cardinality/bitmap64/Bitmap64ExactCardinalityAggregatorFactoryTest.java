@@ -60,13 +60,13 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
     @Override
     public Aggregator factorize(ColumnSelectorFactory metricFactory)
     {
-      return null; 
+      return null;
     }
 
     @Override
     public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
     {
-      return null; 
+      return null;
     }
 
     @Override
@@ -100,7 +100,7 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
   {
     Assertions.assertEquals(Collections.singletonList(FIELD_NAME), factory.requiredFields());
   }
-  
+
   @Test
   public void testFinalizeComputationNull()
   {
@@ -115,7 +115,7 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
     counter.add(2L);
     Assertions.assertEquals(2L, factory.finalizeComputation(counter));
   }
-  
+
   @Test
   public void testGetComparator()
   {
@@ -125,7 +125,7 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
     Bitmap64Counter counter2 = new RoaringBitmap64Counter();
     counter2.add(1L);
     counter2.add(2L);
-    
+
     Assertions.assertTrue(factory.getComparator().compare(counter1, counter2) < 0);
     Assertions.assertTrue(factory.getComparator().compare(counter2, counter1) > 0);
     Assertions.assertTrue(factory.getComparator().compare(null, counter1) < 0);
@@ -140,33 +140,52 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
     Assertions.assertEquals(NAME, combiningFactory.getName());
     Assertions.assertEquals(NAME, ((Bitmap64ExactCardinalityMergeAggregatorFactory) combiningFactory).getFieldName());
   }
-  
+
   @Test
   public void testGetMaxIntermediateSize()
   {
-    Assertions.assertEquals(Bitmap64ExactCardinalityAggregatorFactory.MAX_INTERMEDIATE_SIZE, factory.getMaxIntermediateSize());
+    Assertions.assertEquals(
+        Bitmap64ExactCardinalityAggregatorFactory.MAX_INTERMEDIATE_SIZE,
+        factory.getMaxIntermediateSize()
+    );
   }
-  
+
   @Test
   public void testEqualsAndHashCode()
   {
     // Test symmetry
-    TestBitmap64ExactCardinalityAggregatorFactory factory2 = new TestBitmap64ExactCardinalityAggregatorFactory(NAME, FIELD_NAME);
+    TestBitmap64ExactCardinalityAggregatorFactory factory2 = new TestBitmap64ExactCardinalityAggregatorFactory(
+        NAME,
+        FIELD_NAME
+    );
     Assertions.assertEquals(factory, factory2);
     Assertions.assertEquals(factory.hashCode(), factory2.hashCode());
 
     // Test different name
-    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffName = new TestBitmap64ExactCardinalityAggregatorFactory(NAME + "_diff", FIELD_NAME);
+    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffName = new TestBitmap64ExactCardinalityAggregatorFactory(
+        NAME + "_diff",
+        FIELD_NAME
+    );
     Assertions.assertNotEquals(factory, factoryDiffName);
 
     // Test different fieldName
-    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffFieldName = new TestBitmap64ExactCardinalityAggregatorFactory(NAME, FIELD_NAME + "_diff");
+    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffFieldName = new TestBitmap64ExactCardinalityAggregatorFactory(
+        NAME,
+        FIELD_NAME + "_diff"
+    );
     Assertions.assertNotEquals(factory, factoryDiffFieldName);
 
     // Test different class (even if fields match, if getEffectiveClass is used in parent equals)
     // For Bitmap64ExactCardinalityAggregatorFactory, getClass() is used in equals.
-    Bitmap64ExactCardinalityAggregatorFactory anotherConcreteFactory = new Bitmap64ExactCardinalityBuildAggregatorFactory(NAME, FIELD_NAME);
-    Assertions.assertNotEquals(factory, anotherConcreteFactory, "Test factory should not be equal to Build factory due to different class");
+    Bitmap64ExactCardinalityAggregatorFactory anotherConcreteFactory = new Bitmap64ExactCardinalityBuildAggregatorFactory(
+        NAME,
+        FIELD_NAME
+    );
+    Assertions.assertNotEquals(
+        factory,
+        anotherConcreteFactory,
+        "Test factory should not be equal to Build factory due to different class"
+    );
   }
 
   @Test
@@ -180,15 +199,24 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
   public void testGetCacheKey()
   {
     byte[] cacheKey1 = factory.getCacheKey();
-    TestBitmap64ExactCardinalityAggregatorFactory factory2 = new TestBitmap64ExactCardinalityAggregatorFactory(NAME, FIELD_NAME);
+    TestBitmap64ExactCardinalityAggregatorFactory factory2 = new TestBitmap64ExactCardinalityAggregatorFactory(
+        NAME,
+        FIELD_NAME
+    );
     byte[] cacheKey2 = factory2.getCacheKey();
     Assertions.assertArrayEquals(cacheKey1, cacheKey2);
 
-    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffName = new TestBitmap64ExactCardinalityAggregatorFactory(NAME + "_diff", FIELD_NAME);
+    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffName = new TestBitmap64ExactCardinalityAggregatorFactory(
+        NAME + "_diff",
+        FIELD_NAME
+    );
     byte[] cacheKeyDiffName = factoryDiffName.getCacheKey();
     Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKeyDiffName));
 
-    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffFieldName = new TestBitmap64ExactCardinalityAggregatorFactory(NAME, FIELD_NAME + "_diff");
+    TestBitmap64ExactCardinalityAggregatorFactory factoryDiffFieldName = new TestBitmap64ExactCardinalityAggregatorFactory(
+        NAME,
+        FIELD_NAME + "_diff"
+    );
     byte[] cacheKeyDiffFieldName = factoryDiffFieldName.getCacheKey();
     Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKeyDiffFieldName));
   }
@@ -205,8 +233,8 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
     counter2.add(3L);
 
     Bitmap64Counter result = factory.combine(counter1, counter2);
-    Assertions.assertEquals(3L, result.getCardinality()); 
-    Assertions.assertSame(counter1, result); 
+    Assertions.assertEquals(3L, result.getCardinality());
+    Assertions.assertSame(counter1, result);
 
     Bitmap64Counter counter3 = new RoaringBitmap64Counter();
     counter3.add(4L);
@@ -261,7 +289,7 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
     combiner.reset(selector);
     EasyMock.verify(selector);
     Assertions.assertEquals(1L, combiner.getObject().getCardinality());
-    
+
     Assertions.assertEquals(Bitmap64Counter.class, combiner.classOfObject());
   }
 } 

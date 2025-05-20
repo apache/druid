@@ -92,14 +92,26 @@ public class Bitmap64ExactCardinalityMergeAggregatorFactoryTest
   {
     Assertions.assertEquals(ColumnType.LONG, factory.getResultType());
   }
-  
+
   @Test
   public void testEqualsAndHashCode()
   {
-    Bitmap64ExactCardinalityMergeAggregatorFactory factory1 = new Bitmap64ExactCardinalityMergeAggregatorFactory(NAME, FIELD_NAME);
-    Bitmap64ExactCardinalityMergeAggregatorFactory factory2 = new Bitmap64ExactCardinalityMergeAggregatorFactory(NAME, FIELD_NAME);
-    Bitmap64ExactCardinalityMergeAggregatorFactory factoryDiffName = new Bitmap64ExactCardinalityMergeAggregatorFactory(NAME + "_diff", FIELD_NAME);
-    Bitmap64ExactCardinalityMergeAggregatorFactory factoryDiffFieldName = new Bitmap64ExactCardinalityMergeAggregatorFactory(NAME, FIELD_NAME + "_diff");
+    Bitmap64ExactCardinalityMergeAggregatorFactory factory1 = new Bitmap64ExactCardinalityMergeAggregatorFactory(
+        NAME,
+        FIELD_NAME
+    );
+    Bitmap64ExactCardinalityMergeAggregatorFactory factory2 = new Bitmap64ExactCardinalityMergeAggregatorFactory(
+        NAME,
+        FIELD_NAME
+    );
+    Bitmap64ExactCardinalityMergeAggregatorFactory factoryDiffName = new Bitmap64ExactCardinalityMergeAggregatorFactory(
+        NAME + "_diff",
+        FIELD_NAME
+    );
+    Bitmap64ExactCardinalityMergeAggregatorFactory factoryDiffFieldName = new Bitmap64ExactCardinalityMergeAggregatorFactory(
+        NAME,
+        FIELD_NAME + "_diff"
+    );
 
     Assertions.assertEquals(factory1, factory2);
     Assertions.assertEquals(factory1.hashCode(), factory2.hashCode());
@@ -114,7 +126,11 @@ public class Bitmap64ExactCardinalityMergeAggregatorFactoryTest
   @Test
   public void testToString()
   {
-    String expected = "Bitmap64ExactCardinalityMergeAggregatorFactory { name=" + NAME + ", fieldName=" + FIELD_NAME + " }";
+    String expected = "Bitmap64ExactCardinalityMergeAggregatorFactory { name="
+                      + NAME
+                      + ", fieldName="
+                      + FIELD_NAME
+                      + " }";
     Assertions.assertEquals(expected, factory.toString());
   }
 } 
