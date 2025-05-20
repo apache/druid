@@ -278,9 +278,8 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter = new StubServiceEmitter("test", "test");
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     final SqlToolbox sqlToolbox = new SqlToolbox(
-        engine,
+        null,
         plannerFactory,
         stubServiceEmitter,
         testRequestLogger,
@@ -288,6 +287,7 @@ public class SqlResourceTest extends CalciteTestBase
         defaultQueryConfig,
         lifecycleManager
     );
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlToolbox);
     sqlStatementFactory = new SqlStatementFactory(null)
     {
       @Override
@@ -323,13 +323,12 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
-    //    nativeQueryManager = new NativeQueryManager(lifecycleManager, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig(),
-        null,
-        null,
+        lifecycleManager,
+        Map.of(NativeSqlEngine.NAME, engine),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1647,8 +1646,8 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
-        null,
-        null,
+        lifecycleManager,
+        Map.of(),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1859,7 +1858,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertTrue(validateAndAuthorizeLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     Assert.assertTrue(lifecycleAddLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
     planLatch.countDown();
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
@@ -1892,7 +1891,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
     execLatch.countDown();
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
@@ -1920,7 +1919,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery("invalidQuery", null, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery("invalidQuery", makeRequestForCancel());
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
@@ -1945,7 +1944,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     );
     Assert.assertTrue(planLatch.await(3, TimeUnit.SECONDS));
-    Response cancelResponse = resource.cancelQuery(sqlQueryId, null, makeRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
     Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
@@ -2092,7 +2091,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
-    Assert.assertNull(resource.doPost(query, NativeSqlEngine.NAME.toString(), req));
+    Assert.assertNull(resource.doPost(query, req));
 
     final Object actualQueryId = response.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = response.getHeader(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
@@ -2119,7 +2118,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
 
-    final Response response = resource.doPost(query, NativeSqlEngine.NAME.toString(), req);
+    final Response response = resource.doPost(query, req);
 
     final Object actualQueryId = getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER);
     final Object actualSqlQueryId = getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);

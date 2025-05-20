@@ -91,7 +91,7 @@ public class DartSqlEngine implements SqlEngine
       DartQueryKitSpecFactory queryKitSpecFactory,
       ServerConfig serverConfig,
       @Dart DefaultQueryConfig dartQueryConfig,
-      final SqlToolbox toolbox,
+      SqlToolbox toolbox,
       DartSqlClients sqlClients
   )
   {

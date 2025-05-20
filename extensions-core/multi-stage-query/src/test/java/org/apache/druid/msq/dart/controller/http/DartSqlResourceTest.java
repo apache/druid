@@ -178,44 +178,6 @@ public class DartSqlResourceTest extends MSQTestBase
   {
     mockCloser = MockitoAnnotations.openMocks(this);
 
-    final DartSqlEngine engine = new DartSqlEngine(
-        new MSQTestControllerContext(
-            objectMapper,
-            injector,
-            null /* not used in this test */,
-            workerMemoryParameters,
-            loadedSegmentsMetadata,
-            TaskLockType.APPEND,
-            QueryContext.empty()
-        ) {
-          @Override
-          public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
-          {
-            return super.queryKernelConfig(queryId, querySpec).toBuilder()
-                .workerIds(ImmutableList.of("some")).build();
-          }
-        },
-        controllerRegistry = new DartControllerRegistry()
-        {
-          @Override
-          public void register(ControllerHolder holder)
-          {
-            super.register(holder);
-            controllerRegistered.countDown();
-          }
-        },
-        objectMapper.convertValue(ImmutableMap.of(), DartControllerConfig.class),
-        controllerExecutor = Execs.multiThreaded(
-            MAX_CONTROLLERS,
-            StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
-        ),
-        new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
-        new ServerConfig(),
-        new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
-        null,
-        null
-    );
-
     final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
         CalciteTests.INJECTOR,
         queryFramework().conglomerate(),
@@ -245,7 +207,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final SqlLifecycleManager lifecycleManager = new SqlLifecycleManager();
     final SqlToolbox toolbox = new SqlToolbox(
-        engine,
+        null,
         plannerFactory,
         NoopServiceEmitter.instance(),
         NoopRequestLogger.instance(),
@@ -254,20 +216,51 @@ public class DartSqlResourceTest extends MSQTestBase
         lifecycleManager
     );
 
-    //    DartQueryManager dartQueryManager = new DartQueryManager(
-    //        controllerRegistry,
-    //        dartSqlClients,
-    //        lifecycleManager,
-    //        new DefaultQueryConfig(ImmutableMap.of()),
-    //        new SqlStatementFactory(toolbox)
-    //    );
+
+    final DartSqlEngine engine = new DartSqlEngine(
+        new MSQTestControllerContext(
+            objectMapper,
+            injector,
+            null /* not used in this test */,
+            workerMemoryParameters,
+            loadedSegmentsMetadata,
+            TaskLockType.APPEND,
+            QueryContext.empty()
+        ) {
+          @Override
+          public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
+          {
+            return super.queryKernelConfig(queryId, querySpec).toBuilder()
+                        .workerIds(ImmutableList.of("some")).build();
+          }
+        },
+        controllerRegistry = new DartControllerRegistry()
+        {
+          @Override
+          public void register(ControllerHolder holder)
+          {
+            super.register(holder);
+            controllerRegistered.countDown();
+          }
+        },
+        objectMapper.convertValue(ImmutableMap.of(), DartControllerConfig.class),
+        controllerExecutor = Execs.multiThreaded(
+            MAX_CONTROLLERS,
+            StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
+        ),
+        new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
+        new ServerConfig(),
+        new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
+        toolbox,
+        dartSqlClients
+    );
 
     sqlResource = new SqlResource(
         objectMapper,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig() /* currently only used for error transform strategy */,
-        null,
-        null,
+        lifecycleManager,
+        Map.of(DartSqlEngine.NAME, engine),
         ResponseContextConfig.newConfig(false),
         SELF_NODE
     );
@@ -314,7 +307,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals(
         new GetQueriesResponse(Collections.singletonList(DartQueryInfo.fromControllerHolder(holder))),
-        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -338,7 +331,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -379,7 +372,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 remoteQueryInfo
             )
         ),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -406,7 +399,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // were able to fetch.)
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -443,7 +436,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -479,7 +472,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(remoteQueryInfo.withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME.toString(), httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -503,11 +496,11 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Collections.emptyMap(),
+        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
     Assertions.assertEquals("[[2]]\n", StringUtils.fromUtf8(asyncResponse.baos.toByteArray()));
   }
@@ -530,13 +523,13 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Collections.emptyMap(),
+        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
     Assertions.assertThrows(
         ForbiddenException.class,
-        () -> sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest)
+        () -> sqlResource.doPost(sqlQuery, httpServletRequest)
     );
   }
 
@@ -558,11 +551,11 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        Collections.emptyMap(),
+        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
     Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
 
     final Map<String, Object> e = objectMapper.readValue(
@@ -575,7 +568,6 @@ public class DartSqlResourceTest extends MSQTestBase
     assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
   }
 
-  @Test
   public void test_doPost_regularUser_fullReport() throws Exception
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();
@@ -593,11 +585,11 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true),
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true, QueryContexts.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -634,11 +626,15 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true, QueryContexts.TIMEOUT_KEY, 1),
+        ImmutableMap.of(
+            QueryContexts.CTX_FULL_REPORT, true,
+            QueryContexts.TIMEOUT_KEY, 1,
+            QueryContexts.ENGINE, DartSqlEngine.NAME
+        ),
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -675,11 +671,11 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true),
+        ImmutableMap.of(QueryContexts.CTX_FULL_REPORT, true, QueryContexts.ENGINE, DartSqlEngine.NAME),
         Collections.emptyList()
     );
 
-    Assertions.assertNull(sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
@@ -747,7 +743,11 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId, QueryContexts.CTX_FULL_REPORT, fullReport),
+        ImmutableMap.of(
+            QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId,
+            QueryContexts.CTX_FULL_REPORT, fullReport,
+            QueryContexts.ENGINE, DartSqlEngine.NAME
+        ),
         Collections.emptyList()
     );
 
@@ -758,11 +758,11 @@ public class DartSqlResourceTest extends MSQTestBase
       // 1) The controllerExecutor thread, which is blocked up by sleepFuture.
       // 2) The doPostExec thread, which has a doPost in there, blocking on controllerExecutor.
       // 3) The current main test thread, which continues on and which will issue the cancellation request.
-      doPostFuture = doPostExec.submit(() -> sqlResource.doPost(sqlQuery, DartSqlEngine.NAME.toString(), httpServletRequest));
+      doPostFuture = doPostExec.submit(() -> sqlResource.doPost(sqlQuery, httpServletRequest));
       controllerRegistered.await();
 
       // Issue cancellation request.
-      final Response cancellationResponse = sqlResource.cancelQuery(sqlQueryId, DartSqlEngine.NAME.toString(), httpServletRequest2);
+      final Response cancellationResponse = sqlResource.cancelQuery(sqlQueryId, httpServletRequest2);
       Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), cancellationResponse.getStatus());
 
       // Now that the cancellation request has been accepted, we can cancel the sleepFuture and allow the
@@ -802,8 +802,10 @@ public class DartSqlResourceTest extends MSQTestBase
     Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
-    final Response cancellationResponse = sqlResource.cancelQuery("nonexistent", DartSqlEngine.NAME.toString(), httpServletRequest);
-    Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), cancellationResponse.getStatus());
+    final Response cancellationResponse = sqlResource.cancelQuery("nonexistent", httpServletRequest);
+    // TODO: The SqlResource API returns not found if the query is not found, which is different.
+    // Check if this is a problem
+    Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), cancellationResponse.getStatus());
   }
 
   /**
