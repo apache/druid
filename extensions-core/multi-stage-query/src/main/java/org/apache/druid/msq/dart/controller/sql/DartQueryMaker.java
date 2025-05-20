@@ -271,7 +271,6 @@ public class DartQueryMaker implements QueryMaker
 
       try {
         Thread.currentThread().setName(nameThread(plannerContext));
-        Thread.sleep(30000);
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final TaskReportQueryListener queryListener = new TaskReportQueryListener(
@@ -349,12 +348,6 @@ public class DartQueryMaker implements QueryMaker
    */
   private Sequence<Object[]> runWithoutReport(final ControllerHolder controllerHolder)
   {
-    try {
-      Thread.sleep(30000);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
     return new BaseSequence<>(new ResultIteratorMaker(controllerHolder));
   }
 
