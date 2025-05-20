@@ -212,7 +212,8 @@ public class DartSqlResourceTest extends MSQTestBase
             StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
         ),
         new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
-        new ServerConfig()
+        new ServerConfig(),
+        new DefaultQueryConfig(ImmutableMap.of("foo", "bar"))
     );
 
     final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
