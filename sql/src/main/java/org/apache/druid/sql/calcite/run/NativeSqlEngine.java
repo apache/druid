@@ -77,7 +77,7 @@ public class NativeSqlEngine implements SqlEngine
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.jsonMapper = jsonMapper;
-    this.sqlStatementFactory = new SqlStatementFactory(toolbox.withEngine(this));;
+    this.sqlStatementFactory = new SqlStatementFactory(toolbox.withEngine(this));
   }
 
   @VisibleForTesting
