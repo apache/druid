@@ -404,42 +404,8 @@ public abstract class QueryResultPusher
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
-        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        // and encodes the string using ASCII, so 1 char is = 1 byte
-        ResponseContext.SerializationResult serializationResult;
-        try {
-          serializationResult = responseContext.serializeWith(
-              jsonMapper,
-              responseContextConfig.getMaxResponseContextHeaderSize()
-          );
-        }
-        catch (JsonProcessingException e) {
-          log.info(e, "Problem serializing to JSON!?");
-          serializationResult = new ResponseContext.SerializationResult("Could not serialize", "Could not serialize");
-        }
+        writeResponseContextHeader();
 
-        if (serializationResult.isTruncated()) {
-          final String logToPrint = StringUtils.format(
-              "Response Context truncated for id [%s]. Full context is [%s].",
-              queryId,
-              serializationResult.getFullResult()
-          );
-          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
-            log.error(logToPrint);
-            throw new QueryInterruptedException(
-                new TruncatedResponseContextException(
-                    "Serialized response context exceeds the max size[%s]",
-                    responseContextConfig.getMaxResponseContextHeaderSize()
-                ),
-                selfNode.getHostAndPortToUse()
-            );
-          } else {
-            log.warn(logToPrint);
-          }
-        }
-
-        response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
         response.setContentType(contentType.toString());
 
         if (response instanceof org.eclipse.jetty.server.Response) {
@@ -466,7 +432,7 @@ public abstract class QueryResultPusher
       }
     }
 
-    private void writeResponseContext()
+    private void writeResponseContextHeader()
     {
       // Limit the response-context header, see https://github.com/apache/druid/issues/2331
       // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
@@ -477,8 +443,6 @@ public abstract class QueryResultPusher
                 jsonMapper,
                 responseContextConfig.getMaxResponseContextHeaderSize()
         );
-        log.info("ResponseContext.serializationResult[%s], serializationRes.result[%s], serializationRes.fullResult[%s] responseContext.getMissingSegs[%s], isTrunc[%s]",
-                serializationResult, serializationResult.getResult(), serializationResult.getFullResult(), responseContext.getMissingSegments(), serializationResult.isTruncated());
       }
       catch (JsonProcessingException e) {
         log.info(e, "Problem serializing to JSON!?");
@@ -512,7 +476,6 @@ public abstract class QueryResultPusher
     @Nullable
     public Response accumulate(Response retVal, Object in)
     {
-      log.info("accumulate[%s], in[%s], initialized[%s]", retVal, in, initialized);
       if (!initialized) {
         initialize();
       }
@@ -529,12 +492,12 @@ public abstract class QueryResultPusher
 
     public void flush() throws IOException
     {
-      log.info("flush initialized[%s]", initialized);
       if (!initialized) {
         initialize();
       } else {
-        log.info("grrrr we'll still write the response context in the end");
-        writeResponseContext();
+        // Write the response context even if the response has already been initialized,
+        // since new entries may have been added later that need to be flushed in the end.
+        writeResponseContextHeader();
       }
       writer.writeResponseEnd();
     }

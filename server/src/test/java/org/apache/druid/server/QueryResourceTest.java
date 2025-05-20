@@ -540,71 +540,74 @@ public class QueryResourceTest
     );
 
     queryResource = new QueryResource(
-            new QueryLifecycleFactory(
-                    CONGLOMERATE,
-                    new QuerySegmentWalker()
-                    {
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+              {
+                return (queryPlus, responseContext) -> new BaseSequence<>(
+                    new BaseSequence.IteratorMaker<T, Iterator<T>>() {
                       @Override
-                      public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+                      public Iterator<T> make()
                       {
-                        return (queryPlus, responseContext) -> new BaseSequence<>(
-                                new BaseSequence.IteratorMaker<T, Iterator<T>>() {
-                                  @Override
-                                  public Iterator<T> make() {
-                                    List<T> data = Collections.singletonList((T) ImmutableMap.of("dummy", 1));
-                                    Iterator<T> realIterator = data.iterator();
+                        List<T> data = Collections.singletonList((T) ImmutableMap.of("dummy", 1));
+                        Iterator<T> realIterator = data.iterator();
 
-                                    return new Iterator<T>() {
-                                      private boolean done = false;
+                        return new Iterator<T>() {
+                          private boolean done = false;
 
-                                      @Override
-                                      public boolean hasNext() {
-                                        if (realIterator.hasNext()) {
-                                          return true;
-                                        } else if (!done) {
-                                          // Simulate a segment failure in the end after initialize() has run
-                                          responseContext.addMissingSegments(ImmutableList.of(missingSegDesc));
-                                          done = true;
-                                        }
-                                        return false;
-                                      }
+                          @Override
+                          public boolean hasNext()
+                          {
+                            if (realIterator.hasNext()) {
+                              return true;
+                            } else if (!done) {
+                              // Simulate a segment failure in the end after initialize() has run
+                              responseContext.addMissingSegments(ImmutableList.of(missingSegDesc));
+                              done = true;
+                            }
+                            return false;
+                          }
 
-                                      @Override
-                                      public T next() {
-                                        return realIterator.next();
-                                      }
-                                    };
-                                  }
-
-                                  @Override
-                                  public void cleanup(Iterator<T> iterFromMake)
-                                  {
-                                  }
-                                }
-                        );
+                          @Override
+                          public T next()
+                          {
+                            return realIterator.next();
+                          }
+                        };
                       }
 
                       @Override
-                      public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+                      public void cleanup(Iterator<T> iterFromMake)
                       {
-                        throw new UnsupportedOperationException();
                       }
-                    },
-                    new DefaultGenericQueryMetricsFactory(),
-                    new NoopServiceEmitter(),
-                    testRequestLogger,
-                    new AuthConfig(),
-                    NoopPolicyEnforcer.instance(),
-                    AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-                    Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
-            ),
-            jsonMapper,
-            smileMapper,
-            queryScheduler,
+                    }
+                );
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
             new AuthConfig(),
-            null,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        jsonMapper,
+        smileMapper,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
     );
 
     expectPermissiveHappyPathAuth();
@@ -613,9 +616,9 @@ public class QueryResourceTest
 
     // Execute the query
     Assert.assertNull(queryResource.doPost(
-            new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-            null,
-            testServletRequest
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null,
+        testServletRequest
     ));
 
 
