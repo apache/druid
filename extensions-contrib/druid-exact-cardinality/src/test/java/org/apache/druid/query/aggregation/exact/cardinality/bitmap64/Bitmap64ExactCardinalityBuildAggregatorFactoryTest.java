@@ -129,4 +129,4 @@ public class Bitmap64ExactCardinalityBuildAggregatorFactoryTest
     String expected = "Bitmap64ExactCardinalityBuildAggregatorFactory { name=" + NAME + ", fieldName=" + FIELD_NAME + " }";
     Assertions.assertEquals(expected, factory.toString());
   }
-} 
+}

@@ -156,4 +156,4 @@ public class Bitmap64ExactCardinalityPostAggregatorTest
     String expected = "Bitmap64ExactCardinalityPostAggregator{name='" + NAME + "', field=" + FIELD_NAME + "}";
     Assertions.assertEquals(expected, postAggregator.toString());
   }
-} 
+}

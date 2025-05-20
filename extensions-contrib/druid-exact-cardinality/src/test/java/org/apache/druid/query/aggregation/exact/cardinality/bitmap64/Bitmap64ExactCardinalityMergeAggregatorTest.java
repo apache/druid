@@ -96,7 +96,7 @@ public class Bitmap64ExactCardinalityMergeAggregatorTest
     EasyMock.verify(mockSelector);
   }
   
-    @Test
+  @Test
   public void testAggregateMultipleCountersIncludingNull()
   {
     RoaringBitmap64Counter inputCounter1 = new RoaringBitmap64Counter();
@@ -139,9 +139,9 @@ public class Bitmap64ExactCardinalityMergeAggregatorTest
   }
 
   @Test
-  public void testUnsupported()
+  public void testUnsupportedGetOperations()
   {
     Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getFloat());
     Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getLong());
   }
-} 
+}

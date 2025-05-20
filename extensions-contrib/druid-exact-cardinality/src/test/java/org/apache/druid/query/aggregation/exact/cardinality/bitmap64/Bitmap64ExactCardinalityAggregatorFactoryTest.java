@@ -26,10 +26,10 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
+import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.easymock.EasyMock;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -191,7 +191,11 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
   @Test
   public void testToString()
   {
-    String expected = "TestBitmap64ExactCardinalityAggregatorFactory { name=" + NAME + ", fieldName=" + FIELD_NAME + " }";
+    String expected = "TestBitmap64ExactCardinalityAggregatorFactory { name="
+                      + NAME
+                      + ", fieldName="
+                      + FIELD_NAME
+                      + " }";
     Assertions.assertEquals(expected, factory.toString());
   }
 
@@ -292,4 +296,4 @@ public class Bitmap64ExactCardinalityAggregatorFactoryTest
 
     Assertions.assertEquals(Bitmap64Counter.class, combiner.classOfObject());
   }
-} 
+}

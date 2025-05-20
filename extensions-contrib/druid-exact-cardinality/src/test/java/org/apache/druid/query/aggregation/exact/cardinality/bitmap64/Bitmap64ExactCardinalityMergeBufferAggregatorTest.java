@@ -225,4 +225,4 @@ public class Bitmap64ExactCardinalityMergeBufferAggregatorTest
     Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getDouble(buffer, POSITION_1));
     Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getFloat(buffer, POSITION_1));
   }
-} 
+}

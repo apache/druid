@@ -43,4 +43,4 @@ public class Bitmap64ExactCardinalityModuleTest
     Assertions.assertNotNull(mergeTypeNameSerde);
     Assertions.assertInstanceOf(Bitmap64ExactCardinalityMergeComplexMetricSerde.class, mergeTypeNameSerde);
   }
-} 
+}

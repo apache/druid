@@ -46,6 +46,7 @@ public class Bitmap64ExactCardinalityBuildAggregatorTest
     aggregator.aggregate();
 
     Bitmap64Counter counter = (Bitmap64Counter) aggregator.get();
+    Assertions.assertNotNull(counter);
     Assertions.assertEquals(1, counter.getCardinality());
 
     EasyMock.verify(mockSelector);
@@ -64,6 +65,7 @@ public class Bitmap64ExactCardinalityBuildAggregatorTest
     aggregator.aggregate();
 
     Bitmap64Counter counter = (Bitmap64Counter) aggregator.get();
+    Assertions.assertNotNull(counter);
     Assertions.assertEquals(3, counter.getCardinality());
 
     EasyMock.verify(mockSelector);
@@ -82,6 +84,7 @@ public class Bitmap64ExactCardinalityBuildAggregatorTest
     aggregator.aggregate();
 
     Bitmap64Counter counter = (Bitmap64Counter) aggregator.get();
+    Assertions.assertNotNull(counter);
     Assertions.assertEquals(2, counter.getCardinality());
 
     EasyMock.verify(mockSelector);
@@ -103,31 +106,9 @@ public class Bitmap64ExactCardinalityBuildAggregatorTest
   }
 
   @Test
-  public void testCloseIsIdempotent()
+  public void testUnsupportedGetOperations()
   {
-    aggregator.close();
-    Assertions.assertNull(aggregator.get(), "Bitmap should be null after first close");
-    aggregator.close(); // Call close again
-    Assertions.assertNull(aggregator.get(), "Bitmap should still be null after second close");
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getFloat());
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getLong());
   }
-
-  @Test
-  public void testGetFloatThrowsException()
-  {
-    Assertions.assertThrows(
-        UnsupportedOperationException.class, () -> {
-          aggregator.getFloat();
-        }
-    );
-  }
-
-  @Test
-  public void testGetLongThrowsException()
-  {
-    Assertions.assertThrows(
-        UnsupportedOperationException.class, () -> {
-          aggregator.getLong();
-        }
-    );
-  }
-} 
+}

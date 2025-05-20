@@ -133,4 +133,4 @@ public class Bitmap64ExactCardinalityMergeAggregatorFactoryTest
                       + " }";
     Assertions.assertEquals(expected, factory.toString());
   }
-} 
+}
