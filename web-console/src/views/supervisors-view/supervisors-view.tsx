@@ -726,9 +726,7 @@ export class SupervisorsView extends React.PureComponent<
           value={row.value}
           filters={filters}
           onFiltersChange={onFiltersChange}
-        >
-          {row.value}
-        </TableFilterableCell>
+        />
       );
     };
   }
