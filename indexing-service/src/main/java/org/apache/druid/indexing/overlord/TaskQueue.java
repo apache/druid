@@ -531,6 +531,8 @@ public class TaskQueue
       // insert the task into our queue. So don't catch it.
       final DateTime insertTime = DateTimes.nowUtc();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
+      // Note: the TaskEntry created for this task doesn't actually use the `insertTime` timestamp, it uses a new
+      // timestamp created in the ctor. This prevents races from occurring while syncFromStorage() is happening.
       addTaskInternal(task, insertTime);
       requestManagement();
       return true;
@@ -585,10 +587,11 @@ public class TaskQueue
           // Remove the task only if it doesn't have a more recent update
           if (prevEntry != null && prevEntry.lastUpdatedTime.isBefore(deleteTime)) {
             removedTask.set(prevEntry.task);
+            // Remove this taskId from activeTasks by mapping it to null
+            return null;
           }
-
-          // Remove this taskId from activeTasks by mapping it to null
-          return null;
+          // Preserve this taskId by returning the same reference
+          return prevEntry;
         }
     );
 
