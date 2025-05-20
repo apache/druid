@@ -79,7 +79,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -287,10 +287,10 @@ public class CalciteTests
   public static NativeSqlEngine createMockSqlEngine(
       final QuerySegmentWalker walker,
       final QueryRunnerFactoryConglomerate conglomerate,
-      final SqlToolbox toolbox
+      final SqlStatementFactory sqlStatementFactory
   )
   {
-    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper(), toolbox);
+    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper(), sqlStatementFactory);
   }
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(

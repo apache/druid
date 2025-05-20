@@ -287,7 +287,6 @@ public class SqlResourceTest extends CalciteTestBase
         defaultQueryConfig,
         lifecycleManager
     );
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlToolbox);
     sqlStatementFactory = new SqlStatementFactory(null)
     {
       @Override
@@ -297,7 +296,7 @@ public class SqlResourceTest extends CalciteTestBase
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
-            sqlToolbox,
+            sqlToolbox.withEngine(engine),
             sqlQuery,
             req,
             validateAndAuthorizeLatchSupplier,
@@ -323,6 +322,7 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
@@ -1647,7 +1647,7 @@ public class SqlResourceTest extends CalciteTestBase
           }
         },
         lifecycleManager,
-        Map.of(),
+        Map.of(NativeSqlEngine.NAME, engine),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );

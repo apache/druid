@@ -41,6 +41,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
@@ -186,7 +187,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     PlannerContext context = PlannerContext.create(
         toolbox,
         "SELECT 1",
-        new NativeSqlEngine(queryLifecycleFactory, mapper, null),
+        new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
         Collections.emptyMap(),
         null
     );
@@ -206,7 +207,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     PlannerContext contextWithBloat = PlannerContext.create(
             toolbox,
             "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper, null),
+            new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             null
     );
@@ -214,7 +215,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     PlannerContext contextWithoutBloat = PlannerContext.create(
             toolbox,
             "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper, null),
+            new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             Collections.emptyMap(),
             null
     );

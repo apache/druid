@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
@@ -65,7 +66,7 @@ public class NativeSqlEngine implements SqlEngine
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final ObjectMapper jsonMapper;
-  private final SqlToolbox toolbox;
+  private final SqlStatementFactory sqlStatementFactory;
 
   @Inject
   public NativeSqlEngine(
@@ -76,7 +77,19 @@ public class NativeSqlEngine implements SqlEngine
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.jsonMapper = jsonMapper;
-    this.toolbox = toolbox;
+    this.sqlStatementFactory = new SqlStatementFactory(toolbox.withEngine(this));;
+  }
+
+  @VisibleForTesting
+  public NativeSqlEngine(
+      final QueryLifecycleFactory queryLifecycleFactory,
+      final ObjectMapper jsonMapper,
+      final SqlStatementFactory sqlStatementFactory
+  )
+  {
+    this.queryLifecycleFactory = queryLifecycleFactory;
+    this.jsonMapper = jsonMapper;
+    this.sqlStatementFactory = sqlStatementFactory;
   }
 
   @Override
@@ -178,7 +191,7 @@ public class NativeSqlEngine implements SqlEngine
   @Override
   public SqlStatementFactory getSqlStatementFactory()
   {
-    return new SqlStatementFactory(toolbox.withEngine(this));
+    return sqlStatementFactory;
   }
 
   @Override
