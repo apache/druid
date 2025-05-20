@@ -186,7 +186,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     PlannerContext context = PlannerContext.create(
         toolbox,
         "SELECT 1",
-        new NativeSqlEngine(queryLifecycleFactory, mapper),
+        new NativeSqlEngine(queryLifecycleFactory, mapper, null),
         Collections.emptyMap(),
         null
     );
@@ -206,7 +206,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     PlannerContext contextWithBloat = PlannerContext.create(
             toolbox,
             "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper),
+            new NativeSqlEngine(queryLifecycleFactory, mapper, null),
             Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             null
     );
@@ -214,7 +214,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     PlannerContext contextWithoutBloat = PlannerContext.create(
             toolbox,
             "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper),
+            new NativeSqlEngine(queryLifecycleFactory, mapper, null),
             Collections.emptyMap(),
             null
     );

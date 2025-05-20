@@ -280,7 +280,7 @@ public class CalciteTests
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper());
+    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper(), null);
   }
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(

@@ -330,6 +330,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig(),
         Map.of(NativeSqlEngine.NAME, nativeQueryManager),
+        null,
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1648,6 +1649,7 @@ public class SqlResourceTest extends CalciteTestBase
           }
         },
         Map.of(NativeSqlEngine.NAME, nativeQueryManager),
+        null,
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );

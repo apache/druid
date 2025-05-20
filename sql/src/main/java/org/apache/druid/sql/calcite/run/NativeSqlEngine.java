@@ -31,6 +31,8 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -58,15 +60,18 @@ public class NativeSqlEngine implements SqlEngine
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final ObjectMapper jsonMapper;
+  private final SqlToolbox toolbox;
 
   @Inject
   public NativeSqlEngine(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final SqlToolbox toolbox
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.jsonMapper = jsonMapper;
+    this.toolbox = toolbox;
   }
 
   @Override
@@ -163,5 +168,11 @@ public class NativeSqlEngine implements SqlEngine
     if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
       throw InvalidSqlInput.exception("Join algorithm [%s] is not supported by engine [%s]", joinAlgorithm, NAME);
     }
+  }
+
+  @Override
+  public SqlStatementFactory getSqlStatementFactory()
+  {
+    return new SqlStatementFactory(toolbox.withEngine(this));
   }
 }

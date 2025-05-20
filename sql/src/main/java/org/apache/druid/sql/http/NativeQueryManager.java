@@ -21,14 +21,11 @@ package org.apache.druid.sql.http;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.function.Function;
@@ -66,19 +63,5 @@ public class NativeQueryManager implements QueryManager
     } else {
       return Response.status(Response.Status.FORBIDDEN).build();
     }
-  }
-
-  @Override
-  public List<QueryInfo> getRunningQueries(boolean selfOnly)
-  {
-    throw DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.UNSUPPORTED)
-                        .build("getRunningQueries is not supported for native queries.");
-  }
-
-  @Override
-  public HttpStatement doPost(SqlQuery sqlQuery, HttpServletRequest req)
-  {
-    return sqlStatementFactory.httpStatement(sqlQuery, req);
   }
 }

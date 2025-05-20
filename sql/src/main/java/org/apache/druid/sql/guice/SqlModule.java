@@ -45,6 +45,7 @@ import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
@@ -132,6 +133,10 @@ public class SqlModule implements Module
     MapBinder.newMapBinder(binder, String.class, QueryManager.class)
              .addBinding(NativeSqlEngine.NAME)
              .to(NativeQueryManager.class)
+             .in(LazySingleton.class);
+    MapBinder.newMapBinder(binder, String.class, SqlEngine.class)
+             .addBinding(NativeSqlEngine.NAME)
+             .to(NativeSqlEngine.class)
              .in(LazySingleton.class);
   }
 

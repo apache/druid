@@ -52,6 +52,7 @@ import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.http.QueryManager;
 
 import java.util.Collections;
@@ -101,6 +102,10 @@ public class DartControllerModule implements DruidModule
       MapBinder.newMapBinder(binder, String.class, QueryManager.class)
                .addBinding(DartSqlEngine.NAME)
                .to(DartQueryManager.class)
+               .in(LazySingleton.class);
+      MapBinder.newMapBinder(binder, String.class, SqlEngine.class)
+               .addBinding(DartSqlEngine.NAME)
+               .to(DartSqlEngine.class)
                .in(LazySingleton.class);
     }
 

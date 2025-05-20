@@ -46,6 +46,7 @@ import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlRowTransformer;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -88,6 +89,7 @@ public class SqlResource
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
   private final Map<String, QueryManager> queryManagers;
+  private final Map<String, SqlEngine> engines;
 
   @VisibleForTesting
   @Inject
@@ -96,10 +98,12 @@ public class SqlResource
       final AuthorizerMapper authorizerMapper,
       final ServerConfig serverConfig,
       final Map<String, QueryManager> queryManagers,
+      final Map<String, SqlEngine> engines,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode
   )
   {
+    this.engines = engines;
     log.error("RESOURCE[%s]", queryManagers);
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
@@ -115,7 +119,7 @@ public class SqlResource
   public Response getSupportedEngines(@Context final HttpServletRequest request)
   {
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
-    return Response.ok(new SupportedEnginesResponse(queryManagers.keySet())).build();
+    return Response.ok(new SupportedEnginesResponse(engines.keySet())).build();
   }
 
   /**
@@ -141,12 +145,12 @@ public class SqlResource
         authorizerMapper
     );
 
-    QueryManager queryManager = getQueryManager(engine);
-    if (queryManager == null) {
+    SqlEngine sqlEngine = getEngine(engine);
+    if (sqlEngine == null) {
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
 
-    List<QueryInfo> queries = queryManager.getRunningQueries(selfOnly != null);
+    List<QueryInfo> queries = sqlEngine.getRunningQueries(selfOnly != null);
 
     final GetQueriesResponse response;
     if (stateReadAccess.allowAccessWithNoRestriction()) {
@@ -177,15 +181,15 @@ public class SqlResource
   @Nullable
   public Response doPost(
       final SqlQuery sqlQuery,
-      @QueryParam("engine") String engineString,
+      @QueryParam("engine") String engineString, // TODO: remove and just use query context
       @Context final HttpServletRequest req
   )
   {
-    QueryManager queryManager = getQueryManager(engineString);
-    if (queryManager == null) {
+    SqlEngine engine = getEngine(engineString);
+    if (engine == null) {
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
     }
-    final HttpStatement stmt = queryManager.doPost(sqlQuery, req);
+    final HttpStatement stmt = engine.getSqlStatementFactory().httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
 
@@ -222,6 +226,11 @@ public class SqlResource
   private QueryManager getQueryManager(final String engine)
   {
     return queryManagers.getOrDefault(engine == null ? QueryContexts.DEFAULT_ENGINE : engine, null);
+  }
+
+  private SqlEngine getEngine(final String engine)
+  {
+    return engines.getOrDefault(engine == null ? QueryContexts.DEFAULT_ENGINE : engine, null);
   }
 
   /**

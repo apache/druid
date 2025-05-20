@@ -213,7 +213,9 @@ public class DartSqlResourceTest extends MSQTestBase
         ),
         new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
         new ServerConfig(),
-        new DefaultQueryConfig(ImmutableMap.of("foo", "bar"))
+        new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
+        null,
+        null
     );
 
     final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
@@ -267,6 +269,7 @@ public class DartSqlResourceTest extends MSQTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig() /* currently only used for error transform strategy */,
         Map.of(DartSqlEngine.NAME, dartQueryManager),
+        null,
         ResponseContextConfig.newConfig(false),
         SELF_NODE
     );
