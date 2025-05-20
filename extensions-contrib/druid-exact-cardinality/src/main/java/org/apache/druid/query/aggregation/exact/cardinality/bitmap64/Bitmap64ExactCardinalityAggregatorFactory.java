@@ -97,9 +97,9 @@ public abstract class Bitmap64ExactCardinalityAggregatorFactory extends Aggregat
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner()
+  public AggregateCombiner<Bitmap64Counter> makeAggregateCombiner()
   {
-    return new ObjectAggregateCombiner<Bitmap64Counter>()
+    return new ObjectAggregateCombiner<>()
     {
       private Bitmap64Counter union = new RoaringBitmap64Counter();
 
