@@ -27,10 +27,12 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -41,10 +43,13 @@ import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @LazySingleton
 public class NativeSqlEngine implements SqlEngine
 {
+  private static final Logger log = new Logger(NativeSqlEngine.class);
+
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS = ImmutableSet.of(
       TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME,
       TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME,
@@ -174,5 +179,16 @@ public class NativeSqlEngine implements SqlEngine
   public SqlStatementFactory getSqlStatementFactory()
   {
     return new SqlStatementFactory(toolbox.withEngine(this));
+  }
+
+  @Override
+  public void cancel(PlannerContext plannerContext, QueryScheduler queryScheduler)
+  {
+    final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
+
+    for (String nativeQueryId : nativeQueryIds) {
+      log.debug("Canceling native query [%s]", nativeQueryId);
+      queryScheduler.cancelQuery(nativeQueryId);
+    }
   }
 }

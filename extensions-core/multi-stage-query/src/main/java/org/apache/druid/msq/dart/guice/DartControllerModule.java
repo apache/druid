@@ -42,7 +42,6 @@ import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.DartMessageRelayFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelays;
-import org.apache.druid.msq.dart.controller.DartQueryManager;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactoryImpl;
@@ -53,7 +52,6 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.http.QueryManager;
 
 import java.util.Collections;
 import java.util.List;
@@ -99,10 +97,6 @@ public class DartControllerModule implements DruidModule
       binder.bind(ResourcePermissionMapper.class)
             .annotatedWith(Dart.class)
             .to(DartResourcePermissionMapper.class);
-      MapBinder.newMapBinder(binder, String.class, QueryManager.class)
-               .addBinding(DartSqlEngine.NAME)
-               .to(DartQueryManager.class)
-               .in(LazySingleton.class);
       MapBinder.newMapBinder(binder, String.class, SqlEngine.class)
                .addBinding(DartSqlEngine.NAME)
                .to(DartSqlEngine.class)

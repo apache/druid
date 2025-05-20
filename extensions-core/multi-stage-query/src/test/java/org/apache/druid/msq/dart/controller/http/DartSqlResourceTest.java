@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
-import org.apache.druid.msq.dart.controller.DartQueryManager;
 import org.apache.druid.msq.dart.controller.sql.DartQueryMaker;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClient;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
@@ -71,7 +70,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleManager;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -256,19 +254,19 @@ public class DartSqlResourceTest extends MSQTestBase
         lifecycleManager
     );
 
-    DartQueryManager dartQueryManager = new DartQueryManager(
-        controllerRegistry,
-        dartSqlClients,
-        lifecycleManager,
-        new DefaultQueryConfig(ImmutableMap.of()),
-        new SqlStatementFactory(toolbox)
-    );
+    //    DartQueryManager dartQueryManager = new DartQueryManager(
+    //        controllerRegistry,
+    //        dartSqlClients,
+    //        lifecycleManager,
+    //        new DefaultQueryConfig(ImmutableMap.of()),
+    //        new SqlStatementFactory(toolbox)
+    //    );
 
     sqlResource = new SqlResource(
         objectMapper,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig() /* currently only used for error transform strategy */,
-        Map.of(DartSqlEngine.NAME, dartQueryManager),
+        null,
         null,
         ResponseContextConfig.newConfig(false),
         SELF_NODE

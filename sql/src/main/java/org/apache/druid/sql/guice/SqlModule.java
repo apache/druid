@@ -52,8 +52,6 @@ import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewModule;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
-import org.apache.druid.sql.http.NativeQueryManager;
-import org.apache.druid.sql.http.QueryManager;
 import org.apache.druid.sql.http.SqlHttpModule;
 
 import java.util.Properties;
@@ -129,11 +127,7 @@ public class SqlModule implements Module
     // Default do-nothing catalog resolver
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
 
-    // Bind the native query manager.
-    MapBinder.newMapBinder(binder, String.class, QueryManager.class)
-             .addBinding(NativeSqlEngine.NAME)
-             .to(NativeQueryManager.class)
-             .in(LazySingleton.class);
+    // Bind the engine TODO: is this the right place now that it's an engine?
     MapBinder.newMapBinder(binder, String.class, SqlEngine.class)
              .addBinding(NativeSqlEngine.NAME)
              .to(NativeSqlEngine.class)

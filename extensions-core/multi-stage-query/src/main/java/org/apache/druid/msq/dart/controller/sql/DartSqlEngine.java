@@ -32,17 +32,21 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
@@ -67,6 +71,7 @@ import java.util.stream.Collectors;
 public class DartSqlEngine implements SqlEngine
 {
   public static final String NAME = "msq-dart";
+  private static final Logger log = new Logger(DartSqlEngine.class);
 
   private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
@@ -284,5 +289,24 @@ public class DartSqlEngine implements SqlEngine
     // Sort queries by start time, breaking ties by query ID, so the list comes back in a consistent and nice order.
     queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
     return List.copyOf(queries);
+  }
+
+  @Override
+  public void cancel(PlannerContext plannerContext, QueryScheduler queryScheduler)
+  {
+    final Object dartQueryId = plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID);
+    if (dartQueryId instanceof String) {
+      final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
+      if (holder != null) {
+        holder.cancel(CancellationReason.USER_REQUEST);
+      }
+    } else {
+      log.warn(
+          "%s[%s] for query[%s] is not a string, cannot cancel.",
+          QueryContexts.CTX_DART_QUERY_ID,
+          dartQueryId,
+          "" // TODO: sqlQueryId
+      );
+    }
   }
 }

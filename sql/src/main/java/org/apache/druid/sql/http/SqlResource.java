@@ -44,6 +44,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -88,7 +89,7 @@ public class SqlResource
   private final ServerConfig serverConfig;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
-  private final Map<String, QueryManager> queryManagers;
+  private final SqlLifecycleManager sqlLifecycleManager;
   private final Map<String, SqlEngine> engines;
 
   @VisibleForTesting
@@ -97,20 +98,19 @@ public class SqlResource
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
       final ServerConfig serverConfig,
-      final Map<String, QueryManager> queryManagers,
+      final SqlLifecycleManager sqlLifecycleManager,
       final Map<String, SqlEngine> engines,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode
   )
   {
     this.engines = engines;
-    log.error("RESOURCE[%s]", queryManagers);
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
-    this.queryManagers = queryManagers;
+    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
   }
 
   @GET
@@ -215,17 +215,21 @@ public class SqlResource
   {
     log.debug("Received cancel request for query [%s]", sqlQueryId);
 
-    final QueryManager queryManager = getQueryManager(engineString);
-    if (queryManager == null) {
-      return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
+    List<Cancelable> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
+    if (lifecycles.isEmpty()) {
+      return Response.status(Status.NOT_FOUND).build();
     }
 
-    return queryManager.cancelQuery(sqlQueryId, cancelables -> authorizeCancellation(req, cancelables));
-  }
+    final AuthorizationResult authResult = authorizeCancellation(req, lifecycles);
 
-  private QueryManager getQueryManager(final String engine)
-  {
-    return queryManagers.getOrDefault(engine == null ? QueryContexts.DEFAULT_ENGINE : engine, null);
+    if (authResult.allowAccessWithNoRestriction()) {
+      // should remove only the lifecycles in the snapshot.
+      sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
+      lifecycles.forEach(Cancelable::cancel);
+      return Response.status(Status.ACCEPTED).build();
+    } else {
+      return Response.status(Status.FORBIDDEN).build();
+    }
   }
 
   private SqlEngine getEngine(final String engine)

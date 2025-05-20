@@ -35,7 +35,6 @@ public class SqlHttpModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(SqlResource.class).in(LazySingleton.class);
-    MapBinder.newMapBinder(binder, String.class, QueryManager.class);
     MapBinder.newMapBinder(binder, String.class, SqlEngine.class);
     Jerseys.addResource(binder, SqlResource.class);
   }

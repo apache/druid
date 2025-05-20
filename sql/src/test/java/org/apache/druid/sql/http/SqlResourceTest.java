@@ -181,7 +181,6 @@ public class SqlResourceTest extends CalciteTestBase
   private NativeSqlEngine engine;
   private SqlStatementFactory sqlStatementFactory;
   private StubServiceEmitter stubServiceEmitter;
-  private NativeQueryManager nativeQueryManager;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -324,12 +323,12 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
-    nativeQueryManager = new NativeQueryManager(lifecycleManager, sqlStatementFactory);
+    //    nativeQueryManager = new NativeQueryManager(lifecycleManager, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig(),
-        Map.of(NativeSqlEngine.NAME, nativeQueryManager),
+        null,
         null,
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
@@ -1648,7 +1647,7 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
-        Map.of(NativeSqlEngine.NAME, nativeQueryManager),
+        null,
         null,
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE

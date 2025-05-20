@@ -23,6 +23,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
@@ -126,6 +127,11 @@ public interface SqlEngine
   }
 
   default List<QueryInfo> getRunningQueries(boolean selfOnly)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  default void cancel(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
     throw new UnsupportedOperationException();
   }
