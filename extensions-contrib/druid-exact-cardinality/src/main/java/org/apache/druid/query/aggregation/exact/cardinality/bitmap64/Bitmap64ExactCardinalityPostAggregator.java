@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-@JsonTypeName("bitmap64ExactCountCardinality")
+@JsonTypeName("bitmap64ExactCardinality")
 public class Bitmap64ExactCardinalityPostAggregator implements PostAggregator
 {
   private final String name;
@@ -102,7 +102,7 @@ public class Bitmap64ExactCardinalityPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.BITMAP64_EXACT_COUNT_MERGE_TYPE_ID)
+    return new CacheKeyBuilder(PostAggregatorIds.BITMAP64_EXACT_CARDINALITY_TYPE_ID)
         .appendString(fieldName)
         .build();
   }
@@ -110,7 +110,7 @@ public class Bitmap64ExactCardinalityPostAggregator implements PostAggregator
   @Override
   public String toString()
   {
-    return "Bitmap64ExactCountPostAggregator{" +
+    return "Bitmap64ExactCardinalityPostAggregator{" +
            "name='" + name + '\'' +
            ", field=" + fieldName +
            '}';

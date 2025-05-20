@@ -17,16 +17,16 @@
   ~ under the License.
   -->
 
-This module provides exact distinct count for long type column.
+This module provides exact cardinality count for long type column.
 
-Usage for `Bitmap64ExactCountBuild` and `Bitmap64ExactCountMerge`:
+Usage for `Bitmap64ExactCardinalityBuild` and `Bitmap64ExactCardinalityMerge`:
 Kafka ingestion task spec:
 ```
 {
   "type": "kafka",
   "spec": {
     "dataSchema": {
-      "dataSource": "ticker_event_bitmap64_exact_count_rollup",
+      "dataSource": "ticker_event_bitmap64_exact_cardinality_rollup",
       "timestampSpec": {
         "column": "timestamp",
         "format": "millis",
@@ -43,8 +43,8 @@ Kafka ingestion task spec:
       },
       "metricsSpec": [
         {
-          "type": "Bitmap64ExactCountBuild",
-          "name": "count",
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "cardinality",
           "fieldName": "value"
         }
       ],
@@ -97,7 +97,7 @@ Query from rollup datasource:
   "queryType": "timeseries",
   "dataSource": {
     "type": "table",
-    "name": "ticker_event_bitmap64_exact_count_rollup"
+    "name": "ticker_event_bitmap64_exact_cardinality_rollup"
   },
   "intervals": {
     "type": "intervals",
@@ -113,9 +113,9 @@ Query from rollup datasource:
   },
   "aggregations": [
     {
-      "type": "Bitmap64ExactCountMerge",
+      "type": "Bitmap64ExactCardinalityMerge",
       "name": "a0",
-      "fieldName": "count"
+      "fieldName": "cardinality"
     }
   ],
   "postAggregations": [],
@@ -128,7 +128,7 @@ query with post aggregator:
   "queryType": "timeseries",
   "dataSource": {
     "type": "table",
-    "name": "ticker_event_bitmap64_exact_count_rollup"
+    "name": "ticker_event_bitmap64_exact_cardinality_rollup"
   },
   "intervals": {
     "type": "intervals",
@@ -144,13 +144,13 @@ query with post aggregator:
   },
   "aggregations": [
     {
-      "type": "count",
+      "type": "cardinality",
       "name": "cnt"
     },
     {
-      "type": "Bitmap64ExactCountMerge",
+      "type": "Bitmap64ExactCardinalityMerge",
       "name": "a0",
-      "fieldName": "count"
+      "fieldName": "cardinality"
     }
   ],
   "postAggregations": [
@@ -159,7 +159,7 @@ query with post aggregator:
       "fn": "/",
       "fields": [
         {
-          "type": "bitmap64ExactCountCardinality",
+          "type": "bitmap64ExactCardinality",
           "name": "a0",
           "fieldName": "a0"
         },
@@ -177,13 +177,13 @@ query with post aggregator:
 ```
 sql query:
 ```
-SELECT "key", BITMAP64_EXACT_COUNT("count")
-FROM "ticker_event_bitmap64_exact_count_rollup"
+SELECT "key", BITMAP64_EXACT_CARDINALITY("cardinality")
+FROM "ticker_event_bitmap64_exact_cardinality_rollup"
 WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
 GROUP BY key
 ```
 
-Note: this `longExactCount` aggregator is recommended to use in `timeseries` type query though it also works for `topN` 
+Note: this `longExactCardinality` aggregator is recommended to use in `timeseries` type query though it also works for `topN` 
 and `groupBy` query. eg:
 ```
 {
@@ -203,8 +203,8 @@ and `groupBy` query. eg:
   },
   "aggregations": [
     {
-      "type": "longExactCount",
-      "name": "exactCount",
+      "type": "longExactCardinality",
+      "name": "ExactCardinality",
       "fieldName": "value",
       "expression": null
     }
@@ -227,7 +227,7 @@ and `groupBy` query. eg:
   },
   "aggregations": [
     {
-      "type": "longExactCount",
+      "type": "longExactCardinality",
       "name": "a0",
       "fieldName": "value"
     }

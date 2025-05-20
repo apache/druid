@@ -52,10 +52,10 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
-public class Bitmap64ExactCountSqlAggregator implements SqlAggregator
+public class Bitmap64ExactCardinalitySqlAggregator implements SqlAggregator
 {
 
-  private static final String NAME = "BITMAP64_EXACT_COUNT";
+  private static final String NAME = "BITMAP64_EXACT_CARDINALITY";
   private static final SqlAggFunction FUNCTION_INSTANCE = OperatorConversions.aggregatorBuilder(NAME)
                                                                              .operandNames("column")
                                                                              .operandTypes(SqlTypeFamily.ANY)

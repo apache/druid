@@ -14,4 +14,3 @@
 # limitations under the License.
 
 org.apache.druid.query.aggregation.exact.cardinality.bitmap64.Bitmap64ExactCardinalityModule
-org.apache.druid.query.aggregation.exactcount.bitmap32.Bitmap32ExactCountModule

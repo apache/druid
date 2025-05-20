@@ -43,7 +43,7 @@ public class Bitmap64ExactCardinalityBuildAggregatorFactory extends Bitmap64Exac
   @Override
   protected byte getCacheTypeId()
   {
-    return AggregatorUtil.BITMAP64_EXACT_COUNT_BUILD_CACHE_TYPE_ID;
+    return AggregatorUtil.BITMAP64_EXACT_CARDINALITY_BUILD_CACHE_TYPE_ID;
   }
 
   @Override

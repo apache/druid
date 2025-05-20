@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.query.aggregation.exact.cardinality.bitmap64.sql.Bitmap64ExactCountSqlAggregator;
+import org.apache.druid.query.aggregation.exact.cardinality.bitmap64.sql.Bitmap64ExactCardinalitySqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -34,19 +34,19 @@ import java.util.List;
 
 public class Bitmap64ExactCardinalityModule implements DruidModule
 {
-  public static final String TYPE_NAME = "Bitmap64ExactCount"; // common type name to be associated with segment data
-  public static final String BUILD_TYPE_NAME = "Bitmap64ExactCountBuild";
-  public static final String MERGE_TYPE_NAME = "Bitmap64ExactCountMerge";
+  public static final String TYPE_NAME = "Bitmap64ExactCardinality"; // common type name to be associated with segment data
+  public static final String BUILD_TYPE_NAME = "Bitmap64ExactCardinalityBuild";
+  public static final String MERGE_TYPE_NAME = "Bitmap64ExactCardinalityMerge";
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return Collections.singletonList(
-        new SimpleModule("Bitmap64ExactCountModule")
+        new SimpleModule("Bitmap64ExactCardinalityModule")
             .registerSubtypes(
                 new NamedType(Bitmap64ExactCardinalityMergeAggregatorFactory.class, MERGE_TYPE_NAME),
                 new NamedType(Bitmap64ExactCardinalityBuildAggregatorFactory.class, BUILD_TYPE_NAME),
-                new NamedType(Bitmap64ExactCardinalityPostAggregator.class, "bitmap64ExactCountCardinality")
+                new NamedType(Bitmap64ExactCardinalityPostAggregator.class, "bitmap64ExactCardinality")
             )
             .addSerializer(
                 RoaringBitmap64Counter.class,
@@ -59,7 +59,7 @@ public class Bitmap64ExactCardinalityModule implements DruidModule
   public void configure(Binder binder)
   {
     registerSerde();
-    SqlBindings.addAggregator(binder, Bitmap64ExactCountSqlAggregator.class);
+    SqlBindings.addAggregator(binder, Bitmap64ExactCardinalitySqlAggregator.class);
   }
 
   @VisibleForTesting
