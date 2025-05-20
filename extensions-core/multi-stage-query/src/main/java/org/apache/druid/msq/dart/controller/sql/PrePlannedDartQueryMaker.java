@@ -42,8 +42,8 @@ import java.util.Map.Entry;
 
 /**
  * Executes Dart queries with up-front planned {@link QueryDefinition}.
- *
- * Normal execution flow utilizes {@link QueryKit} to prdocue the plan;
+ * <p>
+ * Normal execution flow utilizes {@code QueryKit} to prdocue the plan;
  * meanwhile it also supports planning the {@link QueryDefinition} directly from
  * the {@link DruidLogicalNode}.
  */

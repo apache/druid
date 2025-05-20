@@ -124,7 +124,6 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
 
   static class DartTestOverrideModule implements DruidModule
   {
-
     @Provides
     @LazySingleton
     public DruidMeta createMeta(DartDruidMeta druidMeta)
