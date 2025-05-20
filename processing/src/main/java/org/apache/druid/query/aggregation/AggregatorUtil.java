@@ -171,11 +171,6 @@ public class AggregatorUtil
   public static final byte BITMAP64_EXACT_COUNT_BUILD_CACHE_TYPE_ID = 0x60;
   public static final byte BITMAP64_EXACT_COUNT_MERGE_CACHE_TYPE_ID = 0x61;
 
-  // Bitmap32 exact count aggregator
-  public static final byte BITMAP32_EXACT_COUNT_BUILD_CACHE_TYPE_ID = 0x62;
-  public static final byte BITMAP32_EXACT_COUNT_MERGE_CACHE_TYPE_ID = 0x63;
-
-
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators
    * required to compute the output column.
