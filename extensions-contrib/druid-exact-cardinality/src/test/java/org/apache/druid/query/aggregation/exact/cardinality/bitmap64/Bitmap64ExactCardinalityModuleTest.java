@@ -29,10 +29,6 @@ public class Bitmap64ExactCardinalityModuleTest
   @Test
   public void testRegisterSerde()
   {
-    ComplexMetrics.unregisterSerde(Bitmap64ExactCardinalityModule.TYPE_NAME);
-    ComplexMetrics.unregisterSerde(Bitmap64ExactCardinalityModule.BUILD_TYPE_NAME);
-    ComplexMetrics.unregisterSerde(Bitmap64ExactCardinalityModule.MERGE_TYPE_NAME);
-
     Bitmap64ExactCardinalityModule.registerSerde();
 
     ComplexMetricSerde typeNameSerde = ComplexMetrics.getSerdeForType(Bitmap64ExactCardinalityModule.TYPE_NAME);

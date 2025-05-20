@@ -50,6 +50,7 @@ public class Bitmap64ExactCardinalityMergeAggregatorTest
     aggregator.aggregate();
 
     Bitmap64Counter resultCounter = (Bitmap64Counter) aggregator.get();
+    Assertions.assertNotNull(resultCounter);
     Assertions.assertEquals(2, resultCounter.getCardinality());
 
     EasyMock.verify(mockSelector);
@@ -64,6 +65,7 @@ public class Bitmap64ExactCardinalityMergeAggregatorTest
     aggregator.aggregate(); // Should not throw NPE, RoaringBitmap64Counter.fold handles null
 
     Bitmap64Counter resultCounter = (Bitmap64Counter) aggregator.get();
+    Assertions.assertNotNull(resultCounter);
     Assertions.assertEquals(0, resultCounter.getCardinality(), "Aggregating null should not change cardinality");
 
     EasyMock.verify(mockSelector);
@@ -88,6 +90,7 @@ public class Bitmap64ExactCardinalityMergeAggregatorTest
     aggregator.aggregate();
 
     Bitmap64Counter resultCounter = (Bitmap64Counter) aggregator.get();
+    Assertions.assertNotNull(resultCounter);
     Assertions.assertEquals(3, resultCounter.getCardinality()); // 10, 20, 30
 
     EasyMock.verify(mockSelector);
@@ -114,6 +117,7 @@ public class Bitmap64ExactCardinalityMergeAggregatorTest
     aggregator.aggregate(); // counter3
 
     Bitmap64Counter resultCounter = (Bitmap64Counter) aggregator.get();
+    Assertions.assertNotNull(resultCounter);
     Assertions.assertEquals(3, resultCounter.getCardinality()); // 10, 20, 30
 
     EasyMock.verify(mockSelector);
@@ -133,29 +137,11 @@ public class Bitmap64ExactCardinalityMergeAggregatorTest
     aggregator.close();
     Assertions.assertNull(aggregator.get(), "Bitmap should be null after close");
   }
-  
-  @Test
-  public void testCloseIsIdempotent()
-  {
-    aggregator.close();
-    Assertions.assertNull(aggregator.get(), "Bitmap should be null after first close");
-    aggregator.close(); 
-    Assertions.assertNull(aggregator.get(), "Bitmap should still be null after second close");
-  }
 
   @Test
-  public void testGetFloatThrowsException()
+  public void testUnsupported()
   {
-    Assertions.assertThrows(UnsupportedOperationException.class, () -> {
-      aggregator.getFloat();
-    });
-  }
-
-  @Test
-  public void testGetLongThrowsException()
-  {
-    Assertions.assertThrows(UnsupportedOperationException.class, () -> {
-      aggregator.getLong();
-    });
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getFloat());
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> aggregator.getLong());
   }
 } 

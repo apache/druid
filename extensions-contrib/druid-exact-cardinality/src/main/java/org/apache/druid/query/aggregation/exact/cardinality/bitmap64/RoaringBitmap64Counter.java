@@ -75,7 +75,10 @@ public class RoaringBitmap64Counter implements Bitmap64Counter
   @Override
   public Bitmap64Counter fold(Bitmap64Counter rhs)
   {
-    bitmap.or(((RoaringBitmap64Counter) rhs).bitmap);
+    if (rhs != null) {
+      bitmap.or(((RoaringBitmap64Counter) rhs).bitmap);
+    }
+
     return this;
   }
 

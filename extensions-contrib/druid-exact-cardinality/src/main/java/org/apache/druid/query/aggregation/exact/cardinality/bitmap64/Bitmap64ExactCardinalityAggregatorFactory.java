@@ -167,7 +167,7 @@ public abstract class Bitmap64ExactCardinalityAggregatorFactory extends Aggregat
   }
 
   @Override
-  public boolean equals(final Object object)
+  public boolean equals(Object object)
   {
     if (this == object) {
       return true;
