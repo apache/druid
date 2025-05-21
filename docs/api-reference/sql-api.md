@@ -154,7 +154,12 @@ If you detect a truncated response, treat it as an error.
 
 #### Sample request
 
-The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`. The query is assigned the ID `request01` using the `sqlQueryId` context parameter. The optional properties `header`, `typesHeader`, and `sqlTypesHeader` are set to `true` to include type information to the response.
+This sample request demonstrates the following actions:
+- This example retrieves all rows from the `wikipedia` datasource.
+- It filters the results to include only rows where the `user` column is equal to `BlueMoon2662`.
+- The query is assigned the ID `request01` using the `sqlQueryId` context parameter.
+- The response includes optional properties like the `header`, `typesHeader`, and `sqlTypesHeader` properties, which all are set as `true`.
+
 
 <Tabs>
 
@@ -194,6 +199,22 @@ Content-Length: 192
 
 </TabItem>
 </Tabs>
+
+You can also specify query-level context parameters directly within the SQL query string using the `SET` command, which provides an inline alternative to the top-level `"context"` JSON object while passing data. For more details on `SET` statements, refer to the see [SET statements](../querying/sql.md#set-statements).
+
+Here's a JSON object that's functionally equivalent to the examples above, using `SET` command for `sqlQueryId` directly in the query string instead of using the context parameter:
+
+```shell
+
+{
+  "query": "SET sqlQueryId='request01'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+  "header": true,
+  "typesHeader": true,
+  "sqlTypesHeader": true
+}
+
+```
+
 
 #### Sample response
 
