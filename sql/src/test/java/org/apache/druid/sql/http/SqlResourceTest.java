@@ -403,6 +403,21 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void test_getEnabled()
+  {
+    Response response = resource.getSupportedEngines(req);
+    Set<String> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getSupportedEngines();
+    Assert.assertTrue(supportedEngines.contains(NativeSqlEngine.NAME));
+  }
+
+  @Test
+  public void test_getWithInvalidEngine()
+  {
+    Response response = resource.doGetRunningQueries("selfOnly", "fake", req);
+    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+  }
+
+  @Test
   public void testCountStarWithMissingIntervalsContext() throws Exception
   {
     final SqlQuery sqlQuery = new SqlQuery(
