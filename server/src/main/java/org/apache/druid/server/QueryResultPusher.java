@@ -437,7 +437,7 @@ public abstract class QueryResultPusher
     /**
      * Serializes the response context, enforcing the max header size limit.
      * Throws {@link QueryInterruptedException} if truncation is disallowed and the context is too large.
-     * Note that this method does not set the serialized result in the final response; use {@link #writeResponseContextHeader()}
+     * Note that this method does not set the serialized result in the final {@link #response}; use {@link #writeResponseContextHeader()}
      * for that.
      */
     private ResponseContext.SerializationResult serializeAndValidateResponseContextHeader()
@@ -481,7 +481,7 @@ public abstract class QueryResultPusher
     }
 
     /**
-     * Serializes the response context header and sets it in the final response.
+     * Serializes the response context header and sets it in the final {@link #response} header.
      * Typically called at the end of query processing, e.g., in {@link #flush()}.
      */
     private void writeResponseContextHeader()

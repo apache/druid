@@ -27,10 +27,10 @@ import java.util.List;
 
 public class DataServerResponse
 {
-  List<SegmentDescriptor> missingSegments;
+  private final List<SegmentDescriptor> missingSegments;
 
   @JsonCreator
-  public DataServerResponse(@JsonProperty("missingSegments") List<SegmentDescriptor> missingSegments)
+  public DataServerResponse(@JsonProperty("missingSegments") final List<SegmentDescriptor> missingSegments)
   {
     this.missingSegments = missingSegments;
   }
