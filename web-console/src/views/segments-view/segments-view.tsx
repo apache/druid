@@ -56,7 +56,7 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
 import { Api } from '../../singletons';
-import type { NumberLike, TableState } from '../../utils';
+import type { AuxiliaryQueryFn, NumberLike, TableState } from '../../utils';
 import {
   applySorting,
   assemble,
@@ -75,12 +75,11 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
+  ResultWithAuxiliaryWork,
   sortedToOrderByClause,
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
-import type { AuxiliaryQueryFn } from '../../utils/query-manager';
-import { ResultWithAuxiliaryWork } from '../../utils/query-manager';
 
 import './segments-view.scss';
 
