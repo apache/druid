@@ -157,7 +157,149 @@ GROUP BY 1
 }
 ```
 
-## More Examples
+## Walkthrough Using Wikipedia datasource
+
+### Batch Ingestion Task Spec
+```json
+{
+  "type": "index",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "wikipedia_metrics",
+      "timestampSpec": {
+        "column": "__time",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "channel",
+          "namespace",
+          "page",
+          "user",
+          "cityName",
+          "countryName",
+          "regionName",
+          "isRobot",
+          "isUnpatrolled",
+          "isNew",
+          "isAnonymous"
+        ]
+      },
+      "metricsSpec": [
+        {
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "unique_added_values",
+          "fieldName": "added"
+        },
+        {
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "unique_delta_values",
+          "fieldName": "delta"
+        },
+        {
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "unique_comment_lengths",
+          "fieldName": "commentLength"
+        },
+        {
+          "name": "count",
+          "type": "count"
+        },
+        {
+          "name": "sum_added",
+          "type": "longSum",
+          "fieldName": "added"
+        },
+        {
+          "name": "sum_delta",
+          "type": "longSum",
+          "fieldName": "delta"
+        }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "HOUR",
+        "rollup": true,
+        "intervals": ["2016-06-27/2016-06-28"]
+      }
+    },
+    "ioConfig": {
+      "type": "index",
+      "inputSource": {
+        "type": "druid",
+        "dataSource": "wikipedia",
+        "interval": "2016-06-27/2016-06-28"
+      },
+      "inputFormat": {
+        "type": "tsv",
+        "findColumnsFromHeader": true
+      }
+    },
+    "tuningConfig": {
+      "type": "index",
+      "maxRowsPerSegment": 5000000,
+      "maxRowsInMemory": 25000
+    }
+  }
+}
+```
+
+### Query from datasource with raw bytes
+```json
+{
+  "queryType": "timeseries",
+  "dataSource": {
+    "type": "table",
+    "name": "wikipedia_metrics"
+  },
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
+  "granularity": {
+    "type": "all"
+  },
+  "aggregations": [
+    {
+      "type": "Bitmap64ExactCardinalityBuild",
+      "name": "a0",
+      "fieldName": "unique_added_values"
+    }
+  ]
+}
+```
+
+### Query from datasource with pre-aggregated bitmap
+```json
+{
+   "queryType": "timeseries",
+   "dataSource": {
+      "type": "table",
+      "name": "wikipedia_metrics"
+   },
+   "intervals": {
+      "type": "intervals",
+      "intervals": [
+         "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+      ]
+   },
+   "granularity": {
+      "type": "all"
+   },
+   "aggregations": [
+      {
+         "type": "Bitmap64ExactCardinalityMerge",
+         "name": "a0",
+         "fieldName": "unique_added_values"
+      }
+   ]
+}
+```
+
+## Other Examples
 
 ### Kafka ingestion task spec
 ```json
@@ -228,65 +370,6 @@ GROUP BY 1
       "type": "kafka"
     }
   }
-}
-```
-
-### Query from datasource with raw bytes
-```json
-{
-  "queryType": "timeseries",
-  "dataSource": {
-    "type": "table",
-    "name": "wikipedia"
-  },
-  "intervals": {
-    "type": "intervals",
-    "intervals": [
-      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-    ]
-  },
-  "granularity": {
-    "type": "all"
-  },
-  "aggregations": [
-    {
-      "type": "Bitmap64ExactCardinalityBuild",
-      "name": "a0",
-      "fieldName": "added"
-    }
-  ]
-}
-```
-
-### Query from datasource with pre-aggregated bitmap
-```json
-{
-  "queryType": "timeseries",
-  "dataSource": {
-    "type": "table",
-    "name": "ticker_event_bitmap64_exact_cardinality_rollup"
-  },
-  "intervals": {
-    "type": "intervals",
-    "intervals": [
-      "2020-09-13T06:35:35.000Z/146140482-04-24T15:36:27.903Z"
-    ]
-  },
-  "descending": false,
-  "virtualColumns": [],
-  "filter": null,
-  "granularity": {
-    "type": "all"
-  },
-  "aggregations": [
-    {
-      "type": "Bitmap64ExactCardinalityMerge",
-      "name": "a0",
-      "fieldName": "cardinality"
-    }
-  ],
-  "postAggregations": [],
-  "limit": 2147483647
 }
 ```
 
