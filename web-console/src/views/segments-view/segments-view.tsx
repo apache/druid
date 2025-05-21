@@ -59,6 +59,7 @@ import { Api } from '../../singletons';
 import type { NumberLike, TableState } from '../../utils';
 import {
   applySorting,
+  assemble,
   compact,
   countBy,
   filterMap,
@@ -78,6 +79,8 @@ import {
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import type { AuxiliaryQueryFn } from '../../utils/query-manager';
+import { ResultWithAuxiliaryWork } from '../../utils/query-manager';
 
 import './segments-view.scss';
 
@@ -217,6 +220,11 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
+interface SegmentsWithAuxiliaryInfo {
+  readonly segments: SegmentQueryResultRow[];
+  readonly count: number;
+}
+
 export interface SegmentsViewProps {
   filters: Filter[];
   onFiltersChange(filters: Filter[]): void;
@@ -225,7 +233,7 @@ export interface SegmentsViewProps {
 }
 
 export interface SegmentsViewState {
-  segmentsState: QueryState<SegmentQueryResultRow[]>;
+  segmentsState: QueryState<SegmentsWithAuxiliaryInfo>;
   segmentTableActionDialogId?: string;
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
@@ -268,7 +276,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return `WITH s AS (SELECT\n${columns.join(',\n')}\nFROM sys.segments)`;
   }
 
-  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentsWithAuxiliaryInfo>;
 
   constructor(props: SegmentsViewProps) {
     super(props);
@@ -295,6 +303,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
+
+        let segments: SegmentQueryResultRow[];
+        let count = -1;
+        const auxiliaryQueries: AuxiliaryQueryFn<SegmentsWithAuxiliaryInfo>[] = [];
 
         if (capabilities.hasSql()) {
           const whereExpression = segmentFiltersToExpression(filtered);
@@ -374,7 +386,27 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             }));
           }
 
-          return result as SegmentQueryResultRow[];
+          segments = result as SegmentQueryResultRow[];
+
+          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, cancelToken) => {
+            const sqlQuery = assemble(
+              'SELECT COUNT(*) AS "cnt"',
+              'FROM "sys"."segments"',
+              filterClause ? `WHERE ${filterClause}` : undefined,
+            ).join('\n');
+            const cnt: any = (
+              await queryDruidSql<{ cnt: number }>(
+                {
+                  query: sqlQuery,
+                },
+                cancelToken,
+              )
+            )[0].cnt;
+            return {
+              ...segmentsWithAuxiliaryInfo,
+              count: typeof cnt === 'number' ? cnt : -1,
+            };
+          });
         } else if (capabilities.hasCoordinatorAccess()) {
           let datasourceList: string[] = [];
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
@@ -428,11 +460,17 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             });
           }
 
+          count = results.length;
           const maxResults = (page + 1) * pageSize;
-          return applySorting(results, sorted).slice(page * pageSize, maxResults);
+          segments = applySorting(results, sorted).slice(page * pageSize, maxResults);
         } else {
           throw new Error('must have SQL or coordinator access to load this view');
         }
+
+        return new ResultWithAuxiliaryWork<SegmentsWithAuxiliaryInfo>(
+          { segments, count },
+          auxiliaryQueries,
+        );
       },
       onStateChange: segmentsState => {
         this.setState({
@@ -562,7 +600,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       showSegmentTimeline,
     } = this.state;
 
-    const segments = segmentsState.data || [];
+    const { segments, count } = segmentsState.data || {
+      segments: [],
+      count: -1,
+    };
 
     const sizeValues = segments.map(d => formatBytes(d.size)).concat('(realtime)');
 
@@ -582,7 +623,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return (
       <ReactTable
         data={segments}
-        pages={10000000} // Dummy, we are hiding the page selector
+        pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000}
         loading={segmentsState.loading}
         noDataText={
           segmentsState.isEmpty()
@@ -602,7 +643,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
         showPagination
         showPageJump={false}
-        ofText=""
+        ofText={count >= 0 ? `of ${formatInteger(count)}` : ''}
         pivotBy={groupByInterval ? ['interval'] : []}
         columns={[
           {
