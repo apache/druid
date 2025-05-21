@@ -457,6 +457,17 @@ export class SupervisorsView extends React.PureComponent<
     });
   };
 
+  private readonly handleFilterChange = (filters: Filter[]) => {
+    this.goToFirstPage();
+    this.props.onFiltersChange(filters);
+  };
+
+  private goToFirstPage() {
+    if (this.state.page) {
+      this.setState({ page: 0 });
+    }
+  }
+
   private readonly closeSpecDialogs = () => {
     this.setState({
       supervisorSpecDialogOpen: false,
@@ -717,7 +728,8 @@ export class SupervisorsView extends React.PureComponent<
   }
 
   private renderSupervisorFilterableCell(field: string) {
-    const { filters, onFiltersChange } = this.props;
+    const { filters } = this.props;
+    const { handleFilterChange } = this;
 
     return function SupervisorFilterableCell(row: { value: any }) {
       return (
@@ -725,7 +737,7 @@ export class SupervisorsView extends React.PureComponent<
           field={field}
           value={row.value}
           filters={filters}
-          onFiltersChange={onFiltersChange}
+          onFiltersChange={handleFilterChange}
         />
       );
     };
@@ -764,7 +776,7 @@ export class SupervisorsView extends React.PureComponent<
   }
 
   private renderSupervisorTable() {
-    const { filters, onFiltersChange } = this.props;
+    const { filters } = this.props;
     const { supervisorsState, page, pageSize, sorted, statsKey, visibleColumns } = this.state;
 
     const { supervisors, status, stats } = supervisorsState.data || {
@@ -787,7 +799,7 @@ export class SupervisorsView extends React.PureComponent<
             manual
             filterable
             filtered={filters}
-            onFilteredChange={onFiltersChange}
+            onFilteredChange={this.handleFilterChange}
             sorted={sorted}
             onSortedChange={sorted => this.setState({ sorted })}
             page={page}
@@ -795,10 +807,10 @@ export class SupervisorsView extends React.PureComponent<
             pageSize={pageSize}
             onPageSizeChange={pageSize => this.setState({ pageSize })}
             pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-            showPagination={supervisors.length >= SMALL_TABLE_PAGE_SIZE || page > 0}
+            showPagination
             showPageJump={false}
             ofText=""
-            columns={this.getTableColumns(visibleColumns, filters, onFiltersChange)}
+            columns={this.getTableColumns(visibleColumns, filters)}
           />
         </StatsContext.Provider>
       </StatusContext.Provider>
@@ -809,7 +821,6 @@ export class SupervisorsView extends React.PureComponent<
     (
       visibleColumns: LocalStorageBackedVisibility,
       filters: Filter[],
-      onFiltersChange: (filters: Filter[]) => void,
     ): Column<SupervisorQueryResultRow>[] => {
       return [
         {
@@ -868,7 +879,7 @@ export class SupervisorsView extends React.PureComponent<
               field="detailed_state"
               value={value}
               filters={filters}
-              onFiltersChange={onFiltersChange}
+              onFiltersChange={this.handleFilterChange}
             >
               <span>
                 <span style={{ color: detailedStateToColor(value) }}>&#x25cf;&nbsp;</span>
