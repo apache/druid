@@ -311,7 +311,7 @@ public class OrFilter implements BooleanFilter
         {
           int currentOffset = offset.getOffset();
           // check if the cursor was reset, and reset iterator if so
-          if (currentOffset > iterOffset) {
+          if (currentOffset >= iterOffset) {
             iterOffset = Integer.MAX_VALUE;
             iterator = BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap);
           }
@@ -345,7 +345,7 @@ public class OrFilter implements BooleanFilter
         {
           int currentOffset = offset.getOffset();
           // check if the cursor was reset, and reset iterator if so
-          if (currentOffset < iterOffset) {
+          if (currentOffset <= iterOffset) {
             iterOffset = -1;
             iterator = rowBitmap.peekableIterator();
           }
@@ -387,7 +387,7 @@ public class OrFilter implements BooleanFilter
       public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
       {
         // check if the cursor was reset, and reset iterator if so
-        if (vectorOffset.getStartOffset() < iterOffset) {
+        if (vectorOffset.getStartOffset() <= iterOffset) {
           iterOffset = -1;
           iterator = bitmap.peekableIterator();
         }

@@ -28,9 +28,7 @@ import org.apache.druid.segment.RowIdSupplier;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -46,7 +44,6 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
   private final Expr expression;
   private final List<String> unknownColumns;
   private final Expr.BindingAnalysis baseBindingAnalysis;
-  private final Set<String> ignoredColumns;
   private final Int2ObjectMap<Expr> transformedCache;
 
   public RowBasedExpressionColumnValueSelector(
@@ -63,7 +60,6 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
                               .filter(x -> !plan.getAnalysis().getArrayBindings().contains(x))
                               .collect(Collectors.toList());
     this.baseBindingAnalysis = plan.getAnalysis();
-    this.ignoredColumns = new HashSet<>();
     this.transformedCache = new Int2ObjectArrayMap<>(unknownColumns.size());
   }
 
@@ -77,12 +73,6 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
       if (isBindingArray(unknownColumn)) {
         arrayBindings.add(unknownColumn);
       }
-    }
-
-    // eliminate anything that will never be an array
-    if (ignoredColumns.size() > 0) {
-      unknownColumns.removeAll(ignoredColumns);
-      ignoredColumns.clear();
     }
 
     // if there are arrays, we need to transform the expression to one that applies each value of the array to the
@@ -108,11 +98,7 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
   {
     Object binding = bindings.get(x);
     if (binding != null) {
-      if (binding instanceof Object[] && ((Object[]) binding).length > 0) {
-        return true;
-      } else if (binding instanceof Number) {
-        ignoredColumns.add(x);
-      }
+      return binding instanceof Object[] && ((Object[]) binding).length > 0;
     }
     return false;
   }
