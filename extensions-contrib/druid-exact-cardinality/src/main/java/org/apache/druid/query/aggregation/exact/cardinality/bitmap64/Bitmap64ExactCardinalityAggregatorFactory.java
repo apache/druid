@@ -25,7 +25,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -42,10 +41,8 @@ public abstract class Bitmap64ExactCardinalityAggregatorFactory extends Aggregat
   static final Comparator<Bitmap64Counter> COMPARATOR =
       Comparator.nullsFirst(Comparator.comparingLong(Bitmap64Counter::getCardinality));
 
-  @NotNull
   private final String name;
 
-  @NotNull
   private final String fieldName;
 
   Bitmap64ExactCardinalityAggregatorFactory(
@@ -71,7 +68,6 @@ public abstract class Bitmap64ExactCardinalityAggregatorFactory extends Aggregat
   }
 
   @Override
-  @NotNull
   public List<String> requiredFields()
   {
     return Collections.singletonList(fieldName);
