@@ -244,7 +244,7 @@ public class ITQueryRetryTestOnMissingSegments
     context.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, numRetriesOnMissingSegments);
     context.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, allowPartialResults);
     context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);
-    context.put(ServerManagerForQueryErrorTest.QUERY_FAILURE_SEGMENT_UNAVAILABLE_IDX, segmentUnavailableIdx);
+    context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY, segmentUnavailableIdx);
     return context;
   }
 }

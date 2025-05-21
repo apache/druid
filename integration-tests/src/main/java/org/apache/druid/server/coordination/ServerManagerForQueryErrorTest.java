@@ -59,14 +59,21 @@ import java.util.function.Function;
 
 /**
  * This server manager is designed to test various query failures.
- *
- * - Missing segments. A segment can be missing during a query if a historical drops the segment
+ * <ul>
+ *  <li> Missing segments. A segment can be missing during a query if a historical drops the segment
  *   after the broker issues the query to the historical. To mimic this situation, the historical
- *   with this server manager announces all segments assigned, but reports missing segment for the
- *   first segment of the datasource specified in the query. The missing report is only generated once for the first
- *   segment. Post that report, all segments are served for the datasource. See ITQueryRetryTestOnMissingSegments.
- * - Other query errors. This server manager returns a sequence that always throws an exception
- *   based on a given query context value. See ITQueryErrorTest.
+ *   with this server manager announces all segments assigned, and reports missing segments based on the following:
+ *   <ul>
+ *     <li> If {@link #QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY} and {@link #QUERY_RETRY_TEST_CONTEXT_KEY} are set,
+ *           the segment at that index is reported as missing exactly once.</li>
+ *     <li> If {@link #QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY} is not set or is -1, it simulates missing segments
+ *     starting from the beginning, up to {@link #MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS}.</li>
+ *   </ul>
+ *   The missing report is only generated once for the first time. Post that report, upon retry, all segments are served
+ *   for the datasource. See ITQueryRetryTestOnMissingSegments. </li>
+ * <li> Other query errors. This server manager returns a sequence that always throws an exception
+ *   based on a given query context value. See ITQueryErrorTest. </li>
+ * </ul>
  *
  * @see org.apache.druid.query.RetryQueryRunner for query retrying.
  * @see org.apache.druid.client.JsonParserIterator for handling query errors from historicals.
@@ -80,10 +87,19 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   public static final String QUERY_UNSUPPORTED_TEST_CONTEXT_KEY = "query-unsupported-test";
   public static final String RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY = "resource-limit-exceeded-test";
   public static final String QUERY_FAILURE_TEST_CONTEXT_KEY = "query-failure-test";
-  public static final String QUERY_FAILURE_SEGMENT_UNAVAILABLE_IDX = "segment-unavailable-idx";
+  /**
+   * Query context that indicates which segment should be marked as unavilable/missing.
+   * This should be used in conjunction with {@link #QUERY_RETRY_TEST_CONTEXT_KEY}.
+   * <p>
+   * A value of {@code 0} means the first segment will be reported as missing, {@code 1} for the second, and so on.
+   * If this key is not set (default = -1), the test will instead simulate missing up to
+   * {@link #MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS} segments from the beginning.
+   * </p>
+   */
+  public static final String QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY = "segment-unavailable-idx";
+  private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 1;
 
   private static final Logger LOG = new Logger(ServerManagerForQueryErrorTest.class);
-  private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 1;
 
   private final ConcurrentHashMap<String, Integer> queryToIgnoredSegments = new ConcurrentHashMap<>();
 
@@ -128,7 +144,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   {
     final QueryContext queryContext = query.context();
     if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
-      final int segmentUnavailableIdx = queryContext.getInt(QUERY_FAILURE_SEGMENT_UNAVAILABLE_IDX, -1);
+      final int segmentUnavailableIdx = queryContext.getInt(QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY, -1);
       final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
       queryToIgnoredSegments.compute(
           query.getMostSpecificId(),
