@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.exact.cardinality.bitmap64;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
@@ -31,9 +30,9 @@ import java.nio.ByteBuffer;
 
 public class RoaringBitmap64Counter implements Bitmap64Counter
 {
-  private static Logger logger = new Logger(RoaringBitmap64Counter.class);
+  private static final Logger log = new Logger(RoaringBitmap64Counter.class);
 
-  private Roaring64NavigableMap bitmap;
+  private final Roaring64NavigableMap bitmap;
 
   public RoaringBitmap64Counter()
   {
@@ -47,17 +46,20 @@ public class RoaringBitmap64Counter implements Bitmap64Counter
 
   public static RoaringBitmap64Counter fromBytes(byte[] bytes)
   {
-    ByteArrayInputStream byteIn = new ByteArrayInputStream(bytes);
     try {
+      ByteArrayInputStream byteIn = new ByteArrayInputStream(bytes);
       DataInputStream in = new DataInputStream(byteIn);
       Roaring64NavigableMap bitmap = new Roaring64NavigableMap();
       bitmap.deserialize(in);
       return new RoaringBitmap64Counter(bitmap);
     }
     catch (Exception e) {
-      logger.info(e.getMessage(), e);
+      log.error(e, "Failed to deserialize RoaringBitmap64Counter from bytes");
+      throw new RuntimeException(
+          "Failed to deserialize RoaringBitmap64Counter from bytes. Error: " + e.getMessage(),
+          e
+      );
     }
-    return null;
   }
 
   @Override
@@ -92,8 +94,7 @@ public class RoaringBitmap64Counter implements Bitmap64Counter
       return ByteBuffer.wrap(out.toByteArray());
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
-
 }
