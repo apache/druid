@@ -133,6 +133,7 @@ interface SupervisorQueryResultRow {
 
 interface SupervisorsWithAuxiliaryInfo {
   readonly supervisors: SupervisorQueryResultRow[];
+  readonly count: number;
   readonly status: Record<string, SupervisorStatus>;
   readonly stats: Record<string, SupervisorStats>;
 }
@@ -282,6 +283,8 @@ export class SupervisorsView extends React.PureComponent<
         setIntermediateQuery,
       ) => {
         let supervisors: SupervisorQueryResultRow[];
+        let count = -1;
+        const auxiliaryQueries: AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo>[] = [];
         if (capabilities.hasSql()) {
           const whereExpression = sqlQueryCustomTableFilters(filtered);
 
@@ -319,6 +322,26 @@ export class SupervisorsView extends React.PureComponent<
             if (typeof spec !== 'string') return supervisor;
             return { ...supervisor, spec: JSONBig.parse(spec) };
           });
+
+          auxiliaryQueries.push(async (supervisorsWithAuxiliaryInfo, cancelToken) => {
+            const sqlQuery = assemble(
+              'SELECT COUNT(*) AS "cnt"',
+              'FROM "sys"."supervisors"',
+              filterClause ? `WHERE ${filterClause}` : undefined,
+            ).join('\n');
+            const cnt: any = (
+              await queryDruidSql<{ cnt: number }>(
+                {
+                  query: sqlQuery,
+                },
+                cancelToken,
+              )
+            )[0].cnt;
+            return {
+              ...supervisorsWithAuxiliaryInfo,
+              count: typeof cnt === 'number' ? cnt : -1,
+            };
+          });
         } else if (capabilities.hasOverlordAccess()) {
           supervisors = (await getApiArray('/druid/indexer/v1/supervisor?full', cancelToken)).map(
             (sup: any) => {
@@ -336,6 +359,7 @@ export class SupervisorsView extends React.PureComponent<
               };
             },
           );
+          count = supervisors.length;
 
           const firstSorted = sorted[0];
           if (firstSorted) {
@@ -351,7 +375,6 @@ export class SupervisorsView extends React.PureComponent<
           throw new Error(`must have SQL or overlord access`);
         }
 
-        const auxiliaryQueries: AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo>[] = [];
         if (capabilities.hasOverlordAccess()) {
           if (visibleColumns.shown('Running tasks', 'Aggregate lag', 'Recent errors')) {
             auxiliaryQueries.push(
@@ -408,7 +431,7 @@ export class SupervisorsView extends React.PureComponent<
         }
 
         return new ResultWithAuxiliaryWork<SupervisorsWithAuxiliaryInfo>(
-          { supervisors, status: {}, stats: {} },
+          { supervisors, count, status: {}, stats: {} },
           auxiliaryQueries,
         );
       },
@@ -779,8 +802,9 @@ export class SupervisorsView extends React.PureComponent<
     const { filters } = this.props;
     const { supervisorsState, page, pageSize, sorted, statsKey, visibleColumns } = this.state;
 
-    const { supervisors, status, stats } = supervisorsState.data || {
+    const { supervisors, count, status, stats } = supervisorsState.data || {
       supervisors: [],
+      count: -1,
       status: {},
       stats: {},
     };
@@ -789,7 +813,7 @@ export class SupervisorsView extends React.PureComponent<
         <StatsContext.Provider value={{ stats, statsKey }}>
           <ReactTable
             data={supervisors}
-            pages={10000000} // We are hiding the page selector
+            pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000} // We are hiding the page selector
             loading={supervisorsState.loading}
             noDataText={
               supervisorsState.isEmpty()
@@ -809,7 +833,7 @@ export class SupervisorsView extends React.PureComponent<
             pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
             showPagination
             showPageJump={false}
-            ofText=""
+            ofText={count >= 0 ? `of ${formatInteger(count)}` : ''}
             columns={this.getTableColumns(visibleColumns, filters)}
           />
         </StatsContext.Provider>
