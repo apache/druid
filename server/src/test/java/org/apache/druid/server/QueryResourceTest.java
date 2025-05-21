@@ -1216,7 +1216,7 @@ public class QueryResourceTest
         ManualQueryPrioritizationStrategy.INSTANCE,
         NoQueryLaningStrategy.INSTANCE,
         // enable total laning
-        ServerConfig.Builder.newBuilder().enableQueryRequestsQueuing(false).build()
+        new ServerConfig(false)
     );
 
     ArrayList<Future<Boolean>> back2 = new ArrayList<>();

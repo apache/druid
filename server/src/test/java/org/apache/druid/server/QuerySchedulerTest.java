@@ -92,7 +92,7 @@ public class QuerySchedulerTest
   private static final int TEST_HI_CAPACITY = 5;
   private static final int TEST_LO_CAPACITY = 2;
   private static final ServerConfig SERVER_CONFIG_WITHOUT_TOTAL = new ServerConfig();
-  private static final ServerConfig SERVER_CONFIG_WITH_TOTAL = ServerConfig.Builder.newBuilder().enableQueryRequestsQueuing(false).build();
+  private static final ServerConfig SERVER_CONFIG_WITH_TOTAL = new ServerConfig(false);
 
   private ListeningExecutorService executorService;
   private ObservableQueryScheduler scheduler;

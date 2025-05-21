@@ -20,10 +20,10 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.query.QueryContexts;
@@ -49,7 +49,7 @@ public class ServerConfig
   public static final int DEFAULT_NUM_PACKING_THREADS = 30;
 
   /**
-   * The ServerConfig is normally created using {@link JsonConfigProvider} binding.
+   * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
    *
    * This constructor is provided for callers that need to create a ServerConfig object with specific field values.
    */
@@ -103,6 +103,12 @@ public class ServerConfig
   public ServerConfig()
   {
 
+  }
+
+  @VisibleForTesting
+  public ServerConfig(boolean enableQueryRequestsQueuing)
+  {
+    this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
   }
 
   @JsonProperty
@@ -189,11 +195,6 @@ public class ServerConfig
 
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
-
-  private ServerConfig(Builder builder)
-  {
-    enableQueryRequestsQueuing = builder.enableQueryRequestsQueuing;
-  }
 
   public int getNumThreads()
   {
@@ -401,40 +402,5 @@ public class ServerConfig
   public static int getDefaultNumThreads()
   {
     return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + DEFAULT_NUM_PACKING_THREADS;
-  }
-
-
-  public static final class Builder
-  {
-    private @Min(1) int numThreads;
-    private boolean enableQueryRequestsQueuing;
-
-    private Builder()
-    {
-
-    }
-
-    public static Builder newBuilder()
-    {
-      return new Builder();
-    }
-
-    public Builder numThreads(@Min(1) int numThreads)
-    {
-      this.numThreads = numThreads;
-      return this;
-    }
-
-
-    public Builder enableQueryRequestsQueuing(boolean enableQueryRequestsQueuing)
-    {
-      this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
-      return this;
-    }
-
-    public ServerConfig build()
-    {
-      return new ServerConfig(this);
-    }
   }
 }

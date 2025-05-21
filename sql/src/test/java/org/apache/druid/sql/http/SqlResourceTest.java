@@ -201,7 +201,7 @@ public class SqlResourceTest extends CalciteTestBase
         ManualQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(40),
         // Enable total laning
-        ServerConfig.Builder.newBuilder().enableQueryRequestsQueuing(false).build()
+        new ServerConfig(false)
     )
     {
       @Override

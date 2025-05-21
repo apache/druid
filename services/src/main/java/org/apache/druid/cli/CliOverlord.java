@@ -574,7 +574,7 @@ public class CliOverlord extends ServerRunnable
   protected static boolean addQOSFiltering(ServletContextHandler root, int threadsForOvelordWork)
   {
     if (threadsForOvelordWork >= ServerConfig.DEFAULT_NUM_PACKING_THREADS) {
-      log.info("Enabling QoS Filter on overlord requests with limit [%d].", threadsForOvelordWork);
+      log.info("Enabling QOS filter on overlord requests with limit [%d].", threadsForOvelordWork);
       JettyBindings.QosFilterHolder filterHolder = new JettyBindings.QosFilterHolder(
           new String[]{
               "/druid-internal/v1/*",
@@ -586,7 +586,7 @@ public class CliOverlord extends ServerRunnable
       return true;
     } else {
       log.info(
-          "QoSFilter is disabled for the overlord requests." +
+          "QOS filter is disabled for the overlord requests." +
           "Set `druid.server.http.numThread` to a value greater than %d to enable QoSFilter.",
           ServerConfig.DEFAULT_NUM_PACKING_THREADS
       );

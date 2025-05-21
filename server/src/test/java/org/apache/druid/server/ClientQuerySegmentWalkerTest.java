@@ -240,7 +240,7 @@ public class ClientQuerySegmentWalkerTest
         8,
         ManualQueryPrioritizationStrategy.INSTANCE,
         NoQueryLaningStrategy.INSTANCE,
-        ServerConfig.Builder.newBuilder().enableQueryRequestsQueuing(false).build()
+        new ServerConfig(false)
     );
     initWalker(ImmutableMap.of(), scheduler);
   }
