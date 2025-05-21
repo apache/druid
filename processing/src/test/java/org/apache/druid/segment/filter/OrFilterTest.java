@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -239,6 +240,31 @@ public class OrFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testTwoFilterFirstMatchesSomeSecondMatchesNonePartialIndex()
+  {
+    assertFilterMatches(
+        new OrDimFilter(
+            ImmutableList.of(
+                new InDimFilter("dim0", ImmutableSet.of("1", "2", "3"), null),
+                new SelectorDimFilter("dim1", "7", null, new FilterTuning(false, null, null))
+            )
+        ),
+        ImmutableList.of("1", "2", "3")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(
+            new OrDimFilter(
+                ImmutableList.of(
+                    new InDimFilter("dim0", ImmutableSet.of("1", "2", "3"), null),
+                    new SelectorDimFilter("dim1", "7", null, new FilterTuning(false, null, null))
+                )
+            )
+        ),
+        ImmutableList.of("0", "4", "5")
+    );
+  }
+
+  @Test
   public void testTwoFilterFirstMatchesNoneSecondMatchesSome()
   {
     assertFilterMatches(
@@ -249,6 +275,20 @@ public class OrFilterTest extends BaseFilterTest
             )
         ),
         ImmutableList.of("3")
+    );
+  }
+
+  @Test
+  public void testTwoFilterFirstMatchesNoneSecondMatchesSomePartialIndex()
+  {
+    assertFilterMatches(
+        new OrDimFilter(
+            ImmutableList.of(
+                new SelectorDimFilter("dim1", "7", null),
+                new InDimFilter("dim0", ImmutableSet.of("1", "2", "3"), null)
+            )
+        ),
+        ImmutableList.of("1", "2", "3")
     );
   }
 
