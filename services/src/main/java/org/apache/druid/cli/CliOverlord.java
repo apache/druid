@@ -123,6 +123,7 @@ import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
@@ -143,7 +144,9 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,6 +154,7 @@ import java.util.Properties;
 import java.util.Set;
 
 /**
+ *
  */
 @Command(
     name = "overlord",
@@ -160,6 +164,7 @@ public class CliOverlord extends ServerRunnable
 {
   private static final Logger log = new Logger(CliOverlord.class);
   private static final String DEFAULT_SERVICE_NAME = "druid/overlord";
+  private static final int THREADS_RESERVED_FOR_HEALTH_CHECK = 1;
 
   protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/druid/indexer/v1/isLeader",
@@ -289,12 +294,7 @@ public class CliOverlord extends ServerRunnable
                     .in(LazySingleton.class);
             }
 
-            Jerseys.addResource(binder, OverlordResource.class);
-            Jerseys.addResource(binder, SupervisorResource.class);
-            Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
-            Jerseys.addResource(binder, OverlordCompactionResource.class);
-            Jerseys.addResource(binder, OverlordDataSourcesResource.class);
-
+            addOverlordJerseyResources(binder);
 
             binder.bind(AppenderatorsManager.class)
                   .to(DummyForInjectionAppenderatorsManager.class)
@@ -460,9 +460,30 @@ public class CliOverlord extends ServerRunnable
     );
   }
 
+
   /**
+   * Currenlty, the resource paths of the jersery resources on the overlord start with
+   *  <ol>
+   *    <li>/druid/indexer/v1</li>
+   *    <li>/druid-internal/v1</li>
+   *  </ol>
+   * <p>
+   * As QOS filtering is enabled on overlord requests, we need to update the QOS filter paths in
+   * {@link org.apache.druid.cli.CliOverlord#addQOSFiltering(ServletContextHandler, int)} when a new jersey resource is added.
    */
-  private static class OverlordJettyServerInitializer implements JettyServerInitializer
+  private static void addOverlordJerseyResources(Binder binder)
+  {
+    Jerseys.addResource(binder, OverlordResource.class);
+    Jerseys.addResource(binder, SupervisorResource.class);
+    Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
+    Jerseys.addResource(binder, OverlordCompactionResource.class);
+    Jerseys.addResource(binder, OverlordDataSourcesResource.class);
+  }
+
+  /**
+   *
+   */
+  protected static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
     private final AuthConfig authConfig;
     private final ServerConfig serverConfig;
@@ -486,6 +507,13 @@ public class CliOverlord extends ServerRunnable
 
       final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
       final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
+      final QueuedThreadPool queuedThreadPool = (QueuedThreadPool) server.getThreadPool();
+      final int maxThreads = queuedThreadPool.getMaxThreads();
+      final int threadsForOvelordWork = maxThreads - THREADS_RESERVED_FOR_HEALTH_CHECK;
+
+      addQOSFiltering(root, threadsForOvelordWork);
+
 
       JettyServerInitUtils.addQosFilters(root, injector);
       AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
@@ -540,6 +568,29 @@ public class CliOverlord extends ServerRunnable
       );
 
       server.setHandler(handlerList);
+    }
+  }
+
+  protected static boolean addQOSFiltering(ServletContextHandler root, int threadsForOvelordWork)
+  {
+    if (threadsForOvelordWork >= ServerConfig.DEFAULT_NUM_PACKING_THREADS) {
+      log.info("Enabling QoS Filter on overlord requests with limit [%d].", threadsForOvelordWork);
+      JettyBindings.QosFilterHolder filterHolder = new JettyBindings.QosFilterHolder(
+          new String[]{
+              "/druid-internal/v1/*",
+              "/druid/indexer/v1/*"
+          },
+          threadsForOvelordWork
+      );
+      JettyServerInitUtils.addFilters(root, Collections.singleton(filterHolder));
+      return true;
+    } else {
+      log.info(
+          "QoSFilter is disabled for the overlord requests." +
+          "Set `druid.server.http.numThread` to a value greater than %d to enable QoSFilter.",
+          ServerConfig.DEFAULT_NUM_PACKING_THREADS
+      );
+      return false;
     }
   }
 }
