@@ -127,7 +127,7 @@ public class SqlModule implements Module
     // Default do-nothing catalog resolver
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
 
-    // Bind the engine TODO: is this the right place now that it's an engine?
+    // Bind the engine
     MapBinder.newMapBinder(binder, String.class, SqlEngine.class)
              .addBinding(NativeSqlEngine.NAME)
              .to(NativeSqlEngine.class)

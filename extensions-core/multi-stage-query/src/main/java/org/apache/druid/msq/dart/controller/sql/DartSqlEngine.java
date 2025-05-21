@@ -305,7 +305,7 @@ public class DartSqlEngine implements SqlEngine
           "%s[%s] for query[%s] is not a string, cannot cancel.",
           QueryContexts.CTX_DART_QUERY_ID,
           dartQueryId,
-          "" // TODO: sqlQueryId
+          plannerContext.getSqlQueryId()
       );
     }
   }

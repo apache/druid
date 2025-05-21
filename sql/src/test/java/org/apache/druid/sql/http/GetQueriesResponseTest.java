@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -37,10 +37,10 @@ import java.util.Objects;
 
 public class GetQueriesResponseTest
 {
-  private ObjectMapper jsonMapper;
+  private static ObjectMapper jsonMapper;
 
-  @BeforeEach
-  void setUp()
+  @BeforeAll
+  static void setUp()
   {
     jsonMapper = TestHelper.JSON_MAPPER.registerModules(
         List.of(

@@ -24,8 +24,11 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 public class DartQueryInfoTest
 {
@@ -46,6 +49,10 @@ public class DartQueryInfoTest
     byte[] bytes = jsonMapper.writeValueAsBytes(dartQueryInfo);
     DartQueryInfo deserialized = jsonMapper.readValue(bytes, DartQueryInfo.class);
     Assertions.assertEquals(dartQueryInfo, deserialized);
+
+    // Assert that the engine is present.
+    Map<String, Object> map = jsonMapper.readValue(bytes, Map.class);
+    Assertions.assertEquals(DartSqlEngine.NAME, map.get("engine"));
   }
 
   @Test

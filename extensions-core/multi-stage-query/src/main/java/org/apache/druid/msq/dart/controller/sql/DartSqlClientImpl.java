@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.controller.sql;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
@@ -46,14 +47,11 @@ public class DartSqlClientImpl implements DartSqlClient
   @Override
   public ListenableFuture<GetQueriesResponse> getRunningQueries(final boolean selfOnly)
   {
-    StringBuilder queryParams = new StringBuilder("/queries?engine=msq-dart");
-    if (selfOnly) {
-      queryParams.append("&selfOnly");
-    }
+    String queryParams = StringUtils.format("/queries?engine=%s%s", DartSqlEngine.NAME, selfOnly ? "&selfOnly" : "");
 
     return FutureUtils.transform(
         client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, queryParams.toString()),
+            new RequestBuilder(HttpMethod.GET, queryParams),
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), GetQueriesResponse.class)

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartWorkerModule;
@@ -80,7 +81,7 @@ public class DartSqlClientImplTest
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/queries?engine=msq-dart"),
+        new RequestBuilder(HttpMethod.GET, StringUtils.format("/queries?engine=%s", DartSqlEngine.NAME)),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(getQueriesResponse)

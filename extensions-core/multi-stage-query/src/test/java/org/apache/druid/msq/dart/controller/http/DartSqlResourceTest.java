@@ -803,8 +803,6 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
     final Response cancellationResponse = sqlResource.cancelQuery("nonexistent", httpServletRequest);
-    // TODO: The SqlResource API returns not found if the query is not found, which is different.
-    // Check if this is a problem
     Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), cancellationResponse.getStatus());
   }
 

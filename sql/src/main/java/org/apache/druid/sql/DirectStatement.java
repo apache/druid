@@ -298,6 +298,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       return;
     }
     state = State.CANCELLED;
+
+    // Give control to the engine to do engine specific things.
     sqlToolbox.engine.cancel(plannerContext, sqlToolbox.queryScheduler);
   }
 
