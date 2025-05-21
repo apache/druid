@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -308,24 +307,12 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
   // CACHE READ METHODS
 
   @Override
-  public Set<String> findExistingSegmentIds(Set<SegmentId> segments)
-  {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
-  }
-
-  @Override
   public Set<SegmentId> findUsedSegmentIdsOverlapping(Interval interval)
   {
     return findUsedSegmentsPlusOverlappingAnyOf(List.of(interval))
         .stream()
         .map(s -> s.getDataSegment().getId())
         .collect(Collectors.toSet());
-  }
-
-  @Override
-  public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
-  {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
   }
 
   @Override
@@ -369,12 +356,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
   }
 
   @Override
-  public DataSegment findSegment(SegmentId segmentId)
-  {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
-  }
-
-  @Override
   @Nullable
   public DataSegment findUsedSegment(SegmentId segmentId)
   {
@@ -383,29 +364,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
           .idToUsedSegment.get(segmentId);
       return segmentPlus == null ? null : segmentPlus.getDataSegment();
     });
-  }
-
-  @Override
-  public List<DataSegmentPlus> findSegments(Set<SegmentId> segmentIds)
-  {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
-  }
-
-  @Override
-  public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
-  {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
-  }
-
-  @Override
-  public List<DataSegment> findUnusedSegments(
-      Interval interval,
-      @Nullable List<String> versions,
-      @Nullable Integer limit,
-      @Nullable DateTime maxUpdatedTime
-  )
-  {
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
   }
 
   @Override
@@ -559,13 +517,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
       }
       return deletedCount;
     });
-  }
-
-  @Override
-  public boolean updateSegmentPayload(DataSegment segment)
-  {
-    // Segment payload updates are not supported since we don't know if the segment is used or unused
-    throw DruidException.defensive("Unsupported: Segment payload updates are not supported in the cache");
   }
 
   @Override

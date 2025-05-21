@@ -22,6 +22,7 @@ package org.apache.druid.metadata.segment;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.metadata.segment.cache.DatasourceSegmentCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -119,6 +120,12 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
+  public SqlSegmentsMetadataQuery noCacheSql()
+  {
+    return delegate.noCacheSql();
+  }
+
+  @Override
   public void setRollbackOnly()
   {
     isRollingBack = true;
@@ -188,13 +195,6 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
-  {
-    // Read from metadata store since unused segments are not cached
-    return delegate.findHighestUnusedSegmentId(interval, version);
-  }
-
-  @Override
   public List<DataSegmentPlus> findSegments(Set<SegmentId> segmentIds)
   {
     final Set<SegmentId> remainingIdsToFind = new HashSet<>(segmentIds);
@@ -221,7 +221,6 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
-    // Read from metadata store since unused segment payloads and schema info is not cached
     return delegate.findSegmentsWithSchema(segmentIds);
   }
 
@@ -244,24 +243,11 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegment> findUnusedSegments(
-      Interval interval,
-      @Nullable List<String> versions,
-      @Nullable Integer limit,
-      @Nullable DateTime maxUpdatedTime
-  )
-  {
-    // Read from metadata store since unused segment payloads are not cached
-    return delegate.findUnusedSegments(interval, versions, limit, maxUpdatedTime);
-  }
-
-  @Override
   public DataSegment findSegment(SegmentId segmentId)
   {
     // Try to find used segment in cache
     final DataSegment usedSegment = metadataCache.findUsedSegment(segmentId);
     if (usedSegment == null) {
-      // Read from metadata store since unused segment payloads are not cached
       return delegate.findSegment(segmentId);
     } else {
       return usedSegment;
@@ -369,7 +355,6 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public boolean updateSegmentPayload(DataSegment segment)
   {
-    // Write only to metadata store since unused segment payloads are not cached
     return delegate.updateSegmentPayload(segment);
   }
 

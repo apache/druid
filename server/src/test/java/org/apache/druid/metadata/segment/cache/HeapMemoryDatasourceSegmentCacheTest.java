@@ -69,56 +69,6 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
-  public void testFindSegment_throwsUnsupported()
-  {
-    DruidExceptionMatcher.defensive().expectMessageIs(
-        "Unsupported: Unused segments are not cached"
-    ).assertThrowsAndMatches(
-        () -> cache.findSegment(SegmentId.dummy(WIKI))
-    );
-  }
-
-  @Test
-  public void testFindUnusedSegments_throwsUnsupported()
-  {
-    DruidExceptionMatcher.defensive().expectMessageIs(
-        "Unsupported: Unused segments are not cached"
-    ).assertThrowsAndMatches(
-        () -> cache.findUnusedSegments(null, null, null, null)
-    );
-  }
-
-  @Test
-  public void testFindSegments_throwsUnsupported()
-  {
-    DruidExceptionMatcher.defensive().expectMessageIs(
-        "Unsupported: Unused segments are not cached"
-    ).assertThrowsAndMatches(
-        () -> cache.findSegments(Set.of())
-    );
-  }
-
-  @Test
-  public void testFindSegmentsWithSchema_throwsUnsupported()
-  {
-    DruidExceptionMatcher.defensive().expectMessageIs(
-        "Unsupported: Unused segments are not cached"
-    ).assertThrowsAndMatches(
-        () -> cache.findSegmentsWithSchema(Set.of())
-    );
-  }
-
-  @Test
-  public void testFindExistingSegmentIds_throwsUnsupported()
-  {
-    DruidExceptionMatcher.defensive().expectMessageIs(
-        "Unsupported: Unused segments are not cached"
-    ).assertThrowsAndMatches(
-        () -> cache.findExistingSegmentIds(Set.of())
-    );
-  }
-
-  @Test
   public void testInsertSegments_withUsedSegment()
   {
     final DataSegmentPlus segmentPlus = createUsedSegment().asPlus();
@@ -210,7 +160,6 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     cache.insertSegments(Set.of(unusedSegmentPlus));
 
-    // TODO: Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
     Assert.assertNull(cache.findUsedSegment(segmentId));
 
     final DataSegmentPlus usedSegmentPlus = new DataSegmentPlus(

@@ -21,7 +21,6 @@ package org.apache.druid.metadata.segment;
 
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.server.http.DataSegmentPlus;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -101,14 +100,6 @@ public interface DatasourceSegmentMetadataWriter
    * @return Number of segments deleted successfully
    */
   int deleteSegments(Set<SegmentId> segmentsIdsToDelete);
-
-  /**
-   * Updates the payload of the given segment in the metadata store.
-   * This method is used only by legacy tasks "move", "archive" and "restore".
-   *
-   * @return true if the segment payload was updated successfully, false otherwise
-   */
-  boolean updateSegmentPayload(DataSegment segment);
 
   /**
    * Inserts a pending segment into the metadata store.

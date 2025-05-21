@@ -47,6 +47,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.loading.SegmentKillResult;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
@@ -212,7 +213,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     int nextBatchSize = computeNextBatchSize(numSegmentsKilled);
     @Nullable Integer numTotalBatches = getNumTotalBatches();
     List<DataSegment> unusedSegments;
-    LOG.info(
+    logInfo(
         "Starting kill for datasource[%s] in interval[%s] and versions[%s] with batchSize[%d], up to limit[%d]"
         + " segments before maxUsedStatusLastUpdatedTime[%s] will be deleted%s",
         getDataSource(), getInterval(), getVersions(), batchSize, limit, maxUsedStatusLastUpdatedTime,
@@ -236,9 +237,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         break;
       }
 
-      unusedSegments = toolbox.getTaskActionClient().submit(
-          new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), getVersions(), nextBatchSize, maxUsedStatusLastUpdatedTime)
-      );
+      unusedSegments = fetchNextBatchOfUnusedSegments(toolbox, nextBatchSize);
 
       // Fetch locks each time as a revokal could have occurred in between batches
       final NavigableMap<DateTime, List<TaskLock>> taskLockMap
@@ -283,6 +282,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       // Nuke Segments
       taskActionClient.submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
+      emitMetric(toolbox.getEmitter(), TaskMetrics.NUKED_SEGMENTS, unusedSegments.size());
 
       // Determine segments to be killed
       final List<DataSegment> segmentsToBeKilled
@@ -290,22 +290,27 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       final Set<DataSegment> segmentsNotKilled = new HashSet<>(unusedSegments);
       segmentsToBeKilled.forEach(segmentsNotKilled::remove);
-      LOG.infoSegments(
-          segmentsNotKilled,
-          "Skipping segment kill from deep storage as their load specs are referenced by other segments."
-      );
+
+      if (!segmentsNotKilled.isEmpty()) {
+        LOG.warn(
+            "Skipping kill of [%d] segments from deep storage as their load specs are used by other segments.",
+            segmentsNotKilled.size()
+        );
+      }
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
+      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, segmentsToBeKilled.size());
+
       numBatchesProcessed++;
       numSegmentsKilled += segmentsToBeKilled.size();
 
-      LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
+      logInfo("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
       nextBatchSize = computeNextBatchSize(numSegmentsKilled);
     } while (!unusedSegments.isEmpty() && (null == numTotalBatches || numBatchesProcessed < numTotalBatches));
 
     final String taskId = getId();
-    LOG.info(
+    logInfo(
         "Finished kill task[%s] for dataSource[%s] and interval[%s]."
         + " Deleted total [%d] unused segments in [%d] batches.",
         taskId, getDataSource(), getInterval(), numSegmentsKilled, numBatchesProcessed
@@ -322,9 +327,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   }
 
   @JsonIgnore
-  @VisibleForTesting
   @Nullable
-  Integer getNumTotalBatches()
+  protected Integer getNumTotalBatches()
   {
     return null != limit ? (int) Math.ceil((double) limit / batchSize) : null;
   }
@@ -334,6 +338,31 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   int computeNextBatchSize(int numSegmentsKilled)
   {
     return null != limit ? Math.min(limit - numSegmentsKilled, batchSize) : batchSize;
+  }
+
+  /**
+   * Fetches the next batch of unused segments that are eligible for kill.
+   */
+  protected List<DataSegment> fetchNextBatchOfUnusedSegments(TaskToolbox toolbox, int nextBatchSize) throws IOException
+  {
+    return toolbox.getTaskActionClient().submit(
+        new RetrieveUnusedSegmentsAction(
+            getDataSource(),
+            getInterval(),
+            getVersions(),
+            nextBatchSize,
+            maxUsedStatusLastUpdatedTime
+        )
+    );
+  }
+
+  /**
+   * Logs the given info message. Exposed here to allow embedded kill tasks to
+   * suppress info logs.
+   */
+  protected void logInfo(String message, Object... args)
+  {
+    LOG.info(message, args);
   }
 
   private NavigableMap<DateTime, List<TaskLock>> getNonRevokedTaskLockMap(TaskActionClient client) throws IOException
@@ -385,6 +414,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         response.getUpgradedToSegmentIds().forEach((parent, children) -> {
           if (!CollectionUtils.isNullOrEmpty(children)) {
             // Do not kill segment if its parent or any of its siblings still exist in metadata store
+            LOG.warn(
+                "Skipping kill of segments[%s] as its load spec is also used by segment IDs[%s].",
+                parentIdToUnusedSegments.get(parent), children
+            );
             parentIdToUnusedSegments.remove(parent);
           }
         });
@@ -402,10 +435,25 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     return parentIdToUnusedSegments.values()
                                    .stream()
                                    .flatMap(Set::stream)
-                                   .filter(segment -> !usedSegmentLoadSpecs.contains(segment.getLoadSpec()))
+                                   .filter(segment -> !isSegmentLoadSpecPresentIn(segment, usedSegmentLoadSpecs))
                                    .collect(Collectors.toList());
   }
 
+  /**
+   * @return true if the load spec of the segment is present in the given set of
+   * used load specs.
+   */
+  private boolean isSegmentLoadSpecPresentIn(
+      DataSegment segment,
+      Set<Map<String, Object>> usedSegmentLoadSpecs
+  )
+  {
+    boolean isPresent = usedSegmentLoadSpecs.contains(segment.getLoadSpec());
+    if (isPresent) {
+      LOG.warn("Skipping kill of segment[%s] as its load spec is also used by other segments.", segment);
+    }
+    return isPresent;
+  }
 
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()

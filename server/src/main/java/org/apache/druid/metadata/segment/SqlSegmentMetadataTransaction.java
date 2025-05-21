@@ -21,7 +21,6 @@ package org.apache.druid.metadata.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
@@ -97,6 +96,12 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
+  public SqlSegmentsMetadataQuery noCacheSql()
+  {
+    return query;
+  }
+
+  @Override
   public void setRollbackOnly()
   {
     transactionStatus.setRollbackOnly();
@@ -139,12 +144,6 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   public Set<SegmentId> findUsedSegmentIdsOverlapping(Interval interval)
   {
     return query.retrieveUsedSegmentIds(dataSource, interval);
-  }
-
-  @Override
-  public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
-  {
-    return query.retrieveHighestUnusedSegmentId(dataSource, interval, version);
   }
 
   @Override
@@ -201,32 +200,6 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
     return query.retrieveSegmentsWithSchemaById(dataSource, segmentIds);
-  }
-
-  @Override
-  public List<DataSegment> findUnusedSegments(
-      Interval interval,
-      @Nullable List<String> versions,
-      @Nullable Integer limit,
-      @Nullable DateTime maxUpdatedTime
-  )
-  {
-    try (final CloseableIterator<DataSegment> iterator =
-             query.retrieveUnusedSegments(
-                 dataSource,
-                 List.of(interval),
-                 versions,
-                 limit,
-                 null,
-                 null,
-                 maxUpdatedTime
-             )
-    ) {
-      return ImmutableList.copyOf(iterator);
-    }
-    catch (IOException e) {
-      throw DruidException.defensive(e, "Error while reading unused segments");
-    }
   }
 
   // WRITE METHODS
