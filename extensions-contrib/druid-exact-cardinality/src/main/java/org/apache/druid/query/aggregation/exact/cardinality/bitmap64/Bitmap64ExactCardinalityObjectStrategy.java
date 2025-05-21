@@ -19,12 +19,11 @@
 
 package org.apache.druid.query.aggregation.exact.cardinality.bitmap64;
 
-import java.nio.BufferUnderflowException;
-import java.nio.ByteBuffer;
+import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
-
-import org.apache.druid.segment.data.ObjectStrategy;
+import java.nio.BufferUnderflowException;
+import java.nio.ByteBuffer;
 
 public class Bitmap64ExactCardinalityObjectStrategy implements ObjectStrategy<Bitmap64Counter>
 {
