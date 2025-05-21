@@ -284,7 +284,7 @@ public class OrFilterTest extends BaseFilterTest
     assertFilterMatches(
         new OrDimFilter(
             ImmutableList.of(
-                new SelectorDimFilter("dim1", "7", null),
+                new SelectorDimFilter("dim1", "7", null, new FilterTuning(false, null, null)),
                 new InDimFilter("dim0", ImmutableSet.of("1", "2", "3"), null)
             )
         ),
