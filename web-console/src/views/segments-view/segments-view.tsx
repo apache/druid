@@ -497,6 +497,17 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   };
 
+  private readonly handleFilterChange = (filters: Filter[]) => {
+    this.goToFirstPage();
+    this.props.onFiltersChange(filters);
+  };
+
+  private goToFirstPage() {
+    if (this.state.page) {
+      this.setState({ page: 0 });
+    }
+  }
+
   private getSegmentActions(id: string, datasource: string): BasicAction[] {
     const actions: BasicAction[] = [];
     actions.push({
@@ -521,7 +532,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     enableComparisons = false,
     valueFn: (value: string) => ReactNode = String,
   ) {
-    const { filters, onFiltersChange } = this.props;
+    const { filters } = this.props;
+    const { handleFilterChange } = this;
 
     return function FilterableCell(row: { value: any }) {
       return (
@@ -529,7 +541,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           field={field}
           value={row.value}
           filters={filters}
-          onFiltersChange={onFiltersChange}
+          onFiltersChange={handleFilterChange}
           enableComparisons={enableComparisons}
         >
           {valueFn(row.value)}
@@ -539,7 +551,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   renderSegmentsTable() {
-    const { capabilities, filters, onFiltersChange } = this.props;
+    const { capabilities, filters } = this.props;
     const {
       segmentsState,
       visibleColumns,
@@ -580,7 +592,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         manual
         filterable
         filtered={filters}
-        onFilteredChange={onFiltersChange}
+        onFilteredChange={this.handleFilterChange}
         sorted={sorted}
         onSortedChange={sorted => this.setState({ sorted })}
         page={page}
@@ -588,7 +600,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE || page > 0}
+        showPagination
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
@@ -1013,7 +1025,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   render() {
-    const { capabilities, filters, onFiltersChange } = this.props;
+    const { capabilities, filters } = this.props;
     const {
       segmentTableActionDialogId,
       datasourceTableActionDialogId,
@@ -1104,7 +1116,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                     small
                     rightIcon={IconNames.ARROW_DOWN}
                     onClick={() =>
-                      onFiltersChange(
+                      this.handleFilterChange(
                         compact([
                           start && { id: 'start', value: `>=${start.toISOString()}` },
                           end && { id: 'end', value: `<${end.toISOString()}` },
