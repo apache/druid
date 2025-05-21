@@ -128,6 +128,13 @@ public class ITQueryRetryTestOnMissingSegments
     testQueries(buildQuery(1, false), Expectation.ALL_SUCCESS);
   }
 
+  @Test
+  public void testFailureWhenLastSegmentIsMissingAndNoRetryAllowed() throws Exception
+  {
+    // Since retry is disabled and partial result is not allowed, the query must fail.
+    testQueries(buildQuery(0, false, 3), Expectation.QUERY_FAILURE);
+  }
+
   private void testQueries(String queryWithResultsStr, Expectation expectation) throws Exception
   {
     final List<QueryWithResults> queries = jsonMapper.readValue(
@@ -216,14 +223,19 @@ public class ITQueryRetryTestOnMissingSegments
 
   private String buildQuery(int numRetriesOnMissingSegments, boolean allowPartialResults) throws IOException
   {
+    return buildQuery(numRetriesOnMissingSegments, allowPartialResults, -1);
+  }
+
+  private String buildQuery(int numRetriesOnMissingSegments, boolean allowPartialResults, int segmentUnavilableIdx) throws IOException
+  {
     return StringUtils.replace(
         AbstractIndexerTest.getResourceAsString(QUERIES_RESOURCE),
         "%%CONTEXT%%",
-        jsonMapper.writeValueAsString(buildContext(numRetriesOnMissingSegments, allowPartialResults))
+        jsonMapper.writeValueAsString(buildContext(numRetriesOnMissingSegments, allowPartialResults, segmentUnavilableIdx))
     );
   }
 
-  private static Map<String, Object> buildContext(int numRetriesOnMissingSegments, boolean allowPartialResults)
+  private static Map<String, Object> buildContext(int numRetriesOnMissingSegments, boolean allowPartialResults, int segmentUnavailableIdx)
   {
     final Map<String, Object> context = new HashMap<>();
     // Disable cache so that each run hits historical.
@@ -232,6 +244,7 @@ public class ITQueryRetryTestOnMissingSegments
     context.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, numRetriesOnMissingSegments);
     context.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, allowPartialResults);
     context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);
+    context.put(ServerManagerForQueryErrorTest.QUERY_FAILURE_SEGMENT_UNAVAILABLE_IDX, segmentUnavailableIdx);
     return context;
   }
 }

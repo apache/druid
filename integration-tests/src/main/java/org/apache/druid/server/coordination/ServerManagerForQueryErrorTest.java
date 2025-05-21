@@ -80,6 +80,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   public static final String QUERY_UNSUPPORTED_TEST_CONTEXT_KEY = "query-unsupported-test";
   public static final String RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY = "resource-limit-exceeded-test";
   public static final String QUERY_FAILURE_TEST_CONTEXT_KEY = "query-failure-test";
+  public static final String QUERY_FAILURE_SEGMENT_UNAVAILABLE_IDX = "segment-unavailable-idx";
 
   private static final Logger LOG = new Logger(ServerManagerForQueryErrorTest.class);
   private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 1;
@@ -127,6 +128,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   {
     final QueryContext queryContext = query.context();
     if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
+      final int segmentUnavailableIdx = queryContext.getInt(QUERY_FAILURE_SEGMENT_UNAVAILABLE_IDX, -1);
       final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
       queryToIgnoredSegments.compute(
           query.getMostSpecificId(),
@@ -134,7 +136,13 @@ public class ServerManagerForQueryErrorTest extends ServerManager
             if (ignoreCounter == null) {
               ignoreCounter = 0;
             }
-            if (ignoreCounter < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
+
+            if (segmentUnavailableIdx >= 0 && segmentUnavailableIdx == ignoreCounter) {
+              // Fail exactly once when counter matches the configured retry index
+              ignoreCounter++;
+              isIgnoreSegment.setTrue();
+            } else if (ignoreCounter < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
+              // Fail up to N times for this query
               ignoreCounter++;
               isIgnoreSegment.setTrue();
             }
