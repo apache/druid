@@ -121,7 +121,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     };
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_start_blocks_add_forAnyTaskId()
   {
     // Add task1 to storage and mark it as running
@@ -145,7 +145,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_add_blocks_stop()
   {
     taskQueue.setActive(true);
@@ -166,7 +166,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_add_blocks_syncFromStorage_forSameTaskId()
   {
     taskQueue.setActive(true);
@@ -189,7 +189,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_syncFromStorage_blocks_add_forSameTaskId()
   {
     final String taskId = "t2";
@@ -309,7 +309,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_add_doesNotBlock_add_forDifferentTaskId()
   {
     taskQueue.setActive(true);
@@ -338,7 +338,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_add_doesNotBlock_shutdown_forDifferentTaskId()
   {
     taskQueue.setActive(true);
@@ -369,7 +369,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_shutdown_doesNotBlock_add_forDifferentTaskId()
   {
     taskQueue.setActive(true);
