@@ -24,6 +24,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -36,10 +37,24 @@ import java.util.Set;
 public interface DatasourceSegmentMetadataReader
 {
   /**
+   * Retrieves the IDs of segments (out of the given set) which already exist in
+   * the metadata store.
+   */
+  Set<String> findExistingSegmentIds(Set<SegmentId> segments);
+
+  /**
    * Retrieves IDs of used segments that belong to the datasource and overlap
    * the given interval.
    */
   Set<SegmentId> findUsedSegmentIdsOverlapping(Interval interval);
+
+  /**
+   * Retrieves the ID of the unused segment that has the highest partition
+   * number amongst all unused segments that exactly match the given interval
+   * and version.
+   */
+  @Nullable
+  SegmentId findHighestUnusedSegmentId(Interval interval, String version);
 
   /**
    * Retrieves used segments that overlap with any of the given intervals.
@@ -64,12 +79,54 @@ public interface DatasourceSegmentMetadataReader
   );
 
   /**
+   * Retrieves the segment for the given segment ID.
+   *
+   * @return null if no such segment exists in the metadata store.
+   */
+  @Nullable
+  DataSegment findSegment(SegmentId segmentId);
+
+  /**
    * Retrieves the used segment for the given segment ID.
    *
    * @return null if no such segment exists in the metadata store.
    */
   @Nullable
   DataSegment findUsedSegment(SegmentId segmentId);
+
+  /**
+   * Retrieves segments for the given segment IDs.
+   */
+  List<DataSegmentPlus> findSegments(
+      Set<SegmentId> segmentIds
+  );
+
+  /**
+   * Retrieves segments with additional metadata info such as number of rows and
+   * schema fingerprint for the given segment IDs.
+   */
+  List<DataSegmentPlus> findSegmentsWithSchema(
+      Set<SegmentId> segmentIds
+  );
+
+  /**
+   * Retrieves unused segments that are fully contained within the given interval.
+   *
+   * @param interval       Returned segments must be fully contained within this
+   *                       interval
+   * @param versions       Optional list of segment versions. If passed as null,
+   *                       all segment versions are eligible.
+   * @param limit          Maximum number of segments to return. If passed as null,
+   *                       all segments are returned.
+   * @param maxUpdatedTime Returned segments must have a {@code used_status_last_updated}
+   *                       which is either null or earlier than this value.
+   */
+  List<DataSegment> findUnusedSegments(
+      Interval interval,
+      @Nullable List<String> versions,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUpdatedTime
+  );
 
   /**
    * Retrieves pending segment IDs for the given sequence name and previous ID.

@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata.segment;
 
-import org.apache.druid.timeline.DataSegment;
 import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
@@ -39,14 +38,6 @@ public interface SegmentMetadataTransaction
    * Marks this transaction to be rolled back.
    */
   void setRollbackOnly();
-
-  /**
-   * Updates the payload of the given segment in the metadata store.
-   * This method is used only by legacy tasks "move", "archive" and "restore".
-   *
-   * @return true if the segment payload was updated successfully, false otherwise
-   */
-  boolean updateSegmentPayload(DataSegment segment);
 
   @FunctionalInterface
   interface Callback<T>

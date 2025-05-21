@@ -21,6 +21,7 @@ package org.apache.druid.metadata.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
@@ -147,6 +148,12 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
+  public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
+  {
+    return query.retrieveHighestUnusedSegmentId(dataSource, interval, version);
+  }
+
+  @Override
   public Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
   {
     try (CloseableIterator<DataSegment> iterator
@@ -200,6 +207,32 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   public List<DataSegmentPlus> findSegmentsWithSchema(Set<SegmentId> segmentIds)
   {
     return query.retrieveSegmentsWithSchemaById(dataSource, segmentIds);
+  }
+
+  @Override
+  public List<DataSegment> findUnusedSegments(
+      Interval interval,
+      @Nullable List<String> versions,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUpdatedTime
+  )
+  {
+    try (final CloseableIterator<DataSegment> iterator =
+             query.retrieveUnusedSegments(
+                 dataSource,
+                 List.of(interval),
+                 versions,
+                 limit,
+                 null,
+                 null,
+                 maxUpdatedTime
+             )
+    ) {
+      return ImmutableList.copyOf(iterator);
+    }
+    catch (IOException e) {
+      throw DruidException.defensive(e, "Error while reading unused segments");
+    }
   }
 
   // WRITE METHODS
