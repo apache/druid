@@ -443,6 +443,9 @@ public abstract class QueryResultPusher
     private ResponseContext.SerializationResult serializeAndValidateResponseContextHeader()
     {
       try {
+        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+        // and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult result = responseContext.serializeWith(
             jsonMapper,
             responseContextConfig.getMaxResponseContextHeaderSize()
