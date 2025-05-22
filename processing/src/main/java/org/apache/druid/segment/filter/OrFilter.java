@@ -304,6 +304,7 @@ public class OrFilter implements BooleanFilter
       return new ValueMatcher()
       {
         int iterOffset = Integer.MAX_VALUE;
+        int lastOffset = Integer.MAX_VALUE;
         IntIterator iterator = initialIterator;
 
         @Override
@@ -311,10 +312,11 @@ public class OrFilter implements BooleanFilter
         {
           int currentOffset = offset.getOffset();
           // check if the cursor was reset, and reset iterator if so
-          if (currentOffset >= iterOffset) {
+          if (currentOffset >= lastOffset) {
             iterOffset = Integer.MAX_VALUE;
             iterator = BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap);
           }
+          lastOffset = currentOffset;
           while (iterOffset > currentOffset && iterator.hasNext()) {
             iterOffset = iterator.next();
           }
@@ -338,6 +340,7 @@ public class OrFilter implements BooleanFilter
       return new ValueMatcher()
       {
         int iterOffset = -1;
+        int lastOffset = -1;
         PeekableIntIterator iterator = initialIterator;
 
         @Override
@@ -345,10 +348,11 @@ public class OrFilter implements BooleanFilter
         {
           int currentOffset = offset.getOffset();
           // check if the cursor was reset, and reset iterator if so
-          if (currentOffset <= iterOffset) {
+          if (currentOffset <= lastOffset) {
             iterOffset = -1;
             iterator = rowBitmap.peekableIterator();
           }
+          lastOffset = currentOffset;
           iterator.advanceIfNeeded(currentOffset);
           if (iterator.hasNext()) {
             iterOffset = iterator.peekNext();
@@ -381,23 +385,26 @@ public class OrFilter implements BooleanFilter
     {
       final VectorMatch match = VectorMatch.wrap(new int[vectorOffset.getMaxVectorSize()]);
       int iterOffset = -1;
+      int lastStartOffset = -1;
       PeekableIntIterator iterator = initialIterator;
 
       @Override
       public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
       {
-        // check if the cursor was reset, and reset iterator if so
-        if (vectorOffset.getStartOffset() <= iterOffset) {
-          iterOffset = -1;
-          iterator = bitmap.peekableIterator();
-        }
         final int[] selection = match.getSelection();
 
         if (vectorOffset.isContiguous()) {
+          final int startOffset = vectorOffset.getStartOffset();
+          // check if the cursor was reset, and reset iterator if so
+          if (startOffset <= lastStartOffset) {
+            iterOffset = -1;
+            iterator = bitmap.peekableIterator();
+          }
+          lastStartOffset = startOffset;
           int numRows = 0;
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];
-            final int rowNum = vectorOffset.getStartOffset() + maskNum;
+            final int rowNum = startOffset + maskNum;
             iterator.advanceIfNeeded(rowNum);
             if (iterator.hasNext()) {
               iterOffset = iterator.peekNext();
@@ -410,6 +417,11 @@ public class OrFilter implements BooleanFilter
           return match;
         } else {
           final int[] currentOffsets = vectorOffset.getOffsets();
+          if (getCurrentVectorSize() > 0 && currentOffsets[0] <= lastStartOffset) {
+            iterOffset = -1;
+            iterator = bitmap.peekableIterator();
+          }
+          lastStartOffset = currentOffsets[0];
           int numRows = 0;
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];
