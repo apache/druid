@@ -16,24 +16,19 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import './fill-indicator.scss';
 
-.services-view {
-  height: 100%;
-  width: 100%;
+export interface FillIndicatorProps {
+  value: number;
+}
 
-  .view-control-bar {
-    margin-bottom: $standard-padding;
-  }
-
-  .ReactTable {
-    position: absolute;
-    top: $view-control-bar-height + $standard-padding;
-    bottom: 0;
-    width: 100%;
-  }
-
-  ul {
-    line-height: 20px;
-  }
+export function FillIndicator({ value }: FillIndicatorProps) {
+  let formattedValue = (value * 100).toFixed(1);
+  if (formattedValue === '0.0' && value > 0) formattedValue = '~' + formattedValue;
+  return (
+    <div className="fill-indicator">
+      <div className="bar" style={{ width: `${value * 100}%` }} />
+      <div className="label">{formattedValue + '%'}</div>
+    </div>
+  );
 }

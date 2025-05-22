@@ -339,9 +339,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           value={row.value}
           filters={filters}
           onFiltersChange={onFiltersChange}
-        >
-          {row.value}
-        </TableFilterableCell>
+        />
       );
     };
   }

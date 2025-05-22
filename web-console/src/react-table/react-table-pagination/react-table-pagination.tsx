@@ -109,8 +109,10 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
   } else {
     pageInfo += '...';
   }
-  if (ofText && nonEmptyArray(sortedData)) {
+  if (ofText === 'of' && nonEmptyArray(sortedData)) {
     pageInfo += ` ${ofText} ${formatInteger(sortedData.length)}`;
+  } else if (ofText) {
+    pageInfo += ` ${ofText}`;
   }
 
   const pageJumpMenuItem = renderPageJumpMenuItem();

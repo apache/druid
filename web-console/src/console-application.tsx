@@ -61,7 +61,7 @@ function viewFilterChange(tab: HeaderActiveTab) {
 }
 
 function pathWithFilter(tab: HeaderActiveTab) {
-  return [`/${tab}/:filters`, `/${tab}`];
+  return `/${tab}/:filters?`;
 }
 
 function switchTab(tab: HeaderActiveTab) {

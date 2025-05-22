@@ -62,18 +62,18 @@ describe('react-table-utils', () => {
     expect(
       tableFiltersToString([
         { id: 'x', value: '~y' },
-        { id: 'z', value: '=w&' },
+        { id: 'z', value: '=w&%/' },
       ]),
-    ).toEqual('x~y&z=w%26');
+    ).toEqual('x~y&z=w%26%25%2F');
   });
 
   it('stringToTableFilters', () => {
     expect(stringToTableFilters(undefined)).toEqual([]);
     expect(stringToTableFilters('')).toEqual([]);
     expect(stringToTableFilters('x~y')).toEqual([{ id: 'x', value: '~y' }]);
-    expect(stringToTableFilters('x~y&z=w%26')).toEqual([
+    expect(stringToTableFilters('x~y&z=w%26%25%2F')).toEqual([
       { id: 'x', value: '~y' },
-      { id: 'z', value: '=w&' },
+      { id: 'z', value: '=w&%/' },
     ]);
     expect(stringToTableFilters('x<3&y<=3')).toEqual([
       { id: 'x', value: '<3' },

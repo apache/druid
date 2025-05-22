@@ -1004,7 +1004,7 @@ GROUP BY 1, 2`;
     rules: Rule[] | undefined,
     compactionInfo: CompactionInfo | undefined,
   ): BasicAction[] {
-    const { goToQuery, capabilities } = this.props;
+    const { goToQuery, goToSegments, capabilities } = this.props;
 
     const goToActions: BasicAction[] = [];
 
@@ -1015,6 +1015,14 @@ GROUP BY 1, 2`;
         onAction: () => goToQuery({ queryString: SqlQuery.create(T(datasource)).toString() }),
       });
     }
+
+    goToActions.push({
+      icon: IconNames.STACKED_CHART,
+      title: 'Go to segments',
+      onAction: () => {
+        goToSegments({ datasource });
+      },
+    });
 
     if (!capabilities.hasCoordinatorAccess()) {
       return goToActions;
