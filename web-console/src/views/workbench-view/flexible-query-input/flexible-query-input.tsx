@@ -88,7 +88,11 @@ export class FlexibleQueryInput extends React.PureComponent<
         const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
         callback(
           null,
-          charBeforePrefix === '"' ? this.state.unquotedCompletions : this.state.quotedCompletions,
+          charBeforePrefix === "'"
+            ? []
+            : charBeforePrefix === '"'
+            ? this.state.unquotedCompletions
+            : this.state.quotedCompletions,
         );
       },
     },
