@@ -296,21 +296,29 @@ public class OrFilter implements BooleanFilter
 
     if (descending) {
 
-      final IntIterator iter = BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap);
+      final IntIterator initialIterator = BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap);
 
-      if (!iter.hasNext()) {
+      if (!initialIterator.hasNext()) {
         return ValueMatchers.allFalse();
       }
       return new ValueMatcher()
       {
         int iterOffset = Integer.MAX_VALUE;
+        int previousOffset = Integer.MAX_VALUE;
+        IntIterator iterator = initialIterator;
 
         @Override
         public boolean matches(boolean includeUnknown)
         {
           int currentOffset = offset.getOffset();
-          while (iterOffset > currentOffset && iter.hasNext()) {
-            iterOffset = iter.next();
+          // check if the cursor was reset, and reset iterator if so
+          if (currentOffset >= previousOffset) {
+            iterOffset = Integer.MAX_VALUE;
+            iterator = BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap);
+          }
+          previousOffset = currentOffset;
+          while (iterOffset > currentOffset && iterator.hasNext()) {
+            iterOffset = iterator.next();
           }
 
           return iterOffset == currentOffset;
@@ -320,26 +328,34 @@ public class OrFilter implements BooleanFilter
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("offset", offset);
-          inspector.visit("iter", iter);
+          inspector.visit("iter", iterator);
         }
       };
     } else {
-      final PeekableIntIterator peekableIterator = rowBitmap.peekableIterator();
+      final PeekableIntIterator initialIterator = rowBitmap.peekableIterator();
 
-      if (!peekableIterator.hasNext()) {
+      if (!initialIterator.hasNext()) {
         return ValueMatchers.allFalse();
       }
       return new ValueMatcher()
       {
         int iterOffset = -1;
+        int previousOffset = -1;
+        PeekableIntIterator iterator = initialIterator;
 
         @Override
         public boolean matches(boolean includeUnknown)
         {
           int currentOffset = offset.getOffset();
-          peekableIterator.advanceIfNeeded(currentOffset);
-          if (peekableIterator.hasNext()) {
-            iterOffset = peekableIterator.peekNext();
+          // check if the cursor was reset, and reset iterator if so
+          if (currentOffset <= previousOffset) {
+            iterOffset = -1;
+            iterator = rowBitmap.peekableIterator();
+          }
+          previousOffset = currentOffset;
+          iterator.advanceIfNeeded(currentOffset);
+          if (iterator.hasNext()) {
+            iterOffset = iterator.peekNext();
           }
 
           return iterOffset == currentOffset;
@@ -349,7 +365,7 @@ public class OrFilter implements BooleanFilter
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("offset", offset);
-          inspector.visit("peekableIterator", peekableIterator);
+          inspector.visit("peekableIterator", iterator);
         }
       };
     }
@@ -360,8 +376,8 @@ public class OrFilter implements BooleanFilter
       final ImmutableBitmap bitmap
   )
   {
-    final PeekableIntIterator peekableIntIterator = bitmap.peekableIterator();
-    if (!peekableIntIterator.hasNext()) {
+    final PeekableIntIterator initialIterator = bitmap.peekableIterator();
+    if (!initialIterator.hasNext()) {
       return BooleanVectorValueMatcher.of(vectorOffset, ConstantMatcherType.ALL_FALSE);
     }
 
@@ -369,19 +385,29 @@ public class OrFilter implements BooleanFilter
     {
       final VectorMatch match = VectorMatch.wrap(new int[vectorOffset.getMaxVectorSize()]);
       int iterOffset = -1;
+      int previousStartOffset = -1;
+      PeekableIntIterator iterator = initialIterator;
 
       @Override
       public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
       {
         final int[] selection = match.getSelection();
+
         if (vectorOffset.isContiguous()) {
+          final int startOffset = vectorOffset.getStartOffset();
+          // check if the cursor was reset, and reset iterator if so
+          if (startOffset <= previousStartOffset) {
+            iterOffset = -1;
+            iterator = bitmap.peekableIterator();
+          }
+          previousStartOffset = startOffset;
           int numRows = 0;
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];
-            final int rowNum = vectorOffset.getStartOffset() + maskNum;
-            peekableIntIterator.advanceIfNeeded(rowNum);
-            if (peekableIntIterator.hasNext()) {
-              iterOffset = peekableIntIterator.peekNext();
+            final int rowNum = startOffset + maskNum;
+            iterator.advanceIfNeeded(rowNum);
+            if (iterator.hasNext()) {
+              iterOffset = iterator.peekNext();
               if (iterOffset == rowNum) {
                 selection[numRows++] = maskNum;
               }
@@ -391,13 +417,18 @@ public class OrFilter implements BooleanFilter
           return match;
         } else {
           final int[] currentOffsets = vectorOffset.getOffsets();
+          if (getCurrentVectorSize() > 0 && currentOffsets[0] <= previousStartOffset) {
+            iterOffset = -1;
+            iterator = bitmap.peekableIterator();
+          }
+          previousStartOffset = currentOffsets[0];
           int numRows = 0;
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];
             final int rowNum = currentOffsets[mask.getSelection()[i]];
-            peekableIntIterator.advanceIfNeeded(rowNum);
-            if (peekableIntIterator.hasNext()) {
-              iterOffset = peekableIntIterator.peekNext();
+            iterator.advanceIfNeeded(rowNum);
+            if (iterator.hasNext()) {
+              iterOffset = iterator.peekNext();
               if (iterOffset == rowNum) {
                 selection[numRows++] = maskNum;
               }

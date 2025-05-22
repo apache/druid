@@ -33,6 +33,10 @@ public class VectorConditionalProcessors
     final ExpressionType outputType = ExpressionTypeConversion.leastRestrictiveType(leftType, rightType);
 
     final ExprVectorProcessor<?> processor;
+    if (outputType == null) {
+      // if output type is null, it means all the input types were null (non-existent), and nvl(null, null) is null
+      return VectorProcessors.constant((Long) null, inspector.getMaxVectorSize());
+    }
     if (outputType.is(ExprType.LONG)) {
       // long is most restrictive so both processors are definitely long typed if output is long
       processor = new NvlLongVectorProcessor(
