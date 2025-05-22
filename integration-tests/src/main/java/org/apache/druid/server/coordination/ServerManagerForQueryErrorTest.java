@@ -64,9 +64,9 @@ import java.util.function.Function;
  *   after the broker issues the query to the historical. To mimic this situation, the historical
  *   with this server manager announces all segments assigned, and reports missing segments based on the following:
  *   <ul>
- *     <li> If {@link #QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY} and {@link #QUERY_RETRY_TEST_CONTEXT_KEY} are set,
+ *     <li> If {@link #QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY} and {@link #QUERY_RETRY_TEST_CONTEXT_KEY} are set,
  *           the segment at that index is reported as missing exactly once.</li>
- *     <li> If {@link #QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY} is not set or is -1, it simulates missing segments
+ *     <li> If {@link #QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY} is not set or is -1, it simulates missing segments
  *     starting from the beginning, up to {@link #MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS}.</li>
  *   </ul>
  *   The missing report is only generated once for the first time. Post that report, upon retry, all segments are served
@@ -96,7 +96,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
    * {@link #MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS} segments from the beginning.
    * </p>
    */
-  public static final String QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY = "segment-unavailable-idx";
+  public static final String QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY = "unavailable-segment-idx";
   private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 1;
 
   private static final Logger LOG = new Logger(ServerManagerForQueryErrorTest.class);
@@ -144,7 +144,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   {
     final QueryContext queryContext = query.context();
     if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
-      final int segmentUnavailableIdx = queryContext.getInt(QUERY_RETRY_SEGMENT_UNAVAILABLE_IDX_KEY, -1);
+      final int unavailableSegmentIdx = queryContext.getInt(QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY, -1);
       final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
       queryToIgnoredSegments.compute(
           query.getMostSpecificId(),
@@ -153,7 +153,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
               ignoreCounter = 0;
             }
 
-            if (segmentUnavailableIdx >= 0 && segmentUnavailableIdx == ignoreCounter) {
+            if (unavailableSegmentIdx >= 0 && unavailableSegmentIdx == ignoreCounter) {
               // Fail exactly once when counter matches the configured retry index
               ignoreCounter++;
               isIgnoreSegment.setTrue();
