@@ -38,7 +38,9 @@ public class Bitmap64ExactCardinalityBuildAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    bitmap.add(selector.getLong());
+    if (!selector.isNull()) {
+      bitmap.add(selector.getLong());
+    }
   }
 
   @Nullable

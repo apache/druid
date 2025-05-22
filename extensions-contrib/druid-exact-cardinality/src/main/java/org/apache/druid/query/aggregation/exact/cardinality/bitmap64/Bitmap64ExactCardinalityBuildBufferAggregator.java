@@ -50,7 +50,9 @@ public class Bitmap64ExactCardinalityBuildBufferAggregator implements BufferAggr
     try {
       buf.position(position);
       Bitmap64Counter bitmap64Counter = getOrCreateCollector(buf, position);
-      bitmap64Counter.add(selector.getLong());
+      if (!selector.isNull()) {
+        bitmap64Counter.add(selector.getLong());
+      }
     }
     finally {
       buf.position(oldPosition);

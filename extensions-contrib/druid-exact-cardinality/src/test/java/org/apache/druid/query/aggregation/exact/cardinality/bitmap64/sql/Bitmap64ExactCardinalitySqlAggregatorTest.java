@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.exact.cardinality.bitmap64.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.exact.cardinality.bitmap64.Bitmap64ExactCardinalityBuildAggregatorFactory;
@@ -35,10 +36,10 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
-import org.junit.Assert.*;
 
 @SqlTestFrameworkConfig.ComponentSupplier(Bitmap64ExactCardinalitySqlAggregatorTest.Bitmap64ExactCardinalitySqlAggComponentSupplier.class)
 public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryTest
@@ -63,19 +64,22 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
     {
       Bitmap64ExactCardinalityModule.registerSerde();
 
+      ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
+      new Bitmap64ExactCardinalityModule().getJacksonModules().forEach(jsonMapper::registerModule);
+
       final QueryableIndex index =
-          IndexBuilder.create(CalciteTests.getJsonMapper())
+          IndexBuilder.create(jsonMapper)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                      .schema(new IncrementalIndexSchema.Builder()
-                                  .withMetrics(
-                                      new Bitmap64ExactCardinalityBuildAggregatorFactory(
-                                          "unique_m1_values",
-                                          "m1"
-                                      )
-                                  )
-                                  .withRollup(false)
-                                  .build())
+                      .schema(
+                          IncrementalIndexSchema.builder()
+                              .withDimensionsSpec(TestDataSet.NUMFOO.getInputRowSchema().getDimensionsSpec())
+                              .withMetrics(
+                                  new Bitmap64ExactCardinalityBuildAggregatorFactory("unique_m1_values", "m1")
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
                       .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
                       .buildMMappedIndex();
 
@@ -97,9 +101,9 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   {
     cannotVectorize();
     testBuilder()
-        .sql("SELECT BITMAP64_EXACT_CARDINALITY(m1) FROM " + DATA_SOURCE)
+        .sql("SELECT BITMAP64_EXACT_CARDINALITY(l1) FROM " + DATA_SOURCE)
         .expectedResults(ImmutableList.of(
-            new Object[]{4L}
+            new Object[]{3L} // l1 values: 7, 325323, 0 (distinct count = 3)
         ))
         .run();
   }
@@ -111,7 +115,7 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
     testBuilder()
         .sql("SELECT BITMAP64_EXACT_CARDINALITY(unique_m1_values) FROM " + DATA_SOURCE)
         .expectedResults(ImmutableList.of(
-            new Object[]{4L} // Expecting 4, as 10, 20, 30, 40 are the unique values
+            new Object[]{6L} // m1 string inputs: "1.0"-"6.0" are 6 unique values
         ))
         .run();
   }
@@ -121,10 +125,14 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   {
     cannotVectorize();
     testBuilder()
-        .sql("SELECT __time, BITMAP64_EXACT_CARDINALITY(m1) FROM " + DATA_SOURCE + " GROUP BY __time ORDER BY __time")
+        .sql("SELECT __time, BITMAP64_EXACT_CARDINALITY(l1) FROM " + DATA_SOURCE + " GROUP BY __time ORDER BY __time")
         .expectedResults(ImmutableList.of(
-            new Object[]{1466985600000L, 3L},
-            new Object[]{1467072000000L, 2L}
+            new Object[]{946684800000L, 1L}, // 2000-01-01, l1=7L
+            new Object[]{946771200000L, 1L}, // 2000-01-02, l1=325323L
+            new Object[]{946857600000L, 1L}, // 2000-01-03, l1=0L
+            new Object[]{978307200000L, 0L}, // 2001-01-01, l1 is null
+            new Object[]{978393600000L, 0L}, // 2001-01-02, l1 is null
+            new Object[]{978480000000L, 0L}  // 2001-01-03, l1 is null
         ))
         .run();
   }
@@ -138,8 +146,12 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
              + DATA_SOURCE
              + " GROUP BY __time ORDER BY __time")
         .expectedResults(ImmutableList.of(
-            new Object[]{1466985600000L, 3L},
-            new Object[]{1467072000000L, 2L}
+            new Object[]{946684800000L, 1L}, // 2000-01-01, m1="1.0"
+            new Object[]{946771200000L, 1L}, // 2000-01-02, m1="2.0"
+            new Object[]{946857600000L, 1L}, // 2000-01-03, m1="3.0"
+            new Object[]{978307200000L, 1L}, // 2001-01-01, m1="4.0"
+            new Object[]{978393600000L, 1L}, // 2001-01-02, m1="5.0"
+            new Object[]{978480000000L, 1L}  // 2001-01-03, m1="6.0"
         ))
         .run();
   }
@@ -149,9 +161,9 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   {
     cannotVectorize();
     testBuilder()
-        .sql("SELECT BITMAP64_EXACT_CARDINALITY(m1) FROM " + DATA_SOURCE + " WHERE m1 > 20")
+        .sql("SELECT BITMAP64_EXACT_CARDINALITY(l1) FROM " + DATA_SOURCE + " WHERE l1 > 20")
         .expectedResults(ImmutableList.of(
-            new Object[]{2L} // 30, 40
+            new Object[]{1L} // l1 values > 20: 325323L (distinct count = 1)
         ))
         .run();
   }
