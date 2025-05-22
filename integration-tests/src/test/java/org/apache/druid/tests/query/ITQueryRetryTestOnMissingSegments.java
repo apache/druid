@@ -133,7 +133,7 @@ public class ITQueryRetryTestOnMissingSegments
   {
     // Since retry is disabled and partial result is not allowed, the query must fail since the last segment
     // is missing/unavailable.
-    testQueries(buildQuery(0, false, 3), Expectation.QUERY_FAILURE);
+    testQueries(buildQuery(0, false, 2), Expectation.QUERY_FAILURE);
   }
 
   private void testQueries(String queryWithResultsStr, Expectation expectation) throws Exception
