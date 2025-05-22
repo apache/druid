@@ -35,10 +35,12 @@ The extension uses `Roaring64NavigableMap` as its underlying data structure to e
 ### Build Aggregator (Bitmap64ExactCardinalityBuild)
 
 The BUILD aggregator is used when you want to compute cardinality directly from raw LONG values:
+
 - Used during ingestion or when querying raw data
 - Must be used on columns of type LONG, otherwise the output will be 1.
 
 Example:
+
 ```json
 {
   "type": "Bitmap64ExactCardinalityBuild",
@@ -50,17 +52,19 @@ Example:
 ### Merge Aggregator (Bitmap64ExactCardinalityMerge)
 
 The MERGE aggregator is used when working with pre-computed bitmaps:
+
 - Used for querying pre-aggregated data (columns that were previously aggregated using BUILD)
 - Combines multiple bitmaps using bitwise operations
 - Must be used on columns that are aggregated using BUILD
 - `Bitmap64ExactCardinalityMerge` aggregator is recommended for use in `timeseries` type queries, though it also works for `topN` and `groupBy` queries.
 
 Example:
+
 ```json
 {
   "type": "Bitmap64ExactCardinalityMerge",
   "name": "total_unique_values",
-  "fieldName": "unique_values"  // Must be a pre-computed bitmap
+  "fieldName": "unique_values" // Must be a pre-computed bitmap
 }
 ```
 
@@ -132,6 +136,7 @@ You can also use the post-aggregator for further processing:
 ## Example Use Cases
 
 1. **User Analytics**: Count unique users over time
+
 ```sql
 -- First ingest with BUILD aggregator
 -- Then query with:
@@ -143,10 +148,13 @@ GROUP BY 1
 ```
 
 2. **High-Precision Metrics**: When exact counts are required
+
 ```json
 {
   "type": "groupBy",
-  "dimensions": ["country"],
+  "dimensions": [
+    "country"
+  ],
   "aggregations": [
     {
       "type": "Bitmap64ExactCardinalityMerge",
@@ -160,6 +168,7 @@ GROUP BY 1
 ## Walkthrough Using Wikipedia datasource
 
 ### Batch Ingestion Task Spec
+
 ```json
 {
   "type": "index",
@@ -221,7 +230,9 @@ GROUP BY 1
         "segmentGranularity": "DAY",
         "queryGranularity": "HOUR",
         "rollup": true,
-        "intervals": ["2016-06-27/2016-06-28"]
+        "intervals": [
+          "2016-06-27/2016-06-28"
+        ]
       }
     },
     "ioConfig": {
@@ -246,6 +257,7 @@ GROUP BY 1
 ```
 
 ### Query from datasource with raw bytes
+
 ```json
 {
   "queryType": "timeseries",
@@ -273,35 +285,37 @@ GROUP BY 1
 ```
 
 ### Query from datasource with pre-aggregated bitmap
+
 ```json
 {
-   "queryType": "timeseries",
-   "dataSource": {
-      "type": "table",
-      "name": "wikipedia_metrics"
-   },
-   "intervals": {
-      "type": "intervals",
-      "intervals": [
-         "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-      ]
-   },
-   "granularity": {
-      "type": "all"
-   },
-   "aggregations": [
-      {
-         "type": "Bitmap64ExactCardinalityMerge",
-         "name": "a0",
-         "fieldName": "unique_added_values"
-      }
-   ]
+  "queryType": "timeseries",
+  "dataSource": {
+    "type": "table",
+    "name": "wikipedia_metrics"
+  },
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
+  "granularity": {
+    "type": "all"
+  },
+  "aggregations": [
+    {
+      "type": "Bitmap64ExactCardinalityMerge",
+      "name": "a0",
+      "fieldName": "unique_added_values"
+    }
+  ]
 }
 ```
 
 ## Other Examples
 
 ### Kafka ingestion task spec
+
 ```json
 {
   "type": "kafka",
@@ -374,6 +388,7 @@ GROUP BY 1
 ```
 
 ### Query with Post-aggregator:
+
 ```json
 {
   "queryType": "timeseries",
