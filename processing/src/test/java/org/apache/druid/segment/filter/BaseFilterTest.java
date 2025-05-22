@@ -732,6 +732,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return false;
   }
 
+  protected boolean hasTypeInformation()
+  {
+    return !testName.contains("rowBasedWithoutTypeSignature");
+  }
+
   protected boolean canTestArrayColumns()
   {
     if (testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature")) {

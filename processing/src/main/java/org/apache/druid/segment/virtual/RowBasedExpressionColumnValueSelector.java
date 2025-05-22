@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.virtual;
 
+import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.math.expr.Expr;
@@ -27,7 +28,6 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.RowIdSupplier;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -67,7 +67,7 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
   protected ExprEval<?> eval()
   {
     // check to find any arrays for this row
-    List<String> arrayBindings = new ArrayList<>();
+    final List<String> arrayBindings = Lists.newArrayListWithCapacity(unknownColumns.size());
 
     for (String unknownColumn : unknownColumns) {
       if (isBindingArray(unknownColumn)) {
@@ -77,12 +77,12 @@ public class RowBasedExpressionColumnValueSelector extends BaseExpressionColumnV
 
     // if there are arrays, we need to transform the expression to one that applies each value of the array to the
     // base expression, we keep a cache of transformed expressions to minimize extra work
-    if (arrayBindings.size() > 0) {
+    if (!arrayBindings.isEmpty()) {
       final int key = arrayBindings.hashCode();
       if (transformedCache.containsKey(key)) {
         return transformedCache.get(key).eval(bindings);
       }
-      Expr transformed = Parser.applyUnappliedBindings(expression, baseBindingAnalysis, arrayBindings);
+      final Expr transformed = Parser.applyUnappliedBindings(expression, baseBindingAnalysis, arrayBindings);
       transformedCache.put(key, transformed);
       return transformed.eval(bindings);
     }
