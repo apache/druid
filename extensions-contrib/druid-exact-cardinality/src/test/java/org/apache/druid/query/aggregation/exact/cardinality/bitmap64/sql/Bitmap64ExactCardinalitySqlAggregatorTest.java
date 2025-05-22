@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.exact.cardinality.bitmap64.Bitmap64ExactCardinalityBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.exact.cardinality.bitmap64.Bitmap64ExactCardinalityModule;
-import org.apache.druid.query.aggregation.exact.cardinality.bitmap64.sql.Bitmap64ExactCardinalitySqlAggregatorTest.Bitmap64ExactCardinalitySqlAggComponentSupplier;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -32,14 +31,16 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
+import org.junit.Assert.*;
 
-@SqlTestFrameworkConfig.ComponentSupplier(Bitmap64ExactCardinalitySqlAggComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(Bitmap64ExactCardinalitySqlAggregatorTest.Bitmap64ExactCardinalitySqlAggComponentSupplier.class)
 public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final String DATA_SOURCE = "numfoo";
@@ -60,8 +61,10 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
     @Override
     public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
+      Bitmap64ExactCardinalityModule.registerSerde();
+
       final QueryableIndex index =
-          IndexBuilder.create()
+          IndexBuilder.create(CalciteTests.getJsonMapper())
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(new IncrementalIndexSchema.Builder()
@@ -92,6 +95,7 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   @Test
   public void testExactCardinalityOnLongColumn()
   {
+    cannotVectorize();
     testBuilder()
         .sql("SELECT BITMAP64_EXACT_CARDINALITY(m1) FROM " + DATA_SOURCE)
         .expectedResults(ImmutableList.of(
@@ -103,6 +107,7 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   @Test
   public void testExactCardinalityOnPreAggregatedColumn()
   {
+    cannotVectorize();
     testBuilder()
         .sql("SELECT BITMAP64_EXACT_CARDINALITY(unique_m1_values) FROM " + DATA_SOURCE)
         .expectedResults(ImmutableList.of(
@@ -114,6 +119,7 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   @Test
   public void testExactCardinalityWithGroupBy()
   {
+    cannotVectorize();
     testBuilder()
         .sql("SELECT __time, BITMAP64_EXACT_CARDINALITY(m1) FROM " + DATA_SOURCE + " GROUP BY __time ORDER BY __time")
         .expectedResults(ImmutableList.of(
@@ -126,6 +132,7 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   @Test
   public void testExactCardinalityOnPreAggregatedWithGroupBy()
   {
+    cannotVectorize();
     testBuilder()
         .sql("SELECT __time, BITMAP64_EXACT_CARDINALITY(unique_m1_values) FROM "
              + DATA_SOURCE
@@ -140,6 +147,7 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   @Test
   public void testExactCardinalityWithFilter()
   {
+    cannotVectorize();
     testBuilder()
         .sql("SELECT BITMAP64_EXACT_CARDINALITY(m1) FROM " + DATA_SOURCE + " WHERE m1 > 20")
         .expectedResults(ImmutableList.of(
