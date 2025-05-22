@@ -44,7 +44,7 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
 {
   private static final String DATA_SOURCE = "numfoo";
 
-  static class Bitmap64ExactCardinalitySqlAggComponentSupplier extends StandardComponentSupplier
+  public static class Bitmap64ExactCardinalitySqlAggComponentSupplier extends StandardComponentSupplier
   {
     public Bitmap64ExactCardinalitySqlAggComponentSupplier(TempDirProducer tempFolderProducer)
     {
