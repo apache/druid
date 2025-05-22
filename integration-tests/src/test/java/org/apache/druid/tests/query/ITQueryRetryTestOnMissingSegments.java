@@ -61,8 +61,8 @@ import java.util.Map;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITQueryRetryTestOnMissingSegments
 {
-  private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
-  private static final String QUERIES_RESOURCE = "/queries/wikipedia_editstream_queries_query_retry_test.json";
+  private static final String TWITTERSTREAM_DATA_SOURCE = "twitterstream";
+  private static final String QUERIES_RESOURCE = "/queries/twitterstream_queries_query_retry_test.json";
 
   /**
    * This enumeration represents an expectation after finishing running the test query.
@@ -97,9 +97,9 @@ public class ITQueryRetryTestOnMissingSegments
   @BeforeMethod
   public void before()
   {
-    // ensure that wikipedia segment is loaded completely
+    // ensure that twitterstream segments are loaded completely
     ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
+        () -> coordinatorClient.areSegmentsLoaded(TWITTERSTREAM_DATA_SOURCE), "twitterstream segments load"
     );
   }
 
