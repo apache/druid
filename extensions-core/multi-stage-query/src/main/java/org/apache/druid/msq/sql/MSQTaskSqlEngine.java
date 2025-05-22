@@ -87,7 +87,7 @@ public class MSQTaskSqlEngine implements SqlEngine
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
-  private static final String NAME = "msq-task";
+  public static final String NAME = "msq-task";
 
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;

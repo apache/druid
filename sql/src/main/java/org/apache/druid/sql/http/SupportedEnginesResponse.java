@@ -19,23 +19,24 @@
 
 package org.apache.druid.sql.http;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.multibindings.MapBinder;
-import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.sql.calcite.run.SqlEngine;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * The Module responsible for providing bindings to the SQL http endpoint
- */
-public class SqlHttpModule implements Module
+import java.util.Set;
+
+public class SupportedEnginesResponse
 {
-  @Override
-  public void configure(Binder binder)
+  private final Set<String> supportedEngines;
+
+  @JsonCreator
+  public SupportedEnginesResponse(@JsonProperty("supportedEngines")Set<String> supportedEngines)
   {
-    binder.bind(SqlResource.class).in(LazySingleton.class);
-    MapBinder.newMapBinder(binder, String.class, SqlEngine.class);
-    Jerseys.addResource(binder, SqlResource.class);
+    this.supportedEngines = supportedEngines;
+  }
+
+  @JsonProperty
+  public Set<String> getSupportedEngines()
+  {
+    return supportedEngines;
   }
 }

@@ -19,23 +19,17 @@
 
 package org.apache.druid.sql.http;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.multibindings.MapBinder;
-import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.sql.calcite.run.SqlEngine;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-/**
- * The Module responsible for providing bindings to the SQL http endpoint
- */
-public class SqlHttpModule implements Module
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "engine")
+public interface QueryInfo
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    binder.bind(SqlResource.class).in(LazySingleton.class);
-    MapBinder.newMapBinder(binder, String.class, SqlEngine.class);
-    Jerseys.addResource(binder, SqlResource.class);
-  }
+  String getIdentity();
+
+  String getAuthenticator();
+
+  /**
+   * Returns a copy of this instance with {@link #getAuthenticator()} and {@link #getIdentity()} nulled.
+   */
+  QueryInfo withoutAuthenticationResult();
 }
