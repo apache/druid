@@ -404,8 +404,9 @@ public abstract class QueryResultPusher
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        // simulate IT failure, writeResponseContextHeader is not called in flush()
-        writeResponseContextHeader();
+        // validate the response context early to fail-fast, but don’t write it to the response yet,
+        // as additional things may still be accumulated.
+        serializeAndValidateResponseContextHeader();
 
         response.setContentType(contentType.toString());
 
@@ -513,6 +514,7 @@ public abstract class QueryResultPusher
         initialize();
       }
 
+      writeResponseContextHeader();
       writer.writeResponseEnd();
     }
 
