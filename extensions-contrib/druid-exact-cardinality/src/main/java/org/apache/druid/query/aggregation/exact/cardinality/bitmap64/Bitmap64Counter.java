@@ -21,13 +21,43 @@ package org.apache.druid.query.aggregation.exact.cardinality.bitmap64;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Interface for a 64-bit bitmap counter used for exact cardinality estimation.
+ * <p>
+ * Implementations of this interface provide methods to add values, merge counters, retrieve the cardinality,
+ * and serialize the counter state. This is typically used in scenarios where exact distinct counting is required
+ * for large datasets, such as analytics or aggregation queries in Druid.
+ * </p>
+ */
 public interface Bitmap64Counter
 {
+  /**
+   * Adds a value to the bitmap counter. The value is treated as a unique element to be tracked for cardinality.
+   *
+   * @param value the value to add to the counter
+   */
   void add(long value);
 
+  /**
+   * Returns the exact cardinality (number of unique values) currently tracked by this counter.
+   *
+   * @return the number of unique values added to the counter
+   */
   long getCardinality();
 
+  /**
+   * Merges the unique values from another Bitmap64Counter into this one, resulting in a new counter that represents the union of both counters.
+   * This method modifies and returns the current Bitmap64Counter instance.
+   *
+   * @param rhs the other Bitmap64Counter to merge with
+   * @return a new Bitmap64Counter representing the union of both counters
+   */
   Bitmap64Counter fold(Bitmap64Counter rhs);
 
+  /**
+   * Serializes the current state of the counter into a ByteBuffer.
+   *
+   * @return a ByteBuffer containing the serialized state of the counter
+   */
   ByteBuffer toByteBuffer();
 }

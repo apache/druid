@@ -88,8 +88,7 @@ public abstract class Bitmap64ExactCardinalityAggregatorFactory extends Aggregat
     if (objectA == null) {
       return (Bitmap64Counter) objectB;
     }
-    ((Bitmap64Counter) objectA).fold((Bitmap64Counter) objectB);
-    return (Bitmap64Counter) objectA;
+    return ((Bitmap64Counter) objectA).fold((Bitmap64Counter) objectB);
   }
 
   @Override
