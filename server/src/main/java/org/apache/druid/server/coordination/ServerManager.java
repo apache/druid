@@ -58,7 +58,6 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
@@ -68,7 +67,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
@@ -260,22 +258,22 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
-
-    final Optional<Segment> maybeSegment = segmentMapFn.apply(referenceCounter);
-    return maybeSegment.map(seg -> buildAndDecorateQueryRunner(
+    return buildAndDecorateQueryRunner(
         factory,
         toolChest,
-        seg,
+        referenceCounter,
+        segmentMapFn,
         cacheKeyPrefix,
         descriptor,
         cpuTimeAccumulator
-    )).orElseGet(() -> new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
+    );
   }
 
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final Segment segment,
+      final ReferenceCountedSegmentProvider segmentProvider,
+      final SegmentMapFunction segmentMapFn,
       final Optional<byte[]> cacheKeyPrefix,
       final SegmentDescriptor segmentDescriptor,
       final AtomicLong cpuTimeAccumulator
@@ -283,19 +281,17 @@ public class ServerManager implements QuerySegmentWalker
   {
     // Short-circuit when the index comes from a tombstone (it has no data by definition),
     // check for null also since no all segments (higher level ones) will have QueryableIndex...
-    if (segment.isTombstone()) {
-      CloseableUtils.closeAndWrapExceptions(segment);
+    if (segmentProvider.getBaseSegment().isTombstone()) {
       return new NoopQueryRunner<>();
     }
 
     final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
-    final SegmentId segmentId = segment.getId();
-    final Interval segmentInterval = segment.getDataInterval();
+    final SegmentId segmentId = segmentProvider.getBaseSegment().getId();
+    final Interval segmentInterval = segmentProvider.getBaseSegment().getDataInterval();
     // ReferenceCountingSegment can return null for ID or interval if it's already closed.
     // Here, we check one more time if the segment is closed.
     // If the segment is closed after this line, ReferenceCountingSegmentQueryRunner will handle and do the right thing.
     if (segmentId == null || segmentInterval == null) {
-      CloseableUtils.closeAndWrapExceptions(segment);
       return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
     }
 
@@ -304,12 +300,13 @@ public class ServerManager implements QuerySegmentWalker
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
-        new ReferenceCountingSegmentQueryRunner<>(factory, segment),
+        new ReferenceCountingSegmentQueryRunner<>(factory, segmentProvider, segmentMapFn, segmentDescriptor),
         QueryMetrics::reportSegmentTime,
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+    // this is not done while hold
+    final TimeBoundaryInspector timeBoundaryInspector = segmentProvider.getBaseSegment().as(TimeBoundaryInspector.class);
     final Interval cacheKeyInterval =
         timeBoundaryInspector != null ? timeBoundaryInspector.getMinMaxInterval() : segmentInterval;
     CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(

@@ -585,20 +585,15 @@ public class QueryRunnerTestHelper
                   query,
                   segments
               )) {
-                QueryPlus queryPlusRunning = queryPlus.withQuery(
-                    queryPlus.getQuery().withQuerySegmentSpec(
-                        new SpecificSegmentSpec(
-                            new SegmentDescriptor(
-                                holder.getInterval(),
-                                holder.getVersion(),
-                                0
-                            )
-                        )
-                    )
+                final SegmentDescriptor descriptor = new SegmentDescriptor(holder.getInterval(), holder.getVersion(), 0);
+                final QueryPlus queryPlusRunning = queryPlus.withQuery(
+                    queryPlus.getQuery().withQuerySegmentSpec(new SpecificSegmentSpec(descriptor))
                 );
                 final QueryRunner<?> runner = new ReferenceCountingSegmentQueryRunner<>(
                     factory,
-                    SegmentMapFunction.IDENTITY.apply(holder.getObject().getChunk(0).getObject()).orElseThrow()
+                    holder.getObject().getChunk(0).getObject(),
+                    SegmentMapFunction.IDENTITY,
+                    descriptor
                 );
                 sequences.add(runner.run(queryPlusRunning, responseContext));
               }

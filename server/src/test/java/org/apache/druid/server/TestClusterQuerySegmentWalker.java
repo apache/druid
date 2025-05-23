@@ -239,7 +239,9 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                             new SpecificSegmentQueryRunner<>(
                                 new ReferenceCountingSegmentQueryRunner<>(
                                     factory,
-                                    segmentMapFn.apply(segment.getSegment()).orElseThrow()
+                                    segment.getSegment(),
+                                    segmentMapFn,
+                                    segment.getDescriptor()
                                 ),
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )
