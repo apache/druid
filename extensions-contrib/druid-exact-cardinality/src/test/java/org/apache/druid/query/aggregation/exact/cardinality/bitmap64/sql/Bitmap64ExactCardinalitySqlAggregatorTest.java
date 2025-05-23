@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.exact.cardinality.bitmap64.sql;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -73,22 +72,22 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
     public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
       Bitmap64ExactCardinalityModule.registerSerde();
-
-      ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
-      new Bitmap64ExactCardinalityModule().getJacksonModules().forEach(jsonMapper::registerModule);
-
       final QueryableIndex index =
-          IndexBuilder.create(jsonMapper)
+          IndexBuilder.create(CalciteTests.getJsonMapper())
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
                           IncrementalIndexSchema.builder()
-                              .withDimensionsSpec(TestDataSet.NUMFOO.getInputRowSchema().getDimensionsSpec())
-                              .withMetrics(
-                                  new Bitmap64ExactCardinalityBuildAggregatorFactory("unique_m1_values", "m1")
-                              )
-                              .withRollup(false)
-                              .build()
+                                                .withDimensionsSpec(TestDataSet.NUMFOO.getInputRowSchema()
+                                                                                      .getDimensionsSpec())
+                                                .withMetrics(
+                                                    new Bitmap64ExactCardinalityBuildAggregatorFactory(
+                                                        "unique_m1_values",
+                                                        "m1"
+                                                    )
+                                                )
+                                                .withRollup(false)
+                                                .build()
                       )
                       .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
                       .buildMMappedIndex();
@@ -114,19 +113,19 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
         "SELECT BITMAP64_EXACT_CARDINALITY(l1) FROM " + DATA_SOURCE,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                .dataSource(DATA_SOURCE)
-                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .granularity(Granularities.ALL)
-                .aggregators(
-                    ImmutableList.of(
-                        new Bitmap64ExactCardinalityBuildAggregatorFactory(
-                            "a0",
-                            "l1"
-                        )
-                    )
-                )
-                .context(Collections.emptyMap())
-                .build()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      ImmutableList.of(
+                          new Bitmap64ExactCardinalityBuildAggregatorFactory(
+                              "a0",
+                              "l1"
+                          )
+                      )
+                  )
+                  .context(Collections.emptyMap())
+                  .build()
         ),
         ImmutableList.of(
             new Object[]{3L} // l1 values: 7, 325323, 0 (distinct count = 3)
@@ -144,19 +143,19 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
         sql,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                .dataSource(DATA_SOURCE)
-                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .granularity(Granularities.ALL)
-                .aggregators(
-                    ImmutableList.of(
-                        new Bitmap64ExactCardinalityMergeAggregatorFactory(
-                            "a0",
-                            "unique_m1_values"
-                        )
-                    )
-                )
-                .context(Collections.emptyMap())
-                .build()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      ImmutableList.of(
+                          new Bitmap64ExactCardinalityMergeAggregatorFactory(
+                              "a0",
+                              "unique_m1_values"
+                          )
+                      )
+                  )
+                  .context(Collections.emptyMap())
+                  .build()
         ),
         ImmutableList.of(
             new Object[]{6L} // m1 string inputs: "1.0"-"6.0" are 6 unique values
@@ -168,22 +167,24 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   public void testExactCardinalityWithGroupBy()
   {
     cannotVectorize();
-    String sql = "SELECT __time, BITMAP64_EXACT_CARDINALITY(l1) FROM " + DATA_SOURCE + " GROUP BY __time ORDER BY __time";
+    String sql = "SELECT __time, BITMAP64_EXACT_CARDINALITY(l1) FROM " + DATA_SOURCE + " "
+                 + "GROUP BY __time "
+                 + "ORDER BY __time";
     testQuery(
         sql,
         ImmutableList.of(
             GroupByQuery.builder()
-                .setDataSource(DATA_SOURCE)
-                .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(ImmutableList.of(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)))
-                .setAggregatorSpecs(
-                    ImmutableList.of(
-                        new Bitmap64ExactCardinalityBuildAggregatorFactory("a0", "l1")
-                    )
-                )
-                .setContext(Collections.emptyMap())
-                .build()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(ImmutableList.of(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(
+                            ImmutableList.of(
+                                new Bitmap64ExactCardinalityBuildAggregatorFactory("a0", "l1")
+                            )
+                        )
+                        .setContext(Collections.emptyMap())
+                        .build()
         ),
         ImmutableList.of(
             new Object[]{946684800000L, 1L}, // 2000-01-01, l1=7L
@@ -200,24 +201,24 @@ public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryT
   public void testExactCardinalityOnPreAggregatedWithGroupBy()
   {
     cannotVectorize();
-    String sql = "SELECT __time, BITMAP64_EXACT_CARDINALITY(unique_m1_values) FROM "
-             + DATA_SOURCE
-             + " GROUP BY __time ORDER BY __time";
+    String sql = "SELECT __time, BITMAP64_EXACT_CARDINALITY(unique_m1_values) FROM " + DATA_SOURCE + " "
+                 + "GROUP BY __time "
+                 + "ORDER BY __time";
     testQuery(
         sql,
         ImmutableList.of(
             GroupByQuery.builder()
-                .setDataSource(DATA_SOURCE)
-                .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(ImmutableList.of(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)))
-                .setAggregatorSpecs(
-                    ImmutableList.of(
-                        new Bitmap64ExactCardinalityMergeAggregatorFactory("a0", "unique_m1_values")
-                    )
-                )
-                .setContext(Collections.emptyMap())
-                .build()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(ImmutableList.of(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)))
+                        .setAggregatorSpecs(
+                            ImmutableList.of(
+                                new Bitmap64ExactCardinalityMergeAggregatorFactory("a0", "unique_m1_values")
+                            )
+                        )
+                        .setContext(Collections.emptyMap())
+                        .build()
         ),
         ImmutableList.of(
             new Object[]{946684800000L, 1L}, // 2000-01-01, m1="1.0"
