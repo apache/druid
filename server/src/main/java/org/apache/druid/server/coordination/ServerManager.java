@@ -58,6 +58,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
@@ -67,6 +68,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
@@ -281,22 +283,23 @@ public class ServerManager implements QuerySegmentWalker
   {
     // Short-circuit when the index comes from a tombstone (it has no data by definition),
     // check for null also since no all segments (higher level ones) will have QueryableIndex...
-    if (segmentProvider.getBaseSegment().isTombstone()) {
-      return new NoopQueryRunner<>();
-    }
 
-    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
-    final SegmentId segmentId = segmentProvider.getBaseSegment().getId();
-    final Interval segmentInterval = segmentProvider.getBaseSegment().getDataInterval();
-    // ReferenceCountingSegment can return null for ID or interval if it's already closed.
-    // Here, we check one more time if the segment is closed.
-    // If the segment is closed after this line, ReferenceCountingSegmentQueryRunner will handle and do the right thing.
-    if (segmentId == null || segmentInterval == null) {
+    // we don't acquire references to base segment here because we are only using methods that are safe to use even if
+    // the segment is dropped
+    final Segment baseSegment = segmentProvider.getBaseSegment();
+    if (baseSegment == null) {
       return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
     }
 
+    if (baseSegment.isTombstone()) {
+      return new NoopQueryRunner<>();
+    }
+
+    final SegmentId segmentId = baseSegment.getId();
+    final Interval segmentInterval = baseSegment.getDataInterval();
     String segmentIdString = segmentId.toString();
 
+    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
@@ -305,15 +308,22 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    // this is not done while hold
-    final TimeBoundaryInspector timeBoundaryInspector = segmentProvider.getBaseSegment().as(TimeBoundaryInspector.class);
-    final Interval cacheKeyInterval =
-        timeBoundaryInspector != null ? timeBoundaryInspector.getMinMaxInterval() : segmentInterval;
+    final Optional<Interval> cacheKeyInterval = segmentProvider.acquireReference().map(segment -> {
+      final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+      final Interval dataInterval = timeBoundaryInspector != null ? timeBoundaryInspector.getMinMaxInterval() : segmentInterval;
+      CloseableUtils.closeAndWrapExceptions(segment);
+      return dataInterval;
+    });
+
+    if (cacheKeyInterval.isEmpty()) {
+      // if we could not get a reference to get the TimeBoundaryInspector then the segment has been dropped
+      return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
+    }
     CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
         cacheKeyPrefix,
         segmentDescriptor,
-        cacheKeyInterval,
+        cacheKeyInterval.get(),
         objectMapper,
         cache,
         toolChest,

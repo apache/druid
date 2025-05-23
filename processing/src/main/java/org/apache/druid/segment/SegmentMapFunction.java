@@ -39,15 +39,6 @@ public interface SegmentMapFunction extends Function<ReferenceCountedObjectProvi
   SegmentMapFunction IDENTITY = ReferenceCountedObjectProvider::acquireReference;
 
   /**
-   * Returns a {@link SegmentMapFunction} that calls {@link ReferenceCountedObjectProvider#acquireReference()} and then
-   * applies the function to the resulting {@link Segment}, if present
-   */
-  static SegmentMapFunction map(Function<Segment, Segment> mapFn)
-  {
-    return segmentReference -> segmentReference.acquireReference().map(mapFn);
-  }
-
-  /**
    * Returns a {@link SegmentMapFunction} which first applies this {@link SegmentMapFunction} and then applies
    * the function to the resulting {@link Segment}, if present
    */
