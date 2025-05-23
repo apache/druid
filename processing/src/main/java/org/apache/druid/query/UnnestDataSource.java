@@ -132,8 +132,8 @@ public class UnnestDataSource implements DataSource
   @Override
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    final SegmentMapFunction mapFn = base.createSegmentMapFunction(query);
-    return SegmentMapFunction.wrap(mapFn, segment -> new UnnestSegment(segment, virtualColumn, unnestFilter));
+    return base.createSegmentMapFunction(query)
+               .thenMap(segment -> new UnnestSegment(segment, virtualColumn, unnestFilter));
   }
 
   @Override

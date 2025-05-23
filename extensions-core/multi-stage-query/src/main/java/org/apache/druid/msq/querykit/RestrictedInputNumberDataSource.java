@@ -98,7 +98,7 @@ public class RestrictedInputNumberDataSource extends LeafDataSource
   @Override
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    return SegmentMapFunction.map(segment -> new RestrictedSegment(segment, policy));
+    return SegmentMapFunction.IDENTITY.thenMap(segment -> new RestrictedSegment(segment, policy));
   }
 
   @Override

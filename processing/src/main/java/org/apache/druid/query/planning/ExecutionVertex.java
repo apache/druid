@@ -35,14 +35,12 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Represents the native engine's execution vertex - the execution unit it may execute in one execution cycle.
@@ -388,13 +386,10 @@ public class ExecutionVertex
    */
   public SegmentMapFunction createSegmentMapFunction(PolicyEnforcer policyEnforcer)
   {
-    DataSource topDataSource = getTopDataSource();
-    final SegmentMapFunction segmentMapFunction = topDataSource.createSegmentMapFunction(topQuery);
-    final Function<Segment, Segment> enforcerFunction = segment -> {
+    return getTopDataSource().createSegmentMapFunction(topQuery).thenMap(segment -> {
       segment.validateOrElseThrow(policyEnforcer);
       return segment;
-    };
-    return SegmentMapFunction.wrap(segmentMapFunction, enforcerFunction);
+    });
   }
 
   /**

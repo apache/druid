@@ -124,7 +124,7 @@ public class RestrictedDataSource implements DataSource
   @Override
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    return SegmentMapFunction.map(segment -> new RestrictedSegment(segment, policy));
+    return base.createSegmentMapFunction(query).thenMap(segment -> new RestrictedSegment(segment, policy));
   }
 
   @Override

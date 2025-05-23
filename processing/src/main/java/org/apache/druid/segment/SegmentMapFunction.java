@@ -34,7 +34,7 @@ import java.util.function.Function;
 public interface SegmentMapFunction extends Function<ReferenceCountedObjectProvider<Segment>, Optional<Segment>>
 {
   /**
-   * {@link SegmentMapFunction} that acuires a {@link Segment} from the {@link ReferenceCountedObjectProvider<Segment>}
+   * {@link SegmentMapFunction} that acquires a {@link Segment} from the {@link ReferenceCountedObjectProvider<Segment>}
    */
   SegmentMapFunction IDENTITY = ReferenceCountedObjectProvider::acquireReference;
 
@@ -48,11 +48,11 @@ public interface SegmentMapFunction extends Function<ReferenceCountedObjectProvi
   }
 
   /**
-   * Returns a {@link SegmentMapFunction} which first applies the supplied {@link SegmentMapFunction} and then applies
+   * Returns a {@link SegmentMapFunction} which first applies this {@link SegmentMapFunction} and then applies
    * the function to the resulting {@link Segment}, if present
    */
-  static SegmentMapFunction wrap(SegmentMapFunction segmentMapFn, Function<Segment, Segment> mapFn)
+  default SegmentMapFunction thenMap(Function<Segment, Segment> mapFn)
   {
-    return segmentReference -> segmentMapFn.apply(segmentReference).map(mapFn);
+    return segmentReference -> apply(segmentReference).map(mapFn);
   }
 }

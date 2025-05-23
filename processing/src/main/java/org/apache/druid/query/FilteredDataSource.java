@@ -120,8 +120,7 @@ public class FilteredDataSource implements DataSource
   @Override
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    final SegmentMapFunction mapFn = base.createSegmentMapFunction(query);
-    return SegmentMapFunction.wrap(mapFn, segment -> new FilteredSegment(segment, filter));
+    return base.createSegmentMapFunction(query).thenMap(segment -> new FilteredSegment(segment, filter));
   }
 
   @Override
