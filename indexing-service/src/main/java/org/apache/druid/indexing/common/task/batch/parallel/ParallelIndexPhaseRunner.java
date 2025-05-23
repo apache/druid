@@ -123,7 +123,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     taskMonitor = new TaskMonitor<>(
         toolbox.getOverlordClient(),
         tuningConfig.getMaxRetry(),
-        estimateTotalNumSubTasks()
+        estimateTotalNumSubTasks(),
+        tuningConfig.getSubTaskTimeoutMs()
     );
     TaskState state = TaskState.RUNNING;
 

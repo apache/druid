@@ -48,6 +48,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   private static final int DEFAULT_MAX_NUM_SEGMENTS_TO_MERGE = 100;
   private static final int DEFAULT_TOTAL_NUM_MERGE_TASKS = 10;
   private static final int DEFAULT_MAX_ALLOWED_LOCK_COUNT = -1;
+  private static final int DEFAULT_SUBTASK_TIMEOUT = 0;
 
   private final SplitHintSpec splitHintSpec;
 
@@ -74,9 +75,12 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
 
   private final int maxAllowedLockCount;
 
+  public final long subTaskTimeoutMs;
+
   public static ParallelIndexTuningConfig defaultConfig()
   {
     return new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         null,
@@ -145,7 +149,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
       @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
       @JsonProperty("maxAllowedLockCount") @Nullable Integer maxAllowedLockCount,
-      @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
+      @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
+      @JsonProperty("subTaskTimeoutMs") @Nullable Long subTaskTimeoutMs
   )
   {
     super(
@@ -209,9 +214,12 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
                                ? DEFAULT_MAX_ALLOWED_LOCK_COUNT
                                : maxAllowedLockCount;
 
+    this.subTaskTimeoutMs = subTaskTimeoutMs == null ? DEFAULT_SUBTASK_TIMEOUT : subTaskTimeoutMs;
+
     Preconditions.checkArgument(this.maxNumConcurrentSubTasks > 0, "maxNumConcurrentSubTasks must be positive");
     Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
     Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
+    Preconditions.checkArgument(this.subTaskTimeoutMs > 0, "subTaskTimeoutMs must be positive");
     if (getPartitionsSpec() != null && getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
       List<String> partitionDimensions = ((DimensionRangePartitionsSpec) getPartitionsSpec()).getPartitionDimensions();
       if (partitionDimensions == null || partitionDimensions.isEmpty()) {
@@ -275,6 +283,12 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     return maxAllowedLockCount;
   }
 
+  @JsonProperty
+  public long getSubTaskTimeoutMs()
+  {
+    return subTaskTimeoutMs;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -295,6 +309,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
            maxNumSegmentsToMerge == that.maxNumSegmentsToMerge &&
            totalNumMergeTasks == that.totalNumMergeTasks &&
            maxAllowedLockCount == that.maxAllowedLockCount &&
+           subTaskTimeoutMs == that.subTaskTimeoutMs &&
            Objects.equals(splitHintSpec, that.splitHintSpec) &&
            Objects.equals(chatHandlerTimeout, that.chatHandlerTimeout);
   }
@@ -312,7 +327,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         chatHandlerNumRetries,
         maxNumSegmentsToMerge,
         totalNumMergeTasks,
-        maxAllowedLockCount
+        maxAllowedLockCount,
+        subTaskTimeoutMs
     );
   }
 
@@ -329,6 +345,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
            ", maxNumSegmentsToMerge=" + maxNumSegmentsToMerge +
            ", totalNumMergeTasks=" + totalNumMergeTasks +
            ", maxAllowedLockCount=" + maxAllowedLockCount +
+           ", subTaskTimeoutMs=" + subTaskTimeoutMs +
            "} " + super.toString();
   }
 }

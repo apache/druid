@@ -88,6 +88,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
   private final OverlordClient overlordClient;
   private final int maxRetry;
   private final int estimatedNumSucceededTasks;
+  private final long taskTimeoutMs;
 
   @GuardedBy("taskCountLock")
   private int numRunningTasks;
@@ -106,14 +107,14 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
   @GuardedBy("startStopLock")
   private boolean running = false;
 
-  TaskMonitor(OverlordClient overlordClient, int maxRetry, int estimatedNumSucceededTasks)
+  TaskMonitor(OverlordClient overlordClient, int maxRetry, int estimatedNumSucceededTasks, long taskTimeoutMs)
   {
     // Unlimited retries for Overlord APIs: if it goes away, we'll wait indefinitely for it to come back.
     this.overlordClient = Preconditions.checkNotNull(overlordClient, "overlordClient")
                                        .withRetryPolicy(StandardRetryPolicy.unlimited());
     this.maxRetry = maxRetry;
     this.estimatedNumSucceededTasks = estimatedNumSucceededTasks;
-
+    this.taskTimeoutMs = taskTimeoutMs;
     log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d]", estimatedNumSucceededTasks);
   }
 
@@ -133,6 +134,26 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
                 final String specId = entry.getKey();
                 final MonitorEntry monitorEntry = entry.getValue();
                 final String taskId = monitorEntry.runningTask.getId();
+
+                final long now = System.currentTimeMillis();
+                final long timeout = taskTimeoutMs;
+                final long elapsed = now - monitorEntry.getStartTime();
+                if (timeout > 0 && elapsed > timeout) {
+                  log.warn("task[%s] timed out after %s ms, cancelling...", taskId, elapsed);
+                  FutureUtils.getUnchecked(overlordClient.cancelTask(taskId), true);
+                  final TaskStatusPlus cancelledTaskStatus = FutureUtils.getUnchecked(
+                          overlordClient.taskStatus(taskId), true).getStatus();
+                  reportsMap.remove(taskId);
+                  incrementNumFailedTasks();
+
+                  if (monitorEntry.numTries() < maxRetry) {
+                    retry(specId, monitorEntry, cancelledTaskStatus);
+                  } else {
+                    monitorEntry.setLastStatus(cancelledTaskStatus);
+                    iterator.remove();
+                  }
+                  continue;
+                }
 
                 // Could improve this by switching to the bulk taskStatuses API.
                 final TaskStatusResponse taskStatusResponse =
@@ -441,6 +462,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
     // old tasks to recent tasks. running task is not included
     private final CopyOnWriteArrayList<TaskStatusPlus> taskHistory;
     private final SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture;
+    private final long startTime;
 
     /**
      * This variable is updated inside of the {@link java.util.concurrent.Callable} executed by
@@ -472,6 +494,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
       this.runningStatus = runningStatus;
       this.taskHistory = taskHistory;
       this.completeEventFuture = completeEventFuture;
+      this.startTime = System.currentTimeMillis();
     }
 
     MonitorEntry withNewRunningTask(T newTask, @Nullable TaskStatusPlus newStatus, TaskStatusPlus statusOfLastTask)
@@ -533,6 +556,11 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
     List<TaskStatusPlus> getTaskHistory()
     {
       return taskHistory;
+    }
+
+    long getStartTime()
+    {
+      return startTime;
     }
   }
 

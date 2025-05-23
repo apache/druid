@@ -280,6 +280,7 @@ The following table lists the properties of a `tuningConfig` object:
 |`chatHandlerTimeout`|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |`chatHandlerNumRetries`|Retries for reporting the pushed segments in worker tasks.|5|no|
 |`awaitSegmentAvailabilityTimeoutMillis`|Milliseconds to wait for the newly indexed segments to become available for query after ingestion completes. If `<= 0`, no wait occurs. If `> 0`, the task waits for the Coordinator to indicate that the new segments are available for querying. If the timeout expires, the task exits as successful, but the segments are not confirmed as available for query.|Long|no (default = 0)|
+|`subTaskTimeoutMs`|Maximum time (in milliseconds) to wait before cancelling a long-running worker task. Set to 0 for no timeout (infinite).|0 (unlimited)|no|
 
 ### Split Hint Spec
 
