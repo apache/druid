@@ -34,6 +34,7 @@ public class Bitmap64ExactCardinalityBuildAggregatorTest
   public void setUp()
   {
     mockSelector = EasyMock.createMock(BaseLongColumnValueSelector.class);
+    EasyMock.expect(mockSelector.isNull()).andReturn(false).anyTimes();
     aggregator = new Bitmap64ExactCardinalityBuildAggregator(mockSelector);
   }
 

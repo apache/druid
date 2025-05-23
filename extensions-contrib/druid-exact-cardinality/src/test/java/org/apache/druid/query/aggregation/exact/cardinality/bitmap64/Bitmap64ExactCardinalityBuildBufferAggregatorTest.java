@@ -40,6 +40,7 @@ public class Bitmap64ExactCardinalityBuildBufferAggregatorTest
   public void setUp()
   {
     mockSelector = EasyMock.createMock(BaseLongColumnValueSelector.class);
+    EasyMock.expect(mockSelector.isNull()).andReturn(false).anyTimes();
     aggregator = new Bitmap64ExactCardinalityBuildBufferAggregator(mockSelector);
     buffer = ByteBuffer.allocate(BUFFER_CAPACITY);
   }

@@ -71,7 +71,7 @@ public class Bitmap64ExactCardinalityBuildAggregatorFactoryTest
   {
     ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(selectorFactory.makeColumnValueSelector(FIELD_NAME))
-            .andReturn(new TestObjectColumnSelector<Object>(null)); // Return a dummy selector
+            .andReturn(new TestObjectColumnSelector<>(null)); // Return a dummy selector
     EasyMock.replay(selectorFactory);
 
     Assertions.assertInstanceOf(
