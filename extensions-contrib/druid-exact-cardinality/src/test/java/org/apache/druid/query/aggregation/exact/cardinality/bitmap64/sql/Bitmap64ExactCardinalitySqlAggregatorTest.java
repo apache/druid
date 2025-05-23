@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.exact.cardinality.bitmap64.sql;
 
-import java.util.Collections;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -49,8 +49,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import java.util.Collections;
 
 @SqlTestFrameworkConfig.ComponentSupplier(Bitmap64ExactCardinalitySqlAggregatorTest.Bitmap64ExactCardinalitySqlAggComponentSupplier.class)
 public class Bitmap64ExactCardinalitySqlAggregatorTest extends BaseCalciteQueryTest
