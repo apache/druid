@@ -22,11 +22,10 @@ package org.apache.druid.segment.join;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * A datasource that returns nothing. Only used to test un-registered datasources.
@@ -70,9 +69,9 @@ public class NoopDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    return Function.identity();
+    return SegmentMapFunction.IDENTITY;
   }
 
   @Override

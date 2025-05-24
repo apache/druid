@@ -176,7 +176,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
     // nothing to close by default, whatever loaded this thing (probably) lives on heap
     return Optional.of(() -> {});

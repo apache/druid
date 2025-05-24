@@ -45,7 +45,7 @@ public class SegmentToRowsAndColumnsOperator implements Operator
   {
     try (final CloseableShapeshifter shifty = segment.as(CloseableShapeshifter.class)) {
       if (shifty == null) {
-        throw DruidException.defensive("Segment [%s] cannot shapeshift", segment.asString());
+        throw DruidException.defensive("Segment [%s] cannot shapeshift", segment.getDebugString());
       }
       RowsAndColumns rac;
       if (shifty instanceof RowsAndColumns) {

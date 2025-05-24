@@ -32,7 +32,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.TopNOptimizationInspector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -1947,7 +1947,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     Assert.assertTrue(makeFactToCountrySegment(JoinType.FULL).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
     // cross join
     HashJoinSegment segment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
         null,
         ImmutableList.of(
             new JoinableClause(
@@ -1961,7 +1961,8 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
                 )
             )
         ),
-        null
+        null,
+        () -> {}
     );
     TopNOptimizationInspector inspector = segment.as(TopNOptimizationInspector.class);
     Assert.assertTrue(inspector.areAllDictionaryIdsPresent());
@@ -1971,10 +1972,11 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   public void test_hasBuiltInFiltersForConvertedJoin()
   {
     final HashJoinSegment segment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
         new InDimFilter("dim", ImmutableSet.of("foo", "bar")),
         ImmutableList.of(),
-        null
+        null,
+        () -> {}
     );
     final TopNOptimizationInspector inspector = segment.as(TopNOptimizationInspector.class);
     Assert.assertFalse(inspector.areAllDictionaryIdsPresent());
@@ -1984,41 +1986,44 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   public void test_hasBuiltInFiltersForMultipleJoinableClausesWithVariousJoinTypes()
   {
     final HashJoinSegment segment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
         null,
         ImmutableList.of(
             factToRegion(JoinType.INNER),
             regionToCountry(JoinType.LEFT)
         ),
-        null
+        null,
+        () -> {}
     );
     Assert.assertFalse(segment.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
 
     final HashJoinSegment segment2 = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
         null,
         ImmutableList.of(
             factToRegion(JoinType.RIGHT),
             regionToCountry(JoinType.INNER),
             factToCountryOnNumber(JoinType.FULL)
         ),
-        null
+        null,
+        () -> {}
     );
     Assert.assertFalse(segment2.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
 
     final HashJoinSegment segment3 = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
         null,
         ImmutableList.of(
             factToRegion(JoinType.LEFT),
             regionToCountry(JoinType.LEFT)
         ),
-        null
+        null,
+        () -> {}
     );
     Assert.assertTrue(segment3.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
 
     final HashJoinSegment segment4 = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
         null,
         ImmutableList.of(
             factToRegion(JoinType.LEFT),
@@ -2033,7 +2038,8 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
                 )
             )
         ),
-        null
+        null,
+        () -> {}
     );
     Assert.assertTrue(segment4.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
   }

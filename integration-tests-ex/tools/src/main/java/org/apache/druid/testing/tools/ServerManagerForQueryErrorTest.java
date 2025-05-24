@@ -46,8 +46,8 @@ import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -58,7 +58,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 /**
  * This server manager is designed to test various query failures.
@@ -121,8 +120,8 @@ public class ServerManagerForQueryErrorTest extends ServerManager
       SegmentDescriptor descriptor,
       QueryRunnerFactory<T, Query<T>> factory,
       QueryToolChest<T, Query<T>> toolChest,
-      VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
-      Function<SegmentReference, SegmentReference> segmentMapFn,
+      VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      SegmentMapFunction segmentMapFn,
       AtomicLong cpuTimeAccumulator,
       Optional<byte[]> cacheKeyPrefix
   )

@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -367,9 +367,9 @@ public class SegmentManagerTest
     final Set<String> expectedDataSourceNames = expectedExistingSegments.stream()
                                                                         .map(DataSegment::getDataSource)
                                                                         .collect(Collectors.toSet());
-    final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> expectedTimelines = new HashMap<>();
+    final Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> expectedTimelines = new HashMap<>();
     for (DataSegment segment : expectedExistingSegments) {
-      final VersionedIntervalTimeline<String, ReferenceCountingSegment> expectedTimeline =
+      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> expectedTimeline =
           expectedTimelines.computeIfAbsent(
               segment.getDataSource(),
               k -> new VersionedIntervalTimeline<>(Ordering.natural())
@@ -378,7 +378,7 @@ public class SegmentManagerTest
           segment.getInterval(),
           segment.getVersion(),
           segment.getShardSpec().createChunk(
-                  ReferenceCountingSegment.wrapSegment(
+              ReferenceCountedSegmentProvider.wrapSegment(
                       new TestSegmentUtils.SegmentForTesting(
                           segment.getDataSource(),
                           (Interval) segment.getLoadSpec().get("interval"),

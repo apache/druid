@@ -25,14 +25,12 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.FilteredSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * This class models a data source to be unnested which is present along with a filter.
@@ -120,10 +118,9 @@ public class FilteredDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
-    return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter);
+    return base.createSegmentMapFunction(query).thenMap(segment -> new FilteredSegment(segment, filter));
   }
 
   @Override

@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -1224,13 +1224,13 @@ public class SegmentLocalCacheManagerTest
 
     final DataSegment dataSegment = TestSegmentUtils.makeSegment("foo", "v1", Intervals.of("2020/2021"));
 
-    final ReferenceCountingSegment actualBootstrapSegment = manager.getBootstrapSegment(
+    final ReferenceCountedSegmentProvider actualBootstrapSegment = manager.getBootstrapSegment(
         dataSegment,
         SegmentLazyLoadFailCallback.NOOP
     );
     Assert.assertNotNull(actualBootstrapSegment);
-    Assert.assertEquals(dataSegment.getId(), actualBootstrapSegment.getId());
-    Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
+    Assert.assertEquals(dataSegment.getId(), actualBootstrapSegment.getBaseSegment().getId());
+    Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getBaseSegment().getDataInterval());
   }
 
   @Test
@@ -1246,16 +1246,16 @@ public class SegmentLocalCacheManagerTest
                                              .size(100)
                                              .build();
 
-    final ReferenceCountingSegment segment = manager.getSegment(tombstone);
+    final ReferenceCountedSegmentProvider segment = manager.getSegment(tombstone);
 
-    Assert.assertEquals(tombstone.getId(), segment.getId());
-    Assert.assertEquals(interval, segment.getDataInterval());
+    Assert.assertEquals(tombstone.getId(), segment.getBaseSegment().getId());
+    Assert.assertEquals(interval, segment.getBaseSegment().getDataInterval());
 
-    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
+    final CursorFactory cursorFactory = segment.getBaseSegment().as(CursorFactory.class);
     Assert.assertNotNull(cursorFactory);
-    Assert.assertTrue(segment.isTombstone());
+    Assert.assertTrue(segment.getBaseSegment().isTombstone());
 
-    final QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
+    final QueryableIndex queryableIndex = segment.getBaseSegment().as(QueryableIndex.class);
     Assert.assertNotNull(queryableIndex);
     Assert.assertEquals(interval, queryableIndex.getDataInterval());
     Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getMetadata);

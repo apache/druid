@@ -184,7 +184,7 @@ public class ScanQueryEngine
                 }
                 responseContext.addRowScanCount(offset - lastOffset);
                 return new ScanResultValue(
-                    segment.getId() == null ? segment.asString() : segment.getId().toString(),
+                    segment.getId() == null ? null : segment.getId().toString(),
                     allColumns,
                     events,
                     rowSignatureBuilder.build()

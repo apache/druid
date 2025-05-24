@@ -73,6 +73,12 @@ public class IncrementalIndexSegment implements Segment
   }
 
   @Override
+  public String getDebugString()
+  {
+    return getClass().getSimpleName() + ":" + segmentId;
+  }
+
+  @Override
   public void close()
   {
     index.close();

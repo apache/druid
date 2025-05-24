@@ -956,7 +956,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     // not really a sane query to write, but it shouldn't behave differently than a single unnest
     // the issue is that the dimension selector handles null differently than if arrays are used from a column value
     // selector. the dimension selector cursor puts nulls in the output to be compatible with implict unnest used by
-    // group-by, while the column selector cursor
+    // group-by, while the column selector cursor uses array rules
     cannotVectorize();
 
     final String dim = "mvd";

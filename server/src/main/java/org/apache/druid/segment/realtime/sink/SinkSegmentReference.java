@@ -20,7 +20,7 @@
 package org.apache.druid.segment.realtime.sink;
 
 
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
@@ -33,16 +33,14 @@ import java.util.function.Function;
 public class SinkSegmentReference implements Closeable
 {
   private final int hydrantNumber;
-  private final SegmentReference segment;
+  private final Segment segment;
   private final boolean immutable;
-  private final Closeable releaser;
 
-  public SinkSegmentReference(int hydrantNumber, SegmentReference segment, boolean immutable, Closeable releaser)
+  public SinkSegmentReference(int hydrantNumber, Segment segment, boolean immutable)
   {
     this.hydrantNumber = hydrantNumber;
     this.segment = segment;
     this.immutable = immutable;
-    this.releaser = releaser;
   }
 
   /**
@@ -57,7 +55,7 @@ public class SinkSegmentReference implements Closeable
   /**
    * The segment reference.
    */
-  public SegmentReference getSegment()
+  public Segment getSegment()
   {
     return segment;
   }
@@ -73,6 +71,6 @@ public class SinkSegmentReference implements Closeable
   @Override
   public void close()
   {
-    CloseableUtils.closeAndWrapExceptions(releaser);
+    CloseableUtils.closeAndWrapExceptions(segment);
   }
 }

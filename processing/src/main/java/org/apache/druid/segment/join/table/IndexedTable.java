@@ -23,7 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ReferenceCountedObject;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -39,7 +39,7 @@ import java.util.Set;
  *
  * The main user of this class is {@link IndexedTableJoinable}, and its main purpose is to participate in joins.
  */
-public interface IndexedTable extends ReferenceCountedObject, Closeable
+public interface IndexedTable extends ReferenceCountedObjectProvider<Closeable>, Closeable
 {
   /**
    * Returns the version of this table, used to compare against when loading a new version of the table

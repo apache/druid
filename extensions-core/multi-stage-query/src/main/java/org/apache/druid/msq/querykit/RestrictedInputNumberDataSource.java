@@ -27,12 +27,11 @@ import org.apache.druid.query.LeafDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Represents an input number, i.e., a positional index into
@@ -97,11 +96,10 @@ public class RestrictedInputNumberDataSource extends LeafDataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    return baseSegment -> new RestrictedSegment(baseSegment, policy);
+    return SegmentMapFunction.IDENTITY.thenMap(segment -> new RestrictedSegment(segment, policy));
   }
-
 
   @Override
   public byte[] getCacheKey()

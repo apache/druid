@@ -31,9 +31,7 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.segment.SegmentReference;
-
-import java.util.function.Function;
+import org.apache.druid.segment.SegmentMapFunction;
 
 @JsonTypeName("groupByPreShuffle")
 public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcessorFactory
@@ -56,7 +54,7 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   @Override
   protected FrameProcessor<Object> makeProcessor(
       final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final SegmentMapFunction segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final FrameContext frameContext
