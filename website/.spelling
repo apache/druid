@@ -470,6 +470,7 @@ pre-aggregating
 pre-aggregation
 pre-computation
 pre-compute
+pre-computed
 pre-computing
 preconfigured
 pre-existing
@@ -2433,6 +2434,10 @@ quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
+
+- ../docs/development/extensions-contrib/druid-exact-cardinality.md
+Bitmap64ExactCardinalityBuild
+Bitmap64ExactCardinalityMerge
 
 - ../docs/development/extensions-core/catalog.md
 ColumnSpec
