@@ -584,7 +584,7 @@ public class TaskQueue
     addOrUpdateTaskEntry(
         taskId,
         prevEntry -> {
-          // Remove the task only if is complete OR it doesn't have a more recent update
+          // Remove the task only if it is complete OR it doesn't have a more recent update
           if (prevEntry != null && (prevEntry.isComplete || prevEntry.lastUpdatedTime.isBefore(deleteTime))) {
             removedTask.set(prevEntry.task);
             // Remove this taskId from activeTasks by mapping it to null
@@ -853,10 +853,10 @@ public class TaskQueue
         final Collection<Task> removedTasks = mapDifference.entriesOnlyOnLeft().values();
 
         // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
-        int numRemoved = 0;
+        int numTaskRemoved = 0;
         for (Task task : removedTasks) {
           if (removeTaskInternal(task.getId(), syncStartTime)) {
-            ++numRemoved;
+            ++numTaskRemoved;
           }
         }
 
@@ -866,8 +866,8 @@ public class TaskQueue
         }
 
         log.info(
-            "Synced [%d] tasks from storage (%d tasks added, %d tasks removable, %d removed).",
-            newTasks.size(), addedTasks.size(), removedTasks.size(), numRemoved
+            "Synced [%d] tasks from storage (%d tasks added, %d tasks removable, %d tasks removed).",
+            newTasks.size(), addedTasks.size(), removedTasks.size(), numTaskRemoved
         );
         requestManagement();
       } else {
