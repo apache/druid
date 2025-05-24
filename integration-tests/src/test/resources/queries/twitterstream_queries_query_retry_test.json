@@ -3,7 +3,7 @@
         "description": "timeseries, 1 agg, all",
         "query": {
             "queryType": "timeseries",
-            "dataSource": "wikipedia_editstream",
+            "dataSource": "twitterstream",
             "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
             "granularity": "all",
             "aggregations": [
@@ -18,7 +18,7 @@
             {
                 "timestamp": "2013-01-01T00:00:00.000Z",
                 "result": {
-                    "rows": 2390950
+                    "rows": 10948544
                 }
             }
         ]
