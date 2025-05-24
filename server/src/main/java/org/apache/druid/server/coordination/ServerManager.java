@@ -308,7 +308,7 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    final Optional<Interval> cacheKeyInterval = segmentProvider.acquireReference().map(segment -> {
+    final Optional<Interval> cacheKeyInterval = segmentMapFn.apply(segmentProvider).map(segment -> {
       final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
       final Interval dataInterval = timeBoundaryInspector != null ? timeBoundaryInspector.getMinMaxInterval() : segmentInterval;
       CloseableUtils.closeAndWrapExceptions(segment);
