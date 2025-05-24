@@ -853,10 +853,10 @@ public class TaskQueue
         final Collection<Task> removedTasks = mapDifference.entriesOnlyOnLeft().values();
 
         // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
-        int numTaskRemoved = 0;
+        int numTasksRemoved = 0;
         for (Task task : removedTasks) {
           if (removeTaskInternal(task.getId(), syncStartTime)) {
-            ++numTaskRemoved;
+            ++numTasksRemoved;
           }
         }
 
@@ -867,7 +867,7 @@ public class TaskQueue
 
         log.info(
             "Synced [%d] tasks from storage (%d tasks added, %d tasks removable, %d tasks removed).",
-            newTasks.size(), addedTasks.size(), removedTasks.size(), numTaskRemoved
+            newTasks.size(), addedTasks.size(), removedTasks.size(), numTasksRemoved
         );
         requestManagement();
       } else {
