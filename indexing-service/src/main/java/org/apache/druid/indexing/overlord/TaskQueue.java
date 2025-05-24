@@ -577,15 +577,15 @@ public class TaskQueue
    * might add it back to the queue, thus causing a duplicate run of the task.
    */
   @GuardedBy("startStopLock")
-  private void removeTaskInternal(final String taskId, final DateTime deleteTime)
+  private boolean removeTaskInternal(final String taskId, final DateTime deleteTime)
   {
     final AtomicReference<Task> removedTask = new AtomicReference<>();
 
     addOrUpdateTaskEntry(
         taskId,
         prevEntry -> {
-          // Remove the task only if it doesn't have a more recent update
-          if (prevEntry != null && prevEntry.lastUpdatedTime.isBefore(deleteTime)) {
+          // Remove the task only if it is complete OR it doesn't have a more recent update
+          if (prevEntry != null && (prevEntry.isComplete || prevEntry.lastUpdatedTime.isBefore(deleteTime))) {
             removedTask.set(prevEntry.task);
             // Remove this taskId from activeTasks by mapping it to null
             return null;
@@ -597,7 +597,9 @@ public class TaskQueue
 
     if (removedTask.get() != null) {
       removeTaskLock(removedTask.get());
+      return true;
     }
+    return false;
   }
 
   /**
@@ -851,8 +853,11 @@ public class TaskQueue
         final Collection<Task> removedTasks = mapDifference.entriesOnlyOnLeft().values();
 
         // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
+        int numTasksRemoved = 0;
         for (Task task : removedTasks) {
-          removeTaskInternal(task.getId(), syncStartTime);
+          if (removeTaskInternal(task.getId(), syncStartTime)) {
+            ++numTasksRemoved;
+          }
         }
 
         // Add new tasks present in metadata store if their lastUpdatedTime is before syncStartTime
@@ -861,8 +866,8 @@ public class TaskQueue
         }
 
         log.info(
-            "Synced [%d] tasks from storage (%d tasks added, %d tasks removed).",
-            newTasks.size(), addedTasks.size(), removedTasks.size()
+            "Synced [%d] tasks from storage (%d tasks added, %d tasks removable, %d tasks removed).",
+            newTasks.size(), addedTasks.size(), removedTasks.size(), numTasksRemoved
         );
         requestManagement();
       } else {
@@ -958,6 +963,7 @@ public class TaskQueue
                                                .collect(Collectors.toSet());
 
     return activeTasks.values().stream()
+                      .filter(entry -> !entry.isComplete)
                       .map(entry -> entry.task)
                       .filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                       .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
