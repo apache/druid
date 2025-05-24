@@ -97,7 +97,12 @@ public class OverlordDutyExecutor
     initExecutor();
 
     final DutySchedule schedule = duty.getSchedule();
-    final String dutyName = duty.getClass().getName();
+    final String dutyName = duty.getClass().getSimpleName();
+
+    if (schedule == null || schedule.getPeriodMillis() <= 0) {
+      log.info("Not scheduling overlord duty[%s] as it has no period specified.", dutyName);
+      return;
+    }
 
     ScheduledExecutors.scheduleWithFixedDelay(
         exec,
@@ -108,13 +113,13 @@ public class OverlordDutyExecutor
             duty.run();
           }
           catch (Exception e) {
-            log.error(e, "Error while running duty [%s]", dutyName);
+            log.error(e, "Error while running duty[%s]", dutyName);
           }
         }
     );
 
     log.info(
-        "Scheduled overlord duty [%s] with initial delay [%d], period [%d].",
+        "Scheduled overlord duty[%s] with initial delay[%d], period[%d].",
         dutyName, schedule.getInitialDelayMillis(), schedule.getPeriodMillis()
     );
   }

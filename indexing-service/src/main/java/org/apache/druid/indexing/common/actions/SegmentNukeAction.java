@@ -27,16 +27,23 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Permanently deletes unused segments from the metadata store.
+ */
 public class SegmentNukeAction implements TaskAction<Void>
 {
+  private static final Logger log = new Logger(SegmentNukeAction.class);
+
   private final Set<DataSegment> segments;
 
   @JsonCreator
@@ -65,22 +72,26 @@ public class SegmentNukeAction implements TaskAction<Void>
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
     try {
+      final Set<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
-          CriticalAction.builder()
-                        .onValidLocks(
-                            () -> {
-                              toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
-                              return null;
-                            }
-                        )
-                        .onInvalidLocks(
-                            () -> {
-                              throw new ISE("Some locks for task[%s] are already revoked", task.getId());
-                            }
-                        )
-                        .build()
+          intervals,
+          CriticalAction.builder().onValidLocks(
+              () -> {
+                int numDeletedSegments =
+                    toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
+                log.info(
+                    "Deleted [%d] segments out of requested[%d] from"
+                    + " metadata store for task[%s], datasource[%s], intervals[%s].",
+                    numDeletedSegments, segments.size(), task.getId(), task.getDataSource(), intervals
+                );
+                return numDeletedSegments;
+              }
+          ).onInvalidLocks(
+              () -> {
+                throw new ISE("Some locks for task[%s] are already revoked", task.getId());
+              }
+          ).build()
       );
     }
     catch (Exception e) {

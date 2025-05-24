@@ -56,7 +56,7 @@ public class KillTaskReport implements TaskReport
 
   @Override
   @JsonProperty
-  public Object getPayload()
+  public Stats getPayload()
   {
     return stats;
   }

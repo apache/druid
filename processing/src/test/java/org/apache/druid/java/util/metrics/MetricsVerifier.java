@@ -22,6 +22,7 @@ package org.apache.druid.java.util.metrics;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +51,7 @@ public interface MetricsVerifier
    * Verifies that the metric was emitted for the given dimension filters the
    * expected number of times.
    */
-  default void verifyEmitted(String metricName, Map<String, Object> dimensionFilters, int times)
+  default void verifyEmitted(String metricName, @Nullable Map<String, Object> dimensionFilters, int times)
   {
     Assert.assertEquals(
         StringUtils.format("Metric [%s] was emitted unexpected number of times.", metricName),
@@ -71,7 +72,7 @@ public interface MetricsVerifier
    * Verifies the value of the event corresponding to the specified metric and
    * dimensionFilters emitted in the previous run.
    */
-  default void verifyValue(String metricName, Map<String, Object> dimensionFilters, Number expectedValue)
+  default void verifyValue(String metricName, @Nullable Map<String, Object> dimensionFilters, Number expectedValue)
   {
     Assert.assertEquals(expectedValue, getValue(metricName, dimensionFilters));
   }
@@ -80,7 +81,7 @@ public interface MetricsVerifier
    * Gets the value of the event corresponding to the specified metric and
    * dimensionFilters.
    */
-  default Number getValue(String metricName, Map<String, Object> dimensionFilters)
+  default Number getValue(String metricName, @Nullable Map<String, Object> dimensionFilters)
   {
     List<Number> values = getMetricValues(metricName, dimensionFilters);
     Assert.assertEquals(
@@ -92,8 +93,35 @@ public interface MetricsVerifier
   }
 
   /**
+   * Gets the sum of values of all events corresponding to the specified metric.
+   */
+  default void verifySum(String metricName, long expectedSum)
+  {
+    verifySum(metricName, null, expectedSum);
+  }
+
+  /**
+   * Gets the sum of values of all events corresponding to the specified metric
+   * and dimensionFilters.
+   */
+  default void verifySum(String metricName, @Nullable Map<String, Object> dimensionFilters, long expectedSum)
+  {
+    long observedSum = getMetricValues(metricName, dimensionFilters)
+        .stream()
+        .mapToLong(Number::longValue)
+        .sum();
+    Assert.assertEquals(
+        StringUtils.format(
+            "Unexpected sum[%s] of metric[%s] with filters[%s]",
+            observedSum, metricName, dimensionFilters
+        ),
+        expectedSum, observedSum
+    );
+  }
+
+  /**
    * Gets the metric values for the specified dimension filters.
    */
-  List<Number> getMetricValues(String metricName, Map<String, Object> dimensionFilters);
+  List<Number> getMetricValues(String metricName, @Nullable Map<String, Object> dimensionFilters);
 
 }

@@ -132,7 +132,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig =
-        new SegmentsMetadataManagerConfig(Period.millis(10), null);
+        new SegmentsMetadataManagerConfig(Period.millis(10), null, null);
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
   }
 

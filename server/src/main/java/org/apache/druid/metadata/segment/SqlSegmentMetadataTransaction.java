@@ -97,6 +97,12 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
+  public SqlSegmentsMetadataQuery noCacheSql()
+  {
+    return query;
+  }
+
+  @Override
   public void setRollbackOnly()
   {
     transactionStatus.setRollbackOnly();

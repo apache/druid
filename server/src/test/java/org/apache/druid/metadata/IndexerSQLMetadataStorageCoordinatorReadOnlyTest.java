@@ -101,7 +101,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         mapper,
-        () -> new SegmentsMetadataManagerConfig(null, cacheMode),
+        () -> new SegmentsMetadataManagerConfig(null, cacheMode, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopSegmentSchemaCache(),
         derbyConnector,
