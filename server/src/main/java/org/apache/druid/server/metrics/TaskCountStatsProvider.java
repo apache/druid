@@ -26,34 +26,34 @@ import java.util.Map;
 public interface TaskCountStatsProvider
 {
   /**
-   * Return the number of successful tasks for each datasource during emission period.
+   * Return the number of successful tasks for each datasource and task type during emission period.
    */
   @Deprecated
-  Map<String, Long> getSuccessfulTaskCount();
+  Map<TaskMetricKey, Long> getSuccessfulTaskCount();
 
   /**
-   * Return the number of failed tasks for each datasource during emission period.
+   * Return the number of failed tasks for each datasource and task type during emission period.
    */
   @Deprecated
-  Map<String, Long> getFailedTaskCount();
+  Map<TaskMetricKey, Long> getFailedTaskCount();
 
   /**
-   * Return the number of current running tasks for each datasource.
+   * Return the number of current running tasks for each datasource and task type.
    */
   @Deprecated
-  Map<String, Long> getRunningTaskCount();
+  Map<TaskMetricKey, Long> getRunningTaskCount();
 
   /**
-   * Return the number of current pending tasks for each datasource.
+   * Return the number of current pending tasks for each datasource and task type.
    */
   @Deprecated
-  Map<String, Long> getPendingTaskCount();
+  Map<TaskMetricKey, Long> getPendingTaskCount();
 
   /**
-   * Return the number of current waiting tasks for each datasource.
+   * Return the number of current waiting tasks for each datasource and task type.
    */
   @Deprecated
-  Map<String, Long> getWaitingTaskCount();
+  Map<TaskMetricKey, Long> getWaitingTaskCount();
 
   /**
    * Collects all task level stats. This method deprecates the other task stats

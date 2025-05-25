@@ -28,6 +28,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
+import org.apache.druid.server.metrics.TaskMetricKey;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
 import javax.annotation.Nullable;
@@ -155,7 +156,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getSuccessfulTaskCount()
+  public Map<TaskMetricKey, Long> getSuccessfulTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -166,7 +167,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getFailedTaskCount()
+  public Map<TaskMetricKey, Long> getFailedTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -177,7 +178,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getRunningTaskCount()
+  public Map<TaskMetricKey, Long> getRunningTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -188,7 +189,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getPendingTaskCount()
+  public Map<TaskMetricKey, Long> getPendingTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -199,7 +200,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getWaitingTaskCount()
+  public Map<TaskMetricKey, Long> getWaitingTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {

@@ -32,6 +32,8 @@ import java.util.Map;
 public class TaskCountStatsMonitorTest
 {
   private TaskCountStatsProvider statsProvider;
+  private static final TaskMetricKey TASK_METRIC_KEY1 = new TaskMetricKey("index", "d1");
+  private static final TaskMetricKey TASK_METRIC_KEY2 = new TaskMetricKey("kill", "d1");
 
   @Before
   public void setUp()
@@ -39,33 +41,33 @@ public class TaskCountStatsMonitorTest
     statsProvider = new TaskCountStatsProvider()
     {
       @Override
-      public Map<String, Long> getSuccessfulTaskCount()
+      public Map<TaskMetricKey, Long> getSuccessfulTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 1L);
       }
 
       @Override
-      public Map<String, Long> getFailedTaskCount()
+      public Map<TaskMetricKey, Long> getFailedTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 1L, TASK_METRIC_KEY2, 1L);
       }
 
       @Override
-      public Map<String, Long> getRunningTaskCount()
+      public Map<TaskMetricKey, Long> getRunningTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 1L);
       }
 
       @Override
-      public Map<String, Long> getPendingTaskCount()
+      public Map<TaskMetricKey, Long> getPendingTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 2L);
       }
 
       @Override
-      public Map<String, Long> getWaitingTaskCount()
+      public Map<TaskMetricKey, Long> getWaitingTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 2L, TASK_METRIC_KEY2, 1L);
       }
 
       @Override
@@ -85,12 +87,17 @@ public class TaskCountStatsMonitorTest
     final TaskCountStatsMonitor monitor = new TaskCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(7, emitter.getEvents().size());
-    emitter.verifyValue("task/success/count", 1L);
-    emitter.verifyValue("task/failed/count", 1L);
-    emitter.verifyValue("task/running/count", 1L);
-    emitter.verifyValue("task/pending/count", 1L);
-    emitter.verifyValue("task/waiting/count", 1L);
+
+    Assert.assertEquals(9, emitter.getEvents().size());
+
+    emitter.verifyValue("task/success/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/failed/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/failed/count", ImmutableMap.of("dataSource", "d1", "taskType", "kill"), 1L);
+    emitter.verifyValue("task/running/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/pending/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 2L);
+    emitter.verifyValue("task/waiting/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 2L);
+    emitter.verifyValue("task/waiting/count", ImmutableMap.of("dataSource", "d1", "taskType", "kill"), 1L);
+
     emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
     emitter.verifyValue(Stat.DEBUG_1.getMetricName(), ImmutableMap.of("tier", "hot", "dataSource", "wiki"), 20L);
   }
