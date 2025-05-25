@@ -27,8 +27,8 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
-import org.apache.druid.server.metrics.TaskMetricKey;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
 import javax.annotation.Nullable;
@@ -156,7 +156,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<TaskMetricKey, Long> getSuccessfulTaskCount()
+  public Map<RowKey, Long> getSuccessfulTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -167,7 +167,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<TaskMetricKey, Long> getFailedTaskCount()
+  public Map<RowKey, Long> getFailedTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -178,7 +178,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<TaskMetricKey, Long> getRunningTaskCount()
+  public Map<RowKey, Long> getRunningTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -189,7 +189,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<TaskMetricKey, Long> getPendingTaskCount()
+  public Map<RowKey, Long> getPendingTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -200,7 +200,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<TaskMetricKey, Long> getWaitingTaskCount()
+  public Map<RowKey, Long> getWaitingTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {

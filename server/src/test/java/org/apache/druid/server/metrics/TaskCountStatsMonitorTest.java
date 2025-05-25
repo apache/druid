@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,8 +34,12 @@ import java.util.Map;
 public class TaskCountStatsMonitorTest
 {
   private TaskCountStatsProvider statsProvider;
-  private static final TaskMetricKey TASK_METRIC_KEY1 = new TaskMetricKey("index", "d1");
-  private static final TaskMetricKey TASK_METRIC_KEY2 = new TaskMetricKey("kill", "d1");
+  private static final RowKey TASK_METRIC_KEY1 = RowKey.with(Dimension.DATASOURCE, "d1")
+                                                       .with(Dimension.TASK_TYPE, "index")
+                                                       .build();
+  private static final RowKey TASK_METRIC_KEY2 = RowKey.with(Dimension.DATASOURCE, "d1")
+                                                       .with(Dimension.TASK_TYPE, "kill")
+                                                       .build();
 
   @Before
   public void setUp()
@@ -41,31 +47,31 @@ public class TaskCountStatsMonitorTest
     statsProvider = new TaskCountStatsProvider()
     {
       @Override
-      public Map<TaskMetricKey, Long> getSuccessfulTaskCount()
+      public Map<RowKey, Long> getSuccessfulTaskCount()
       {
         return ImmutableMap.of(TASK_METRIC_KEY1, 1L);
       }
 
       @Override
-      public Map<TaskMetricKey, Long> getFailedTaskCount()
+      public Map<RowKey, Long> getFailedTaskCount()
       {
         return ImmutableMap.of(TASK_METRIC_KEY1, 1L, TASK_METRIC_KEY2, 1L);
       }
 
       @Override
-      public Map<TaskMetricKey, Long> getRunningTaskCount()
+      public Map<RowKey, Long> getRunningTaskCount()
       {
         return ImmutableMap.of(TASK_METRIC_KEY1, 1L);
       }
 
       @Override
-      public Map<TaskMetricKey, Long> getPendingTaskCount()
+      public Map<RowKey, Long> getPendingTaskCount()
       {
         return ImmutableMap.of(TASK_METRIC_KEY1, 2L);
       }
 
       @Override
-      public Map<TaskMetricKey, Long> getWaitingTaskCount()
+      public Map<RowKey, Long> getWaitingTaskCount()
       {
         return ImmutableMap.of(TASK_METRIC_KEY1, 2L, TASK_METRIC_KEY2, 1L);
       }
