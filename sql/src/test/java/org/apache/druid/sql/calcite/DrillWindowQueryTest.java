@@ -36,6 +36,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.apache.druid.sql.calcite.NotYetSupported.Scope;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -94,7 +95,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
   @RegisterExtension
-  public NotYetSupportedProcessor ignoreProcessor = new NotYetSupportedProcessor();
+  public NotYetSupportedProcessor ignoreProcessor = new NotYetSupportedProcessor(Scope.WINDOWING);
 
   @RegisterExtension
   public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();

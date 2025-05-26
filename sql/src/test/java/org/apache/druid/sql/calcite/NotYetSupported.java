@@ -73,37 +73,50 @@ public @interface NotYetSupported
 {
   Modes value();
 
+  enum Scope {
+    DECOUPLED,
+    WINDOWING
+  }
+
   enum Modes
   {
     // @formatter:off
-    NOT_ENOUGH_RULES(DruidException.class, "There are not enough rules to produce a node"),
-    DISTINCT_AGGREGATE_NOT_SUPPORTED(DruidException.class, "DISTINCT is not supported"),
-    EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
-    NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
-    BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
-    ALLDATA_CSV(DruidException.class, "allData.csv"),
-    BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
-    VIEWS_NOT_SUPPORTED(DruidException.class, "Incorrect syntax near the keyword 'CREATE'"),
-    RESULT_MISMATCH(AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
-    LONG_CASTING(AssertionError.class, "expected: java.lang.Long"),
-    UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
-    SORT_REMOVE_CONSTANT_KEYS_CONFLICT(DruidException.class, "not enough rules"),
-    UNNEST_INLINED(Exception.class, "Missing conversion is Uncollect"),
-    UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)"),
-    SUPPORT_SORT(DruidException.class, "Unable to process relNode.*DruidSort"),
-    SUPPORT_AGGREGATE(DruidException.class, "Unable to process relNode.*DruidAggregate"),
-    RESTRICTED_DATASOURCE_SUPPORT(DruidException.class, "ForbiddenException: Unauthorized");
+    DISTINCT_AGGREGATE_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "DISTINCT is not supported"),
+    EXPRESSION_NOT_GROUPED(Scope.WINDOWING, DruidException.class, "Expression '[a-z]+' is not being grouped"),
+    NULLS_FIRST_LAST(Scope.WINDOWING, DruidException.class, "NULLS (FIRST|LAST)"),
+    BIGINT_TO_DATE(Scope.WINDOWING, DruidException.class, "BIGINT to type (DATE|TIME)"),
+    AGGREGATION_NOT_SUPPORT_TYPE(Scope.WINDOWING, DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
+    ALLDATA_CSV(Scope.WINDOWING, DruidException.class, "allData.csv"),
+    BIGINT_TIME_COMPARE(Scope.WINDOWING, DruidException.class, "Cannot apply '.' to arguments of type"),
+    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Incorrect syntax near the keyword 'CREATE'"),
+    RESULT_MISMATCH(Scope.WINDOWING, AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
+    LONG_CASTING(Scope.WINDOWING, AssertionError.class, "expected: java.lang.Long"),
+    UNSUPPORTED_NULL_ORDERING(Scope.WINDOWING, DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
+
+    NOT_ENOUGH_RULES(Scope.DECOUPLED, DruidException.class, "There are not enough rules to produce a node"),
+    SORT_REMOVE_TROUBLE(Scope.DECOUPLED, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    SORT_REMOVE_CONSTANT_KEYS_CONFLICT(Scope.DECOUPLED, DruidException.class, "not enough rules"),
+    UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
+    UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    SUPPORT_SORT(Scope.DECOUPLED, DruidException.class, "Unable to process relNode.*DruidSort"),
+    SUPPORT_AGGREGATE(Scope.DECOUPLED, DruidException.class, "Unable to process relNode.*DruidAggregate"),
+    RESTRICTED_DATASOURCE_SUPPORT(Scope.DECOUPLED, DruidException.class, "ForbiddenException: Unauthorized");
     // @formatter:on
 
+    public Scope scope;
     public Class<? extends Throwable> throwableClass;
     public String regex;
 
-    Modes(Class<? extends Throwable> cl, String regex)
+    Modes(Scope scope, Class<? extends Throwable> cl, String regex)
     {
+      this.scope = scope;
       this.throwableClass = cl;
       this.regex = regex;
+    }
+
+    Modes(Class<? extends Throwable> cl, String regex)
+    {
+      this(Scope.DECOUPLED, cl, regex);
     }
 
     Pattern getPattern()
@@ -126,6 +139,13 @@ public @interface NotYetSupported
    */
   class NotYetSupportedProcessor implements InvocationInterceptor
   {
+    private final Scope scope;
+
+    public NotYetSupportedProcessor(Scope scope)
+    {
+      this.scope = scope;
+    }
+
     @Override
     public void interceptTestMethod(Invocation<Void> invocation,
         ReflectiveInvocationContext<Method> invocationContext,
@@ -134,7 +154,7 @@ public @interface NotYetSupported
       Method method = extensionContext.getTestMethod().get();
       NotYetSupported annotation = method.getAnnotation(NotYetSupported.class);
 
-      if (annotation == null) {
+      if (annotation == null || annotation.value().scope != scope) {
         invocation.proceed();
         return;
       }
