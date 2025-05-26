@@ -42,7 +42,10 @@ import static org.junit.Assert.assertThrows;
  *
  * In case a testcase marked with this annotation fails - it means that the
  * testcase no longer fails with the annotated expectation. This means that a
- * code change affected this test either
+ * code change affected this test either.
+ *
+ * Each reason must belong to a {@link Scope}; for which the
+ * {@link NotYetSupportedProcessor} be enable to be supressed.
  *
  * <ol>
  * <li>it suddenly passes: yay, assuming it makes sense that it suddenly passes,
@@ -52,15 +55,14 @@ import static org.junit.Assert.assertThrows;
  * expected error.</li>
  * </ol>
  *
- * During usage; the annotation process have to be added to registered with the testclass.
- * Ensure that it's loaded as the most outer-rule by using the right ExtendWith order - or by
- * specifying Order:
- * <code>
- *   @Order(0)
+ * During usage; the annotation process have to be added to registered with the
+ * testclass. Ensure that it's loaded as the most outer-rule by using the right
+ * ExtendWith order - or by specifying Order: <code>
+ *   &#64;Order(0)
  *   @RegisterExtension
- *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor();
+ *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor(Scope.DECOUPLED);
  *
- *   @NotYetSupported(NOT_ENOUGH_RULES)
+ *   &#64;NotYetSupported(NOT_ENOUGH_RULES)
  *   &#64;Test
  *   public void testA() {
  *   }
