@@ -64,6 +64,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
@@ -153,12 +155,12 @@ public class TaskQueue
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
-  private final ConcurrentHashMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
   @GuardedBy("totalSuccessfulTaskCount")
-  private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
+  private Map<RowKey, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
   @GuardedBy("totalFailedTaskCount")
-  private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
+  private Map<RowKey, Long> prevTotalFailedTaskCount = new HashMap<>();
 
   private final AtomicInteger statusUpdatesInQueue = new AtomicInteger();
   private final AtomicInteger handledStatusUpdates = new AtomicInteger();
@@ -807,9 +809,9 @@ public class TaskQueue
                 );
 
                 if (status.isSuccess()) {
-                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, task.getDataSource());
+                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
                 } else {
-                  Counters.incrementAndGetLong(totalFailedTaskCount, task.getDataSource());
+                  Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
                 }
               }
             }
@@ -892,9 +894,9 @@ public class TaskQueue
     return rv;
   }
 
-  private Map<String, Long> getDeltaValues(Map<String, Long> total, Map<String, Long> prev)
+  private Map<RowKey, Long> getDeltaValues(Map<RowKey, Long> total, Map<RowKey, Long> prev)
   {
-    final Map<String, Long> deltaValues = new HashMap<>();
+    final Map<RowKey, Long> deltaValues = new HashMap<>();
     total.forEach(
         (dataSource, totalCount) -> deltaValues.put(
             dataSource,
@@ -904,58 +906,59 @@ public class TaskQueue
     return deltaValues;
   }
 
-  public Map<String, Long> getSuccessfulTaskCount()
+  public Map<RowKey, Long> getSuccessfulTaskCount()
   {
-    Map<String, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
+    final Map<RowKey, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
     synchronized (totalSuccessfulTaskCount) {
-      Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
+      Map<RowKey, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
       prevTotalSuccessfulTaskCount = total;
       return delta;
     }
   }
 
-  public Map<String, Long> getFailedTaskCount()
+  public Map<RowKey, Long> getFailedTaskCount()
   {
-    Map<String, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
+    final Map<RowKey, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
     synchronized (totalFailedTaskCount) {
-      Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
+      Map<RowKey, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
       prevTotalFailedTaskCount = total;
       return delta;
     }
   }
 
-  private Map<String, String> getCurrentTaskDatasources()
+  private Map<String, RowKey> getCurrentTaskDatasources()
   {
     return activeTasks.values().stream()
+                      .filter(entry -> !entry.isComplete)
                       .map(entry -> entry.task)
-                      .collect(Collectors.toMap(Task::getId, Task::getDataSource));
+                      .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
   }
 
-  public Map<String, Long> getRunningTaskCount()
+  public Map<RowKey, Long> getRunningTaskCount()
   {
-    Map<String, String> taskDatasources = getCurrentTaskDatasources();
+    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
     return taskRunner.getRunningTasks()
                      .stream()
                      .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
                          e -> 1L,
                          Long::sum
                      ));
   }
 
-  public Map<String, Long> getPendingTaskCount()
+  public Map<RowKey, Long> getPendingTaskCount()
   {
-    Map<String, String> taskDatasources = getCurrentTaskDatasources();
+    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
     return taskRunner.getPendingTasks()
                      .stream()
                      .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
                          e -> 1L,
                          Long::sum
                      ));
   }
 
-  public Map<String, Long> getWaitingTaskCount()
+  public Map<RowKey, Long> getWaitingTaskCount()
   {
     Set<String> runnerKnownTaskIds = taskRunner.getKnownTasks()
                                                .stream()
@@ -966,7 +969,7 @@ public class TaskQueue
                       .filter(entry -> !entry.isComplete)
                       .map(entry -> entry.task)
                       .filter(task -> !runnerKnownTaskIds.contains(task.getId()))
-                      .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+                      .collect(Collectors.toMap(TaskQueue::getMetricKey, task -> 1L, Long::sum));
   }
 
   /**
@@ -1135,5 +1138,14 @@ public class TaskQueue
       this.task = task;
       this.lastUpdatedTime = DateTimes.nowUtc();
     }
+  }
+
+  private static RowKey getMetricKey(final Task task)
+  {
+    if (task == null) {
+      return RowKey.empty();
+    }
+    return RowKey.with(Dimension.DATASOURCE, task.getDataSource())
+                 .and(Dimension.TASK_TYPE, task.getType());
   }
 }
