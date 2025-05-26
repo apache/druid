@@ -928,7 +928,10 @@ public class TaskQueue
 
   private Map<String, RowKey> getCurrentTaskDatasources()
   {
-    return activeTasks.values().stream().filter(entry -> !entry.isComplete).map(entry -> entry.task).collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
+    return activeTasks.values().stream()
+                      .filter(entry -> !entry.isComplete)
+                      .map(entry -> entry.task)
+                      .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
   }
 
   public Map<RowKey, Long> getRunningTaskCount()
@@ -1142,10 +1145,7 @@ public class TaskQueue
     if (task == null) {
       return RowKey.empty();
     }
-    RowKey.Builder builder = new RowKey.Builder();
-    builder.with(Dimension.DATASOURCE, task.getDataSource());
-    builder.with(Dimension.TASK_TYPE, task.getType());
-
-    return builder.build();
+    return RowKey.with(Dimension.DATASOURCE, task.getDataSource())
+                 .and(Dimension.TASK_TYPE, task.getType());
   }
 }

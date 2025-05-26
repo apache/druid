@@ -96,16 +96,16 @@ public class TaskCountStatsMonitorTest
 
     Assert.assertEquals(9, emitter.getEvents().size());
 
-    emitter.verifyValue("task/success/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 1L);
-    emitter.verifyValue("task/failed/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 1L);
-    emitter.verifyValue("task/failed/count", ImmutableMap.of("dataSource", "d1", "taskType", "kill"), 1L);
-    emitter.verifyValue("task/running/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 1L);
-    emitter.verifyValue("task/pending/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 2L);
-    emitter.verifyValue("task/waiting/count", ImmutableMap.of("dataSource", "d1", "taskType", "index"), 2L);
-    emitter.verifyValue("task/waiting/count", ImmutableMap.of("dataSource", "d1", "taskType", "kill"), 1L);
+    emitter.verifyValue("task/success/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "kill"), 1L);
+    emitter.verifyValue("task/running/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/pending/count", Map.of("dataSource", "d1", "taskType", "index"), 2L);
+    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "index"), 2L);
+    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "kill"), 1L);
 
     emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
-    emitter.verifyValue(Stat.DEBUG_1.getMetricName(), ImmutableMap.of("tier", "hot", "dataSource", "wiki"), 20L);
+    emitter.verifyValue(Stat.DEBUG_1.getMetricName(), Map.of("tier", "hot", "dataSource", "wiki"), 20L);
   }
 
   private static class Stat
