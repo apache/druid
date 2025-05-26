@@ -70,6 +70,7 @@ public class GroupByStatsProvider
     private long spilledQueries = 0;
     private long spilledBytes = 0;
     private long mergeDictionarySize = 0;
+    private long mergeBufferUsedCount = 0;
 
     public AggregateStats()
     {
@@ -80,7 +81,8 @@ public class GroupByStatsProvider
         long mergeBufferAcquisitionTimeNs,
         long spilledQueries,
         long spilledBytes,
-        long mergeDictionarySize
+        long mergeDictionarySize,
+        long mergeBufferUsedCount
     )
     {
       this.mergeBufferQueries = mergeBufferQueries;
@@ -88,6 +90,7 @@ public class GroupByStatsProvider
       this.spilledQueries = spilledQueries;
       this.spilledBytes = spilledBytes;
       this.mergeDictionarySize = mergeDictionarySize;
+      this.mergeBufferUsedCount = mergeBufferUsedCount;
     }
 
     public long getMergeBufferQueries()
@@ -115,10 +118,16 @@ public class GroupByStatsProvider
       return mergeDictionarySize;
     }
 
+    public long getMergeBufferUsedCount()
+    {
+      return mergeBufferUsedCount;
+    }
+
     public void addQueryStats(PerQueryStats perQueryStats)
     {
       if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
         mergeBufferQueries++;
+        mergeBufferUsedCount += perQueryStats.getMergeBufferUsedCount();
         mergeBufferAcquisitionTimeNs += perQueryStats.getMergeBufferAcquisitionTimeNs();
       }
 
@@ -138,7 +147,8 @@ public class GroupByStatsProvider
               mergeBufferAcquisitionTimeNs,
               spilledQueries,
               spilledBytes,
-              mergeDictionarySize
+              mergeDictionarySize,
+              mergeBufferUsedCount
           );
 
       this.mergeBufferQueries = 0;
@@ -146,6 +156,7 @@ public class GroupByStatsProvider
       this.spilledQueries = 0;
       this.spilledBytes = 0;
       this.mergeDictionarySize = 0;
+      this.mergeBufferUsedCount = 0;
 
       return aggregateStats;
     }
@@ -156,6 +167,7 @@ public class GroupByStatsProvider
     private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
     private final AtomicLong mergeDictionarySize = new AtomicLong(0);
+    private final AtomicLong mergeBufferUsedCount = new AtomicLong(0);
 
     public void mergeBufferAcquisitionTime(long delay)
     {
@@ -172,9 +184,19 @@ public class GroupByStatsProvider
       mergeDictionarySize.addAndGet(size);
     }
 
+    public void mergeBufferUsedCount(long count)
+    {
+      mergeBufferUsedCount.addAndGet(count);
+    }
+
     public long getMergeBufferAcquisitionTimeNs()
     {
       return mergeBufferAcquisitionTimeNs.get();
+    }
+
+    public long getMergeBufferUsedCount()
+    {
+      return mergeBufferUsedCount.get();
     }
 
     public long getSpilledBytes()
