@@ -41,6 +41,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
   private final KafkaConfigOverrides configOverrides;
 
   private final boolean multiTopic;
+  private final String cluster;
 
   @JsonCreator
   public KafkaIndexTaskIOConfig(
@@ -64,7 +65,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
       @JsonProperty("multiTopic") @Nullable Boolean multiTopic,
-      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes
+      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
+      @JsonProperty("cluster") @Nullable String cluster
   )
   {
     super(
@@ -85,6 +87,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
     this.pollTimeout = pollTimeout != null ? pollTimeout : KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
     this.configOverrides = configOverrides;
     this.multiTopic = multiTopic != null ? multiTopic : KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC;
+    this.cluster = cluster;
 
     final SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> myEndSequenceNumbers = getEndSequenceNumbers();
     for (KafkaTopicPartition partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
@@ -128,7 +131,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         inputFormat,
         configOverrides,
         KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        null
     );
   }
 
@@ -184,6 +188,13 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
     return multiTopic;
   }
 
+  @JsonProperty
+  @Nullable
+  public String getCluster()
+  {
+    return cluster;
+  }
+
   @Override
   public String toString()
   {
@@ -193,6 +204,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
            ", startSequenceNumbers=" + getStartSequenceNumbers() +
            ", endSequenceNumbers=" + getEndSequenceNumbers() +
            ", consumerProperties=" + consumerProperties +
+           ", multiTopic=" + multiTopic +
+           ", cluster=" + cluster +
            ", pollTimeout=" + pollTimeout +
            ", useTransaction=" + isUseTransaction() +
            ", minimumMessageTime=" + getMinimumMessageTime() +

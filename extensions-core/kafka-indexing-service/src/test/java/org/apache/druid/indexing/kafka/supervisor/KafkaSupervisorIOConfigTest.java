@@ -340,7 +340,8 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         null,
-        false
+        false,
+        null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);
@@ -375,7 +376,8 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         null,
-        false
+        false,
+        null
     );
     Assert.assertEquals(5, kafkaSupervisorIOConfig.getTaskCount().intValue());
 
@@ -427,7 +429,8 @@ public class KafkaSupervisorIOConfigTest
         null,
         mapper.convertValue(idleConfig, IdleConfig.class),
         null,
-        false
+        false,
+        null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);

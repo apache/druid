@@ -125,6 +125,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   ) throws InterruptedException, IOException
   {
     final String stream = task.getIOConfig().getStartSequenceNumbers().getStream();
+    final String clusterKey = task.getIOConfig().getCluster();
     final boolean isMultiTopic = task.getIOConfig().isMultiTopic();
     final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
     boolean doReset = false;
@@ -135,7 +136,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         // seek to the beginning to get the least available offset
         StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(
             stream,
-            new KafkaTopicPartition(isMultiTopic, topicPartition.topic(), topicPartition.partition())
+            new KafkaTopicPartition(isMultiTopic, clusterKey, topicPartition.topic(), topicPartition.partition())
         );
         final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
         if (leastAvailableOffset == null) {
@@ -159,7 +160,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     if (doReset) {
       sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, topicPartition -> StreamPartition.of(
           stream,
-          new KafkaTopicPartition(isMultiTopic, topicPartition.topic(), topicPartition.partition())
+          new KafkaTopicPartition(isMultiTopic, clusterKey, topicPartition.topic(), topicPartition.partition())
       )), taskToolbox);
     } else {
       log.warn("Retrying in %dms", task.getPollRetryMs());

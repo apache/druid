@@ -46,6 +46,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -75,6 +76,23 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
    */
   private String stream;
 
+  /**
+    * Store the clusterId which is a unique key that stores which cluster this consumer is connected to.
+  */
+  private final String clusterId;
+
+  public KafkaRecordSupplier(
+      Map<String, Object> consumerProperties,
+      ObjectMapper sortingMapper,
+      KafkaConfigOverrides configOverrides,
+      boolean multiTopic,
+      final @Nullable String clusterId
+  )
+  {
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, clusterId);
+  }
+
+  @VisibleForTesting
   public KafkaRecordSupplier(
       Map<String, Object> consumerProperties,
       ObjectMapper sortingMapper,
@@ -91,13 +109,24 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       boolean multiTopic
   )
   {
+    this(consumer, multiTopic, null);
+  }
+
+  @VisibleForTesting
+  public KafkaRecordSupplier(
+      KafkaConsumer<byte[], byte[]> consumer,
+      boolean multiTopic,
+      final String clusterId
+  )
+  {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
     this.monitor = new KafkaConsumerMonitor(consumer);
+    this.clusterId = clusterId;
   }
 
   @Override
-  public void assign(Set<StreamPartition<KafkaTopicPartition>> streamPartitions)
+  public synchronized void assign(Set<StreamPartition<KafkaTopicPartition>> streamPartitions)
   {
     if (streamPartitions.isEmpty()) {
       wrapExceptions(() -> consumer.assign(Collections.emptyList()));
@@ -116,7 +145,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public void seek(StreamPartition<KafkaTopicPartition> partition, Long sequenceNumber)
+  public synchronized void seek(StreamPartition<KafkaTopicPartition> partition, Long sequenceNumber)
   {
     wrapExceptions(() -> consumer.seek(
         partition.getPartitionId().asTopicPartition(partition.getStream()),
@@ -125,7 +154,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public void seekToEarliest(Set<StreamPartition<KafkaTopicPartition>> partitions)
+  public synchronized void seekToEarliest(Set<StreamPartition<KafkaTopicPartition>> partitions)
   {
     wrapExceptions(() -> consumer.seekToBeginning(partitions
                                                       .stream()
@@ -134,7 +163,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public void seekToLatest(Set<StreamPartition<KafkaTopicPartition>> partitions)
+  public synchronized void seekToLatest(Set<StreamPartition<KafkaTopicPartition>> partitions)
   {
     wrapExceptions(() -> consumer.seekToEnd(partitions
                                                 .stream()
@@ -143,13 +172,13 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public Set<StreamPartition<KafkaTopicPartition>> getAssignment()
+  public synchronized Set<StreamPartition<KafkaTopicPartition>> getAssignment()
   {
     return wrapExceptions(() -> consumer.assignment()
                                         .stream()
                                         .map(e -> new StreamPartition<>(
                                             stream,
-                                            new KafkaTopicPartition(multiTopic, e.topic(),
+                                            new KafkaTopicPartition(multiTopic, clusterId, e.topic(),
                                                                     e.partition()
                                             )
                                         ))
@@ -175,7 +204,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public Long getLatestSequenceNumber(StreamPartition<KafkaTopicPartition> partition)
+  public synchronized Long getLatestSequenceNumber(StreamPartition<KafkaTopicPartition> partition)
   {
     Long currPos = getPosition(partition);
     seekToLatest(Collections.singleton(partition));
@@ -185,7 +214,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public Long getEarliestSequenceNumber(StreamPartition<KafkaTopicPartition> partition)
+  public synchronized Long getEarliestSequenceNumber(StreamPartition<KafkaTopicPartition> partition)
   {
     Long currPos = getPosition(partition);
     seekToEarliest(Collections.singleton(partition));
@@ -195,7 +224,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public boolean isOffsetAvailable(StreamPartition<KafkaTopicPartition> partition, OrderedSequenceNumber<Long> offset)
+  public synchronized boolean isOffsetAvailable(StreamPartition<KafkaTopicPartition> partition, OrderedSequenceNumber<Long> offset)
   {
     final Long earliestOffset = getEarliestSequenceNumber(partition);
     return earliestOffset != null
@@ -203,13 +232,13 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public Long getPosition(StreamPartition<KafkaTopicPartition> partition)
+  public synchronized Long getPosition(StreamPartition<KafkaTopicPartition> partition)
   {
     return wrapExceptions(() -> consumer.position(partition.getPartitionId().asTopicPartition(partition.getStream())));
   }
 
   @Override
-  public Map<KafkaTopicPartition, Long> getLatestSequenceNumbers(Set<StreamPartition<KafkaTopicPartition>> partitions)
+  public synchronized Map<KafkaTopicPartition, Long> getLatestSequenceNumbers(Set<StreamPartition<KafkaTopicPartition>> partitions)
   {
     return wrapExceptions(() -> CollectionUtils.mapKeys(
       consumer.endOffsets(
@@ -224,7 +253,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public Set<KafkaTopicPartition> getPartitionIds(String stream)
+  public synchronized Set<KafkaTopicPartition> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
       List<PartitionInfo> allPartitions;
@@ -252,7 +281,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
         }
       }
       return allPartitions.stream()
-                          .map(p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition()))
+                          .map(p -> new KafkaTopicPartition(multiTopic, clusterId, p.topic(), p.partition()))
                           .collect(Collectors.toSet());
     });
   }
@@ -266,7 +295,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public void close()
+  public synchronized void close()
   {
     if (closed) {
       return;

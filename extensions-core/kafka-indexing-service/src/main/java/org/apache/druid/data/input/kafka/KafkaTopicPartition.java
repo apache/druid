@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.seekablestream.common.PartitionId;
 import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nullable;
@@ -47,11 +48,13 @@ import java.util.Optional;
     KafkaTopicPartition.KafkaTopicPartitionKeySerializer.class)
 @JsonDeserialize(using = KafkaTopicPartition.KafkaTopicPartitionDeserializer.class, keyUsing =
     KafkaTopicPartition.KafkaTopicPartitionKeyDeserializer.class)
-public class KafkaTopicPartition
+public class KafkaTopicPartition implements PartitionId
 {
   private final int partition;
   @Nullable
   private final String topic;
+  @Nullable
+  private final String clusterKey;
 
   /**
    * This flag is used to maintain backward compatibilty with older versions of kafka indexing. If this flag
@@ -65,6 +68,16 @@ public class KafkaTopicPartition
 
   public KafkaTopicPartition(boolean multiTopicPartition, @Nullable String topic, int partition)
   {
+    this(multiTopicPartition, null, topic, partition);
+  }
+
+  public KafkaTopicPartition(
+      boolean multiTopicPartition,
+      @Nullable String clusterKey,
+      @Nullable String topic,
+      int partition
+  )
+  {
     this.partition = partition;
     this.multiTopicPartition = multiTopicPartition;
     if (multiTopicPartition) {
@@ -75,6 +88,7 @@ public class KafkaTopicPartition
     } else {
       this.topic = null;
     }
+    this.clusterKey = clusterKey;
   }
 
   public int partition()
@@ -114,13 +128,13 @@ public class KafkaTopicPartition
     return partition == that.partition && multiTopicPartition == that.multiTopicPartition && Objects.equals(
         topic,
         that.topic
-    );
+    ) && Objects.equals(clusterKey, that.clusterKey);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partition, multiTopicPartition, topic);
+    return Objects.hash(partition, multiTopicPartition, topic, clusterKey);
   }
 
   @Override
@@ -130,7 +144,15 @@ public class KafkaTopicPartition
            "partition=" + partition +
            ", topic='" + topic + '\'' +
            ", multiTopicPartition=" + multiTopicPartition +
+           ", clusterKey='" + clusterKey + '\'' +
            '}';
+  }
+
+  @Override
+  @Nullable
+  public String getCluster()
+  {
+    return clusterKey;
   }
 
   public static class KafkaTopicPartitionDeserializer extends JsonDeserializer<KafkaTopicPartition>
@@ -155,10 +177,11 @@ public class KafkaTopicPartition
     public void serialize(KafkaTopicPartition value, JsonGenerator gen, SerializerProvider serializers)
         throws IOException
     {
-      if (null != value.topic && value.multiTopicPartition) {
-        gen.writeString(value.topic + ":" + value.partition);
+      final String clusterPrefix = value.clusterKey != null ? value.clusterKey + "|" : "";
+      if (value.topic != null && value.multiTopicPartition) {
+        gen.writeString(clusterPrefix + value.topic + ":" + value.partition);
       } else {
-        gen.writeString(String.valueOf(value.partition));
+        gen.writeString(clusterPrefix + value.partition);
       }
     }
 
@@ -175,10 +198,11 @@ public class KafkaTopicPartition
     public void serialize(KafkaTopicPartition value, JsonGenerator gen, SerializerProvider serializers)
         throws IOException
     {
-      if (null != value.topic && value.multiTopicPartition) {
-        gen.writeFieldName(value.topic + ":" + value.partition);
+      final String clusterPrefix = value.clusterKey != null ? value.clusterKey + "|" : "";
+      if (value.topic != null && value.multiTopicPartition) {
+        gen.writeFieldName(clusterPrefix + value.topic + ":" + value.partition);
       } else {
-        gen.writeFieldName(String.valueOf(value.partition));
+        gen.writeFieldName(clusterPrefix + value.partition);
       }
     }
 
@@ -200,15 +224,37 @@ public class KafkaTopicPartition
 
   public static KafkaTopicPartition fromString(String str)
   {
-    int index = str.lastIndexOf(':');
-    if (index < 0) {
-      return new KafkaTopicPartition(false, null, Integer.parseInt(str));
+    final String[] parts = str.split("\\|");
+    final String clusterKey;
+    final String[] topicAndPartition;
+    if (parts.length == 1) { // cluster key doesn't exist
+      clusterKey = null;
+      topicAndPartition = parts[0].split(":");
+    } else if (parts.length == 2) {
+      clusterKey = parts[0];
+      topicAndPartition = parts[1].split(":");
     } else {
-      return new KafkaTopicPartition(
-          true,
-          str.substring(0, index),
-          Integer.parseInt(str.substring(index + 1))
-      );
+      throw new IllegalArgumentException("Invalid partition id format: " + str);
     }
+
+    final String topic;
+    final int partition;
+
+    if (topicAndPartition.length == 1) {
+      if (topicAndPartition[0].isEmpty()) {
+        throw new IllegalArgumentException("Partition is required: " + str);
+      }
+      topic = null;
+      partition = Integer.parseInt(topicAndPartition[0]);
+    } else if (topicAndPartition.length == 2) {
+      if (topicAndPartition[0].isEmpty() || topicAndPartition[1].isEmpty()) {
+        throw new IllegalArgumentException("Topic and partition are required: " + str);
+      }
+      topic = topicAndPartition[0];
+      partition = Integer.parseInt(topicAndPartition[1]);
+    } else {
+      throw new IllegalArgumentException("Invalid format: " + str);
+    }
+    return new KafkaTopicPartition(topic != null, clusterKey, topic, partition);
   }
 }

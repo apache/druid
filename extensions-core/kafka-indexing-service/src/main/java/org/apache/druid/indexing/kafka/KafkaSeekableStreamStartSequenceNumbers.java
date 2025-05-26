@@ -106,7 +106,7 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
             }
           })
           .collect(Collectors.toMap(
-              e -> new KafkaTopicPartition(false, thisTopic, e.getKey().partition()),
+              e -> new KafkaTopicPartition(false, e.getKey().getCluster(), thisTopic, e.getKey().partition()),
               Map.Entry::getValue
           )));
 
@@ -115,9 +115,9 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
       // 2) exclusive in "other"
       getPartitionSequenceNumberMap().forEach(
           (partitionId, sequenceOffset) -> {
-            KafkaTopicPartition multiTopicPartitonIdToSearch = new KafkaTopicPartition(true, thisTopic, partitionId.partition());
+            KafkaTopicPartition multiTopicPartitonIdToSearch = new KafkaTopicPartition(true, partitionId.getCluster(), thisTopic, partitionId.partition());
             if (getExclusivePartitions().contains(partitionId) && !that.getPartitionSequenceNumberMap().containsKey(multiTopicPartitonIdToSearch)) {
-              newExclusivePartitions.add(new KafkaTopicPartition(false, this.getStream(), partitionId.partition()));
+              newExclusivePartitions.add(new KafkaTopicPartition(false, partitionId.getCluster(), this.getStream(), partitionId.partition()));
             }
           }
       );
@@ -131,6 +131,7 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
           getPartitionSequenceNumberMap(),
           k -> new KafkaTopicPartition(
               true,
+              k.getCluster(),
               k.asTopicPartition(thisTopic).topic(),
               k.partition()
           )
@@ -148,7 +149,7 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
             }
           })
           .collect(Collectors.toMap(
-              e -> new KafkaTopicPartition(true, e.getKey().asTopicPartition(thatTopic).topic(), e.getKey().partition()),
+              e -> new KafkaTopicPartition(true, e.getKey().getCluster(), e.getKey().asTopicPartition(thatTopic).topic(), e.getKey().partition()),
               Map.Entry::getValue
           )));
 
@@ -157,10 +158,10 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
       // 2) exclusive in "other"
       getPartitionSequenceNumberMap().forEach(
           (partitionId, sequenceOffset) -> {
-            KafkaTopicPartition multiTopicPartitonIdToSearch = new KafkaTopicPartition(true, thisTopic, partitionId.partition());
+            KafkaTopicPartition multiTopicPartitonIdToSearch = new KafkaTopicPartition(true, partitionId.getCluster(), thisTopic, partitionId.partition());
             boolean thatTopicMatchesThisTopicPattern = partitionId.topic().isPresent() ? pattern.matcher(partitionId.topic().get()).matches() : pattern.matcher(thatTopic).matches();
             if (getExclusivePartitions().contains(partitionId) && (!thatTopicMatchesThisTopicPattern || !that.getPartitionSequenceNumberMap().containsKey(multiTopicPartitonIdToSearch))) {
-              newExclusivePartitions.add(new KafkaTopicPartition(true, this.getStream(), partitionId.partition()));
+              newExclusivePartitions.add(new KafkaTopicPartition(true, partitionId.getCluster(), this.getStream(), partitionId.partition()));
             }
           }
       );
@@ -193,9 +194,9 @@ public class KafkaSeekableStreamStartSequenceNumbers extends SeekableStreamStart
       String thisTopic = entry.getKey().asTopicPartition(getStream()).topic();
       boolean otherContainsThis = otherStart.getPartitionSequenceNumberMap().containsKey(entry.getKey());
       boolean otherContainsThisMultiTopic = otherStart.getPartitionSequenceNumberMap()
-          .containsKey(new KafkaTopicPartition(true, thisTopic, entry.getKey().partition()));
+          .containsKey(new KafkaTopicPartition(true, entry.getKey().getCluster(), thisTopic, entry.getKey().partition()));
       boolean otherContainsThisSingleTopic = (thatTopic.equals(thisTopic) && otherStart.getPartitionSequenceNumberMap()
-          .containsKey(new KafkaTopicPartition(false, null, entry.getKey().partition())));
+          .containsKey(new KafkaTopicPartition(false, entry.getKey().getCluster(), null, entry.getKey().partition())));
       if (!otherContainsThis && !otherContainsThisMultiTopic && !otherContainsThisSingleTopic) {
         newMap.put(entry.getKey(), entry.getValue());
         // A partition is exclusive if it's exclusive in "this" and not in "other"'s partitionSequenceNumberMap

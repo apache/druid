@@ -326,7 +326,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         new IdleConfig(true, 1000L),
         1,
-        false
+        false,
+        null
     );
 
     final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
@@ -5317,7 +5318,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         idleConfig,
         null,
-        true
+        true,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5433,7 +5435,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+         null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -5552,7 +5555,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
