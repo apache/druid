@@ -75,16 +75,17 @@ public @interface NotYetSupported
 {
   Modes value();
 
-  enum Scope {
+  enum Scope
+  {
+    WINDOWING,
     DECOUPLED,
-    WINDOWING
+    BINDABLE,
   }
 
   enum Modes
   {
     // @formatter:off
     DISTINCT_AGGREGATE_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "DISTINCT is not supported"),
-    EXPRESSION_NOT_GROUPED(Scope.WINDOWING, DruidException.class, "Expression '[a-z]+' is not being grouped"),
     NULLS_FIRST_LAST(Scope.WINDOWING, DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(Scope.WINDOWING, DruidException.class, "BIGINT to type (DATE|TIME)"),
     AGGREGATION_NOT_SUPPORT_TYPE(Scope.WINDOWING, DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
@@ -94,6 +95,8 @@ public @interface NotYetSupported
     RESULT_MISMATCH(Scope.WINDOWING, AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
     LONG_CASTING(Scope.WINDOWING, AssertionError.class, "expected: java.lang.Long"),
     UNSUPPORTED_NULL_ORDERING(Scope.WINDOWING, DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
+
+    EXPRESSION_NOT_GROUPED(Scope.BINDABLE, DruidException.class, "Expression '[a-z]+' is not being grouped"),
 
     NOT_ENOUGH_RULES(Scope.DECOUPLED, DruidException.class, "There are not enough rules to produce a node"),
     SORT_REMOVE_TROUBLE(Scope.DECOUPLED, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
