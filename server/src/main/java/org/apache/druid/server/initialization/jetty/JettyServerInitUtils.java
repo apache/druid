@@ -36,6 +36,7 @@ import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.compression.CompressionPool;
 import org.eclipse.jetty.util.compression.DeflaterPool;
+import org.eclipse.jetty.util.compression.InflaterPool;
 
 import javax.ws.rs.HttpMethod;
 
@@ -54,6 +55,7 @@ public class JettyServerInitUtils
     gzipHandler.setIncludedMethods(GZIP_METHODS);
     gzipHandler.setInflateBufferSize(inflateBufferSize);
     gzipHandler.setDeflaterPool(new DeflaterPool(CompressionPool.DEFAULT_CAPACITY, compressionLevel, true));
+    gzipHandler.setInflaterPool(new InflaterPool(CompressionPool.DEFAULT_CAPACITY, true));
 
     gzipHandler.setHandler(handler);
     return gzipHandler;
