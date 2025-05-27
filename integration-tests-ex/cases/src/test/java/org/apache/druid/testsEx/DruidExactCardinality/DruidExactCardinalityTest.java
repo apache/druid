@@ -19,19 +19,16 @@
 
 package org.apache.druid.testsEx.DruidExactCardinality;
 
-import com.google.inject.Inject;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KafkaAdminClient;
 import org.apache.druid.testing.utils.KafkaEventWriter;
 import org.apache.druid.testing.utils.KafkaUtil;
-import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.StreamEventWriter;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.joda.time.Interval;
