@@ -280,7 +280,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
     boolean isOpen = channel.isOpen();
 
     if (log.isTraceEnabled()) {
-      log.trace("isGood = isSucess[%s] && isConnected[%s] && isOpen[%s]", isSuccess, isConnected, isOpen);
+      log.trace("isGood = isSuccess[%s] && isConnected[%s] && isOpen[%s]", isSuccess, isConnected, isOpen);
     }
 
     return isSuccess && isConnected && isOpen;
