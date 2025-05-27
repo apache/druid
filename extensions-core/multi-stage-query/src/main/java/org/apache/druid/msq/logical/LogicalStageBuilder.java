@@ -219,7 +219,7 @@ public class LogicalStageBuilder
   class FilterStage extends ReadStage
   {
     protected final VirtualColumnRegistry virtualColumnRegistry;
-    private DimFilter dimFilter;
+    protected final DimFilter dimFilter;
 
     public FilterStage(ReadStage inputStage, VirtualColumnRegistry virtualColumnRegistry, DimFilter dimFilter)
     {
@@ -270,12 +270,32 @@ public class LogicalStageBuilder
       super(root, newVirtualColumnRegistry, rowSignature);
     }
 
+    public ProjectStage(ProjectStage root)
+    {
+      super(root, root.virtualColumnRegistry, root.signature);
+    }
+
     @Override
     public LogicalStage extendWith(DruidNodeStack stack)
     {
       return null;
     }
   }
+
+  class SortStage extends ProjectStage
+  {
+    public SortStage(ProjectStage root)
+    {
+      super(root);
+    }
+
+    @Override
+    public LogicalStage extendWith(DruidNodeStack stack)
+    {
+      return null;
+    }
+  }
+
 
   private static final String IRRELEVANT = "irrelevant";
 

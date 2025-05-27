@@ -55,7 +55,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.SUPPORT_SORT)
   @Test
   public void testOrderBy()
   {
