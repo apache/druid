@@ -95,7 +95,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
   @RegisterExtension
-  public NotYetSupportedProcessor ignoreProcessor = new NotYetSupportedProcessor(Scope.WINDOWING);
+  public NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(Scope.WINDOWING);
 
   @RegisterExtension
   public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
