@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.extensionDruidExactCardinality;
+package org.apache.druid.testsEx.DruidExactCardinality;
 
 import org.apache.druid.testsEx.categories.DruidExactCardinality;
 import org.apache.druid.testsEx.config.DruidTestRunner;

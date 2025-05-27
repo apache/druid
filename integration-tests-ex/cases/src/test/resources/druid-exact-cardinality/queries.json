@@ -1,0 +1,49 @@
+[
+  {
+    "description": "Timeseries query.",
+    "query": {
+      "queryType": "timeseries",
+      "dataSource": {
+        "type": "union",
+        "dataSources": [
+          "%%DATASOURCE%%-1", "%%DATASOURCE%%-2", "%%DATASOURCE%%-3",
+          "%%DATASOURCE%%-0"
+        ]
+      },
+      "intervals": ["2013-08-31/2013-09-01"],
+      "granularity": "all",
+      "aggregations": [
+        {
+          "type": "count",
+          "name": "time_count"
+        },
+        {
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "time_cardinality",
+          "fieldName": "__time"
+        },
+        {
+          "type": "count",
+          "name": "deleted_count",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "deleted_cardinality",
+          "fieldName": "deleted"
+        }
+      ]
+    },
+    "expectedResults": [
+      {
+        "timestamp": "2016-06-27T00:00:00.000Z",
+        "result": {
+          "time_count": 40,
+          "time_cardinality": 10,
+          "deleted_count": 40,
+          "deleted_cardinality": 5
+        }
+      }
+    ]
+  }
+]
