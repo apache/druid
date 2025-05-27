@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -63,7 +64,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link OverlordDuty} to delete unused segments from metadata store and the
  * deep storage. Launches {@link EmbeddedKillTask}s to clean unused segments
  * of a single datasource-interval.
- * <p>
+ *
  * @see SegmentsMetadataManagerConfig to enable the cleanup
  */
 public class UnusedSegmentsKiller implements OverlordDuty
@@ -77,6 +78,11 @@ public class UnusedSegmentsKiller implements OverlordDuty
    */
   private static final Duration QUEUE_RESET_PERIOD = Duration.standardDays(1);
 
+  /**
+   * Duration for which a kill task is allowed to run.
+   */
+  private static final Duration MAX_TASK_DURATION = Duration.standardMinutes(10);
+
   private final ServiceEmitter emitter;
   private final TaskLockbox taskLockbox;
   private final DruidLeaderSelector leaderSelector;
@@ -86,13 +92,18 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private final TaskActionClientFactory taskActionClientFactory;
   private final IndexerMetadataStorageCoordinator storageCoordinator;
 
+  /**
+   * Single-threaded executor to process kill jobs.
+   */
   private final ScheduledExecutorService exec;
   private int previousLeaderTerm;
   private final AtomicReference<DateTime> lastResetTime = new AtomicReference<>(null);
 
+  private final AtomicReference<TaskInfo> currentTaskInfo = new AtomicReference<>(null);
+
   /**
    * Queue of kill candidates. Use a PriorityBlockingQueue to ensure thread-safety
-   * since this queue is accessed by both {@link #run()} and {@link #processKillQueue()}.
+   * since this queue is accessed by both {@link #run()} and {@link #startNextJobInKillQueue}.
    */
   private final PriorityBlockingQueue<KillCandidate> killQueue;
 
@@ -151,10 +162,22 @@ public class UnusedSegmentsKiller implements OverlordDuty
     if (shouldResetKillQueue()) {
       // Clear the killQueue to stop further processing of already queued jobs
       killQueue.clear();
-      exec.submit(this::resetKillQueue);
+      exec.submit(() -> {
+        resetKillQueue();
+        startNextJobInKillQueue();
+      });
     }
 
-    // TODO: do something if a single job has been stuck since the last duty run
+    // Cancel the current task if it has been running for too long
+    final TaskInfo taskInfo = currentTaskInfo.get();
+    if (taskInfo != null && !taskInfo.future.isDone()
+        && taskInfo.sinceTaskStarted.hasElapsed(MAX_TASK_DURATION)) {
+      log.warn(
+          "Cancelling kill task[%s] as it has been running for [%d] millis.",
+          taskInfo.taskId, taskInfo.sinceTaskStarted.millisElapsed()
+      );
+      taskInfo.future.cancel(true);
+    }
   }
 
   @Override
@@ -178,9 +201,12 @@ public class UnusedSegmentsKiller implements OverlordDuty
     }
   }
 
+  /**
+   * Returns true if the kill queue is empty or if the queue has not been reset
+   * yet or if {@code (lastResetTime + resetPeriod) < (now + 1)}.
+   */
   private boolean shouldResetKillQueue()
   {
-    // Perform reset if (lastResetTime + resetPeriod < now + 1)
     final DateTime now = DateTimes.nowUtc().plus(1);
 
     return killQueue.isEmpty()
@@ -190,6 +216,8 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
   /**
    * Resets the kill queue with fresh jobs.
+   * This method need not handle race conditions as it is always run on
+   * {@link #exec} which is single-threaded.
    */
   private void resetKillQueue()
   {
@@ -230,50 +258,58 @@ public class UnusedSegmentsKiller implements OverlordDuty
           resetDuration.millisElapsed(), killQueue.size()
       );
     }
-
-    if (!killQueue.isEmpty()) {
-      processKillQueue();
-    }
   }
 
   /**
-   * Cleans up all unused segments added to the {@link #killQueue} by the last
-   * {@link #run()} of this duty. An {@link EmbeddedKillTask} is launched for
-   * each eligible unused interval of a datasource
+   * Launches an {@link EmbeddedKillTask} on the {@link #exec} for the next
+   * {@link KillCandidate} in the {@link #killQueue}. This method returns
+   * immediately.
    */
-  public void processKillQueue()
+  public void startNextJobInKillQueue()
   {
-    if (!isEnabled()) {
+    if (!isEnabled() || !leaderSelector.isLeader()) {
       return;
     }
 
-    final Stopwatch stopwatch = Stopwatch.createStarted();
-    try {
-      while (!killQueue.isEmpty() && leaderSelector.isLeader()) {
-        final KillCandidate candidate = killQueue.poll();
-        if (candidate == null) {
-          return;
-        }
-
-        final String taskId = IdUtils.newTaskId(
-            TASK_ID_PREFIX,
-            KillUnusedSegmentsTask.TYPE,
-            candidate.dataSource,
-            candidate.interval
-        );
-        runKillTask(candidate, taskId);
+    if (killQueue.isEmpty()) {
+      // If the last entry has been processed, emit the total processing time and exit
+      final DateTime lastQueueResetTime = lastResetTime.get();
+      if (lastQueueResetTime != null) {
+        long processTimeMillis = DateTimes.nowUtc().getMillis() - lastQueueResetTime.getMillis();
+        emitMetric(Metric.QUEUE_PROCESS_TIME, processTimeMillis, null);
       }
+      return;
+    }
+
+    try {
+      final KillCandidate candidate = killQueue.poll();
+      if (candidate == null) {
+        return;
+      }
+
+      final String taskId = IdUtils.newTaskId(
+          TASK_ID_PREFIX,
+          KillUnusedSegmentsTask.TYPE,
+          candidate.dataSource,
+          candidate.interval
+      );
+
+      final Future<?> taskFuture = exec.submit(() -> runKillTask(candidate, taskId));
+      currentTaskInfo.set(new TaskInfo(taskId, taskFuture));
     }
     catch (Throwable t) {
-      log.error(t, "Error while processing queued kill jobs.");
-    }
-    finally {
-      emitMetric(Metric.QUEUE_PROCESS_TIME, stopwatch.millisElapsed(), null);
+      log.error(
+          t,
+          "Failed while processing kill jobs. There are [%d] jobs in queue.",
+          killQueue.size()
+      );
+      startNextJobInKillQueue();
     }
   }
 
   /**
    * Launches an embedded kill task for the given candidate.
+   * Also queues up the next task after this task has finished.
    */
   private void runKillTask(KillCandidate candidate, String taskId)
   {
@@ -310,8 +346,19 @@ public class UnusedSegmentsKiller implements OverlordDuty
       emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, taskRunTime.millisElapsed()));
     }
     finally {
-      taskLockbox.remove(killTask);
+      cleanupLocksSilently(killTask);
       emitMetric(Metric.PROCESSED_KILL_JOBS, 1L, Map.of(DruidMetrics.DATASOURCE, candidate.dataSource));
+      startNextJobInKillQueue();
+    }
+  }
+
+  private void cleanupLocksSilently(EmbeddedKillTask killTask)
+  {
+    try {
+      taskLockbox.remove(killTask);
+    }
+    catch (Throwable t) {
+      log.error(t, "Error while cleaning up locks for kill task[%s].", killTask.getId());
     }
   }
 
@@ -336,6 +383,22 @@ public class UnusedSegmentsKiller implements OverlordDuty
     {
       this.dataSource = dataSource;
       this.interval = interval;
+    }
+  }
+
+  /**
+   * Info of the currently running task.
+   */
+  private static class TaskInfo
+  {
+    private final Stopwatch sinceTaskStarted = Stopwatch.createStarted();
+    private final String taskId;
+    private final Future<?> future;
+
+    private TaskInfo(String taskId, Future<?> future)
+    {
+      this.future = future;
+      this.taskId = taskId;
     }
   }
 

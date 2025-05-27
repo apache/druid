@@ -30,12 +30,15 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.UnusedSegmentKillerConfig;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -53,6 +56,7 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class UnusedSegmentsKillerTest
 {
@@ -198,25 +202,83 @@ public class UnusedSegmentsKillerTest
   {
     leaderSelector.becomeLeader();
 
+    // Verify that the queue has been reset
+    killer.run();
+    finishQueuedKillJobs();
+    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.QUEUE_RESET_TIME, 1);
+    emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS);
+
     storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_10X1D), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
 
-    // Queue the unused segments for kill
-    killer.run();
+    // Lose and reacquire leadership
+    leaderSelector.stopBeingLeader();
+    leaderSelector.becomeLeader();
 
-    // TODO: finish this test
+    // Run again and verify that queue has been reset
+    emitter.flush();
+    killer.run();
+    finishQueuedKillJobs();
+    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.QUEUE_RESET_TIME, 1);
+    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
   }
 
   @Test
-  public void test_run_doesNotResetQueue_ifLastRunWasLessThanOneDayAgo()
+  public void test_run_doesNotResetQueue_ifThereArePendingJobs_andLastRunWasLessThanOneDayAgo()
   {
+    leaderSelector.becomeLeader();
 
+    storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_10X1D), null);
+    storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
+
+    // Invoke run, reset the queue and process only some of the jobs
+    killer.run();
+    killExecutor.finishNextPendingTasks(6);
+    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.QUEUE_RESET_TIME, 1);
+    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 5);
+
+    Assert.assertTrue(killExecutor.hasPendingTasks());
+
+    // Invoke run again and verify that queue has not been reset
+    emitter.flush();
+    killer.run();
+    finishQueuedKillJobs();
+    emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.QUEUE_RESET_TIME);
+    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 5);
+
+    // All jobs have been processed
+    Assert.assertFalse(killExecutor.hasPendingTasks());
   }
 
   @Test
   public void test_run_prioritizesOlderIntervals()
   {
+    leaderSelector.becomeLeader();
 
+    storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_10X1D), null);
+    storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
+
+    killer.run();
+    finishQueuedKillJobs();
+    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
+
+    // Verify that the kill intervals are sorted with the oldest interval first
+    final List<StubServiceEmitter.ServiceMetricEventSnapshot> events =
+        emitter.getMetricEvents().get(TaskMetrics.RUN_DURATION);
+    final List<Interval> killIntervals = events.stream().map(event -> {
+      final String taskId = (String) event.getUserDims().get(DruidMetrics.TASK_ID);
+      String[] splits = taskId.split("_");
+      return Intervals.of(splits[4] + "/" + splits[5]);
+    }).collect(Collectors.toList());
+
+    Assert.assertEquals(10, killIntervals.size());
+
+    final List<Interval> expectedIntervals =
+        WIKI_SEGMENTS_10X1D.stream()
+                           .map(DataSegment::getInterval)
+                           .sorted(Comparators.intervalsByEndThenStart())
+                           .collect(Collectors.toList());
+    Assert.assertEquals(expectedIntervals, killIntervals);
   }
 
   @Test
@@ -238,12 +300,6 @@ public class UnusedSegmentsKillerTest
     finishQueuedKillJobs();
     emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 10L);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 8L);
-  }
-
-  @Test
-  public void test_run_withMultipleDatasources()
-  {
-
   }
 
   @Test
