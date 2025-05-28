@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 
 import java.util.Objects;
 
@@ -83,5 +84,13 @@ public class KeyColumn
   public String toString()
   {
     return StringUtils.format("%s%s", columnName, order == KeyOrder.NONE ? "" : " " + order);
+  }
+
+  static public KeyColumn fromOrderByColumnSpec(OrderByColumnSpec orderByColumnSpec)
+  {
+    return new KeyColumn(
+        orderByColumnSpec.getDimension(),
+        KeyOrder.fromDirection(orderByColumnSpec.getDirection())
+    );
   }
 }

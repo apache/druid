@@ -19,6 +19,8 @@
 
 package org.apache.druid.frame.key;
 
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
+
 /**
  * Ordering associated with a {@link KeyColumn}.
  */
@@ -57,5 +59,18 @@ public enum KeyOrder
   public boolean sortable()
   {
     return sortable;
+  }
+
+  static KeyOrder fromDirection(Direction direction)
+  {
+    switch (direction)
+    {
+      case ASCENDING:
+        return ASCENDING;
+      case DESCENDING:
+        return DESCENDING;
+      default:
+        return NONE;
+    }
   }
 }

@@ -19,12 +19,20 @@
 
 package org.apache.druid.msq.logical;
 
+import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
+import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
@@ -71,7 +79,8 @@ public class LogicalStageBuilder
         VirtualColumns virtualColumns,
         RowSignature signature,
         List<InputSpec> inputs,
-        DimFilter dimFilter)
+        DimFilter dimFilter,
+        List<KeyColumn> keyColumns)
     {
       ScanQuery s = Druids.newScanQueryBuilder()
           .dataSource(IRRELEVANT)
@@ -86,9 +95,26 @@ public class LogicalStageBuilder
           .inputs(inputs)
           .processorFactory(scanProcessorFactory)
           .signature(signature)
-          .shuffleSpec(MixShuffleSpec.instance())
+          .shuffleSpec(shuffleFor(keyColumns))
           ;
       return sdb.build(getIdForBuilder());
+    }
+
+    private ShuffleSpec shuffleFor(List<KeyColumn> keyColumns)
+    {
+      if(keyColumns == null ) {
+        return MixShuffleSpec.instance();
+      }else {
+
+        final Granularity segmentGranularity = Granularities.ALL;
+// FIXME:
+//   QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
+
+final ClusterBy clusterBy = QueryKitUtils
+    .clusterByWithSegmentGranularity(new ClusterBy(keyColumns, 0), segmentGranularity);
+// FIXME targetSize == 1
+return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
+      }
     }
 
     private int getNextStageId()
@@ -164,7 +190,7 @@ public class LogicalStageBuilder
     @Override
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
-      return stageMaker.makeScanStage(VirtualColumns.EMPTY, signature, inputSpecs, null);
+      return stageMaker.makeScanStage(VirtualColumns.EMPTY, signature, inputSpecs, null, null);
     }
 
     @Override
@@ -245,7 +271,7 @@ public class LogicalStageBuilder
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
       VirtualColumns output = virtualColumnRegistry.build(Collections.emptySet());
-      return stageMaker.makeScanStage(output, signature, inputSpecs, dimFilter);
+      return stageMaker.makeScanStage(output, signature, inputSpecs, dimFilter, null);
     }
 
     @Override
@@ -253,13 +279,12 @@ public class LogicalStageBuilder
     {
       if (stack.getNode() instanceof DruidProject) {
         DruidProject project = (DruidProject) stack.getNode();
-        Projection preAggregation = Projection
-            .preAggregation(project, plannerContext, signature, virtualColumnRegistry);
+        Projection projection = Projection.preAggregation(project, plannerContext, signature, virtualColumnRegistry);
 
         return new ProjectStage(
             this,
             virtualColumnRegistry,
-            preAggregation.getOutputRowSignature()
+            projection.getOutputRowSignature()
         );
       }
       return null;
@@ -273,9 +298,9 @@ public class LogicalStageBuilder
       super(root, newVirtualColumnRegistry, rowSignature);
     }
 
-    public ProjectStage(ProjectStage root)
+    public ProjectStage(ProjectStage root, RowSignature rowSignature)
     {
-      super(root, root.virtualColumnRegistry, root.signature);
+      super(root, root.virtualColumnRegistry, rowSignature);
     }
 
     @Override
@@ -287,8 +312,8 @@ public class LogicalStageBuilder
           throw DruidException.defensive("Sort with limit or offset is not supported in MSQ logical stage builder");
         }
         List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(signature, sort);
-
-        return new SortStage(this, orderBySpecs);
+        List<KeyColumn> keyColumns = Lists.transform(orderBySpecs, KeyColumn::fromOrderByColumnSpec);
+        return new SortStage(this, keyColumns);
       }
       return null;
     }
@@ -296,9 +321,12 @@ public class LogicalStageBuilder
 
   class SortStage extends ProjectStage
   {
-    public SortStage(ProjectStage root, List<OrderByColumnSpec> orderBySpecs)
+    private List<KeyColumn> keyColumns;
+
+    public SortStage(ProjectStage root, List<KeyColumn> keyColumns)
     {
-      super(root);
+      super(root, QueryKitUtils.sortableSignature(root.signature, keyColumns));
+      this.keyColumns = keyColumns;
     }
 
     @Override
@@ -310,10 +338,8 @@ public class LogicalStageBuilder
     @Override
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
-      StageDefinition inputStage = super.buildCurrentStage(stageMaker);
-
-
-      return inputStage;
+      VirtualColumns output = virtualColumnRegistry.build(Collections.emptySet());
+      return stageMaker.makeScanStage(output, signature, inputSpecs, dimFilter, keyColumns);
     }
   }
 
