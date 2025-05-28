@@ -327,7 +327,8 @@ public class TaskMonitorTest
     }
 
     @Override
-    public ListenableFuture<Void> cancelTask(String taskId){
+    public ListenableFuture<Void> cancelTask(String taskId)
+    {
       cancelled.add(taskId);
       return Futures.immediateFuture(null);
     }
