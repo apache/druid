@@ -21,7 +21,6 @@ package org.apache.druid.msq.logical;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.kernel.DagDefinition;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -89,12 +88,6 @@ public class LogicalStageBuilder
           .signature(signature)
           .shuffleSpec(MixShuffleSpec.instance())
           ;
-
-      DagDefinition dd = new DagDefinition();
-      Object n = dd.newNode(inputs, signature, scanProcessorFactory);
-      Object e = dd.newEdge(MixShuffleSpec.instance());
-
-      dd.addOutEdge(n, e);
       return sdb.build(getIdForBuilder());
     }
 
