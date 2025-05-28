@@ -22,15 +22,13 @@ package org.apache.druid.msq.dart.controller.sql;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.http.client.utils.URIBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-
-import java.net.URISyntaxException;
 
 /**
  * Production implementation of {@link DartSqlClient}.
@@ -49,21 +47,11 @@ public class DartSqlClientImpl implements DartSqlClient
   @Override
   public ListenableFuture<GetQueriesResponse> getRunningQueries(final boolean selfOnly)
   {
-    URIBuilder builder;
-    try {
-      builder = new URIBuilder("/queries");
-    }
-    catch (URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
-    builder.addParameter("engine", DartSqlEngine.NAME);
-    if (selfOnly) {
-      builder.addParameter("selfOnly", null);
-    }
+    String queryParams = StringUtils.format("/queries?engine=%s%s", DartSqlEngine.NAME, selfOnly ? "&selfOnly" : "");
 
     return FutureUtils.transform(
         client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, builder.toString()),
+            new RequestBuilder(HttpMethod.GET, queryParams),
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), GetQueriesResponse.class)

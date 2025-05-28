@@ -104,6 +104,18 @@ public class GetQueriesResponseTest
       return query;
     }
 
+    @JsonProperty
+    public String getIdentity()
+    {
+      return identity;
+    }
+
+    @JsonProperty
+    public String getAuthenticator()
+    {
+      return authenticator;
+    }
+
     @Override
     public boolean equals(Object o)
     {

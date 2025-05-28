@@ -817,7 +817,7 @@ public abstract class AbstractAuthConfigurationTest
       HttpResponseStatus expectedStatus
   ) throws Exception
   {
-    Map<String, Object> dartContext = new HashMap<>(context);
+    final Map<String, Object> dartContext = new HashMap<>(context);
     dartContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
     return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql", dartContext, expectedStatus);
   }
