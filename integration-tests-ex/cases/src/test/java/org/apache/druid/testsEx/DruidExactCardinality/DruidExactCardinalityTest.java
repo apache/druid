@@ -50,7 +50,7 @@ public class DruidExactCardinalityTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(DruidExactCardinalityTest.class);
   private static final String SUPERVISOR_TEMPLATE = "/druid-exact-cardinality/kafka_supervisor_template.json";
   private static final String QUERY_FILE = "/druid-exact-cardinality/queries.json";
-  private static final String DATA_FILE = "/druid-exact-cardinality/union_data.json";
+  private static final String DATA_FILE = "/druid-exact-cardinality/data.json";
   private static final String DATASOURCE = "wikipedia_index_test";
   private String fullDatasourceName;
 

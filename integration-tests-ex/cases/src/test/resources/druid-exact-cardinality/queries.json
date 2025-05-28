@@ -36,11 +36,11 @@
     },
     "expectedResults": [
       {
-        "timestamp": "2016-06-27T00:00:00.000Z",
+        "timestamp": "2013-08-31T01:02:33.000Z",
         "result": {
-          "time_count": 40,
-          "time_cardinality": 10,
-          "deleted_count": 40,
+          "time_count": 15,
+          "time_cardinality": 5,
+          "deleted_count": 15,
           "deleted_cardinality": 5
         }
       }
