@@ -34,8 +34,8 @@ import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.security.ResourceAction;
-import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
@@ -192,7 +192,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
     return "";
   }
 
-  @NotNull
+  @Nonnull
   @Override
   public Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
   {

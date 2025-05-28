@@ -27,8 +27,8 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.ResourceAction;
-import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
@@ -123,10 +123,12 @@ public class CompactionSupervisorSpec implements SupervisorSpec
     return "";
   }
 
-  @NotNull
+  @Nonnull
   @Override
   public Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
   {
+    // No external resource is read. The datasource being written to is authorized
+    // separately in SupervisorResource itself
     return Set.of();
   }
 

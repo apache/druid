@@ -88,7 +88,7 @@ public interface SupervisorSpec
   {
     throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                         .ofCategory(DruidException.Category.UNSUPPORTED)
-                        .build("Supervisor type[%s], does not support input source based security", getType());
+                        .build("Supervisor type[%s] does not support input source based security", getType());
   }
 
   /**
