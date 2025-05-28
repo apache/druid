@@ -71,6 +71,7 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
               id={i}
               key={i}
               title={`${auditInfo.comment || 'Change'} @ ${formattedTime}`}
+              data-tooltip={formattedTime}
               panel={
                 <ShowValue
                   jsonValue={normalizePayload(payload)}
@@ -91,7 +92,7 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
   if (diffIndex !== -1) {
     return (
       <DiffDialog
-        title="Supervisor spec diff"
+        title={`${title} diff`}
         versions={historyRecords.map(({ auditInfo, auditTime, payload }) => ({
           label: auditInfo.comment || auditTime,
           value: normalizePayload(payload),
