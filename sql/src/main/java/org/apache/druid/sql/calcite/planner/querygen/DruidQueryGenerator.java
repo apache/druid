@@ -29,6 +29,8 @@ import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
@@ -84,6 +86,12 @@ public class DruidQueryGenerator
       {
         this.node = node;
         this.operandIndex = operandIndex;
+      }
+
+      @Override
+      public String toString()
+      {
+        return ToStringBuilder.reflectionToString(this, ToStringStyle.NO_CLASS_NAME_STYLE);
       }
     }
 

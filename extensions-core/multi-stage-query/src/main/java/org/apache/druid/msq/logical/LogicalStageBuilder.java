@@ -29,6 +29,7 @@ import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
@@ -40,6 +41,7 @@ import org.apache.druid.sql.calcite.rel.Projection;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.rel.logical.DruidFilter;
 import org.apache.druid.sql.calcite.rel.logical.DruidProject;
+import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -278,13 +280,22 @@ public class LogicalStageBuilder
     @Override
     public LogicalStage extendWith(DruidNodeStack stack)
     {
+      if (stack.getNode() instanceof DruidSort) {
+        DruidSort sort = (DruidSort) stack.getNode();
+        if(sort.hasLimitOrOffset()) {
+          throw DruidException.defensive("Sort with limit or offset is not supported in MSQ logical stage builder");
+        }
+        List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(signature, sort);
+
+        return new SortStage(this, orderBySpecs);
+      }
       return null;
     }
   }
 
   class SortStage extends ProjectStage
   {
-    public SortStage(ProjectStage root)
+    public SortStage(ProjectStage root, List<OrderByColumnSpec> orderBySpecs)
     {
       super(root);
     }
@@ -293,6 +304,13 @@ public class LogicalStageBuilder
     public LogicalStage extendWith(DruidNodeStack stack)
     {
       return null;
+    }
+
+    @Override
+    public StageDefinition buildCurrentStage(StageMaker stageMaker)
+    {
+      StageDefinition inputStage = super.buildCurrentStage(stageMaker);
+      return inputStage;
     }
   }
 
