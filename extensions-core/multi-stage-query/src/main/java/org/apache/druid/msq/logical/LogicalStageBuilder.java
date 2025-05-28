@@ -26,6 +26,7 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -54,12 +55,13 @@ import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Stack;
 
 /**
  * Helper class to build a {@link LogicalStage} tree.
  *
- * Tightly coupled to {@link DruidLogicalToQueryDefinitionTranslator}.
- * Currently its just a context to hold all the {@link LogicalStage} classes.
+ * Tightly coupled to {@link DruidLogicalToQueryDefinitionTranslator}. Currently
+ * its just a context to hold all the {@link LogicalStage} classes.
  */
 public class LogicalStageBuilder
 {
@@ -68,6 +70,64 @@ public class LogicalStageBuilder
   public LogicalStageBuilder(PlannerContext plannerContext)
   {
     this.plannerContext = plannerContext;
+  }
+
+  public interface DagStage
+  {
+    StageDefinitionBuilder buildStages(StageMaker stageMaker);
+  }
+
+  public static class FrameProcessorStage implements DagStage
+  {
+    private final List<InputSpec> inputs;
+    private final FrameProcessorFactory<?,?,?> scanProcessorFactory;
+    private RowSignature signature;
+
+    public FrameProcessorStage(
+        List<InputSpec> inputs,
+        RowSignature signature,
+        FrameProcessorFactory<?,?,?> scanProcessorFactory)
+    {
+      this.inputs = inputs;
+      this.signature = signature;
+      this.scanProcessorFactory = scanProcessorFactory;
+    }
+
+    @Override
+    public StageDefinitionBuilder buildStages(StageMaker stageMaker)
+    {
+      StageDefinitionBuilder sdb = StageDefinition.builder(stageMaker.getNextStageId())
+          .inputs(inputs)
+          .processorFactory(scanProcessorFactory)
+          .signature(signature);
+
+      return sdb;
+
+    }
+  }
+
+  public static class ShuffleStage implements DagStage
+  {
+
+    private DagStage inputStage;
+    private RowSignature signature;
+    private List<KeyColumn> keyColumns;
+
+    public ShuffleStage(DagStage inputStage, RowSignature signature, List<KeyColumn> keyColumns)
+    {
+      this.inputStage = inputStage;
+      this.signature = signature;
+      this.keyColumns = keyColumns;
+    }
+
+    @Override
+    public StageDefinitionBuilder buildStages(StageMaker stageMaker)
+    {
+      StageDefinitionBuilder sdb = inputStage.buildStages(stageMaker);
+      sdb.shuffleSpec(stageMaker.shuffleFor(keyColumns));
+      return sdb;
+    }
+
   }
 
   class StageMaker
@@ -82,6 +142,55 @@ public class LogicalStageBuilder
         DimFilter dimFilter,
         List<KeyColumn> keyColumns)
     {
+      ScanQueryFrameProcessorFactory scanProcessorFactory = makeScanFrameProcessor(
+          virtualColumns, signature, dimFilter
+      );
+      StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
+          .inputs(inputs)
+          .processorFactory(scanProcessorFactory)
+          .signature(signature)
+          .shuffleSpec(shuffleFor(keyColumns));
+
+      return sdb.build(getIdForBuilder());
+    }
+
+    StageDefinition makeScanStage2(
+        VirtualColumns virtualColumns,
+        RowSignature signature,
+        List<InputSpec> inputs,
+        DimFilter dimFilter)
+    {
+      ScanQueryFrameProcessorFactory scanProcessorFactory = makeScanFrameProcessor(
+          virtualColumns, signature, dimFilter
+      );
+      StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
+          .inputs(inputs)
+          .processorFactory(scanProcessorFactory)
+          .signature(signature);
+
+      return sdb.build(getIdForBuilder());
+    }
+
+    Stack<DagStage> stack = new Stack<>();
+
+    public void pushFrameProcessorStage(
+        List<InputSpec> inputs,
+        RowSignature signature,
+        FrameProcessorFactory<?, ?, ?> processorFactory)
+    {
+      stack.push(new FrameProcessorStage(inputs, signature, processorFactory));
+    }
+
+    public void pushSortStage(RowSignature signature, List<KeyColumn> keyColumns)
+    {
+      stack.push(new ShuffleStage(stack.pop(), signature, keyColumns));
+    }
+
+    public ScanQueryFrameProcessorFactory makeScanFrameProcessor(
+        VirtualColumns virtualColumns,
+        RowSignature signature,
+        DimFilter dimFilter)
+    {
       ScanQuery s = Druids.newScanQueryBuilder()
           .dataSource(IRRELEVANT)
           .intervals(QuerySegmentSpec.ETERNITY)
@@ -90,32 +199,32 @@ public class LogicalStageBuilder
           .columns(signature.getColumnNames())
           .columnTypes(signature.getColumnTypes())
           .build();
-      ScanQueryFrameProcessorFactory scanProcessorFactory = new ScanQueryFrameProcessorFactory(s);
-      StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
-          .inputs(inputs)
-          .processorFactory(scanProcessorFactory)
-          .signature(signature)
-          .shuffleSpec(shuffleFor(keyColumns))
-          ;
 
-      return sdb.build(getIdForBuilder());
+      return new ScanQueryFrameProcessorFactory(s);
     }
 
     private ShuffleSpec shuffleFor(List<KeyColumn> keyColumns)
     {
-      if(keyColumns == null ) {
+      if (keyColumns == null) {
         return MixShuffleSpec.instance();
-      }else {
+      } else {
 
         final Granularity segmentGranularity = Granularities.ALL;
-// FIXME:
-//   QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
+        // FIXME:
+        // QueryKitUtils.getSegmentGranularityFromContext(jsonMapper,
+        // queryToRun.getContext());
 
-final ClusterBy clusterBy = QueryKitUtils
-    .clusterByWithSegmentGranularity(new ClusterBy(keyColumns, 0), segmentGranularity);
-// FIXME targetSize == 1
-return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
+        final ClusterBy clusterBy = QueryKitUtils
+            .clusterByWithSegmentGranularity(new ClusterBy(keyColumns, 0), segmentGranularity);
+        // FIXME targetSize == 1
+        return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
       }
+    }
+
+
+    StageDefinition build1() {
+      DagStage node = stack.pop();
+      return node.buildStages(new StageMaker()).build(getIdForBuilder());
     }
 
     private int getNextStageId()
@@ -165,7 +274,8 @@ return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, 
       if (!inputStages.isEmpty()) {
         throw DruidException.defensive("Not yet supported");
       }
-      ret.add(buildCurrentStage(stageMaker));
+      buildCurrentStage(stageMaker);
+      ret.add(stageMaker.build1());
       return ret;
     }
   }
@@ -191,7 +301,11 @@ return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, 
     @Override
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
-      return stageMaker.makeScanStage(VirtualColumns.EMPTY, signature, inputSpecs, null, null);
+      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
+          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
+      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+      stageMaker.pushSortStage(signature, Collections.emptyList());
+      return null;
     }
 
     @Override
@@ -272,7 +386,11 @@ return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, 
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
       VirtualColumns output = virtualColumnRegistry.build(Collections.emptySet());
-      return stageMaker.makeScanStage(output, signature, inputSpecs, dimFilter, null);
+      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
+          .makeScanFrameProcessor(output, signature, dimFilter);
+      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+      stageMaker.pushSortStage(signature, Collections.emptyList());
+      return null;
     }
 
     @Override
@@ -309,7 +427,7 @@ return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, 
     {
       if (stack.getNode() instanceof DruidSort) {
         DruidSort sort = (DruidSort) stack.getNode();
-        if(sort.hasLimitOrOffset()) {
+        if (sort.hasLimitOrOffset()) {
           throw DruidException.defensive("Sort with limit or offset is not supported in MSQ logical stage builder");
         }
         List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(signature, sort);
@@ -339,11 +457,11 @@ return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, 
     @Override
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
-      VirtualColumns output = virtualColumnRegistry.build(Collections.emptySet());
-      return stageMaker.makeScanStage(output, signature, inputSpecs, dimFilter, keyColumns);
+      super.buildCurrentStage(stageMaker);
+      stageMaker.pushSortStage(signature, keyColumns);
+      return null;
     }
   }
-
 
   private static final String IRRELEVANT = "irrelevant";
 
