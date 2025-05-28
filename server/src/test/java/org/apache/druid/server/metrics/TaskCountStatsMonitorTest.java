@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,6 +34,12 @@ import java.util.Map;
 public class TaskCountStatsMonitorTest
 {
   private TaskCountStatsProvider statsProvider;
+  private static final RowKey TASK_METRIC_KEY1 = RowKey.with(Dimension.DATASOURCE, "d1")
+                                                       .with(Dimension.TASK_TYPE, "index")
+                                                       .build();
+  private static final RowKey TASK_METRIC_KEY2 = RowKey.with(Dimension.DATASOURCE, "d1")
+                                                       .with(Dimension.TASK_TYPE, "kill")
+                                                       .build();
 
   @Before
   public void setUp()
@@ -39,33 +47,33 @@ public class TaskCountStatsMonitorTest
     statsProvider = new TaskCountStatsProvider()
     {
       @Override
-      public Map<String, Long> getSuccessfulTaskCount()
+      public Map<RowKey, Long> getSuccessfulTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 1L);
       }
 
       @Override
-      public Map<String, Long> getFailedTaskCount()
+      public Map<RowKey, Long> getFailedTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 1L, TASK_METRIC_KEY2, 1L);
       }
 
       @Override
-      public Map<String, Long> getRunningTaskCount()
+      public Map<RowKey, Long> getRunningTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 1L);
       }
 
       @Override
-      public Map<String, Long> getPendingTaskCount()
+      public Map<RowKey, Long> getPendingTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 2L);
       }
 
       @Override
-      public Map<String, Long> getWaitingTaskCount()
+      public Map<RowKey, Long> getWaitingTaskCount()
       {
-        return ImmutableMap.of("d1", 1L);
+        return ImmutableMap.of(TASK_METRIC_KEY1, 2L, TASK_METRIC_KEY2, 1L);
       }
 
       @Override
@@ -85,14 +93,19 @@ public class TaskCountStatsMonitorTest
     final TaskCountStatsMonitor monitor = new TaskCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(7, emitter.getEvents().size());
-    emitter.verifyValue("task/success/count", 1L);
-    emitter.verifyValue("task/failed/count", 1L);
-    emitter.verifyValue("task/running/count", 1L);
-    emitter.verifyValue("task/pending/count", 1L);
-    emitter.verifyValue("task/waiting/count", 1L);
+
+    Assert.assertEquals(9, emitter.getEvents().size());
+
+    emitter.verifyValue("task/success/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "kill"), 1L);
+    emitter.verifyValue("task/running/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
+    emitter.verifyValue("task/pending/count", Map.of("dataSource", "d1", "taskType", "index"), 2L);
+    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "index"), 2L);
+    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "kill"), 1L);
+
     emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
-    emitter.verifyValue(Stat.DEBUG_1.getMetricName(), ImmutableMap.of("tier", "hot", "dataSource", "wiki"), 20L);
+    emitter.verifyValue(Stat.DEBUG_1.getMetricName(), Map.of("tier", "hot", "dataSource", "wiki"), 20L);
   }
 
   private static class Stat

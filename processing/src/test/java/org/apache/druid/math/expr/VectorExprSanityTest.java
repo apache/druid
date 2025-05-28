@@ -232,7 +232,8 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "%s(s1, s2)",
         "%s(nonexistent, l1)",
         "%s(nonexistent, d1)",
-        "%s(nonexistent, s1)"
+        "%s(nonexistent, s1)",
+        "%s(nonexistent, nonexistent2)"
     };
     testFunctions(types, templates, functions);
   }
