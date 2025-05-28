@@ -84,9 +84,10 @@ public class LogicalStageBuilder
       ScanQueryFrameProcessorFactory scanProcessorFactory = new ScanQueryFrameProcessorFactory(s);
       StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
           .inputs(inputs)
+          .processorFactory(scanProcessorFactory)
           .signature(signature)
           .shuffleSpec(MixShuffleSpec.instance())
-          .processorFactory(scanProcessorFactory);
+          ;
       return sdb.build(getIdForBuilder());
     }
 
@@ -310,6 +311,8 @@ public class LogicalStageBuilder
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
       StageDefinition inputStage = super.buildCurrentStage(stageMaker);
+
+
       return inputStage;
     }
   }
