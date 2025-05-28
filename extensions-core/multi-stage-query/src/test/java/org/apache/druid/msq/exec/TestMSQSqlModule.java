@@ -56,7 +56,7 @@ public class TestMSQSqlModule extends TestDruidModule
       MSQTestOverlordServiceClient indexingServiceClient,
       MSQTaskQueryKitSpecFactory queryKitSpecFactory)
   {
-    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper, new SegmentGenerationTerminalStageSpecFactory(), queryKitSpecFactory);
+    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper, new SegmentGenerationTerminalStageSpecFactory(), queryKitSpecFactory, null);
   }
 
   @Provides

@@ -42,16 +42,7 @@ public class GetQueriesResponseTest
   @BeforeAll
   static void setUp()
   {
-    jsonMapper = TestHelper.JSON_MAPPER.registerModules(
-        List.of(
-            new SimpleModule("DartModule").registerSubtypes(
-                new NamedType(
-                    TestQueryInfo.class,
-                    "test"
-                )
-            )
-        )
-    );
+    jsonMapper = TestHelper.makeJsonMapper().registerModules(getJacksonModules());
   }
 
   @Test
@@ -71,7 +62,7 @@ public class GetQueriesResponseTest
     Assertions.assertEquals(response, response2);
   }
 
-  public List<? extends Module> getJacksonModules()
+  public static List<? extends Module> getJacksonModules()
   {
     return Collections.<com.fasterxml.jackson.databind.Module>singletonList(
         new SimpleModule("DartModule").registerSubtypes(

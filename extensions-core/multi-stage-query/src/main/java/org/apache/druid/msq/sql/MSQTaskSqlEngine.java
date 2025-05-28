@@ -54,6 +54,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -94,19 +96,22 @@ public class MSQTaskSqlEngine implements SqlEngine
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   private final QueryKitSpecFactory queryKitSpecFactory;
+  private final SqlToolbox sqlToolbox;
 
   @Inject
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory,
-      final MSQTaskQueryKitSpecFactory queryKitSpecFactory
+      final MSQTaskQueryKitSpecFactory queryKitSpecFactory,
+      final SqlToolbox sqlToolbox
   )
   {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
     this.terminalStageSpecFactory = terminalStageSpecFactory;
     this.queryKitSpecFactory = queryKitSpecFactory;
+    this.sqlToolbox = sqlToolbox;
   }
 
   @Override
@@ -222,6 +227,12 @@ public class MSQTaskSqlEngine implements SqlEngine
         terminalStageSpecFactory,
         queryKitSpecFactory
     );
+  }
+
+  @Override
+  public SqlStatementFactory getSqlStatementFactory()
+  {
+    return new SqlStatementFactory(sqlToolbox.withEngine(this));
   }
 
   /**

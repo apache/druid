@@ -121,17 +121,14 @@ public interface SqlEngine
   {
   }
 
-  default SqlStatementFactory getSqlStatementFactory()
-  {
-    throw new UnsupportedOperationException();
-  }
+  SqlStatementFactory getSqlStatementFactory();
 
   default List<QueryInfo> getRunningQueries(boolean selfOnly)
   {
     throw new UnsupportedOperationException();
   }
 
-  default void cancel(PlannerContext plannerContext, QueryScheduler queryScheduler)
+  default void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
     throw new UnsupportedOperationException();
   }

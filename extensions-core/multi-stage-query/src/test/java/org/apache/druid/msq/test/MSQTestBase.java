@@ -581,7 +581,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
         new SegmentGenerationTerminalStageSpecFactory(),
-        injector.getInstance(MSQTaskQueryKitSpecFactory.class)
+        injector.getInstance(MSQTaskQueryKitSpecFactory.class),
+        null
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(

@@ -22,7 +22,6 @@ package org.apache.druid.msq.dart.controller.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
@@ -37,7 +36,6 @@ import java.util.Objects;
 /**
  * Class included in {@link GetQueriesResponse}.
  */
-@JsonTypeName("msq-dart")
 public class DartQueryInfo implements QueryInfo
 {
   private final String sqlQueryId;

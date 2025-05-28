@@ -532,7 +532,7 @@ public class CalciteTests
   /**
    * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
    */
-  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  public static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
     private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
 

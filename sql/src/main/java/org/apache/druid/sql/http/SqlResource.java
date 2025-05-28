@@ -47,7 +47,6 @@ import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlRowTransformer;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
@@ -185,7 +184,7 @@ public class SqlResource
       @Context final HttpServletRequest req
   )
   {
-    final String engineName = QueryContexts.parseString(sqlQuery.getContext(), QueryContexts.ENGINE, NativeSqlEngine.NAME);
+    final String engineName = sqlQuery.queryContext().getEngine();
     final SqlEngine engine = getEngine(engineName);
     if (engine == null) {
       return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();

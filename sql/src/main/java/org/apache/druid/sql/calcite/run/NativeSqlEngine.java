@@ -49,7 +49,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @LazySingleton
 public class NativeSqlEngine implements SqlEngine
 {
-  private static final Logger log = new Logger(NativeSqlEngine.class);
+  private static final Logger LOG = new Logger(NativeSqlEngine.class);
 
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS = ImmutableSet.of(
       TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME,
@@ -195,12 +195,12 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public void cancel(PlannerContext plannerContext, QueryScheduler queryScheduler)
+  public void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
     final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
     for (String nativeQueryId : nativeQueryIds) {
-      log.debug("Canceling native query [%s]", nativeQueryId);
+      LOG.debug("Canceling native query [%s]", nativeQueryId);
       queryScheduler.cancelQuery(nativeQueryId);
     }
   }

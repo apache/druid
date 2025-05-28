@@ -25,6 +25,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -45,7 +46,7 @@ public class DartQueryInfoTest
         DateTimes.of("2000"),
         ControllerHolder.State.RUNNING.toString()
     );
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    ObjectMapper jsonMapper = new DefaultObjectMapper().registerModules(new DartWorkerModule().getJacksonModules());
     byte[] bytes = jsonMapper.writeValueAsBytes(dartQueryInfo);
     DartQueryInfo deserialized = jsonMapper.readValue(bytes, DartQueryInfo.class);
     Assertions.assertEquals(dartQueryInfo, deserialized);

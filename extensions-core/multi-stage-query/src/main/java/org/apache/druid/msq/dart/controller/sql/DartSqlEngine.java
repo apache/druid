@@ -292,7 +292,7 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public void cancel(PlannerContext plannerContext, QueryScheduler queryScheduler)
+  public void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
     final Object dartQueryId = plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID);
     if (dartQueryId instanceof String) {
