@@ -24,11 +24,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplierGroup;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -37,8 +41,10 @@ import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,22 +66,50 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
   }
 
   @Override
-  protected KafkaRecordSupplier createRecordSupplier()
+  protected RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> createRecordSupplier()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = (KafkaSupervisorIOConfig) ioConfig;
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
       final Map<String, Object> props = new HashMap<>(((KafkaSupervisorIOConfig) ioConfig).getConsumerProperties());
 
-      props.put("enable.auto.commit", "false");
-      props.put("auto.offset.reset", "none");
-      props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
-      KafkaSupervisorIOConfig kafkaSupervisorIOConfig = (KafkaSupervisorIOConfig) ioConfig;
+      if (kafkaSupervisorIOConfig.isMultiCluster()) {
+        List<String> keyList = new ArrayList<>();
+        List<RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierList = new ArrayList<>();
 
-      return new KafkaRecordSupplier(props, objectMapper, kafkaSupervisorIOConfig.getConfigOverrides(),
-                                     kafkaSupervisorIOConfig.isMultiTopic()
-      );
+        for (Map.Entry<String, Object> entry : props.entrySet()) {
+          final String clusterKey = entry.getKey();
+          final Map<String, Object> consumerProperty = (Map<String, Object>) entry.getValue();
+
+          consumerProperty.put("enable.auto.commit", "false");
+          consumerProperty.put("auto.offset.reset", "none");
+          consumerProperty.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
+
+          keyList.add(clusterKey);
+
+          final KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+              consumerProperty,
+              objectMapper,
+              kafkaSupervisorIOConfig.getConfigOverrides(),
+              kafkaSupervisorIOConfig.isMultiTopic(),
+              clusterKey
+          );
+
+          supplierList.add(recordSupplier);
+        }
+
+        return new RecordSupplierGroup<>(keyList, supplierList);
+      } else {
+        props.put("enable.auto.commit", "false");
+        props.put("auto.offset.reset", "none");
+        props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
+
+        return new KafkaRecordSupplier(props, objectMapper, kafkaSupervisorIOConfig.getConfigOverrides(),
+                                       kafkaSupervisorIOConfig.isMultiTopic()
+        );
+      }
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

@@ -102,7 +102,7 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
             }
           })
           .collect(Collectors.toMap(
-              e -> new KafkaTopicPartition(false, thisTopic, e.getKey().partition()),
+              e -> new KafkaTopicPartition(false, e.getKey().getCluster(), thisTopic, e.getKey().partition()),
               Map.Entry::getValue
           )));
     } else {
@@ -114,6 +114,7 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
           getPartitionSequenceNumberMap(),
           k -> new KafkaTopicPartition(
               true,
+              k.getCluster(),
               k.asTopicPartition(thisTopic).topic(),
               k.partition()
           )
@@ -131,7 +132,7 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
             }
           })
           .collect(Collectors.toMap(
-              e -> new KafkaTopicPartition(true, e.getKey().asTopicPartition(thatTopic).topic(), e.getKey().partition()),
+              e -> new KafkaTopicPartition(true, e.getKey().getCluster(), e.getKey().asTopicPartition(thatTopic).topic(), e.getKey().partition()),
               Map.Entry::getValue
           )));
     }
@@ -163,9 +164,9 @@ public class KafkaSeekableStreamEndSequenceNumbers extends SeekableStreamEndSequ
       String thisTopic = entry.getKey().asTopicPartition(getStream()).topic();
       boolean otherContainsThis = otherEnd.getPartitionSequenceNumberMap().containsKey(entry.getKey());
       boolean otherContainsThisMultiTopic = otherEnd.getPartitionSequenceNumberMap()
-          .containsKey(new KafkaTopicPartition(true, thisTopic, entry.getKey().partition()));
+          .containsKey(new KafkaTopicPartition(true, entry.getKey().getCluster(), thisTopic, entry.getKey().partition()));
       boolean otherContainsThisSingleTopic = (thatTopic.equals(thisTopic) && otherEnd.getPartitionSequenceNumberMap()
-          .containsKey(new KafkaTopicPartition(false, null, entry.getKey().partition())));
+          .containsKey(new KafkaTopicPartition(false, entry.getKey().getCluster(), null, entry.getKey().partition())));
       if (!otherContainsThis && !otherContainsThisMultiTopic && !otherContainsThisSingleTopic) {
         newMap.put(entry.getKey(), entry.getValue());
       }

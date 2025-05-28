@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
@@ -49,6 +50,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplierGroup;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -95,6 +97,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   private volatile Map<KafkaTopicPartition, Long> partitionToTimeLag;
 
   private final KafkaSupervisorSpec spec;
+  private final Map<String, Integer> clusterIndices;
 
   public KafkaSupervisor(
       final TaskStorage taskStorage,
@@ -120,12 +123,46 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     this.spec = spec;
     this.pattern = getIoConfig().isMultiTopic() ? Pattern.compile(getIoConfig().getStream()) : null;
+
+    if (getIoConfig().isMultiCluster()) {
+      int idx = 0;
+      final Map<String, Object> consumerProperties = getIoConfig().getConsumerProperties();
+      final ImmutableMap.Builder<String, Integer> clusterIndices = new ImmutableMap.Builder<>();
+      final List<String> sortedClusters = consumerProperties.keySet().stream().sorted().collect(Collectors.toList());
+      for (final String cluster : sortedClusters) {
+        clusterIndices.put(cluster, idx++);
+      }
+      this.clusterIndices = clusterIndices.build();
+    } else {
+      this.clusterIndices = ImmutableMap.of();
+    }
   }
 
 
   @Override
   protected RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> setupRecordSupplier()
   {
+    final KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
+    if (!ioConfig.isMultiCluster()) {
+      final Map<String, Object> props = new HashMap<>(ioConfig.getConsumerProperties());
+      final List<String> keyList = new ArrayList<>();
+      final List<RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierList = new ArrayList<>();
+      for (final Map.Entry<String, Object> entry : props.entrySet()) {
+        final String clusterKey = entry.getKey();
+        final Map<String, Object> consumerProperty = (Map<String, Object>) entry.getValue();
+        log.info("cluster=[%s], consumerProperty=[%s]", clusterKey, consumerProperty);
+        keyList.add(clusterKey);
+        final KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+            consumerProperty,
+            sortingMapper,
+            ioConfig.getConfigOverrides(),
+            ioConfig.isMultiTopic(),
+            clusterKey
+        );
+        supplierList.add(recordSupplier);
+      }
+      return new RecordSupplierGroup<>(keyList, supplierList);
+    }
     return new KafkaRecordSupplier(
         spec.getIoConfig().getConsumerProperties(),
         sortingMapper,
@@ -138,10 +175,14 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   protected int getTaskGroupIdForPartition(KafkaTopicPartition partitionId)
   {
     Integer taskCount = spec.getIoConfig().getTaskCount();
+    final int tasksPerCluster = getIoConfig().isMultiCluster() ? taskCount / clusterIndices.size() : taskCount;
+    final int clusterIdx = getIoConfig().isMultiCluster() ? clusterIndices.get(partitionId.getCluster()) : 0;
+    final int clusterOffset = clusterIdx * (tasksPerCluster);
     if (partitionId.isMultiTopicPartition()) {
-      return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
+      return clusterOffset + (Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition())
+                              % tasksPerCluster);
     } else {
-      return partitionId.partition() % taskCount;
+      return clusterOffset + (Math.abs(partitionId.partition()) % tasksPerCluster);
     }
   }
 
@@ -198,6 +239,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   )
   {
     KafkaSupervisorIOConfig kafkaIoConfig = (KafkaSupervisorIOConfig) ioConfig;
+    final String cluster = startPartitions.keySet().stream().findFirst().get().getCluster();
     return new KafkaIndexTaskIOConfig(
         groupId,
         baseSequenceName,
@@ -213,7 +255,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         ioConfig.getInputFormat(),
         kafkaIoConfig.getConfigOverrides(),
         kafkaIoConfig.isMultiTopic(),
-        ioConfig.getTaskDuration().getStandardMinutes()
+        ioConfig.getTaskDuration().getStandardMinutes(),
+        cluster
     );
   }
 
@@ -459,7 +502,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     try {
       int maxPolls = 5;
       while (!remainingPartitions.isEmpty() && maxPolls-- > 0) {
-        for (OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> record : recordSupplier.poll(getIoConfig().getPollTimeout())) {
+        for (OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> record : recordSupplier.poll(
+            getIoConfig().getPollTimeout())) {
           if (!result.containsKey(record.getPartitionId())) {
             result.put(record.getPartitionId(), record.getTimestamp());
             remainingPartitions.remove(new StreamPartition<>(getIoConfig().getStream(), record.getPartitionId()));
@@ -620,6 +664,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         ? pattern.matcher(streamMatchValue).matches()
         : getIoConfig().getStream().equals(streamMatchValue);
 
-    return match ? new KafkaTopicPartition(isMultiTopic(), streamMatchValue, kafkaTopicPartition.partition()) : null;
+    return match ? new KafkaTopicPartition(
+        isMultiTopic(),
+        kafkaTopicPartition.getCluster(),
+        streamMatchValue,
+        kafkaTopicPartition.partition()
+    ) : null;
   }
 }

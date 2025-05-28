@@ -701,7 +701,8 @@ public class KafkaSupervisorSpecTest
             null,
             null,
             null,
-            false
+            false,
+            null
         ),
         Map.of(
             "key1",
@@ -750,7 +751,8 @@ public class KafkaSupervisorSpecTest
           null,
           null,
           null,
-          false
+          false,
+          null
       ),
       null,
       null,

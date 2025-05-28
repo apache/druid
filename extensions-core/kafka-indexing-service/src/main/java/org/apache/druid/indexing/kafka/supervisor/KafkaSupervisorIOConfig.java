@@ -54,6 +54,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final String topic;
   private final String topicPattern;
   private final boolean emitTimeLagMetrics;
+  private final boolean multiCluster;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -77,7 +78,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
-      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics
+      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
+      @Nullable @JsonProperty("multiCluster") Boolean multiCluster
   )
   {
     super(
@@ -100,15 +102,24 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
-    Preconditions.checkNotNull(
-        consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
-        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
-    );
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
     this.configOverrides = configOverrides;
     this.topic = topic;
     this.topicPattern = topicPattern;
     this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
+    this.multiCluster = Configs.valueOrDefault(multiCluster, false);
+
+    if (!this.multiCluster) {
+      Preconditions.checkNotNull(
+          consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
+          StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+      );
+    } else {
+      Preconditions.checkState(
+          !consumerProperties.isEmpty(),
+          "Multi-cluster consumerProperties must contain at least 1 entry!"
+      );
+    }
   }
 
   /**
@@ -167,15 +178,22 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return emitTimeLagMetrics;
   }
 
+  @JsonProperty
+  public boolean isMultiCluster()
+  {
+    return multiCluster;
+  }
+
   @Override
   public String toString()
   {
     return "KafkaSupervisorIOConfig{" +
            "topic='" + getTopic() + '\'' +
-           "topicPattern='" + getTopicPattern() + '\'' +
+           ", topicPattern='" + getTopicPattern() + '\'' +
            ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
+           ", multiCluster=" + isMultiCluster() +
            ", consumerProperties=" + consumerProperties +
            ", autoScalerConfig=" + getAutoScalerConfig() +
            ", pollTimeout=" + pollTimeout +

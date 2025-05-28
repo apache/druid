@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -98,19 +99,24 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   }
 
   @Override
-  protected KafkaRecordSupplier newTaskRecordSupplier(final TaskToolbox toolbox)
+  protected RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
       KafkaIndexTaskIOConfig kafkaIndexTaskIOConfig = (KafkaIndexTaskIOConfig) super.ioConfig;
-      final Map<String, Object> props = new HashMap<>(kafkaIndexTaskIOConfig.getConsumerProperties());
-
+      final String cluster = kafkaIndexTaskIOConfig.getCluster();
+      final Map<String, Object> props;
+      if (cluster != null) {
+        props = (Map<String, Object>) new HashMap<>(kafkaIndexTaskIOConfig.getConsumerProperties()).get(cluster);
+      } else {
+        props = new HashMap<>(kafkaIndexTaskIOConfig.getConsumerProperties());
+      }
       props.put("auto.offset.reset", "none");
 
       final KafkaRecordSupplier recordSupplier =
           new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides(),
-                                  kafkaIndexTaskIOConfig.isMultiTopic());
+                                  kafkaIndexTaskIOConfig.isMultiTopic(), kafkaIndexTaskIOConfig.getCluster());
 
       if (toolbox.getMonitorScheduler() != null) {
         toolbox.getMonitorScheduler().addMonitor(recordSupplier.monitor());
