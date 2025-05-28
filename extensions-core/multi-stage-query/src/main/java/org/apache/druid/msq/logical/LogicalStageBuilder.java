@@ -26,6 +26,7 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.kernel.DagDefinition;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -97,6 +98,12 @@ public class LogicalStageBuilder
           .signature(signature)
           .shuffleSpec(shuffleFor(keyColumns))
           ;
+
+      DagDefinition dd = new DagDefinition();
+      Object n = dd.newNode(inputs, signature, scanProcessorFactory);
+      Object e = dd.newEdge(MixShuffleSpec.instance());
+
+      dd.addOutEdge(n, e);
       return sdb.build(getIdForBuilder());
     }
 
