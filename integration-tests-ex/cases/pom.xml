@@ -260,6 +260,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.extensions.contrib</groupId>
+            <artifactId>druid-exact-cardinality</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
@@ -555,6 +561,15 @@
             </activation>
             <properties>
                 <it.category>Security</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-DruidExactCardinality</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>DruidExactCardinality</it.category>
             </properties>
         </profile>
     </profiles>

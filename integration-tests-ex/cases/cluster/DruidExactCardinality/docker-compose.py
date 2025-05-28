@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from template import BaseTemplate, generate
+from template import COORDINATOR, MIDDLE_MANAGER
 
 class Template(BaseTemplate):
     def extend_druid_service(self, service):
@@ -27,9 +28,9 @@ class Template(BaseTemplate):
         self.add_env(service, 'druid_coordinator_period', 'PT10S')
 
     def define_indexer(self):
-          '''
-          Override the indexer to MIDDLE_MANAGER
-          '''
-          return self.define_std_indexer(MIDDLE_MANAGER)
+        '''
+        Override the indexer to MIDDLE_MANAGER
+        '''
+        return self.define_std_indexer(MIDDLE_MANAGER)
 
 generate(__file__, Template())
