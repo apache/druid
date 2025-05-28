@@ -62,10 +62,22 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
   }
 
   function addTier() {
-    let newTierName = tiers[0];
+    if (!rule.tieredReplicants) return;
 
-    if (rule.tieredReplicants) {
-      for (const tier of tiers) {
+    let newTierName: string | undefined;
+
+    // Pick an exiting tier that is not assigned
+    for (const tier of tiers) {
+      if (rule.tieredReplicants[tier] === undefined) {
+        newTierName = tier;
+        break;
+      }
+    }
+
+    // If no such tier exists, pick a new tier name
+    if (!newTierName) {
+      for (let i = 1; i < 100; i++) {
+        const tier = `tier${i}`;
         if (rule.tieredReplicants[tier] === undefined) {
           newTierName = tier;
           break;
@@ -73,7 +85,9 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       }
     }
 
-    onChange?.(RuleUtil.addTieredReplicant(rule, newTierName, 1));
+    if (newTierName) {
+      onChange?.(RuleUtil.addTieredReplicant(rule, newTierName, 1));
+    }
   }
 
   function renderTiers() {
@@ -135,17 +149,10 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
   function renderTierAdder() {
     if (!onChange) return;
-    const disabled = Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length;
 
     return (
       <FormGroup>
-        <Button
-          onClick={addTier}
-          minimal
-          icon={IconNames.PLUS}
-          disabled={disabled}
-          data-tooltip={disabled ? 'There are no tiers left to assign' : undefined}
-        >
+        <Button onClick={addTier} minimal icon={IconNames.PLUS} disabled={disabled}>
           Add historical tier replication
         </Button>
       </FormGroup>
