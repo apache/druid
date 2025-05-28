@@ -26,11 +26,14 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.security.ResourceAction;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class CompactionSupervisorSpec implements SupervisorSpec
 {
@@ -118,6 +121,13 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   public String getSource()
   {
     return "";
+  }
+
+  @NotNull
+  @Override
+  public Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
+  {
+    return Set.of();
   }
 
   @Override
