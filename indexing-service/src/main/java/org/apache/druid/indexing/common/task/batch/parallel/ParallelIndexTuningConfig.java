@@ -219,7 +219,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     Preconditions.checkArgument(this.maxNumConcurrentSubTasks > 0, "maxNumConcurrentSubTasks must be positive");
     Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
     Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
-    Preconditions.checkArgument(this.subTaskTimeoutMs > 0, "subTaskTimeoutMs must be positive");
+    Preconditions.checkArgument(this.subTaskTimeoutMs >= 0, "subTaskTimeoutMs must be non-negative");
     if (getPartitionsSpec() != null && getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
       List<String> partitionDimensions = ((DimensionRangePartitionsSpec) getPartitionsSpec()).getPartitionDimensions();
       if (partitionDimensions == null || partitionDimensions.isEmpty()) {
