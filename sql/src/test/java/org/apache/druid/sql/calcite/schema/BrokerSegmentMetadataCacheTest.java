@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -101,6 +102,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -325,7 +327,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    "foo3",
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -1072,7 +1077,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    "test",
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -1255,7 +1263,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    "test",
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
