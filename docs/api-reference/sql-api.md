@@ -155,10 +155,10 @@ If you detect a truncated response, treat it as an error.
 #### Sample request
 
 This sample request demonstrates the following actions:
-- This example retrieves all rows from the `wikipedia` datasource.
-- It filters the results to include only rows where the `user` column is equal to `BlueMoon2662`.
-- The query is assigned the ID `request01` using the `sqlQueryId` context parameter.
-- The response includes optional properties like the `header`, `typesHeader`, and `sqlTypesHeader` properties, which all are set as `true`.
+- This query retrieves all rows from the `wikipedia` datasource.
+- This query also filters the results where the `user` value is `BlueMoon2662`.
+- The `sqlTimeZone` context parameter sets the query's time zone to `America/Los_Angeles`
+- This response also set its `header`, `typesHeader`, and `sqlTypesHeader` properties as `true`.
 
 
 <Tabs>
@@ -171,7 +171,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 --header 'Content-Type: application/json' \
 --data '{
     "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
-    "context" : {"sqlQueryId" : "request01"},
+    "context" : {"sqlTimeZone" : "America/Los_Angeles"},
     "header" : true,
     "typesHeader" : true,
     "sqlTypesHeader" : true
@@ -186,11 +186,11 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 POST /druid/v2/sql HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
-Content-Length: 192
+Content-Length: 201
 
 {
     "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
-    "context" : {"sqlQueryId" : "request01"},
+    "context" : {"sqlTimeZone" : "America/Los_Angeles"},
     "header" : true,
     "typesHeader" : true,
     "sqlTypesHeader" : true
@@ -200,19 +200,17 @@ Content-Length: 192
 </TabItem>
 </Tabs>
 
-You can also specify query-level context parameters directly within the SQL query string using the `SET` command, which provides an inline alternative to the top-level `"context"` JSON object while passing data. For more details on `SET` statements, refer to the see [SET statements](../querying/sql.md#set-statements).
+You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details on `SET` statements, see [SET statements](../querying/sql.md#set-statements).
 
-Here's a JSON object that's functionally equivalent to the examples above, using `SET` command for `sqlQueryId` directly in the query string instead of using the context parameter:
+The following functionally equivalent JSON object uses `SET` command for `sqlQueryId` directly in the query:
 
-```shell
-
-{
-  "query": "SET sqlQueryId='request01'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+```JSON
+[
+  "query": "SET sqlTimeZone='America/Los_Angeles'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
   "header": true,
   "typesHeader": true,
   "sqlTypesHeader": true
-}
-
+]
 ```
 
 
@@ -249,24 +247,24 @@ Here's a JSON object that's functionally equivalent to the examples above, using
             "sqlType": "VARCHAR"
         },
         "isAnonymous": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isMinor": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isNew": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isRobot": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isUnpatrolled": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "metroCode": {
             "type": "LONG",
@@ -306,22 +304,22 @@ Here's a JSON object that's functionally equivalent to the examples above, using
         }
     },
     {
-        "__time": "2015-09-12T00:47:53.259Z",
+        "__time": "2015-09-11T17:47:53.259-07:00",
         "channel": "#ja.wikipedia",
-        "cityName": "",
+        "cityName": null,
         "comment": "/* 対戦通算成績と得失点 */",
-        "countryIsoCode": "",
-        "countryName": "",
-        "isAnonymous": 0,
-        "isMinor": 1,
-        "isNew": 0,
-        "isRobot": 0,
-        "isUnpatrolled": 0,
-        "metroCode": 0,
+        "countryIsoCode": null,
+        "countryName": null,
+        "isAnonymous": "false",
+        "isMinor": "true",
+        "isNew": "false",
+        "isRobot": "false",
+        "isUnpatrolled": "false",
+        "metroCode": null,
         "namespace": "Main",
         "page": "アルビレックス新潟の年度別成績一覧",
-        "regionIsoCode": "",
-        "regionName": "",
+        "regionIsoCode": null,
+        "regionName": null,
         "user": "BlueMoon2662",
         "delta": 14,
         "added": 14,
