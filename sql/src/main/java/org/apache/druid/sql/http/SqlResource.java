@@ -35,6 +35,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -51,6 +52,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -69,7 +71,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -145,34 +146,12 @@ public class SqlResource
         authorizerMapper
     );
 
-    SqlEngine sqlEngine = getEngine(engine);
-    if (sqlEngine == null) {
-      return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
-    }
+    final SqlEngine sqlEngine = getEngine(engine);
+    final List<QueryInfo> queries = sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess);
 
-    List<QueryInfo> queries = sqlEngine.getRunningQueries(selfOnly != null);
-
-    final GetQueriesResponse response;
-    if (stateReadAccess.allowAccessWithNoRestriction()) {
-      // User can READ STATE, so they can see all running queries, as well as authentication details.
-      response = new GetQueriesResponse(queries);
-    } else {
-      // User cannot READ STATE, so they can see only their own queries, without authentication details.
-      response = new GetQueriesResponse(
-          queries.stream()
-                 .filter(
-                     query ->
-                         authenticationResult.getAuthenticatedBy() != null
-                         && authenticationResult.getIdentity() != null
-                         && Objects.equals(authenticationResult.getAuthenticatedBy(), query.getAuthenticator())
-                         && Objects.equals(authenticationResult.getIdentity(), query.getIdentity()))
-                 .map(QueryInfo::withoutAuthenticationResult)
-                 .collect(Collectors.toList())
-      );
-    }
 
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
-    return Response.ok().entity(response).build();
+    return Response.ok().entity(new GetQueriesResponse(queries)).build();
   }
 
   @POST
@@ -186,9 +165,6 @@ public class SqlResource
   {
     final String engineName = sqlQuery.queryContext().getEngine();
     final SqlEngine engine = getEngine(engineName);
-    if (engine == null) {
-      return Response.status(Status.BAD_REQUEST).entity("Unsupported engine").build();
-    }
     final HttpStatement stmt = engine.getSqlStatementFactory().httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
@@ -231,9 +207,14 @@ public class SqlResource
     }
   }
 
-  private SqlEngine getEngine(final String engine)
+  @NotNull
+  private SqlEngine getEngine(final String engineName)
   {
-    return engines.getOrDefault(engine == null ? QueryContexts.DEFAULT_ENGINE : engine, null);
+    SqlEngine engine = engines.getOrDefault(engineName == null ? QueryContexts.DEFAULT_ENGINE : engineName, null);
+    if (engine == null) {
+      throw new BadRequestException("Unsupported engine");
+    }
+    return engine;
   }
 
   /**

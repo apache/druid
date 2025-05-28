@@ -124,7 +124,6 @@ public class DartQueryInfo implements QueryInfo
   /**
    * Authenticator that authenticated the identity from {@link #getIdentity()}.
    */
-  @Override
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getAuthenticator()
@@ -135,7 +134,6 @@ public class DartQueryInfo implements QueryInfo
   /**
    * User that issued this query.
    */
-  @Override
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getIdentity()
@@ -162,7 +160,6 @@ public class DartQueryInfo implements QueryInfo
   /**
    * Returns a copy of this instance with {@link #getAuthenticator()} and {@link #getIdentity()} nulled.
    */
-  @Override
   public DartQueryInfo withoutAuthenticationResult()
   {
     return new DartQueryInfo(sqlQueryId, dartQueryId, sql, controllerHost, null, null, startTime, state);

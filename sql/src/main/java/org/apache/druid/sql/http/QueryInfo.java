@@ -24,12 +24,4 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "engine")
 public interface QueryInfo
 {
-  String getIdentity();
-
-  String getAuthenticator();
-
-  /**
-   * Returns a copy of this instance with {@link #getAuthenticator()} and {@link #getIdentity()} nulled.
-   */
-  QueryInfo withoutAuthenticationResult();
 }

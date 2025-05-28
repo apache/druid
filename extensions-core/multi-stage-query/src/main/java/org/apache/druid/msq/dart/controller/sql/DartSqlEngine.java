@@ -48,6 +48,8 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -63,6 +65,7 @@ import org.apache.druid.sql.http.QueryInfo;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
@@ -261,7 +264,11 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public List<QueryInfo> getRunningQueries(boolean selfOnly)
+  public List<QueryInfo> getRunningQueries(
+      boolean selfOnly,
+      AuthenticationResult authenticationResult,
+      AuthorizationResult authorizationResult
+  )
   {
     final List<DartQueryInfo> queries = controllerRegistry.getAllHolders()
                                                           .stream()
@@ -288,7 +295,28 @@ public class DartSqlEngine implements SqlEngine
 
     // Sort queries by start time, breaking ties by query ID, so the list comes back in a consistent and nice order.
     queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
-    return List.copyOf(queries);
+
+    if (authorizationResult.allowAccessWithNoRestriction()) {
+      // User can READ STATE, so they can see all running queries, as well as authentication details.
+      return List.copyOf(queries);
+    } else {
+      // User cannot READ STATE, so they can see only their own queries, without authentication details.
+      return queries.stream()
+                    .filter(
+                        query ->
+                            authenticationResult.getAuthenticatedBy() != null
+                            && authenticationResult.getIdentity() != null
+                            && Objects.equals(
+                                authenticationResult.getAuthenticatedBy(),
+                                query.getAuthenticator()
+                            )
+                            && Objects.equals(
+                                authenticationResult.getIdentity(),
+                                query.getIdentity()
+                            ))
+                    .map(DartQueryInfo::withoutAuthenticationResult)
+                    .collect(Collectors.toList());
+    }
   }
 
   @Override

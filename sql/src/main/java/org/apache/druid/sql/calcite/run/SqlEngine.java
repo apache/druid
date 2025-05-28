@@ -24,6 +24,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
@@ -123,7 +125,11 @@ public interface SqlEngine
 
   SqlStatementFactory getSqlStatementFactory();
 
-  default List<QueryInfo> getRunningQueries(boolean selfOnly)
+  default List<QueryInfo> getRunningQueries(
+      boolean selfOnly,
+      AuthenticationResult authenticationResult,
+      AuthorizationResult authorizationResult
+  )
   {
     throw new UnsupportedOperationException();
   }
