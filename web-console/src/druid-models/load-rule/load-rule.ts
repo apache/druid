@@ -126,6 +126,7 @@ export class RuleUtil {
   }
 
   static renameTieredReplicant(rule: Rule, oldTier: string, newTier: string): Rule {
+    if (typeof deepGet(rule, `tieredReplicants.${oldTier}`) !== 'number') return rule;
     // Ensure we are never stomping over an existing tier
     while (deepGet(rule, `tieredReplicants.${newTier}`)) newTier += '+';
     return deepMove(rule, `tieredReplicants.${oldTier}`, `tieredReplicants.${newTier}`);
