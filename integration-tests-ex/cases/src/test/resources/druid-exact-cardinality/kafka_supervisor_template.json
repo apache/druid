@@ -43,6 +43,11 @@
         "type": "doubleSum",
         "name": "delta",
         "fieldName": "delta"
+      },
+      {
+        "type": "Bitmap64ExactCardinalityBuild",
+        "name": "unique_deleted",
+        "fieldName": "deleted"
       }
     ],
     "granularitySpec": {

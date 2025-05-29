@@ -1,6 +1,42 @@
 [
   {
-    "description": "Timeseries query.",
+    "description": "Timeseries query on non-rolled-up columns",
+    "query": {
+      "queryType": "timeseries",
+      "dataSource": {
+        "type": "union",
+        "dataSources": [
+          "%%DATASOURCE%%-1", "%%DATASOURCE%%-2", "%%DATASOURCE%%-3",
+          "%%DATASOURCE%%-0"
+        ]
+      },
+      "intervals": ["2013-08-31/2013-09-01"],
+      "granularity": "all",
+      "aggregations": [
+        {
+          "type": "count",
+          "name": "added_count",
+          "fieldName": "added"
+        },
+        {
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "added_cardinality",
+          "fieldName": "added"
+        }
+      ]
+    },
+    "expectedResults": [
+      {
+        "timestamp": "2013-08-31T01:02:33.000Z",
+        "result": {
+          "added_count": 15,
+          "added_cardinality": 4
+        }
+      }
+    ]
+  },
+  {
+    "description": "Bitmap64 works on time column",
     "query": {
       "queryType": "timeseries",
       "dataSource": {
@@ -21,16 +57,6 @@
           "type": "Bitmap64ExactCardinalityBuild",
           "name": "time_cardinality",
           "fieldName": "__time"
-        },
-        {
-          "type": "count",
-          "name": "deleted_count",
-          "fieldName": "deleted"
-        },
-        {
-          "type": "Bitmap64ExactCardinalityBuild",
-          "name": "deleted_cardinality",
-          "fieldName": "deleted"
         }
       ]
     },
@@ -39,9 +65,7 @@
         "timestamp": "2013-08-31T01:02:33.000Z",
         "result": {
           "time_count": 15,
-          "time_cardinality": 5,
-          "deleted_count": 15,
-          "deleted_cardinality": 5
+          "time_cardinality": 5
         }
       }
     ]
