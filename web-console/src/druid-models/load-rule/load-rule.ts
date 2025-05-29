@@ -18,7 +18,7 @@
 
 import { sum } from 'd3-array';
 
-import { deepMove, deepSet } from '../../utils';
+import { deepGet, deepMove, deepSet } from '../../utils';
 
 export type RuleType =
   | 'loadForever'
@@ -125,7 +125,9 @@ export class RuleUtil {
     return rule.type.startsWith('load');
   }
 
-  static renameTieredReplicants(rule: Rule, oldTier: string, newTier: string): Rule {
+  static renameTieredReplicant(rule: Rule, oldTier: string, newTier: string): Rule {
+    // Ensure we are never stomping over an existing tier
+    while (deepGet(rule, `tieredReplicants.${newTier}`)) newTier += '+';
     return deepMove(rule, `tieredReplicants.${oldTier}`, `tieredReplicants.${newTier}`);
   }
 
