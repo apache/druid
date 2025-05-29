@@ -196,13 +196,12 @@ public class JettyServerModule extends JerseyServletModule
     // that concurrently handle the requests".
     int numServerThreads = config.getNumThreads() + getMaxJettyAcceptorsSelectorsNum(node);
 
-    final QueuedThreadPool threadPool;
     if (config.getQueueSize() == Integer.MAX_VALUE) {
-      threadPool = new QueuedThreadPool();
-      threadPool.setMinThreads(numServerThreads);
-      threadPool.setMaxThreads(numServerThreads);
+      jettyServerThreadPool = new QueuedThreadPool();
+      jettyServerThreadPool.setMinThreads(numServerThreads);
+      jettyServerThreadPool.setMaxThreads(numServerThreads);
     } else {
-      threadPool = new QueuedThreadPool(
+      jettyServerThreadPool = new QueuedThreadPool(
           numServerThreads,
           numServerThreads,
           60000, // same default is used in other case when threadPool = new QueuedThreadPool()
@@ -210,10 +209,10 @@ public class JettyServerModule extends JerseyServletModule
       );
     }
 
-    threadPool.setDaemon(true);
-    jettyServerThreadPool = threadPool;
+    jettyServerThreadPool.setDaemon(true);
 
-    final Server server = new Server(threadPool);
+
+    final Server server = new Server(jettyServerThreadPool);
 
     // Without this bean set, the default ScheduledExecutorScheduler runs as non-daemon, causing lifecycle hooks to fail
     // to fire on main exit. Related bug: https://github.com/apache/druid/pull/1627
