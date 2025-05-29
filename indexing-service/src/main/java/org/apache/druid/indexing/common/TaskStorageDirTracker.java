@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common;
 
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
@@ -45,6 +46,8 @@ import java.util.stream.Collectors;
 public class TaskStorageDirTracker
 {
   private static final Logger log = new Logger(TaskStorageDirTracker.class);
+
+  @GuardedBy("this")
   private long numUsedSlots = 0;
 
   public static TaskStorageDirTracker fromConfigs(WorkerConfig workerConfig, TaskConfig taskConfig)
