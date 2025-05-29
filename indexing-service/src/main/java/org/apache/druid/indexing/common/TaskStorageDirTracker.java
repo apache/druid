@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 public class TaskStorageDirTracker
 {
   private static final Logger log = new Logger(TaskStorageDirTracker.class);
+  private long numUsedSlots = 0;
 
   public static TaskStorageDirTracker fromConfigs(WorkerConfig workerConfig, TaskConfig taskConfig)
   {
@@ -145,6 +146,7 @@ public class TaskStorageDirTracker
       final StorageSlot candidateSlot = slots[currIncrement % slots.length];
       if (candidateSlot.runningTaskId == null) {
         candidateSlot.runningTaskId = taskId;
+        ++numUsedSlots;
         return candidateSlot;
       }
     }
@@ -155,6 +157,7 @@ public class TaskStorageDirTracker
   {
     if (slot.getParentRef() == this) {
       slot.runningTaskId = null;
+      --numUsedSlots;
     } else {
       throw new IAE("Cannot return storage slot for task [%s] that I don't own.", slot.runningTaskId);
     }
@@ -178,6 +181,7 @@ public class TaskStorageDirTracker
     // correct in-memory accounting for anything that is currently running in a known slot.  After that, for
     // compatibility with an old implementation, we need to check the base directories to see if any of
     // the tasks are running in the legacy locations and assign them to one of the free task slots.
+    numUsedSlots = 0;
     for (String taskId : taskIds) {
       StorageSlot candidateSlot = Arrays.stream(slots)
                                         .filter(slot -> slot.runningTaskId == null)
@@ -189,6 +193,7 @@ public class TaskStorageDirTracker
         missingIds.add(taskId);
       } else {
         candidateSlot.runningTaskId = taskId;
+        ++numUsedSlots;
         retVal.put(taskId, candidateSlot);
       }
     }
@@ -258,5 +263,9 @@ public class TaskStorageDirTracker
              ", runningTaskId='" + runningTaskId + '\'' +
              '}';
     }
+  }
+
+  public synchronized long getNumUsedSlots() {
+    return numUsedSlots;
   }
 }
