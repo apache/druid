@@ -116,6 +116,10 @@ public abstract class AbstractAuthConfigurationTest
           Action.READ
       ),
       new ResourceAction(
+          new Resource(QueryContexts.ENGINE, ResourceType.QUERY_CONTEXT),
+          Action.WRITE
+      ),
+      new ResourceAction(
           new Resource("auth_test_ctx", ResourceType.QUERY_CONTEXT),
           Action.WRITE
       )

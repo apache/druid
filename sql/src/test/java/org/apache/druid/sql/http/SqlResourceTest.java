@@ -72,6 +72,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
@@ -413,8 +414,10 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void test_getWithInvalidEngine()
   {
-    Response response = resource.doGetRunningQueries("selfOnly", "fake", req);
-    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    BadRequestException e = Assert.assertThrows(BadRequestException.class, () -> {
+      resource.doGetRunningQueries("selfOnly", "fake", req);
+    });
+    Assert.assertEquals("Unsupported engine", e.getMessage());
   }
 
   @Test
