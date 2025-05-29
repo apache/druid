@@ -67,7 +67,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
     let newTierName: string | undefined;
 
-    // Pick an exiting tier that is not assigned
+    // Pick an existing tier that is not assigned
     for (const tier of tiers) {
       if (rule.tieredReplicants[tier] === undefined) {
         newTierName = tier;
