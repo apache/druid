@@ -65,7 +65,7 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
     content = (
       <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
         {historyRecords.map(({ auditInfo, auditTime, payload }, i) => {
-          const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
+          const formattedTime = auditTime.replace('T', ' ').substring(0, 19);
           return (
             <Tab
               id={i}
