@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
@@ -69,9 +69,13 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class UnusedSegmentsKiller implements OverlordDuty
 {
-  private static final Logger log = new Logger(UnusedSegmentsKiller.class);
+  private static final EmittingLogger log = new EmittingLogger(UnusedSegmentsKiller.class);
 
   private static final String TASK_ID_PREFIX = "overlord-issued";
+
+  private static final int INITIAL_KILL_QUEUE_SIZE = 1000;
+  private static final int MAX_INTERVALS_TO_KILL_IN_DATASOURCE = 10_000;
+  private static final int MAX_SEGMENTS_TO_KILL_IN_INTERVAL = 1000;
 
   /**
    * Period after which the queue is reset even if there are existing jobs in queue.
@@ -131,7 +135,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     if (isEnabled()) {
       this.exec = executorFactory.create(1, "UnusedSegmentsKiller-%s");
       this.killQueue = new PriorityBlockingQueue<>(
-          1000,
+          INITIAL_KILL_QUEUE_SIZE,
           Ordering.from(Comparators.intervalsByEndThenStart())
                   .onResultOf(candidate -> candidate.interval)
       );
@@ -229,7 +233,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
       final Map<String, Integer> dataSourceToIntervalCounts = new HashMap<>();
       for (String dataSource : dataSources) {
-        storageCoordinator.retrieveUnusedSegmentIntervals(dataSource, 10_000).forEach(
+        storageCoordinator.retrieveUnusedSegmentIntervals(dataSource, MAX_INTERVALS_TO_KILL_IN_DATASOURCE).forEach(
             interval -> {
               dataSourceToIntervalCounts.merge(dataSource, 1, Integer::sum);
               killQueue.offer(new KillCandidate(dataSource, interval));
@@ -239,7 +243,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
       lastResetTime.set(DateTimes.nowUtc());
       log.info(
-          "Queued kill jobs for [%d] intervals across [%d] datasources in [%d] millis.",
+          "Queued [%d] kill jobs for [%d] datasources in [%d] millis.",
           killQueue.size(), dataSources.size(), resetDuration.millisElapsed()
       );
       dataSourceToIntervalCounts.forEach(
@@ -252,11 +256,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       emitMetric(Metric.QUEUE_RESET_TIME, resetDuration.millisElapsed(), null);
     }
     catch (Throwable t) {
-      log.error(
-          t,
-          "Failed while queueing kill jobs after [%d] millis. There are [%d] jobs in queue.",
-          resetDuration.millisElapsed(), killQueue.size()
-      );
+      log.makeAlert(t, "Error while resetting kill queue.");
     }
   }
 
@@ -294,22 +294,20 @@ public class UnusedSegmentsKiller implements OverlordDuty
           candidate.interval
       );
 
-      final Future<?> taskFuture = exec.submit(() -> runKillTask(candidate, taskId));
+      final Future<?> taskFuture = exec.submit(() -> {
+        runKillTask(candidate, taskId);
+        startNextJobInKillQueue();
+      });
       currentTaskInfo.set(new TaskInfo(taskId, taskFuture));
     }
     catch (Throwable t) {
-      log.error(
-          t,
-          "Failed while processing kill jobs. There are [%d] jobs in queue.",
-          killQueue.size()
-      );
-      startNextJobInKillQueue();
+      log.makeAlert(t, "Error while processing kill queue.");
+      currentTaskInfo.set(null);
     }
   }
 
   /**
    * Launches an embedded kill task for the given candidate.
-   * Also queues up the next task after this task has finished.
    */
   private void runKillTask(KillCandidate candidate, String taskId)
   {
@@ -340,7 +338,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, taskRunTime.millisElapsed()));
     }
     catch (Throwable t) {
-      log.error(t, "Embedded kill task[%s] failed", killTask.getId());
+      log.error(t, "Embedded kill task[%s] failed.", killTask.getId());
 
       IndexTaskUtils.setTaskStatusDimensions(metricBuilder, TaskStatus.failure(taskId, "Unknown error"));
       emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, taskRunTime.millisElapsed()));
@@ -348,7 +346,6 @@ public class UnusedSegmentsKiller implements OverlordDuty
     finally {
       cleanupLocksSilently(killTask);
       emitMetric(Metric.PROCESSED_KILL_JOBS, 1L, Map.of(DruidMetrics.DATASOURCE, candidate.dataSource));
-      startNextJobInKillQueue();
     }
   }
 
@@ -448,7 +445,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
           getDataSource(),
           getInterval(),
           getMaxUsedStatusLastUpdatedTime(),
-          1000
+          MAX_SEGMENTS_TO_KILL_IN_INTERVAL
       );
     }
 
