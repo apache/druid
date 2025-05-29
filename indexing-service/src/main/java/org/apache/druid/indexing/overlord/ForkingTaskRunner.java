@@ -735,7 +735,7 @@ public class ForkingTaskRunner
 
   public long getUsedTaskSlotCountLong()
   {
-    return getTracker().getNumUsedSlots();
+    return getWorkerUsedTaskSlotCount();
   }
 
   @Override
