@@ -40,6 +40,7 @@ import org.junit.runners.Parameterized;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -111,7 +112,7 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
                        + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t30\n"
                        + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t40\n"
                        + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t50\n";
-    MapBasedRow row = ingestAndQuery(new ByteArrayInputStream(inputRows.getBytes()));
+    MapBasedRow row = ingestAndQuery(new ByteArrayInputStream(inputRows.getBytes(StandardCharsets.UTF_8)));
     FixedBucketsHistogram histogram = (FixedBucketsHistogram) row.getRaw("index_fbh");
     Assert.assertEquals(10, histogram.getCount());
     Assert.assertEquals(10, row.getMetric("index_min").floatValue(), 0.0001);
