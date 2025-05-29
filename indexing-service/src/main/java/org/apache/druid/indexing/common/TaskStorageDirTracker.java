@@ -265,7 +265,8 @@ public class TaskStorageDirTracker
     }
   }
 
-  public synchronized long getNumUsedSlots() {
+  public synchronized long getNumUsedSlots()
+  {
     return numUsedSlots;
   }
 }
