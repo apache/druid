@@ -158,7 +158,7 @@ This sample request demonstrates the following actions:
 - This query retrieves all rows from the `wikipedia` datasource.
 - This query also filters the results where the `user` value is `BlueMoon2662`.
 - The `sqlTimeZone` context parameter sets the time zone to `America/Los_Angeles` for query results.
-- This response also set its `header`, `typesHeader`, and `sqlTypesHeader` properties as `true`.
+- The query results also include descriptors for `header`, `typesHeader`, and `sqlTypesHeader`.
 
 
 <Tabs>
