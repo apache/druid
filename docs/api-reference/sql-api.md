@@ -200,7 +200,7 @@ Content-Length: 201
 </TabItem>
 </Tabs>
 
-You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details on `SET` statements, see [SET statements](../querying/sql.md#set-statements).
+You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details, see [SET statements](../querying/sql.md#set-statements).
 
 The following functionally equivalent JSON object uses `SET` command for `sqlQueryId` directly in the query:
 
