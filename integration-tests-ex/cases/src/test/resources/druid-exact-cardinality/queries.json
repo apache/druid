@@ -36,6 +36,48 @@
     ]
   },
   {
+    "description": "Timeseries query on rolled-up columns",
+    "query": {
+      "queryType": "timeseries",
+      "dataSource": {
+        "type": "union",
+        "dataSources": [
+          "%%DATASOURCE%%-1", "%%DATASOURCE%%-2", "%%DATASOURCE%%-3",
+          "%%DATASOURCE%%-0"
+        ]
+      },
+      "intervals": ["2013-08-31/2013-09-01"],
+      "granularity": "all",
+      "aggregations": [
+        {
+          "type": "count",
+          "name": "deleted_count",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "Bitmap64ExactCardinalityBuild",
+          "name": "deleted_cardinality",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "Bitmap64ExactCardinalityMerge",
+          "name": "deleted_cardinality_from_rollup_columns",
+          "fieldName": "unique_deleted"
+        }
+      ]
+    },
+    "expectedResults": [
+      {
+        "timestamp": "2013-08-31T01:02:33.000Z",
+        "result": {
+          "deleted_count": 15,
+          "deleted_cardinality": 5,
+          "deleted_cardinality_from_rollup_columns": 5
+        }
+      }
+    ]
+  },
+  {
     "description": "Bitmap64 works on time column",
     "query": {
       "queryType": "timeseries",
