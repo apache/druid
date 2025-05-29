@@ -730,12 +730,12 @@ public class ForkingTaskRunner
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
+    return ImmutableMap.of(workerConfig.getCategory(), getUsedTaskSlotCountLong());
   }
 
   public long getUsedTaskSlotCountLong()
   {
-    return portFinder.findUsedPortCount();
+    return getTracker().getNumUsedSlots();
   }
 
   @Override
@@ -768,7 +768,7 @@ public class ForkingTaskRunner
   @Override
   public Long getWorkerUsedTaskSlotCount()
   {
-    return (long) portFinder.findUsedPortCount();
+    return getTracker().getNumUsedSlots();
   }
 
   @Override
