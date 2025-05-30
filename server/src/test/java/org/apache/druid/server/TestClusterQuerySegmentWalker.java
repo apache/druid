@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
@@ -40,8 +42,8 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.planning.ExecutionVertex;
@@ -53,6 +55,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -228,29 +231,39 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       return new NoopQueryRunner<>();
     }
 
-    return new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            factory.mergeRunners(
-                Execs.directExecutor(),
-                FunctionalIterable
-                    .create(segmentsList)
-                    .transform(
-                        segment ->
-                            new SpecificSegmentQueryRunner<>(
-                                new ReferenceCountingSegmentQueryRunner<>(
-                                    factory,
-                                    segment.getSegment(),
-                                    segmentMapFn,
-                                    segment.getDescriptor()
-                                ),
-                                new SpecificSegmentSpec(segment.getDescriptor())
-                            )
-                    )
-            ),
-            true
-        ),
-        toolChest
-    );
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
+      {
+        final Closer closer = Closer.create();
+        try {
+          QueryRunner<T> runner = new FinalizeResultsQueryRunner<>(
+              toolChest.mergeResults(
+                  factory.mergeRunners(
+                      Execs.directExecutor(),
+                      FunctionalIterable
+                          .create(segmentsList)
+                          .transform(
+                              segment ->
+                                  new SpecificSegmentQueryRunner<>(
+                                      factory.createRunner(closer.register(segmentMapFn.apply(segment.getSegment())
+                                                                                       .orElseThrow())),
+                                      new SpecificSegmentSpec(segment.getDescriptor())
+                                  )
+                          )
+                  ),
+                  true
+              ),
+              toolChest
+          );
+          return runner.run(queryPlus, responseContext).withBaggage(closer);
+        }
+        catch (Throwable e) {
+          throw CloseableUtils.closeAndWrapInCatch(e, closer);
+        }
+      }
+    };
   }
 
   private List<WindowedSegment> getSegmentsForTable(final String dataSource, final Interval interval)
