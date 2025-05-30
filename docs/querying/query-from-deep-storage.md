@@ -112,6 +112,22 @@ curl --location 'http://localhost:8888/druid/v2/sql/statements' \
     }  
 }'
 ```
+You can also use `SET` command to specify query context parameters directly in your JSON objection within the request payload. For example:
+
+```json
+{
+    "query":"SET executionMode='ASYNC'; SET selectDestination='durableStorage'; SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"
+}
+```
+This sample query with `SET` command is functionally equivalent to the context parameter example shown above for querying from deep storage:
+
+```
+curl --location 'http://localhost:8888/druid/v2/sql/statements' \
+--header 'Content-Type: application/json' \
+--data '{
+    "query":"SET executionMode='\''ASYNC'\''; SET selectDestination='\''durableStorage'\''; SELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP'\''2017-09-01'\'' AND \"__time\" <= TIMESTAMP'\''2017-09-02'\''"
+}'
+```
 
 The response for submitting a query includes the query ID along with basic information, such as when you submitted the query and the schema of the results:
 
