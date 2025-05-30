@@ -137,9 +137,8 @@ public class RestrictedDataSource implements DataSource
     }
 
     Optional<Policy> newPolicy = policyMap.getOrDefault(base.getName(), Optional.empty());
-    if (newPolicy.isEmpty()) {
+    if (newPolicy.isEmpty() || newPolicy.get() instanceof NoRestrictionPolicy) {
       // allow empty policy, which means no restriction.
-    } else if (newPolicy.get() instanceof NoRestrictionPolicy) {
       // druid-internal calls with NoRestrictionPolicy: allow
     } else if (newPolicy.get().equals(policy)) {
       // same policy: allow
