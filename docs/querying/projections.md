@@ -29,27 +29,21 @@ import TabItem from '@theme/TabItem';
 
 Projections are a type of aggregation that is computed and stored as part of a segment. The pre-aggregated data can speed up queries by reducing the number of rows that need to be processed for any query shape that matches a projection. 
 
-## Projections
+## Create a projection
 
-### Virtual columns
+A projection has three components:
 
-Virtual columns (`spec.projections.virtualColumns`) are used to compute a projection. They must exist in your datasource.
-
-### Grouping columns
-
-Grouping columns (`spec.projections.groupingColumns`) are used to group a projection. They must either already exist in your datasource or be defined in `virtualColumns`.
-
-### Aggregators
-
-Aggregators (`spec.projections.aggregators`) define the columns you want to create projections for and which aggregator to use for that column. They must either already exist in your datasource or be defined in `virtualColumns`.
+- Virtual columns (`spec.projections.virtualColumns`) that are used to compute a projection. The source data for the virtual columns must exist in your datasource.
+- Grouping columns (`spec.projections.groupingColumns`) that are used to group a projection. They must either already exist in your datasource or be defined in `virtualColumns`. The order in which you define your grouping columns equates to the order in which data is sorted in teh projection, always ascending.
+- Aggregators (`spec.projections.aggregators`) that define the columns you want to create projections for and which aggregator to use for that column. They must either already exist in your datasource or be defined in `virtualColumns`.
 
 The aggregators are what Druid attempts to match when you run a query. If an aggregator in a query matches an aggregator you defined in your projection, Druid uses it.
-
-## Create a projection
 
 You can either create a projection at ingestion time or after the datasource is created. 
 
 Note that any projection dimension you create becomes part of your datasource. To remove a projection from your datasource, you need to reingest the data. Alternatively, you can use a query context parameter to not use projections for a specific query.
+
+
 
 ### At ingestion time
 
@@ -137,6 +131,13 @@ To create a projection for an existing datasource, you must have the `druid-cata
 
 In this example, Druid aggregates data into `distinct_user`, `sum_added`, and `sum_deleted` dimensions based on the aggregator that's specified and a source dimension. These aggregations are grouped by the columns you define in `groupingColumns`.
 
+## Use a projection 
+
+Druid automatically uses a projection if your query matches a projection you've defined. There are some query context parameters that give you some control on how projections are used and Druid's behavior:
+
+- `useProjection`: The name of a projection you defined. The query engine must use that projection and will fail the query if the projection does not match the query.
+- `forceProjections` `true` or `false`. The query engine must use a projection and will fail the query if there isn't a matching projection.
+-  `noProjections`:  `true` or `false`. The query engine won't use any projections.
 
 ## Compaction
 

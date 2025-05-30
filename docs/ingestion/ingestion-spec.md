@@ -398,9 +398,9 @@ ingested. Any of Druid's standard [query filters](../querying/filters.md) can be
 
 ### Projections
 
-Projections are pre-aggregated segments that can speed up queries by reducing the number of rows that need to be processed. Use the `projectionsSpec` block to define projections for your data during ingestion or [afterwards](../querying/projections.md).
+Projections are pre-aggregated segments that can speed up queries by reducing the number of rows that need to be processed. Use the `projectionsSpec` block to define projections for your data during ingestion or [create them afterwards](../querying/projections.md#after-ingestion).
 
-Note that the projections dimension becomes part of your datasource. To remove a projection from your datasource, you need to reingest the data with the `projectionsSpec` block removed. Alternatively, you can use a query context parameter to not use projections for a specific query.
+Note that any projections you define becomes a dimension for your datasource. To remove a projection from your datasource, you need to reingest the data with the projection removed. Alternatively, you can use a query context parameter to not use projections for a specific query.
 
 ```json
 "projectionsSpec": {
