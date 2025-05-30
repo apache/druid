@@ -51,7 +51,6 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
@@ -101,7 +100,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       final RowIngestionMetersFactory rowIngestionMetersFactory)
   {
     super(
-        StringUtils.format("RabbitSupervisor-%s", spec.getDataSchema().getDataSource()),
+        spec.getId(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -142,9 +141,13 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
-  protected boolean doesTaskTypeMatchSupervisor(Task task)
+  protected boolean doesTaskMatchSupervisor(Task task)
   {
-    return task instanceof RabbitStreamIndexTask;
+    if (!(task instanceof RabbitStreamIndexTask)) {
+      return false;
+    }
+    final String supervisorId = ((RabbitStreamIndexTask) task).getSupervisorId();
+    return supervisorId.equals(spec.getId());
   }
 
   @Override
@@ -155,6 +158,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
     RabbitStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
     Map<String, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new RabbitStreamSupervisorReportPayload(
+        spec.getId(),
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
         numPartitions,
@@ -223,7 +227,9 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
           (RabbitStreamIndexTaskTuningConfig) taskTuningConfig,
           (RabbitStreamIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper));
+          sortingMapper,
+          spec.getId()
+      ));
     }
     return taskList;
   }

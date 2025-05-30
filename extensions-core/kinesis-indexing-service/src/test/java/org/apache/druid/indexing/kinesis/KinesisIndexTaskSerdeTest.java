@@ -125,6 +125,7 @@ public class KinesisIndexTaskSerdeTest
         IO_CONFIG,
         null,
         false,
+        null,
         null
     );
     ObjectMapper objectMapper = createObjectMapper();

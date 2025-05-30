@@ -2412,6 +2412,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         tuningConfig,
         ioConfig,
         context,
+        null,
         null
     );
   }
@@ -2496,7 +2497,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
         @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
         @JsonProperty("context") Map<String, Object> context,
-        @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
+        @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
+        @JsonProperty("supervisorId") @Nullable String supervisorId
     )
     {
       super(
@@ -2507,7 +2509,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
           ioConfig,
           context,
           false,
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          supervisorId
       );
     }
 

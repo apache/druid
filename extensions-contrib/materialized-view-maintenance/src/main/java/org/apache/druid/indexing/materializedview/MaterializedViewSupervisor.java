@@ -133,6 +133,7 @@ public class MaterializedViewSupervisor implements Supervisor
       DataSourceMetadata metadata = metadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
       if (null == metadata) {
         metadataStorageCoordinator.insertDataSourceMetadata(
+            supervisorId,
             dataSource,
             new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
         );
@@ -502,7 +503,7 @@ public class MaterializedViewSupervisor implements Supervisor
 
   private void commitDataSourceMetadata(DataSourceMetadata dataSourceMetadata)
   {
-    if (!metadataStorageCoordinator.insertDataSourceMetadata(dataSource, dataSourceMetadata)) {
+    if (!metadataStorageCoordinator.insertDataSourceMetadata(supervisorId, dataSource, dataSourceMetadata)) {
       try {
         metadataStorageCoordinator.resetDataSourceMetadata(
             dataSource,

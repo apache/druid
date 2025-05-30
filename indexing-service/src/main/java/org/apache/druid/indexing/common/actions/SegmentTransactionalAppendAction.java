@@ -66,25 +66,29 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Nullable
   private final DataSourceMetadata endMetadata;
   @Nullable
+  private final String supervisorId;
+  @Nullable
   private final SegmentSchemaMapping segmentSchemaMapping;
 
   public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)
   {
-    return new SegmentTransactionalAppendAction(segments, null, null, segmentSchemaMapping);
+    return new SegmentTransactionalAppendAction(null, segments, null, null, segmentSchemaMapping);
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
+      String supervisorId,
       Set<DataSegment> segments,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, segmentSchemaMapping);
+    return new SegmentTransactionalAppendAction(supervisorId, segments, startMetadata, endMetadata, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
@@ -94,12 +98,22 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     this.segments = segments;
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
+    this.supervisorId = supervisorId;
 
     if ((startMetadata == null && endMetadata != null)
         || (startMetadata != null && endMetadata == null)) {
       throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
+    } else if (startMetadata != null && supervisorId == null) {
+      throw InvalidInput.exception("supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
     }
     this.segmentSchemaMapping = segmentSchemaMapping;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getSupervisorId()
+  {
+    return supervisorId;
   }
 
   @JsonProperty
@@ -132,7 +146,9 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<>() {};
+    return new TypeReference<SegmentPublishResult>()
+    {
+    };
   }
 
   @Override
@@ -178,7 +194,8 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           startMetadata,
           endMetadata,
           taskAllocatorId,
-          segmentSchemaMapping
+          segmentSchemaMapping,
+          supervisorId
       );
     }
 
@@ -188,14 +205,14 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
-              .onValidLocks(publishAction)
-              .onInvalidLocks(
-                  () -> SegmentPublishResult.fail(
-                      "Invalid task locks. Maybe they are revoked by a higher priority task."
-                      + " Please check the overlord log for details."
-                  )
-              )
-              .build()
+                        .onValidLocks(publishAction)
+                        .onInvalidLocks(
+                            () -> SegmentPublishResult.fail(
+                                "Invalid task locks. Maybe they are revoked by a higher priority task."
+                                + " Please check the overlord log for details."
+                            )
+                        )
+                        .build()
       );
     }
     catch (Exception e) {
@@ -210,6 +227,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentTransactionalAppendAction{" +
+           "supervisorId='" + supervisorId + '\'' +
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            '}';
   }

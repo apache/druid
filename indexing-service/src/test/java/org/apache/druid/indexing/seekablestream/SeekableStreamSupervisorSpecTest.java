@@ -107,6 +107,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private SeekableStreamIndexTaskClientFactory taskClientFactory;
   private static final String STREAM = "stream";
   private static final String DATASOURCE = "testDS";
+  private static final String SUPERVISOR = "supervisor";
   private SeekableStreamSupervisorSpec spec;
   private SupervisorStateManagerConfig supervisorConfig;
 
@@ -238,7 +239,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     }
 
     @Override
-    protected boolean doesTaskTypeMatchSupervisor(Task task)
+    protected boolean doesTaskMatchSupervisor(Task task)
     {
       return true;
     }
@@ -290,6 +291,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     )
     {
       return new SeekableStreamSupervisorReportPayload<>(
+          DATASOURCE,
           DATASOURCE,
           STREAM,
           1,
@@ -410,6 +412,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     )
     {
       super(
+          id,
           ingestionSchema,
           context,
           suspended,
@@ -1202,8 +1205,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.replay(ingestionSchema);
+    EasyMock.expect(dataSchema.getDataSource()).andReturn(DATASOURCE);
+    EasyMock.replay(dataSchema);
 
     spec = new SeekableStreamSupervisorSpec(
+        null,
         ingestionSchema,
         null,
         null,
@@ -1473,9 +1479,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private void mockIngestionSchema()
   {
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(dataSchema.getDataSource()).andReturn(DATASOURCE).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
+    EasyMock.replay(dataSchema);
   }
 
   private static DataSchema getDataSchema()

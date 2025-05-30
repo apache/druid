@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -40,6 +41,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
@@ -69,7 +71,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
       @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("useListShards") boolean useListShards,
-      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
+      @JsonProperty("supervisorId") @Nullable String supervisorId
   )
   {
     super(
@@ -79,7 +82,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        supervisorId
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;

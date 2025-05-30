@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
@@ -68,6 +69,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final Map<String, Object> context;
   protected final LockGranularity lockGranularityToUse;
   protected final TaskLockType lockTypeToUse;
+  protected final String supervisorId;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
@@ -81,7 +83,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       final SeekableStreamIndexTaskTuningConfig tuningConfig,
       final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
       @Nullable final Map<String, Object> context,
-      @Nullable final String groupId
+      @Nullable final String groupId,
+      @Nullable final String supervisorId
   )
   {
     super(
@@ -101,6 +104,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
     this.lockTypeToUse = TaskLocks.determineLockTypeForAppend(getContext());
+    this.supervisorId = Preconditions.checkNotNull(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), "supervisorId");
   }
 
   protected static String getFormattedGroupId(String dataSource, String type)
@@ -124,6 +128,12 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public DataSchema getDataSchema()
   {
     return dataSchema;
+  }
+
+  @JsonProperty
+  public String getSupervisorId()
+  {
+    return supervisorId;
   }
 
   @JsonProperty
