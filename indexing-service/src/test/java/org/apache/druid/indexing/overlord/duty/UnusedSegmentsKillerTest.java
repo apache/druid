@@ -29,9 +29,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -45,7 +43,6 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -189,8 +186,8 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.QUEUE_PROCESS_TIME, 1);
     emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 10);
 
-    emitter.verifyEmitted(TaskMetrics.NUKED_SEGMENTS, 10);
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 10L);
+    emitter.verifyEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10L);
 
     emitter.verifyEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
@@ -225,7 +222,7 @@ public class UnusedSegmentsKillerTest
 
     // Verify that a single kill task has run which killed 1k segments
     emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 1);
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 1000L);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 1000L);
 
     Assert.assertEquals(
         1000,
@@ -257,7 +254,7 @@ public class UnusedSegmentsKillerTest
 
     // Verify that 10k kill tasks have run, each killing a single segment
     emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 10000);
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 10_000L);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10_000L);
 
     Assert.assertEquals(
         10_000,
@@ -366,7 +363,7 @@ public class UnusedSegmentsKillerTest
     // Verify that all unused segments are deleted from metadata store but the
     // ones with used load specs are not deleted from the deep store
     finishQueuedKillJobs();
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 10L);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10L);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 8L);
   }
 
@@ -388,7 +385,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
     emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 10);
 
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 0L);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 0L);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 0L);
   }
 
@@ -407,7 +404,7 @@ public class UnusedSegmentsKillerTest
     killer.run();
     finishQueuedKillJobs();
 
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 10L);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10L);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
   }
 
@@ -438,7 +435,7 @@ public class UnusedSegmentsKillerTest
       finishQueuedKillJobs();
 
       // Verify that unused segments from locked intervals are not killed
-      emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 5L);
+      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 5L);
       emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 5L);
       emitter.verifySum(UnusedSegmentsKiller.Metric.SKIPPED_INTERVALS, 5L);
     }
@@ -449,38 +446,8 @@ public class UnusedSegmentsKillerTest
     // Do another run to clean up the rest of the segments
     killer.run();
     finishQueuedKillJobs();
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 10L);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10L);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
-  }
-
-  @Test
-  public void test_run_killsSegmentUpdatedInFuture_ifBufferPeriodIsNegative()
-  {
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.days(1).negated());
-    initKiller();
-
-    storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
-    storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
-
-    setLastUpdatedTime(DateTimes.nowUtc().plusHours(10));
-
-    leaderSelector.becomeLeader();
-    killer.run();
-    finishQueuedKillJobs();
-
-    emitter.verifySum(TaskMetrics.NUKED_SEGMENTS, 10L);
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
-  }
-
-  private void setLastUpdatedTime(DateTime lastUpdatedTime)
-  {
-    final String sql = StringUtils.format(
-        "UPDATE %1$s SET used_status_last_updated = ?",
-        taskActionTestKit.getMetadataStorageTablesConfig().getSegmentsTable()
-    );
-    taskActionTestKit.getTestDerbyConnector().retryWithHandle(
-        handle -> handle.update(sql, lastUpdatedTime.toString())
-    );
   }
 
   private List<DataSegment> retrieveUnusedSegments(Interval interval)

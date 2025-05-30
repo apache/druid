@@ -66,6 +66,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * of a single datasource-interval.
  *
  * @see SegmentsMetadataManagerConfig to enable the cleanup
+ * @see org.apache.druid.server.coordinator.duty.KillUnusedSegments for legacy
+ * mode of killing unused segments via Coordinator duties
  */
 public class UnusedSegmentsKiller implements OverlordDuty
 {
@@ -163,11 +165,11 @@ public class UnusedSegmentsKiller implements OverlordDuty
     }
 
     updateStateIfNewLeader();
-    if (shouldResetKillQueue()) {
+    if (shouldRebuildKillQueue()) {
       // Clear the killQueue to stop further processing of already queued jobs
       killQueue.clear();
       exec.submit(() -> {
-        resetKillQueue();
+        rebuildKillQueue();
         startNextJobInKillQueue();
       });
     }
@@ -177,7 +179,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     if (taskInfo != null && !taskInfo.future.isDone()
         && taskInfo.sinceTaskStarted.hasElapsed(MAX_TASK_DURATION)) {
       log.warn(
-          "Cancelling kill task[%s] as it has been running for [%d] millis.",
+          "Cancelling kill task[%s] as it has been running for [%,d] millis.",
           taskInfo.taskId, taskInfo.sinceTaskStarted.millisElapsed()
       );
       taskInfo.future.cancel(true);
@@ -189,6 +191,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
   {
     if (isEnabled()) {
       // Check every hour that the kill queue is being processed normally
+      log.info("Scheduling is enabled to launch embedded kill tasks.");
       return new DutySchedule(Duration.standardHours(1).getMillis(), Duration.standardMinutes(1).getMillis());
     } else {
       return new DutySchedule(0, 0);
@@ -209,7 +212,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
    * Returns true if the kill queue is empty or if the queue has not been reset
    * yet or if {@code (lastResetTime + resetPeriod) < (now + 1)}.
    */
-  private boolean shouldResetKillQueue()
+  private boolean shouldRebuildKillQueue()
   {
     final DateTime now = DateTimes.nowUtc().plus(1);
 
@@ -219,15 +222,18 @@ public class UnusedSegmentsKiller implements OverlordDuty
   }
 
   /**
-   * Resets the kill queue with fresh jobs.
+   * Clears the kill queue and adds fresh jobs.
    * This method need not handle race conditions as it is always run on
    * {@link #exec} which is single-threaded.
    */
-  private void resetKillQueue()
+  private void rebuildKillQueue()
   {
     final Stopwatch resetDuration = Stopwatch.createStarted();
     try {
       killQueue.clear();
+      if (!leaderSelector.isLeader()) {
+        log.info("Not rebuilding kill queue as we are not leader anymore.");
+      }
 
       final Set<String> dataSources = storageCoordinator.retrieveAllDatasourceNames();
 
@@ -265,7 +271,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
    * {@link KillCandidate} in the {@link #killQueue}. This method returns
    * immediately.
    */
-  public void startNextJobInKillQueue()
+  private void startNextJobInKillQueue()
   {
     if (!isEnabled() || !leaderSelector.isLeader()) {
       return;
@@ -388,7 +394,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
    */
   private static class TaskInfo
   {
-    private final Stopwatch sinceTaskStarted = Stopwatch.createStarted();
+    private final Stopwatch sinceTaskStarted;
     private final String taskId;
     private final Future<?> future;
 
@@ -396,6 +402,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     {
       this.future = future;
       this.taskId = taskId;
+      this.sinceTaskStarted = Stopwatch.createStarted();
     }
   }
 
@@ -422,7 +429,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
           candidate.dataSource,
           candidate.interval,
           null,
-          Map.of(Tasks.PRIORITY_KEY, 25),
+          Map.of(Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY),
           null,
           null,
           maxUpdatedTimeOfEligibleSegment

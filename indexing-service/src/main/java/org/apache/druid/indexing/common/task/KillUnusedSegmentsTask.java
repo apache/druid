@@ -281,7 +281,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       // Nuke Segments
       taskActionClient.submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-      emitMetric(toolbox.getEmitter(), TaskMetrics.NUKED_SEGMENTS, unusedSegments.size());
+      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, unusedSegments.size());
 
       // Determine segments to be killed
       final List<DataSegment> segmentsToBeKilled
@@ -413,7 +413,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         response.getUpgradedToSegmentIds().forEach((parent, children) -> {
           if (!CollectionUtils.isNullOrEmpty(children)) {
             // Do not kill segment if its parent or any of its siblings still exist in metadata store
-            LOG.warn(
+            LOG.info(
                 "Skipping kill of segments[%s] as its load spec is also used by segment IDs[%s].",
                 parentIdToUnusedSegments.get(parent), children
             );
@@ -449,7 +449,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   {
     boolean isPresent = usedSegmentLoadSpecs.contains(segment.getLoadSpec());
     if (isPresent) {
-      LOG.warn("Skipping kill of segment[%s] as its load spec is also used by other segments.", segment);
+      LOG.info("Skipping kill of segment[%s] as its load spec is also used by other segments.", segment);
     }
     return isPresent;
   }

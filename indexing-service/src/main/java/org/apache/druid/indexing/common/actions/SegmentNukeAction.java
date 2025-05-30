@@ -73,25 +73,25 @@ public class SegmentNukeAction implements TaskAction<Void>
 
     try {
       final Set<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
-      toolbox.getTaskLockbox().doInCriticalSection(
+      int numDeletedSegments = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           intervals,
-          CriticalAction.builder().onValidLocks(
-              () -> {
-                int numDeletedSegments =
-                    toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments);
-                log.info(
-                    "Deleted [%d] segments out of requested[%d] from"
-                    + " metadata store for task[%s], datasource[%s], intervals[%s].",
-                    numDeletedSegments, segments.size(), task.getId(), task.getDataSource(), intervals
-                );
-                return numDeletedSegments;
-              }
+          CriticalAction.<Integer>builder().onValidLocks(
+              () -> toolbox.getIndexerMetadataStorageCoordinator().deleteSegments(segments)
           ).onInvalidLocks(
               () -> {
                 throw new ISE("Some locks for task[%s] are already revoked", task.getId());
               }
           ).build()
+      );
+
+      final Set<Interval> sampleIntervals = intervals.stream().limit(5).collect(Collectors.toSet());
+      log.info(
+          "Deleted [%d] segments from metadata store out of requested[%d],"
+          + " across [%d] intervals[sample=%s], for task[%s] of datasource[%s].",
+          numDeletedSegments, segments.size(),
+          intervals.size(), sampleIntervals,
+          task.getId(), task.getDataSource()
       );
     }
     catch (Exception e) {

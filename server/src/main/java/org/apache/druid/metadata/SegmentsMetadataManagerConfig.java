@@ -22,7 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.joda.time.Period;
 
@@ -54,9 +54,14 @@ public class SegmentsMetadataManagerConfig
     this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.NEVER);
     this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null));
     if (this.killUnused.isEnabled() && this.useIncrementalCache == SegmentMetadataCache.UsageMode.NEVER) {
-      throw InvalidInput.exception(
-          "Segment metadata cache must be enabled to allow killing of unused segments."
-      );
+      throw DruidException
+          .forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.INVALID_INPUT)
+          .build(
+              "Segment metadata cache must be enabled to allow killing of unused segments."
+              + " Set 'druid.manager.segments.useIncrementalCache=always'"
+              + " or 'druid.manager.segments.useIncrementalCache=ifSynced' to enable the cache."
+          );
     }
   }
 

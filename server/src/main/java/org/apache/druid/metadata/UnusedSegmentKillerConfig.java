@@ -27,7 +27,8 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 
 /**
- * Config for {@code UnusedSegmentKiller}.
+ * Config for {@code UnusedSegmentKiller}. This is used only by the Overlord.
+ * Enabling this config on the Coordinator or other services has no effect.
  */
 public class UnusedSegmentKillerConfig
 {
@@ -44,13 +45,11 @@ public class UnusedSegmentKillerConfig
   )
   {
     this.enabled = Configs.valueOrDefault(enabled, false);
-    this.bufferPeriod = Configs.valueOrDefault(bufferPeriod, Period.days(90));
+    this.bufferPeriod = Configs.valueOrDefault(bufferPeriod, Period.days(30));
   }
 
   /**
    * Period for which segments are retained even after being marked as unused.
-   * If this returns null, segments are never killed by the {@code UnusedSegmentKiller}
-   * but they might still be killed by the Coordinator.
    */
   public Period getBufferPeriod()
   {

@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.UnmodifiableIterator;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
@@ -314,7 +315,7 @@ public class SqlSegmentsMetadataQuery
       return ImmutableList.copyOf(iterator);
     }
     catch (IOException e) {
-      throw DruidException.defensive(e, "Error while reading unused segments");
+      throw InternalServerError.exception(e, "Error while reading unused segments");
     }
   }
 
