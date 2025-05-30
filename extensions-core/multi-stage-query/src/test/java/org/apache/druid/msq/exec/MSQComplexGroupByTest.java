@@ -522,7 +522,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(modifiedContext)
-                     .setExpectedResultRows(List.of(
+                     .setExpectedResultRows(Collections.singletonList(
                          new Object[]{7L}
                      ))
                      .verifyResults();
@@ -614,7 +614,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(modifiedContext)
-                     .setExpectedResultRows(List.of(
+                     .setExpectedResultRows(Collections.singletonList(
                          new Object[]{1L}
                      ))
                      .verifyResults();
