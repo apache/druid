@@ -374,8 +374,7 @@ public abstract class TuningConfigBuilder<C>
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
           maxAllowedLockCount,
-          numPersistThreads,
-          subTaskTimeoutMs
+          numPersistThreads
       );
     }
   }
@@ -416,8 +415,7 @@ public abstract class TuningConfigBuilder<C>
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
-          numPersistThreads,
-          subTaskTimeoutMs
+          numPersistThreads
       );
     }
   }

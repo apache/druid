@@ -472,6 +472,7 @@ The following parameters apply to all task types.
 |`useLineageBasedSegmentAllocation`|Enables the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to `true` to ensure data correctness.|`false` in 0.21 or earlier, `true` in 0.22 or later|
 |`lookupLoadingMode`|Controls the lookup loading behavior in tasks. This property supports three values: `ALL` mode loads all the lookups, `NONE` mode does not load any lookups and `ONLY_REQUIRED` mode loads the lookups specified with context key `lookupsToLoad`. This property must not be specified for `MSQ` and `kill` tasks as the task engine enforces `ONLY_REQUIRED` mode for `MSQWorkerTask` and `NONE` mode for `MSQControllerTask` and `kill` tasks.|`ALL`|
 |`lookupsToLoad`|List of lookup names to load in tasks. This property is required only if the `lookupLoadingMode` is set to `ONLY_REQUIRED`. For `MSQWorkerTask` type, the lookup names to load are identified by the controller task by parsing the SQL. |`null`|
+|`subTaskTimeoutMillis`|Maximum time (in milliseconds) to wait before cancelling a long-running worker task. Set to 0 for no timeout (infinite).|0 (unlimited)|
 
 ## Task logs
 
