@@ -404,42 +404,10 @@ public abstract class QueryResultPusher
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
-        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        // and encodes the string using ASCII, so 1 char is = 1 byte
-        ResponseContext.SerializationResult serializationResult;
-        try {
-          serializationResult = responseContext.serializeWith(
-              jsonMapper,
-              responseContextConfig.getMaxResponseContextHeaderSize()
-          );
-        }
-        catch (JsonProcessingException e) {
-          log.info(e, "Problem serializing to JSON!?");
-          serializationResult = new ResponseContext.SerializationResult("Could not serialize", "Could not serialize");
-        }
+        // validate the response context early to fail-fast, but don’t write it to the response yet,
+        // as additional things may still be accumulated.
+        serializeAndValidateResponseContextHeader();
 
-        if (serializationResult.isTruncated()) {
-          final String logToPrint = StringUtils.format(
-              "Response Context truncated for id [%s]. Full context is [%s].",
-              queryId,
-              serializationResult.getFullResult()
-          );
-          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
-            log.error(logToPrint);
-            throw new QueryInterruptedException(
-                new TruncatedResponseContextException(
-                    "Serialized response context exceeds the max size[%s]",
-                    responseContextConfig.getMaxResponseContextHeaderSize()
-                ),
-                selfNode.getHostAndPortToUse()
-            );
-          } else {
-            log.warn(logToPrint);
-          }
-        }
-
-        response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
         response.setContentType(contentType.toString());
 
         if (response instanceof org.eclipse.jetty.server.Response) {
@@ -466,6 +434,62 @@ public abstract class QueryResultPusher
       }
     }
 
+    /**
+     * Serializes the response context, enforcing the max header size limit.
+     * Throws {@link QueryInterruptedException} if truncation is disallowed and the context is too large.
+     * Note that this method does not set the serialized result in the final {@link #response}; use {@link #writeResponseContextHeader()}
+     * for that.
+     */
+    private ResponseContext.SerializationResult serializeAndValidateResponseContextHeader()
+    {
+      try {
+        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+        // and encodes the string using ASCII, so 1 char is = 1 byte
+        final ResponseContext.SerializationResult result = responseContext.serializeWith(
+            jsonMapper,
+            responseContextConfig.getMaxResponseContextHeaderSize()
+        );
+
+        if (result.isTruncated()) {
+          final String logToPrint = StringUtils.format(
+              "Response Context truncated for id [%s]. Full context is [%s].",
+              queryId,
+              result.getFullResult()
+          );
+
+          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
+            log.error(logToPrint);
+            throw new QueryInterruptedException(
+                new TruncatedResponseContextException(
+                    "Serialized response context exceeds the max size[%s]",
+                    responseContextConfig.getMaxResponseContextHeaderSize()
+                ),
+                selfNode.getHostAndPortToUse()
+            );
+          } else {
+            log.warn(logToPrint);
+          }
+        }
+
+        return result;
+      }
+      catch (JsonProcessingException e) {
+        log.warn(e, "Problem serializing response context for validation");
+        return new ResponseContext.SerializationResult("Could not serialize", "Could not serialize");
+      }
+    }
+
+    /**
+     * Serializes the response context header and sets it in the final {@link #response} header.
+     * Typically called at the end of query processing, e.g., in {@link #flush()}.
+     */
+    private void writeResponseContextHeader()
+    {
+      final ResponseContext.SerializationResult serializationResult = serializeAndValidateResponseContextHeader();
+      response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
+    }
+
     @Override
     @Nullable
     public Response accumulate(Response retVal, Object in)
@@ -489,6 +513,8 @@ public abstract class QueryResultPusher
       if (!initialized) {
         initialize();
       }
+
+      writeResponseContextHeader();
       writer.writeResponseEnd();
     }
 
