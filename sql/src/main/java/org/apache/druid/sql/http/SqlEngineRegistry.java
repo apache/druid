@@ -19,23 +19,39 @@
 
 package org.apache.druid.sql.http;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.multibindings.Multibinder;
-import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.LazySingleton;
+import com.google.inject.Inject;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
-/**
- * The Module responsible for providing bindings to the SQL http endpoint
- */
-public class SqlHttpModule implements Module
+import javax.validation.constraints.NotNull;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class SqlEngineRegistry
 {
-  @Override
-  public void configure(Binder binder)
+
+  private final Map<String, SqlEngine> engines;
+
+  @Inject
+  public SqlEngineRegistry(Set<SqlEngine> engineSet)
   {
-    binder.bind(SqlResource.class).in(LazySingleton.class);
-    Multibinder.newSetBinder(binder, SqlEngine.class);
-    Jerseys.addResource(binder, SqlResource.class);
+    engines = engineSet.stream().collect(Collectors.toMap(SqlEngine::name, engine -> engine));
+  }
+
+  @NotNull
+  public SqlEngine getEngine(final String engineName)
+  {
+    SqlEngine engine = engines.getOrDefault(engineName == null ? QueryContexts.DEFAULT_ENGINE : engineName, null);
+    if (engine == null) {
+      throw new BadRequestException("Unsupported engine");
+    }
+    return engine;
+  }
+
+  public Set<String> getSupportedEngines()
+  {
+    return engines.keySet();
   }
 }

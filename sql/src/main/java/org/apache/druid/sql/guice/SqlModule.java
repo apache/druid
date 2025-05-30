@@ -26,7 +26,7 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.multibindings.MapBinder;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -128,10 +128,10 @@ public class SqlModule implements Module
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
 
     // Bind the engine
-    MapBinder.newMapBinder(binder, String.class, SqlEngine.class)
-             .addBinding(NativeSqlEngine.NAME)
-             .to(NativeSqlEngine.class)
-             .in(LazySingleton.class);
+    Multibinder.newSetBinder(binder, SqlEngine.class)
+               .addBinding()
+               .to(NativeSqlEngine.class)
+               .in(LazySingleton.class);
   }
 
   private boolean isEnabled()

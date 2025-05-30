@@ -25,7 +25,7 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.multibindings.MapBinder;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -97,10 +97,10 @@ public class DartControllerModule implements DruidModule
       binder.bind(ResourcePermissionMapper.class)
             .annotatedWith(Dart.class)
             .to(DartResourcePermissionMapper.class);
-      MapBinder.newMapBinder(binder, String.class, SqlEngine.class)
-               .addBinding(DartSqlEngine.NAME)
-               .to(DartSqlEngine.class)
-               .in(LazySingleton.class);
+      Multibinder.newSetBinder(binder, SqlEngine.class)
+                 .addBinding()
+                 .to(DartSqlEngine.class)
+                 .in(LazySingleton.class);
     }
 
     @Provides

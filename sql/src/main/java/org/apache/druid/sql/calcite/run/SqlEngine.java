@@ -123,8 +123,14 @@ public interface SqlEngine
   {
   }
 
+  /**
+   * Returns a {@link SqlStatementFactory} which uses this engine to create statements.
+   */
   SqlStatementFactory getSqlStatementFactory();
 
+  /**
+   * Returns a list of {@link QueryInfo} containing the currently running queries using this engine.
+   */
   default List<QueryInfo> getRunningQueries(
       boolean selfOnly,
       AuthenticationResult authenticationResult,
@@ -134,6 +140,9 @@ public interface SqlEngine
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Cancels a currently running query given the {@link PlannerContext} for the query.
+   */
   default void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
     throw new UnsupportedOperationException();

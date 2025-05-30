@@ -84,6 +84,7 @@ import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.sql.http.SupportedEnginesResponse;
@@ -260,7 +261,7 @@ public class DartSqlResourceTest extends MSQTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         new ServerConfig() /* currently only used for error transform strategy */,
         lifecycleManager,
-        Map.of(DartSqlEngine.NAME, engine),
+        new SqlEngineRegistry(Set.of(engine)),
         ResponseContextConfig.newConfig(false),
         SELF_NODE
     );

@@ -62,18 +62,6 @@ public class GetQueriesResponseTest
     Assertions.assertEquals(response, response2);
   }
 
-  public static List<? extends Module> getJacksonModules()
-  {
-    return Collections.<com.fasterxml.jackson.databind.Module>singletonList(
-        new SimpleModule("DartModule").registerSubtypes(
-            new NamedType(
-                TestQueryInfo.class,
-                "test"
-            )
-        )
-    );
-  }
-
   @Test
   public void test_equals()
   {
@@ -136,5 +124,17 @@ public class GetQueriesResponseTest
     {
       return Objects.hash(query, identity, authenticator);
     }
+  }
+
+  private static List<? extends Module> getJacksonModules()
+  {
+    return Collections.<com.fasterxml.jackson.databind.Module>singletonList(
+        new SimpleModule("TestModule").registerSubtypes(
+            new NamedType(
+                TestQueryInfo.class,
+                "test"
+            )
+        )
+    );
   }
 }

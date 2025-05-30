@@ -110,7 +110,7 @@ public class DartSqlClientImplTest
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/queries?engine=msq-dart&selfOnly"),
+        new RequestBuilder(HttpMethod.GET, StringUtils.format("/queries?engine=%s&selfOnly", DartSqlEngine.NAME)),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(getQueriesResponse)

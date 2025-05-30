@@ -27,7 +27,6 @@ import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryResource;
@@ -35,7 +34,6 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -52,7 +50,6 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -91,7 +88,7 @@ public class SqlResource
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
   private final SqlLifecycleManager sqlLifecycleManager;
-  private final Map<String, SqlEngine> engines;
+  private final SqlEngineRegistry sqlEngineRegistry;
 
   @VisibleForTesting
   @Inject
@@ -100,12 +97,12 @@ public class SqlResource
       final AuthorizerMapper authorizerMapper,
       final ServerConfig serverConfig,
       final SqlLifecycleManager sqlLifecycleManager,
-      final Map<String, SqlEngine> engines,
+      final SqlEngineRegistry sqlEngineRegistry,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode
   )
   {
-    this.engines = engines;
+    this.sqlEngineRegistry = Preconditions.checkNotNull(sqlEngineRegistry, "sqlEngineRegistry");
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
@@ -120,7 +117,7 @@ public class SqlResource
   public Response getSupportedEngines(@Context final HttpServletRequest request)
   {
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
-    return Response.ok(new SupportedEnginesResponse(engines.keySet())).build();
+    return Response.ok(new SupportedEnginesResponse(sqlEngineRegistry.getSupportedEngines())).build();
   }
 
   /**
@@ -146,7 +143,7 @@ public class SqlResource
         authorizerMapper
     );
 
-    final SqlEngine sqlEngine = getEngine(engine);
+    final SqlEngine sqlEngine = sqlEngineRegistry.getEngine(engine);
     final List<QueryInfo> queries = sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess);
 
 
@@ -164,7 +161,7 @@ public class SqlResource
   )
   {
     final String engineName = sqlQuery.queryContext().getEngine();
-    final SqlEngine engine = getEngine(engineName);
+    final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
     final HttpStatement stmt = engine.getSqlStatementFactory().httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
@@ -205,16 +202,6 @@ public class SqlResource
     } else {
       return Response.status(Status.FORBIDDEN).build();
     }
-  }
-
-  @NotNull
-  private SqlEngine getEngine(final String engineName)
-  {
-    SqlEngine engine = engines.getOrDefault(engineName == null ? QueryContexts.DEFAULT_ENGINE : engineName, null);
-    if (engine == null) {
-      throw new BadRequestException("Unsupported engine");
-    }
-    return engine;
   }
 
   /**
