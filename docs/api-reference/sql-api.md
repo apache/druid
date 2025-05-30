@@ -157,8 +157,8 @@ If you detect a truncated response, treat it as an error.
 This sample request demonstrates the following actions:
 - This query retrieves all rows from the `wikipedia` datasource.
 - This query also filters the results where the `user` value is `BlueMoon2662`.
-- The `sqlTimeZone` context parameter sets the query's time zone to `America/Los_Angeles`
-- This response also set its `header`, `typesHeader`, and `sqlTypesHeader` properties as `true`.
+- The `sqlTimeZone` context parameter sets the time zone to `America/Los_Angeles` for query results.
+- The query results also include descriptors for `header`, `typesHeader`, and `sqlTypesHeader`.
 
 
 <Tabs>
@@ -200,9 +200,9 @@ Content-Length: 201
 </TabItem>
 </Tabs>
 
-You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details on `SET` statements, see [SET statements](../querying/sql.md#set-statements).
+You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details, see [SET statements](../querying/sql.md#set-statements).
 
-The following functionally equivalent JSON object uses `SET` command for `sqlQueryId` directly in the query:
+The following request body is functionally equivalent to the previous example and uses SET instead of the `context` parameter:
 
 ```JSON
 [
