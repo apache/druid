@@ -1,6 +1,30 @@
 # Apache Druid MCP Server
 
+[![npm version](https://badge.fury.io/js/apache-druid-mcp.svg)](https://www.npmjs.com/package/apache-druid-mcp)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+
 A Model Context Protocol (MCP) server that provides tools and resources for querying and managing Apache Druid datasources. This server enables AI assistants to interact with Apache Druid clusters through a standardized interface.
+
+## 📚 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [🚀 Quick Start](./QUICK_START.md) | Get connected in minutes! |
+| [🔧 Integration Guide](./INTEGRATION_GUIDE.md) | Detailed setup for all clients |
+| [🐳 Docker Setup](./INTEGRATION_GUIDE.md#-docker-deployment) | Containerized deployment |
+| [☸️ Kubernetes](./INTEGRATION_GUIDE.md#️-kubernetes-deployment) | K8s deployment guides |
+
+## 📋 Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Client Integration](#client-integration)
+- [Configuration](#configuration)
+- [API Examples](#api-examples)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
@@ -19,10 +43,15 @@ A Model Context Protocol (MCP) server that provides tools and resources for quer
 
 ## Installation
 
+### From npm (Recommended)
+```bash
+npm install -g apache-druid-mcp
+```
+
 ### From source
 ```bash
 # Clone the repository
-git clone https://github.com/apache/druid.git
+git clone https://github.com/AnilPuram/druid.git
 cd druid/mcp-server
 
 # Install dependencies
@@ -79,9 +108,135 @@ DRUID_PASSWORD=secret \
 apache-druid-mcp
 ```
 
-### Integration with AI Assistants
+## Client Integration
 
-The server implements the Model Context Protocol, making it compatible with AI assistants that support MCP. Configure your AI assistant to connect to this server to enable Druid querying capabilities.
+The server implements the Model Context Protocol, making it compatible with various AI assistants and development tools. Here's how to connect it to different clients:
+
+### 🖥️ Claude Desktop
+
+1. **Install the MCP server globally:**
+   ```bash
+   npm install -g apache-druid-mcp
+   ```
+
+2. **Configure Claude Desktop** by editing your MCP settings file:
+
+   **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   **Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
+
+   ```json
+   {
+     "mcpServers": {
+       "apache-druid": {
+         "command": "apache-druid-mcp",
+         "env": {
+           "DRUID_URL": "http://localhost:8888",
+           "DRUID_USERNAME": "your-username",
+           "DRUID_PASSWORD": "your-password"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Restart Claude Desktop** to load the new configuration.
+
+### 🔧 VS Code with Continue
+
+1. **Install the MCP server:**
+   ```bash
+   npm install -g apache-druid-mcp
+   ```
+
+2. **Install the Continue extension** in VS Code.
+
+3. **Configure Continue** by editing `~/.continue/config.json`:
+   ```json
+   {
+     "models": [...],
+     "mcpServers": [
+       {
+         "name": "apache-druid",
+         "command": "apache-druid-mcp",
+         "env": {
+           "DRUID_URL": "http://localhost:8888"
+         }
+       }
+     ]
+   }
+   ```
+
+4. **Restart VS Code** to apply the configuration.
+
+### 🌐 Any MCP-Compatible Client
+
+For other MCP-compatible clients, use these connection details:
+
+**Command:** `apache-druid-mcp`
+**Transport:** stdio
+**Environment Variables:**
+- `DRUID_URL`: Your Druid broker URL
+- `DRUID_USERNAME`: Optional authentication username
+- `DRUID_PASSWORD`: Optional authentication password
+- `DRUID_TIMEOUT`: Request timeout in milliseconds (default: 30000)
+
+### 🐳 Docker Integration
+
+Run the MCP server in Docker:
+
+```bash
+# Build the image
+docker build -t apache-druid-mcp .
+
+# Run with environment variables
+docker run -e DRUID_URL=http://your-druid:8888 apache-druid-mcp
+```
+
+### 🔧 Development Integration
+
+For development environments, you can run the server directly:
+
+```bash
+# Set environment variables
+export DRUID_URL=http://localhost:8888
+export DRUID_USERNAME=admin
+export DRUID_PASSWORD=secret
+
+# Run the server
+apache-druid-mcp
+```
+
+### ⚙️ Configuration Examples
+
+**Local Development:**
+```json
+{
+  "env": {
+    "DRUID_URL": "http://localhost:8888"
+  }
+}
+```
+
+**Production with Authentication:**
+```json
+{
+  "env": {
+    "DRUID_URL": "https://druid.company.com:8888",
+    "DRUID_USERNAME": "mcp-user",
+    "DRUID_PASSWORD": "secure-password",
+    "DRUID_TIMEOUT": "60000"
+  }
+}
+```
+
+**Docker/Kubernetes Environment:**
+```json
+{
+  "env": {
+    "DRUID_URL": "http://druid-broker.druid-namespace.svc.cluster.local:8888"
+  }
+}
+```
 
 ## API Examples
 
@@ -181,17 +336,67 @@ The server provides comprehensive error handling:
 - Request timeout limits to prevent resource exhaustion
 - Input validation on all query parameters
 
-## Contributing
+## 🤝 Contributing
 
-This MCP server is part of the Apache Druid project. Please refer to the main Druid repository for contribution guidelines.
+We welcome contributions! Here's how you can help:
 
-## License
+### 🐛 Reporting Issues
+- Check [existing issues](https://github.com/AnilPuram/druid/issues) first
+- Use the issue template when creating new issues
+- Include reproduction steps and environment details
 
-Apache License 2.0 - see the LICENSE file for details.
+### 💻 Development Setup
+```bash
+# Fork and clone the repository
+git clone https://github.com/your-username/druid.git
+cd druid/mcp-server
 
-## Related Links
+# Install dependencies
+npm install
 
-- [Apache Druid](https://druid.apache.org/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Druid SQL Documentation](https://druid.apache.org/docs/latest/querying/sql.html)
-- [Druid Native Queries](https://druid.apache.org/docs/latest/querying/querying.html)
+# Run in development mode
+npm run dev
+
+# Run tests and linting
+npm run type-check
+npm run lint
+```
+
+### 🔄 Pull Requests
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Ensure all checks pass: `npm run build && npm run type-check && npm run lint`
+5. Commit with clear messages
+6. Push and create a Pull Request
+
+### 📝 Documentation
+- Update README.md for new features
+- Add examples to INTEGRATION_GUIDE.md
+- Update QUICK_START.md for setup changes
+
+## 📄 License
+
+Apache License 2.0 - see the [LICENSE](./LICENSE) file for details.
+
+## 🔗 Related Links
+
+- [📦 npm Package](https://www.npmjs.com/package/apache-druid-mcp)
+- [🐙 GitHub Repository](https://github.com/AnilPuram/druid)
+- [🔧 Apache Druid](https://druid.apache.org/)
+- [🤖 Model Context Protocol](https://modelcontextprotocol.io/)
+- [📖 Druid SQL Documentation](https://druid.apache.org/docs/latest/querying/sql.html)
+- [🛠️ Druid Native Queries](https://druid.apache.org/docs/latest/querying/querying.html)
+
+## ⭐ Support
+
+If this project helps you, please consider:
+- ⭐ Starring the repository
+- 🐛 Reporting issues you encounter
+- 💡 Suggesting new features
+- 📖 Improving documentation
+- 🤝 Contributing code
+
+---
+
+**Made with ❤️ for the Apache Druid and AI community**
