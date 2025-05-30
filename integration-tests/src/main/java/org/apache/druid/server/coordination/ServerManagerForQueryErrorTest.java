@@ -178,10 +178,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                                 throw new QueryTimeoutException("query timeout test");
                               }
                             };
-                          } else if (queryContext.getBoolean(
-                              QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY,
-                              false
-                          )) {
+                          } else if (queryContext.getBoolean(QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY, false)) {
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
@@ -191,7 +188,8 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               )
                               {
                                 throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
-                                    "query capacity exceeded test");
+                                    "query capacity exceeded test"
+                                );
                               }
 
                               @Override
@@ -201,13 +199,11 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               )
                               {
                                 throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
-                                    "query capacity exceeded test");
+                                    "query capacity exceeded test"
+                                );
                               }
                             };
-                          } else if (queryContext.getBoolean(
-                              QUERY_UNSUPPORTED_TEST_CONTEXT_KEY,
-                              false
-                          )) {
+                          } else if (queryContext.getBoolean(QUERY_UNSUPPORTED_TEST_CONTEXT_KEY, false)) {
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
@@ -228,10 +224,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                                 throw new QueryUnsupportedException("query unsupported test");
                               }
                             };
-                          } else if (queryContext.getBoolean(
-                              RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY,
-                              false
-                          )) {
+                          } else if (queryContext.getBoolean(RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY, false)) {
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
@@ -277,7 +270,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
 
                           return buildQueryRunnerForSegment(
                               ref.getSegmentDescriptor(),
-                              closer.register(segment),
+                              segment,
                               factory,
                               toolChest,
                               cpuTimeAccumulator,

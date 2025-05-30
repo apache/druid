@@ -251,7 +251,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                           }
                           return buildQueryRunnerForSegment(
                               ref.getSegmentDescriptor(),
-                              closer.register(segment),
+                              segment,
                               factory,
                               toolChest,
                               cpuTimeAccumulator,
