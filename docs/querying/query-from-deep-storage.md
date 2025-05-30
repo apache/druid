@@ -149,7 +149,7 @@ However, if you submit the same query as a JSON payload to the **`/druid/v2/sql/
 }
 ```
 
-You'll receive an error message: "Execution mode is not provided to the SQL statement API. Please set [executionMode] to [ASYNC] in the query context." This is because `executionMode` isn't a parameter you can set within the SQL query itself for this API. Instead, you must define it in the request's top-level `context`.
+You'll receive an error message: "Execution mode is not provided to the SQL statement API. Please set `executionMode` to `ASYNC` in the query context." This is because `executionMode` isn't a parameter you can set within the SQL query itself for this API. Instead, you must define it in the request's top-level `context`.
 
 
 ### Get query status
