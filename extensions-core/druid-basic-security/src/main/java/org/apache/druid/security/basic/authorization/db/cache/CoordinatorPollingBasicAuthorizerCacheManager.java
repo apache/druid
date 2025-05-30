@@ -135,6 +135,10 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               }
               LOG.debug("Scheduled userMap cache poll is done");
             }
+            catch (InterruptedException e)
+            {
+              LOG.noStackTrace().warn(e, "Interrupted while polling Coordinator for cachedUserMaps.");
+            }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
@@ -161,6 +165,9 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               }
               LOG.debug("Scheduled groupMappingMap cache poll is done");
             }
+            catch (InterruptedException e) {
+              LOG.noStackTrace().warn(e, "Interrupted while polling Coordinator for cachedGroupMappingMaps.");
+            }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occurred while polling for cachedGroupMappingMaps.").emit();
             }
@@ -183,7 +190,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     }
 
     LOG.info("CoordinatorPollingBasicAuthorizerCacheManager is stopping.");
-    exec.shutdown();
+    exec.shutdownNow();
     LOG.info("CoordinatorPollingBasicAuthorizerCacheManager is stopped.");
   }
 
