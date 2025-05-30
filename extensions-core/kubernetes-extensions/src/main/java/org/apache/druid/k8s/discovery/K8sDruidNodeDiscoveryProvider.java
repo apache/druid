@@ -97,7 +97,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
     return () -> k8sApiClient.listPods(
         podInfo.getPodNamespace(),
         K8sDruidNodeAnnouncer.getLabelSelectorForNode(discoveryConfig, nodeRole, node),
-        nodeRole
+        nodeRole, discoveryConfig.getIgnoreTerminatingStateDuration()
     ).getDruidNodes().containsKey(node.getHostAndPortToUse());
   }
 
@@ -223,9 +223,35 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         return;
       }
 
+      // Create a scheduled executor for polling the pod list
+      ScheduledExecutorService periodicListExecutor = Execs.scheduledSingleThreaded(
+          "K8sDruidNodeDiscoveryProvider-PeriodicList-" + nodeRole.getJsonName()
+      );
+
+      periodicListExecutor.scheduleAtFixedRate(() -> {
+        try {
+          LOGGER.info("Performing periodic pod listing for NodeRole [%s]", nodeRole);
+          DiscoveryDruidNodeList list = k8sApiClient.listPods(
+              podInfo.getPodNamespace(),
+              labelSelector,
+              nodeRole,
+              discoveryConfig.getIgnoreTerminatingStateDuration()
+          );
+          baseNodeRoleWatcher.resetNodes(list.getDruidNodes());
+        }
+        catch (Throwable ex) {
+          LOGGER.error(ex, "Error during periodic pod listing for NodeRole [%s]", nodeRole);
+        }
+      }, 120000, discoveryConfig.getPollDuration().getMillis(), TimeUnit.MILLISECONDS);
+
       while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
         try {
-          DiscoveryDruidNodeList list = k8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, nodeRole);
+          DiscoveryDruidNodeList list = k8sApiClient.listPods(
+              podInfo.getPodNamespace(),
+              labelSelector,
+              nodeRole,
+              discoveryConfig.getIgnoreTerminatingStateDuration()
+          );
           baseNodeRoleWatcher.resetNodes(list.getDruidNodes());
 
           if (!cacheInitialized) {
@@ -247,6 +273,8 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
       }
 
       LOGGER.info("Exited Watch for role[%s].", nodeRole);
+      // Shutdown the periodic executor when the watch is stopped
+      periodicListExecutor.shutdownNow();
     }
 
     private void keepWatching(String labelSelector, String resourceVersion)

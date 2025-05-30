@@ -36,6 +36,9 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -52,6 +55,9 @@ public class DefaultK8sApiClient implements K8sApiClient
   private final ApiClient realK8sClient;
   private final CoreV1Api coreV1Api;
   private final ObjectMapper jsonMapper;
+
+  private static final long DEFAULT_TERMINATION_GRACE_PERIOD_MS = 30 * 1000L;
+  private static final long DEFAULT_IGNORE_TERMINATING_STATE_DURATION_MS = 30 * 1000L;
 
   @Inject
   public DefaultK8sApiClient(ApiClient realK8sClient, @Json ObjectMapper jsonMapper)
@@ -76,7 +82,8 @@ public class DefaultK8sApiClient implements K8sApiClient
   public DiscoveryDruidNodeList listPods(
       String podNamespace,
       String labelSelector,
-      NodeRole nodeRole
+      NodeRole nodeRole,
+      @Nullable Duration ignoreTerminatingStateDuration
   )
   {
     try {
@@ -85,6 +92,10 @@ public class DefaultK8sApiClient implements K8sApiClient
 
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
       for (V1Pod podDef : podList.getItems()) {
+        if (shouldSkipTerminatingPod(podDef, ignoreTerminatingStateDuration)) {
+          continue;
+        }
+
         DiscoveryDruidNode node = getDiscoveryDruidNodeFromPodDef(nodeRole, podDef);
         allNodes.put(node.getDruidNode().getHostAndPortToUse(), node);
       }
@@ -93,6 +104,31 @@ public class DefaultK8sApiClient implements K8sApiClient
     catch (ApiException ex) {
       throw new RE(ex, "Expection in listing pods, code[%d] and error[%s].", ex.getCode(), ex.getResponseBody());
     }
+  }
+
+  private boolean shouldSkipTerminatingPod(V1Pod podDef, @Nullable Duration ignoreTerminatingStateDuration)
+  {
+    if (podDef.getMetadata() == null || podDef.getMetadata().getDeletionTimestamp() == null) {
+      return false;
+    }
+
+    long terminationGracePeriod = podDef.getSpec().getTerminationGracePeriodSeconds() != null ? 
+        podDef.getSpec().getTerminationGracePeriodSeconds() * 1000L : DEFAULT_TERMINATION_GRACE_PERIOD_MS;
+    long timeInTermination = System.currentTimeMillis() -
+            podDef.getMetadata().getDeletionTimestamp().toInstant().toEpochMilli() + terminationGracePeriod;
+    long checkDuration = ignoreTerminatingStateDuration != null ?
+        ignoreTerminatingStateDuration.getMillis() : DEFAULT_IGNORE_TERMINATING_STATE_DURATION_MS;
+
+    if (timeInTermination > checkDuration) {
+      LOGGER.info(
+          "Skipping pod %s/%s from discovery as it has been in terminating state for more than %d seconds",
+          podDef.getMetadata().getNamespace(),
+          podDef.getMetadata().getName(),
+          checkDuration / 1000
+      );
+      return true;
+    }
+    return false;
   }
 
   private DiscoveryDruidNode getDiscoveryDruidNodeFromPodDef(NodeRole nodeRole, V1Pod podDef)
