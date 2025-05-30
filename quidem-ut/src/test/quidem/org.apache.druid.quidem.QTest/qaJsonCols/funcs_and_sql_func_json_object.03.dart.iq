@@ -1,0 +1,674 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A100
+#-------------------------------------------------------------------------
+SELECT json_object('a':c_empty_obj_nested) c
+FROM test_json_cols;
++-----------------------------------+
+| c                                 |
++-----------------------------------+
+| {"a":null}                        |
+| {"a":null}                        |
+| {"a":{"o1":{},"o2":[],"o3":null}} |
+| {"a":{"o1":{},"o2":[],"o3":null}} |
++-----------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A101
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value c_empty_array_nested) c
+FROM test_json_cols;
++--------------------+
+| c                  |
++--------------------+
+| {"a":[{},[],null]} |
+| {"a":[{},[],null]} |
+| {"a":null}         |
+| {"a":null}         |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A102
+#-------------------------------------------------------------------------
+SELECT json_object('a':c_empty_array_nested) c
+FROM test_json_cols;
++--------------------+
+| c                  |
++--------------------+
+| {"a":[{},[],null]} |
+| {"a":[{},[],null]} |
+| {"a":null}         |
+| {"a":null}         |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A103
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value c1) c
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A104
+#-------------------------------------------------------------------------
+SELECT json_object('a':c1) c
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A105
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_query(c1, '$.a_array[0].a_obj')) c
+FROM test_json_cols;
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                        |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":null}                                                                                                                                                                                               |
+| {"a":null}                                                                                                                                                                                               |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A106
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_query(c1, '$.a_array[0].a_obj')) c
+FROM test_json_cols;
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                        |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":null}                                                                                                                                                                                               |
+| {"a":null}                                                                                                                                                                                               |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}} |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A107
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value json_object(KEY 'b' value 'B')) c
+FROM test_json_cols;
++-----------------+
+| c               |
++-----------------+
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
++-----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A108
+#-------------------------------------------------------------------------
+SELECT json_object('a':json_object(KEY 'b' value 'B')) c
+FROM test_json_cols;
++-----------------+
+| c               |
++-----------------+
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
+| {"a":{"b":"B"}} |
++-----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A109
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object(KEY 'a' value c1) IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A110
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object('a':c1) IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A111
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object(KEY 'a' value c1) IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A112
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object('a':c1) IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A113
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object(KEY 'a' value c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A114
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object('a':c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A115
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL json_object(KEY 'a' value c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A116
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL json_object('a':c1)
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A117
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_object(KEY 'a' value c1) mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A118
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_object('a':c1) mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A119
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT DISTINCT json_object(KEY 'a' value c1) c
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A120
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT DISTINCT json_object('a':c1) c
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A121
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object(KEY 'a' value c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A122
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_object('a':c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A123
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT c1,
+          json_object(KEY 'a' value c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A124
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT c1,
+          json_object('a':c1) mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A125
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object(KEY 'a' value c1) = json_object(KEY 'a' value c1);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A126
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_object('a':c1) = json_object('a':c1);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A127
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_object(KEY 'a' value t1.c1)=json_object(KEY 'a' value t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A128
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_object('a':t1.c1)=json_object('a':t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A129
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_object(KEY 'a' value t1.c1)=json_object(KEY 'a' value t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A130
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_object('a':t1.c1)=json_object('a':t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A131
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_object(KEY 'a' value t1.c1)=json_object(KEY 'a' value t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A132
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_object('a':t1.c1)=json_object('a':t2.c1);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A133
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+ORDER BY __time;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A134
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+ORDER BY __time;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A135
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+LIMIT 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A136
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+LIMIT 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
++-----------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A137
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+OFFSET 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A138
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+OFFSET 1;
++-----------+
+| c         |
++-----------+
+| {"a":"b"} |
+| {"a":"b"} |
+| {"a":"b"} |
++-----------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A139
+#-------------------------------------------------------------------------
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols
+UNION ALL
+SELECT json_object(KEY 'a' value 'b') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A140
+#-------------------------------------------------------------------------
+SELECT json_object('a':'b') c
+FROM test_json_cols
+UNION ALL
+SELECT json_object('a':'b') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A141
+#-------------------------------------------------------------------------
+
+SELECT json_object(KEY 'a' value c1)
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| EXPR$0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[JSON_OBJECT(FLAG(NULL_ON_NULL), 'a', $10)])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_object TEST_ID: A142
+#-------------------------------------------------------------------------
+
+SELECT json_object('a':c1)
+FROM test_json_cols;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| EXPR$0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null],"a_obj":{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},"a_array":[{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]},{"a_str":"A","a_num_int":1,"a_num_float":0.1,"a_bool":true,"a_null":null,"a_empty_obj":{},"a_empty_array":[],"a_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"a_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
+| {"a":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null],"b_obj":{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},"b_array":[{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]},{"b_str":"A","b_num_int":1,"b_num_float":0.1,"b_bool":true,"b_null":null,"b_empty_obj":{},"b_empty_array":[],"b_empty_obj_nested":{"o1":{},"o2":[],"o3":null},"b_empty_array_nested":[{},[],null]}]}]}} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[JSON_OBJECT(FLAG(NULL_ON_NULL), 'a', $10)])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+

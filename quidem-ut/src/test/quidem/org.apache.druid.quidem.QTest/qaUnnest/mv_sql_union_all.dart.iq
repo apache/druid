@@ -1,0 +1,259 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A1_B1
+#-------------------------------------------------------------------------
+SELECT c_long,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    999)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c_long IN (2,
+                    999));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A1_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A2_B1
+#-------------------------------------------------------------------------
+SELECT c_long,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    999)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num)) AS u(c)
+   WHERE c_long IN (2,
+                    999));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A2_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num)) AS u(c)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num)) AS u(c));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A3_B1
+#-------------------------------------------------------------------------
+SELECT c_long,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    999)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (2,
+                    999));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A3_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_val)) AS u(c)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_val)) AS u(c));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A4_B1
+#-------------------------------------------------------------------------
+SELECT c_long,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    999)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (2,
+                    999));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A4_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A5_B1
+#-------------------------------------------------------------------------
+SELECT c_long,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    999)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+   WHERE c_long IN (2,
+                    999));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A5_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A6_B1
+#-------------------------------------------------------------------------
+SELECT c_long,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    999)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+   WHERE c_long IN (2,
+                    999));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A6_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A7_B1
+#-------------------------------------------------------------------------
+SELECT c_long,
+       c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    999)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (2,
+                    999));
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A7_B2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   UNION ALL SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c));
+QueryInterruptedException
+!error
+

@@ -1,0 +1,523 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A1_B1
+#-------------------------------------------------------------------------
+
+SELECT a_bool
+FROM test_array;
++--------------+
+| a_bool       |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_bool=[$1])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A4_B1
+#-------------------------------------------------------------------------
+
+SELECT a_int
+FROM test_array;
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_int=[$2])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A5_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array)
+FROM test_array;
++--------------+
+| EXPR$0       |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_BIGINT($8, '$[1]')):BIGINT ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A6_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array)
+FROM test_array;
++--------------+
+| EXPR$0       |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_BIGINT($8, '$[7][1]')):BIGINT ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A7_B1
+#-------------------------------------------------------------------------
+
+SELECT a_float
+FROM test_array;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_float=[$3])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A8_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array)
+FROM test_array;
++------------------+
+| EXPR$0           |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_DOUBLE($8, '$[2]')):DECIMAL(19, 0) ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A9_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array)
+FROM test_array;
++------------------+
+| EXPR$0           |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_DOUBLE($8, '$[7][2]')):DECIMAL(19, 0) ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A10_B1
+#-------------------------------------------------------------------------
+
+SELECT a_str
+FROM test_array;
++----------------+
+| a_str          |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_str=[$4])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A11_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array)
+FROM test_array;
++----------------+
+| EXPR$0         |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[3]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A12_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array)
+FROM test_array;
++----------------+
+| EXPR$0         |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[7][3]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A13_B1
+#-------------------------------------------------------------------------
+
+SELECT a_null
+FROM test_array;
++--------------------+
+| a_null             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_null=[$5])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A14_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array)
+FROM test_array;
++--------------------+
+| EXPR$0             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[4]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A15_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array)
+FROM test_array;
++--------------------+
+| EXPR$0             |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[7][4]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A16_B1
+#-------------------------------------------------------------------------
+
+SELECT a_empty
+FROM test_array;
++---------+
+| a_empty |
++---------+
+| []      |
+| []      |
+| []      |
+| []      |
++---------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_empty=[$6])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A17_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+| []     |
+| []     |
+| []     |
+| []     |
++--------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[5]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A18_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+| []     |
+| []     |
+| []     |
+| []     |
++--------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[7][5]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A19_B1
+#-------------------------------------------------------------------------
+
+SELECT a_mixed
+FROM test_array;
++--------------------------+
+| a_mixed                  |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_mixed=[$7])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A20_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[6]' RETURNING varchar array)
+FROM test_array;
++--------------------------+
+| EXPR$0                   |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[6]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A21_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array)
+FROM test_array;
++--------------------------+
+| EXPR$0                   |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[7][6]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A22_B1
+#-------------------------------------------------------------------------
+
+SELECT a_nested
+FROM test_array;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+LogicalProject(a_nested=[$8])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A23_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+|        |
+|        |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[7]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_explain TEST_ID: A24_B1
+#-------------------------------------------------------------------------
+
+SELECT json_value(a_nested, '$[7][7]' RETURNING varchar array)
+FROM test_array;
++--------+
+| EXPR$0 |
++--------+
+|        |
+|        |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_ARRAY_VARCHAR($8, '$[7][7]')):VARCHAR ARRAY])
+  LogicalTableScan(table=[[druid, test_array]])
+
+!druidPlan
+

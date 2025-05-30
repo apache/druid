@@ -1,0 +1,528 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B1_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT CURRENT_TIMESTAMP AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+     AND CURRENT_TIMESTAMP IS NOT NULL);
++-----+
+| cnt |
++-----+
+|  15 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B2_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT CURRENT_DATE AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+     AND CURRENT_DATE IS NOT NULL);
++-----+
+| cnt |
++-----+
+|  15 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B3_C1
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND date_trunc('year', c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B3_C2
+#-------------------------------------------------------------------------
+SELECT date_trunc('year', c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND date_trunc('year', c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B4_C1
+#-------------------------------------------------------------------------
+SELECT time_ceil(c, 'P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_ceil(c, 'P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B4_C2
+#-------------------------------------------------------------------------
+SELECT time_ceil(c_long, 'P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_ceil(c_long, 'P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B5_C1
+#-------------------------------------------------------------------------
+SELECT time_floor(c, 'P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_floor(c, 'P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B5_C2
+#-------------------------------------------------------------------------
+SELECT time_floor(c_long, 'P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_floor(c_long, 'P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B6_C1
+#-------------------------------------------------------------------------
+SELECT time_shift(c, 'P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_shift(c, 'P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B6_C2
+#-------------------------------------------------------------------------
+SELECT time_shift(c_long, 'P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_shift(c_long, 'P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B7_C1
+#-------------------------------------------------------------------------
+SELECT time_extract(c, 'HOUR') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_extract(c, 'HOUR') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B7_C2
+#-------------------------------------------------------------------------
+SELECT time_extract(c_long, 'HOUR') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_extract(c_long, 'HOUR') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B8_C1
+#-------------------------------------------------------------------------
+SELECT time_parse(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_parse(c) IS NOT NULL;
++-------------------------+
+| col                     |
++-------------------------+
+| 0001-01-01 00:00:00.000 |
+| 0001-01-01 00:00:00.000 |
+| 0001-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
+| 0003-01-01 00:00:00.000 |
+| 0003-01-01 00:00:00.000 |
+| 0003-01-01 00:00:00.000 |
++-------------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B8_C2
+#-------------------------------------------------------------------------
+SELECT time_parse(cast(c_long AS char)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_parse(cast(c_long AS char)) IS NOT NULL;
++-------------------------+
+| col                     |
++-------------------------+
+| 0000-01-01 00:00:00.000 |
+| 0000-01-01 00:00:00.000 |
+| 0000-01-01 00:00:00.000 |
+| 0000-01-01 00:00:00.000 |
+| 0000-01-01 00:00:00.000 |
+| 0001-01-01 00:00:00.000 |
+| 0001-01-01 00:00:00.000 |
+| 0001-01-01 00:00:00.000 |
+| 0001-01-01 00:00:00.000 |
+| 0001-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
+| 0002-01-01 00:00:00.000 |
++-------------------------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B9_C1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(c, '2001-01-01/P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_in_interval(c, '2001-01-01/P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B9_C2
+#-------------------------------------------------------------------------
+SELECT time_in_interval(c_long, '2001-01-01/P1D') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND time_in_interval(c, '2001-01-01/P1D') IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B10_C1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND millis_to_timestamp(cast(c AS int))<>'2000-01-01T00:00:00.000Z';
++-------------------------+
+| col                     |
++-------------------------+
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.002 |
+| 1970-01-01 00:00:00.002 |
+| 1970-01-01 00:00:00.002 |
+| 1970-01-01 00:00:00.003 |
+| 1970-01-01 00:00:00.003 |
+| 1970-01-01 00:00:00.003 |
+|                         |
+|                         |
+|                         |
++-------------------------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B10_C2
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND millis_to_timestamp(c_long)<>'2000-01-01T00:00:00.000Z';
++-------------------------+
+| col                     |
++-------------------------+
+| 1970-01-01 00:00:00.000 |
+| 1970-01-01 00:00:00.000 |
+| 1970-01-01 00:00:00.000 |
+| 1970-01-01 00:00:00.000 |
+| 1970-01-01 00:00:00.000 |
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.001 |
+| 1970-01-01 00:00:00.002 |
+| 1970-01-01 00:00:00.002 |
+| 1970-01-01 00:00:00.002 |
+| 1970-01-01 00:00:00.002 |
+| 1970-01-01 00:00:00.002 |
++-------------------------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B11_C1
+#-------------------------------------------------------------------------
+SELECT timestamp_to_millis(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestamp_to_millis(c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B11_C2
+#-------------------------------------------------------------------------
+SELECT timestamp_to_millis(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestamp_to_millis(c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B12_C1
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND extract(DAY
+              FROM c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B12_C2
+#-------------------------------------------------------------------------
+SELECT extract(DAY
+               FROM c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND extract(DAY
+              FROM c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B13_C1
+#-------------------------------------------------------------------------
+SELECT floor(c TO DAY) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND floor(c TO DAY) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B13_C2
+#-------------------------------------------------------------------------
+SELECT floor(c_long TO DAY) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND floor(c_long TO DAY) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B14_C1
+#-------------------------------------------------------------------------
+SELECT ceil(c TO DAY) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND ceil(c TO DAY) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B14_C2
+#-------------------------------------------------------------------------
+SELECT ceil(c_long TO DAY) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND ceil(c_long TO DAY) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B15_C1
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestampadd(DAY, 1, c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B15_C2
+#-------------------------------------------------------------------------
+SELECT timestampadd(DAY, 1, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestampadd(DAY, 1, c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B16_C1
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, c, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestampdiff(DAY, c, c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B16_C2
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, c_long, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestampdiff(DAY, c_long, c) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B16_C3
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, c, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestampdiff(DAY, c, c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_datetime_funcs TEST_ID: A1_B16_C4
+#-------------------------------------------------------------------------
+SELECT timestampdiff(DAY, c_long, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND timestampdiff(DAY, c_long, c_long) IS NOT NULL;
+QueryInterruptedException
+!error
+
