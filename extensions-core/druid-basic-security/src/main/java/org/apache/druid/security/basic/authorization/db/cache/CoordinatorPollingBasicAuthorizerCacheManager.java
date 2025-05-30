@@ -135,8 +135,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               }
               LOG.debug("Scheduled userMap cache poll is done");
             }
-            catch (InterruptedException e)
-            {
+            catch (InterruptedException e) {
               LOG.noStackTrace().warn(e, "Interrupted while polling Coordinator for cachedUserMaps.");
             }
             catch (Throwable t) {

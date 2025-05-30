@@ -126,6 +126,9 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
               }
               LOG.debug("Scheduled user cache poll is done");
             }
+            catch (InterruptedException e) {
+              LOG.noStackTrace().warn(e, "Interrupted while polling Coordinator for cachedUserMaps.");
+            }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
@@ -148,7 +151,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     }
 
     LOG.info("CoordinatorPollingBasicAuthenticatorCacheManager is stopping.");
-    exec.shutdown();
+    exec.shutdownNow();
     LOG.info("CoordinatorPollingBasicAuthenticatorCacheManager is stopped.");
   }
 
