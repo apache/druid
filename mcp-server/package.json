@@ -12,7 +12,9 @@
     "start": "node dist/index.js",
     "clean": "rm -rf dist",
     "lint": "eslint src --ext .ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run build",
+    "prepack": "npm run build"
   },
   "keywords": [
     "mcp",
@@ -24,15 +26,15 @@
     "database",
     "timeseries"
   ],
-  "author": "Apache Druid Community",
+  "author": "Anil Reddy Puram",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/apache/druid.git",
+    "url": "git+https://github.com/AnilPuram/druid.git",
     "directory": "mcp-server"
   },
   "bugs": {
-    "url": "https://github.com/apache/druid/issues"
+    "url": "https://github.com/AnilPuram/druid/issues"
   },
   "homepage": "https://druid.apache.org",
   "engines": {
