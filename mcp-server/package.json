@@ -1,0 +1,57 @@
+{
+  "name": "apache-druid-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for Apache Druid - provides tools and resources for querying and managing Druid datasources",
+  "main": "dist/index.js",
+  "bin": {
+    "apache-druid-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "druid",
+    "apache-druid",
+    "analytics",
+    "sql",
+    "database",
+    "timeseries"
+  ],
+  "author": "Apache Druid Community",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apache/druid.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/apache/druid/issues"
+  },
+  "homepage": "https://druid.apache.org",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ]
+}
