@@ -37,7 +37,6 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
-
 import java.util.Map;
 
 public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
@@ -46,6 +45,7 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @JsonCreator
   public RabbitStreamSupervisorSpec(
+      @JsonProperty("id") @Nullable String id,
       @JsonProperty("spec") @Nullable RabbitStreamSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
       @JsonProperty("tuningConfig") @Nullable RabbitStreamSupervisorTuningConfig tuningConfig,
@@ -63,6 +63,7 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
       @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig)
   {
     super(
+        id,
         ingestionSchema != null
             ? ingestionSchema
             : new RabbitStreamSupervisorIngestionSpec(
@@ -136,6 +137,7 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
   protected RabbitStreamSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new RabbitStreamSupervisorSpec(
+        getId(),
         getSpec(),
         getDataSchema(),
         getTuningConfig(),

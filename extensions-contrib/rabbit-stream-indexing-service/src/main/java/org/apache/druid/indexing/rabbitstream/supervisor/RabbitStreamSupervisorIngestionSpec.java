@@ -34,7 +34,8 @@ public class RabbitStreamSupervisorIngestionSpec extends SeekableStreamSuperviso
   public RabbitStreamSupervisorIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") RabbitStreamSupervisorIOConfig ioConfig,
-      @JsonProperty("tuningConfig") RabbitStreamSupervisorTuningConfig tuningConfig)
+      @JsonProperty("tuningConfig") RabbitStreamSupervisorTuningConfig tuningConfig
+  )
   {
     super(dataSchema, ioConfig, tuningConfig);
     this.dataSchema = dataSchema;

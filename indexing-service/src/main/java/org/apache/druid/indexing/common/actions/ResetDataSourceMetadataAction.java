@@ -26,14 +26,17 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
 public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
 {
+  private final String supervisorId;
   private final String dataSource;
   private final DataSourceMetadata resetMetadata;
 
   public ResetDataSourceMetadataAction(
+      @JsonProperty("supervisorId") String supervisorId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("resetMetadata") DataSourceMetadata resetMetadata
   )
   {
+    this.supervisorId = supervisorId;
     this.dataSource = dataSource;
     this.resetMetadata = resetMetadata;
   }
@@ -42,6 +45,12 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  @JsonProperty
+  public String getSupervisorId()
+  {
+    return supervisorId;
   }
 
   @JsonProperty
@@ -59,7 +68,7 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   @Override
   public Boolean perform(Task task, TaskActionToolbox toolbox)
   {
-    return toolbox.getSupervisorManager().resetSupervisor(dataSource, resetMetadata);
+    return toolbox.getSupervisorManager().resetSupervisor(supervisorId, resetMetadata);
   }
 
   @Override
@@ -67,6 +76,7 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   {
     return "ResetDataSourceMetadataAction{" +
            "dataSource='" + dataSource + '\'' +
+           ", supervisorId='" + supervisorId + '\'' +
            ", resetMetadata=" + resetMetadata +
            '}';
   }

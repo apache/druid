@@ -476,6 +476,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
             null,
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -923,7 +924,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor [testDS] for dataSource [testDS]",
         alert.getDescription()
     );
   }
@@ -2437,7 +2438,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     taskClient.close();
-    taskRunner.unregisterListener(StringUtils.format("KinesisSupervisor-%s", DATASOURCE));
+    taskRunner.unregisterListener(DATASOURCE);
     replayAll();
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -2875,7 +2876,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor [testDS] for dataSource [testDS]",
         alert.getDescription()
     );
   }
@@ -3486,7 +3487,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     final AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "SeekableStreamSupervisor[testDS] failed to handle notice",
+        "SeekableStreamSupervisor[testDS] for datasource=[testDS] failed to handle notice",
         alert.getDescription()
     );
     Assert.assertEquals(
@@ -4191,6 +4192,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testCorrectInputSources()
   {
     KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        null,
         null,
         dataSchema,
         null,
@@ -5218,6 +5220,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
             null,
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -5322,6 +5325,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
             null,
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -5406,6 +5410,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             null,
             dataSchema,
             tuningConfig,
@@ -5493,6 +5498,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             null,
             dataSchema,
             tuningConfig,
@@ -5613,6 +5619,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         ),
         Collections.emptyMap(),
         false,
+        null,
         null
     );
   }

@@ -313,17 +313,27 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createDataSourceTable(final String tableName)
   {
+    final List<String> columns = new ArrayList<>();
+    columns.add(StringUtils.format("supervisor_id VARCHAR(255) %s NOT NULL", getCollation()));
+    columns.add(StringUtils.format("dataSource VARCHAR(255) %s NOT NULL", getCollation()));
+    columns.add("created_date VARCHAR(255) NOT NULL");
+    columns.add(StringUtils.format("commit_metadata_payload %s NOT NULL", getPayloadType()));
+    columns.add("commit_metadata_sha1 VARCHAR(255) NOT NULL");
+
+    final StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
+
+    for (String column : columns) {
+      createStatementBuilder.append(column);
+      createStatementBuilder.append(",\n");
+    }
+
+    createStatementBuilder.append("PRIMARY KEY (supervisor_id)\n)");
+
     createTable(
         tableName,
         ImmutableList.of(
             StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  dataSource VARCHAR(255) %3$s NOT NULL,\n"
-                + "  created_date VARCHAR(255) NOT NULL,\n"
-                + "  commit_metadata_payload %2$s NOT NULL,\n"
-                + "  commit_metadata_sha1 VARCHAR(255) NOT NULL,\n"
-                + "  PRIMARY KEY (dataSource)\n"
-                + ")",
+                createStatementBuilder.toString(),
                 tableName, getPayloadType(), getCollation()
             )
         )

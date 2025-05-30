@@ -122,7 +122,7 @@ public class CliPeonTest
   }
 
   @Test
-  public void testCliPeonHeartbeatDimensions() throws IOException
+  public void testCliPeonHeartbeatDimensions()
   {
     // non-streaming task
     String taskId = "testTaskId";
@@ -140,6 +140,7 @@ public class CliPeonTest
     );
 
     // streaming task with empty ags
+    String supervisor = "testSupervisor";
     Assert.assertEquals(
         ImmutableMap.of(
             DruidMetrics.TASK_ID, taskId,
@@ -148,7 +149,7 @@ public class CliPeonTest
             DruidMetrics.TASK_TYPE, TestStreamingTask.TYPE,
             DruidMetrics.STATUS, TestStreamingTask.STATUS
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId, supervisor))
     );
 
     // streaming task with non-empty ags
@@ -161,7 +162,7 @@ public class CliPeonTest
             DruidMetrics.STATUS, TestStreamingTask.STATUS,
             DruidMetrics.TAGS, tags
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId, supervisor))
     );
   }
 
@@ -232,7 +233,8 @@ public class CliPeonTest
         String id,
         String datasource,
         @Nullable Map context,
-        @Nullable String groupId
+        @Nullable String groupId,
+        @Nullable String supervisorId
     )
     {
       this(
@@ -247,7 +249,8 @@ public class CliPeonTest
           mock(SeekableStreamIndexTaskTuningConfig.class),
           new TestSeekableStreamIndexTaskIOConfig(),
           context,
-          groupId
+          groupId,
+          supervisorId
       );
     }
 
@@ -258,11 +261,12 @@ public class CliPeonTest
         SeekableStreamIndexTaskTuningConfig tuningConfig,
         SeekableStreamIndexTaskIOConfig ioConfig,
         @Nullable Map context,
-        @Nullable String groupId
+        @Nullable String groupId,
+        @Nullable String supervisorId
     )
     {
 
-      super(id, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
+      super(id, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, supervisorId);
     }
 
     @Override

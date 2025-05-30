@@ -315,6 +315,7 @@ public interface IndexerMetadataStorageCoordinator
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
    * {@param segments} and dropping {@param segmentsToDrop}.
    *
+   * @param supervisorId   (optional) supervisorID which is committing the segments
    * @param segments       set of segments to add, must all be from the same dataSource
    * @param startMetadata  dataSource metadata pre-insert must match this startMetadata according to
    *                       {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
@@ -335,7 +336,8 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping
+      @Nullable SegmentSchemaMapping segmentSchemaMapping,
+      @Nullable String supervisorId
   );
 
   /**
@@ -378,8 +380,9 @@ public interface IndexerMetadataStorageCoordinator
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      String taskAllocatorId,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping
+      String taskGroup,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping,
+      @Nullable String supervisorId
   );
 
   /**
@@ -405,47 +408,48 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
+   * Retrieves supervisor's metadata from the datasource metadata store. Returns null if there is no metadata.
    */
-  @Nullable DataSourceMetadata retrieveDataSourceMetadata(String dataSource);
+  @Nullable DataSourceMetadata retrieveDataSourceMetadata(String supervisorId);
 
   /**
-   * Removes entry for 'dataSource' from the dataSource metadata table.
+   * Removes entry for 'supervisorId' from the dataSource metadata table.
    *
-   * @param dataSource identifier
+   * @param supervisorId identifier
    *
    * @return true if the entry was deleted, false otherwise
    */
-  boolean deleteDataSourceMetadata(String dataSource);
+  boolean deleteDataSourceMetadata(String supervisorId);
 
   /**
-   * Resets dataSourceMetadata entry for 'dataSource' to the one supplied.
+   * Resets dataSourceMetadata entry for 'supervisorId' to the one supplied.
    *
-   * @param dataSource         identifier
+   * @param supervisorId         identifier
    * @param dataSourceMetadata value to set
    *
    * @return true if the entry was reset, false otherwise
    */
-  boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata) throws IOException;
+  boolean resetDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata) throws IOException;
 
   /**
-   * Insert dataSourceMetadata entry for 'dataSource'.
+   * Insert dataSourceMetadata entry for 'supervisorId' and 'dataSource'.
    *
+   * @param supervisorId       identifier
    * @param dataSource         identifier
    * @param dataSourceMetadata value to set
    *
    * @return true if the entry was inserted, false otherwise
    */
-  boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
+  boolean insertDataSourceMetadata(String supervisorId, String dataSource, DataSourceMetadata dataSourceMetadata);
 
   /**
-   * Remove datasource metadata created before the given timestamp and not in given excludeDatasources set.
+   * Remove datasource metadata created before the given timestamp and not in given excludeSupervisorIds set.
    *
    * @param timestamp timestamp in milliseconds
-   * @param excludeDatasources set of datasource names to exclude from removal
+   * @param excludeSupervisorIds set of supervisor ids to exclude from removal
    * @return number of datasource metadata removed
    */
-  int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources);
+  int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeSupervisorIds);
 
   /**
    * Similar to {@link #commitSegments}, but meant for streaming ingestion tasks for handling
@@ -455,7 +459,8 @@ public interface IndexerMetadataStorageCoordinator
    * The metadata should undergo the same validation checks as performed by {@link #commitSegments}.
    *
    *
-   * @param dataSource the datasource
+   * @param supervisorId the supervisorId
+   * @param dataSource the dataSource
    * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
    *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}.
    * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
@@ -469,6 +474,7 @@ public interface IndexerMetadataStorageCoordinator
    * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
   SegmentPublishResult commitMetadataOnly(
+      String supervisorId,
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata

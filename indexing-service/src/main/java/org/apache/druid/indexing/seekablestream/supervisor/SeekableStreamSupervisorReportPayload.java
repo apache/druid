@@ -33,6 +33,7 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>
 {
+  private final String id;
   private final String dataSource;
   private final String stream;
   private final int partitions;
@@ -53,6 +54,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final List<SupervisorStateManager.ExceptionEvent> recentErrors;
 
   public SeekableStreamSupervisorReportPayload(
+      String id,
       String dataSource,
       String stream,
       int partitions,
@@ -71,6 +73,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
+    this.id = id;
     this.dataSource = dataSource;
     this.stream = stream;
     this.partitions = partitions;
@@ -100,6 +103,12 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     } else {
       throw new IAE("Unknown task type [%s]", data.getType().name());
     }
+  }
+
+  @JsonProperty
+  public String getId()
+  {
+    return id;
   }
 
   @JsonProperty

@@ -29,6 +29,7 @@ import java.util.Map;
 public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
   public KinesisSupervisorReportPayload(
+      String id,
       String dataSource,
       String stream,
       Integer partitions,
@@ -44,6 +45,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
   )
   {
     super(
+        id,
         dataSource,
         stream,
         partitions,
@@ -67,7 +69,8 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
   public String toString()
   {
     return "KinesisSupervisorReportPayload{" +
-           "dataSource='" + getDataSource() + '\'' +
+           "id='" + getId() + '\'' +
+           ", dataSource='" + getDataSource() + '\'' +
            ", stream='" + getStream() + '\'' +
            ", partitions=" + getPartitions() +
            ", replicas=" + getReplicas() +

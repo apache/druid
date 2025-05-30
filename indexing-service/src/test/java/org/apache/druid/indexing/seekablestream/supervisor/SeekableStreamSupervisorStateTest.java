@@ -129,6 +129,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String DATASOURCE = "testDS";
+  private static final String SUPERVISOR_ID = "testSupervisorId";
   private static final String STREAM = "stream";
   private static final String SHARD_ID = "0";
   private static final StreamPartition<String> SHARD0_PARTITION = StreamPartition.of(STREAM, SHARD_ID);
@@ -193,7 +194,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     EasyMock.expectLastCall().times(0, 1);
 
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(null).anyTimes();
     EasyMock.expect(recordSupplier.getAssignment()).andReturn(ImmutableSet.of(SHARD0_PARTITION)).anyTimes();
     EasyMock.expect(recordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("10").anyTimes();
   }
@@ -767,7 +768,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Map<String, String> laterOffsets = ImmutableMap.of("0", "20");
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
@@ -1142,7 +1143,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             taskTuningConfig,
             taskIoConfig,
             context,
-            "0"
+            "0",
+            null
     );
 
     TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
@@ -1152,7 +1154,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             taskTuningConfig,
             taskIoConfig,
             context,
-            "0"
+            "0",
+            null
     );
 
     TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
@@ -1162,7 +1165,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         taskTuningConfig,
         taskIoConfig,
         context,
-        "0"
+        "0",
+        null
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1186,7 +1190,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id2)).anyTimes();
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
             .andReturn(new TestSeekableStreamDataSourceMetadata(null)).anyTimes();
     EasyMock.expect(indexTaskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
@@ -1351,7 +1355,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
         ),
         context,
-        "0"
+        "0",
+        null
     );
 
     TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
@@ -1370,7 +1375,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
         ),
         context,
-        "1"
+        "1",
+        null
     );
 
     TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
@@ -1389,7 +1395,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
         ),
         context,
-        "2"
+        "2",
+        null
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1416,7 +1423,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id2)).anyTimes();
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
             .andReturn(new TestSeekableStreamDataSourceMetadata(null)).anyTimes();
     EasyMock.expect(indexTaskClient.getStatusAsync("id1"))
             .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
@@ -1579,7 +1586,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ),
         context,
         "0",
-        streamingTaskRunner
+        streamingTaskRunner,
+        null
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1596,7 +1604,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
         .andReturn(new TestSeekableStreamDataSourceMetadata(null)).anyTimes();
     EasyMock.expect(indexTaskClient.getStatusAsync("id1"))
         .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
@@ -1890,7 +1898,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testSupervisorResetAllWithCheckpoints() throws InterruptedException
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
-    EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(
+    EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         true
     );
     taskQueue.shutdown("task1", "DataSourceMetadata is not found while reset");
@@ -1935,7 +1943,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
@@ -1943,7 +1951,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
-    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             STREAM,
             expectedOffsets
@@ -2074,7 +2082,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
@@ -2082,7 +2090,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
-    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             expectedOffsets
@@ -2152,8 +2160,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null);
-    EasyMock.expect(indexerMetadataStorageCoordinator.insertDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(null);
+    EasyMock.expect(indexerMetadataStorageCoordinator.insertDataSourceMetadata(SUPERVISOR_ID, DATASOURCE, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             expectedOffsets
@@ -2225,7 +2233,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
@@ -2233,7 +2241,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
-    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             expectedOffsets
@@ -2290,7 +2298,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
@@ -2298,7 +2306,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
-    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             expectedOffsets
@@ -2754,7 +2762,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         SeekableStreamIndexTaskTuningConfig tuningConfig,
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
         @Nullable Map<String, Object> context,
-        @Nullable String groupId
+        @Nullable String groupId,
+        @Nullable String supervisorId
     )
     {
       this(
@@ -2765,7 +2774,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           ioConfig,
           context,
           groupId,
-          null
+          null,
+          supervisorId
       );
     }
 
@@ -2777,7 +2787,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
         @Nullable Map<String, Object> context,
         @Nullable String groupId,
-        @Nullable SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner
+        @Nullable SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner,
+        @Nullable String supervisorId
     )
     {
       super(
@@ -2787,7 +2798,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           tuningConfig,
           ioConfig,
           context,
-          groupId
+          groupId,
+          supervisorId
       );
       this.streamingTaskRunner = streamingTaskRunner;
     }
@@ -2900,6 +2912,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           taskTuningConfig,
           taskIoConfig,
           null,
+          null,
           null
       ));
     }
@@ -2922,7 +2935,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected boolean doesTaskTypeMatchSupervisor(Task task)
+    protected boolean doesTaskMatchSupervisor(Task task)
     {
       return true;
     }
@@ -2974,6 +2987,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     )
     {
       return new SeekableStreamSupervisorReportPayload<>(
+          DATASOURCE,
           DATASOURCE,
           STREAM,
           1,
