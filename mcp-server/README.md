@@ -19,17 +19,35 @@ A Model Context Protocol (MCP) server that provides tools and resources for quer
 
 ## Installation
 
-### From npm (when published)
-```bash
-npm install -g apache-druid-mcp
-```
-
 ### From source
 ```bash
-cd mcp-server
+# Clone the repository
+git clone https://github.com/apache/druid.git
+cd druid/mcp-server
+
+# Install dependencies
 npm install
+
+# Build the server
 npm run build
+
+# Install globally (optional)
 npm link
+```
+
+### For development
+```bash
+# Install dependencies
+npm install
+
+# Build and watch for changes
+npm run dev
+
+# Type check
+npm run type-check
+
+# Lint code
+npm run lint
 ```
 
 ## Configuration
