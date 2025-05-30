@@ -95,14 +95,14 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
    * Get all {@link ColumnType} for the nested field column
    */
   @Nullable
-  public abstract Set<ColumnType> getColumnTypes(List<NestedPathPart> path);
+  public abstract Set<ColumnType> getFieldTypes(List<NestedPathPart> path);
 
   /**
-   * Reduces {@link #getColumnTypes(List)} for the nested field column using
+   * Reduces {@link #getFieldTypes(List)} for the nested field column using
    * {@link ColumnType#leastRestrictiveType(ColumnType, ColumnType)}
    */
   @Nullable
-  public abstract ColumnType getLeastRestrictiveType(List<NestedPathPart> path);
+  public abstract ColumnType getFieldLogicalType(List<NestedPathPart> path);
 
   /**
    * Get a {@link ColumnHolder} for a nested field column to retrieve metadata, the column itself, or indexes.

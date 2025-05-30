@@ -844,7 +844,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
 
   @Nullable
   @Override
-  public Set<ColumnType> getColumnTypes(List<NestedPathPart> path)
+  public Set<ColumnType> getFieldTypes(List<NestedPathPart> path)
   {
     String field = getField(path);
     int index = fields.indexOf(field);
@@ -873,7 +873,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
 
   @Nullable
   @Override
-  public ColumnType getLeastRestrictiveType(List<NestedPathPart> path)
+  public ColumnType getFieldLogicalType(List<NestedPathPart> path)
   {
     final String field = getField(path);
     final Set<ColumnType> fieldTypes;
