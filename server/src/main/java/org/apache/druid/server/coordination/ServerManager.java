@@ -74,6 +74,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -190,31 +191,34 @@ public class ServerManager implements QuerySegmentWalker
    * to the {@link Closer}, and will be empty if the segment was not actually in the timeline, or if unable to apply
    * the reference
    */
-  protected Iterable<SegmentReference> acquireAllSegments(
+  protected List<SegmentReference> acquireAllSegments(
       VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFn,
       Closer closer
   )
   {
-    return FunctionalIterable
-        .create(segments)
-        .transform(
-            descriptor -> {
-              final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
-                  descriptor.getInterval(),
-                  descriptor.getVersion(),
-                  descriptor.getPartitionNumber()
-              );
+    // materialize to list to acquire all of the references
+    return Lists.newArrayList(
+        FunctionalIterable
+            .create(segments)
+            .transform(
+                descriptor -> {
+                  final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
+                      descriptor.getInterval(),
+                      descriptor.getVersion(),
+                      descriptor.getPartitionNumber()
+                  );
 
-              if (chunk == null) {
-                return new SegmentReference(descriptor, Optional.empty());
-              }
+                  if (chunk == null) {
+                    return new SegmentReference(descriptor, Optional.empty());
+                  }
 
-              final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
-              return new SegmentReference(descriptor, segmentMapFn.apply(referenceCounter).map(closer::register));
-            }
-        );
+                  final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
+                  return new SegmentReference(descriptor, segmentMapFn.apply(referenceCounter).map(closer::register));
+                }
+            )
+    );
   }
 
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
