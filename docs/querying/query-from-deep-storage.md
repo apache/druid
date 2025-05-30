@@ -112,22 +112,6 @@ curl --location 'http://localhost:8888/druid/v2/sql/statements' \
     }  
 }'
 ```
-You can also use `SET` command to specify query context parameters directly in your JSON objection within the request payload. For example:
-
-```json
-{
-    "query":"SET executionMode='ASYNC'; SET selectDestination='durableStorage'; SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"
-}
-```
-This sample query with `SET` command is functionally equivalent to the context parameter example shown above for querying from deep storage:
-
-```
-curl --location 'http://localhost:8888/druid/v2/sql/statements' \
---header 'Content-Type: application/json' \
---data '{
-    "query":"SET executionMode='\''ASYNC'\''; SET selectDestination='\''durableStorage'\''; SELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP'\''2017-09-01'\'' AND \"__time\" <= TIMESTAMP'\''2017-09-02'\''"
-}'
-```
 
 The response for submitting a query includes the query ID along with basic information, such as when you submitted the query and the schema of the results:
 
@@ -147,6 +131,25 @@ The response for submitting a query includes the query ID along with basic infor
 "durationMs": DURATION_IN_MS,
 }
 ```
+You can also use `Set` command to enable `executionMode` of the given query. However, the results depends on where you set `executionMode`.
+
+When using the **Druid UI Console**, you can use the `SET` command directly in your query string to set executionMode. For instance, this query runs successfully:
+
+```sql
+SET executionMode='ASYNC';
+SET selectDestination='durableStorage';
+SELECT * FROM "YOUR_DATASOURCE" WHERE "__time" > TIMESTAMP'2017-09-01' AND "__time" <= TIMESTAMP'2017-09-02'
+```
+
+However, if you submit the same query as a JSON payload to the **`/druid/v2/sql/statements` API endpoint** as the following:
+
+```json
+{
+  "query": "SET executionMode='ASYNC';\nSET selectDestination='durableStorage';\nSELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP'2017-09-01' AND \"__time\" <= TIMESTAMP'2017-09-02'"
+}
+```
+
+You'll receive an error message: "Execution mode is not provided to the SQL statement API. Please set [executionMode] to [ASYNC] in the query context." This is because `executionMode` isn't a parameter you can set within the SQL query itself for this API. Instead, you must define it in the request's top-level `context`.
 
 
 ### Get query status
