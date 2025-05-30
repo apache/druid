@@ -34,7 +34,7 @@ Projections are a type of aggregation that is computed and stored as part of a s
 A projection has three components:
 
 - Virtual columns (`spec.projections.virtualColumns`) that are used to compute a projection. The source data for the virtual columns must exist in your datasource.
-- Grouping columns (`spec.projections.groupingColumns`) that are used to group a projection. They must either already exist in your datasource or be defined in `virtualColumns`. The order in which you define your grouping columns equates to the order in which data is sorted in teh projection, always ascending.
+- Grouping columns (`spec.projections.groupingColumns`) that are used to group a projection. They must either already exist in your datasource or be defined in `virtualColumns`. The order in which you define your grouping columns equates to the order in which data is sorted in the projection, always ascending.
 - Aggregators (`spec.projections.aggregators`) that define the columns you want to create projections for and which aggregator to use for that column. They must either already exist in your datasource or be defined in `virtualColumns`.
 
 The aggregators are what Druid attempts to match when you run a query. If an aggregator in a query matches an aggregator you defined in your projection, Druid uses it.
