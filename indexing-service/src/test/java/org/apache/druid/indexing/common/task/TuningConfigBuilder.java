@@ -70,7 +70,6 @@ public abstract class TuningConfigBuilder<C>
   protected Long awaitSegmentAvailabilityTimeoutMillis;
   protected Integer maxAllowedLockCount;
   protected Integer numPersistThreads;
-  protected Long subTaskTimeoutMs;
 
   public TuningConfigBuilder<C> withTargetPartitionSize(Integer targetPartitionSize)
   {
@@ -267,12 +266,6 @@ public abstract class TuningConfigBuilder<C>
   public TuningConfigBuilder<C> withMaxAllowedLockCount(Integer maxAllowedLockCount)
   {
     this.maxAllowedLockCount = maxAllowedLockCount;
-    return this;
-  }
-
-  public TuningConfigBuilder<C> withSubTaskTimeoutMs(Long subTaskTimeoutMs)
-  {
-    this.subTaskTimeoutMs = subTaskTimeoutMs;
     return this;
   }
 
