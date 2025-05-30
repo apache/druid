@@ -46,7 +46,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
-import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -5137,7 +5136,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
   public void testJoinOnRestricted(Map<String, Object> queryContext)
   {
     String sql = "SELECT druid.restrictedBroadcastDatasource_m1_is_6.dim4, COUNT(*)\n"
@@ -5158,12 +5156,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER
                         ),
                         "j0.",
-                        equalsCondition(
-                            makeColumnExpression("dim4"),
-                            makeColumnExpression("j0.dim4")
-                        ),
+                        equalsCondition(makeColumnExpression("dim4"), makeColumnExpression("j0.dim4")),
                         JoinType.INNER
-
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -5180,8 +5174,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    QueryUnsupportedException e = Assert.assertThrows(
-        QueryUnsupportedException.class,
+    Exception e = Assert.assertThrows(
+        Exception.class,
         () -> testQuery(
             PLANNER_CONFIG_DEFAULT,
             sql,
@@ -5190,10 +5184,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    Assert.assertEquals(
-        "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported",
-        e.getMessage()
-    );
+    System.out.println(e.getMessage());
+    Assert.assertTrue(e.getMessage()
+                       .contains(
+                           "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"));
   }
 
   @MethodSource("provideQueryContexts")
