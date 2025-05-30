@@ -7311,7 +7311,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     "obj":{... "c": 12.3, ...},
     "obj":{... "c": null, ...},
      */
-    // capturing existing behavior... the count should be 4 if it was counting all non-null literal values, but that
+    // capturing existing behavior... the count should be 4 if it was counting all non-null primitive values, but that
     // would mean that the virtual column would need to plan as ARRAY<STRING> expected type instead of STRING
     // ... you might notice there are actually 5 non-null obj.c values, however json_value only returns primitive
     // values, so the object row is rightfully skipped
