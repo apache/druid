@@ -52,13 +52,12 @@ public class DruidExactCardinalityTest extends AbstractIndexerTest
   private static final String QUERY_FILE = "/druid-exact-cardinality/queries.json";
   private static final String DATA_FILE = "/druid-exact-cardinality/data.json";
   private static final String DATASOURCE = "wikipedia_index_test";
-  private String fullDatasourceName;
 
   @Test
   public void testQuery() throws Exception
   {
-    fullDatasourceName = DATASOURCE + config.getExtraDatasourceNameSuffix();
-    final String baseName = fullDatasourceName + UUID.randomUUID();
+    final String fullDatasourceName = DATASOURCE + config.getExtraDatasourceNameSuffix();
+    String baseName = fullDatasourceName + UUID.randomUUID();
     KafkaAdminClient streamAdminClient = new KafkaAdminClient(config);
     List<String> supervisors = new ArrayList<>();
 
