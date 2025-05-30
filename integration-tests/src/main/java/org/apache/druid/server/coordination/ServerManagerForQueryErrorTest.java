@@ -158,7 +158,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               return new ReportTimelineMissingSegmentQueryRunner<T>(ref.getSegmentDescriptor());
                             }
                           } else if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
-                            return (QueryRunner<T>)(queryPlus, responseContext) -> new Sequence<>()
+                            return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
                               public <OutType> OutType accumulate(
@@ -182,7 +182,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY,
                               false
                           )) {
-                            return (QueryRunner<T>)(queryPlus, responseContext) -> new Sequence<>()
+                            return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
                               public <OutType> OutType accumulate(
@@ -208,7 +208,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               QUERY_UNSUPPORTED_TEST_CONTEXT_KEY,
                               false
                           )) {
-                            return (QueryRunner<T>)(queryPlus, responseContext) -> new Sequence<>()
+                            return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
                               public <OutType> OutType accumulate(
@@ -232,7 +232,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY,
                               false
                           )) {
-                            return (QueryRunner<T>)(queryPlus, responseContext) -> new Sequence<>()
+                            return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
                               public <OutType> OutType accumulate(
@@ -253,7 +253,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               }
                             };
                           } else if (queryContext.getBoolean(QUERY_FAILURE_TEST_CONTEXT_KEY, false)) {
-                            return (QueryRunner<T>)(queryPlus, responseContext) -> new Sequence<>()
+                            return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
                               public <OutType> OutType accumulate(
