@@ -25,12 +25,12 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
@@ -241,7 +241,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
           QueryRunner<T> runner = new FinalizeResultsQueryRunner<>(
               toolChest.mergeResults(
                   factory.mergeRunners(
-                      Execs.directExecutor(),
+                      DirectQueryProcessingPool.INSTANCE,
                       FunctionalIterable
                           .create(segmentsList)
                           .transform(
