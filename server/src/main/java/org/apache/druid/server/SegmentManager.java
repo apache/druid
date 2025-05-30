@@ -67,80 +67,6 @@ public class SegmentManager
 
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
-  /**
-   * Represent the state of a data source including the timeline, total segment size, and number of segments.
-   */
-  public static class DataSourceState
-  {
-    private final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline =
-        new VersionedIntervalTimeline<>(Ordering.natural());
-
-    private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
-    private long totalSegmentSize;
-    private long numSegments;
-    private long rowCount;
-    private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
-
-    private void addSegment(DataSegment segment, long numOfRows)
-    {
-      totalSegmentSize += segment.getSize();
-      numSegments++;
-      rowCount += (numOfRows);
-      if (segment.isTombstone()) {
-        segmentRowCountDistribution.addTombstoneToDistribution();
-      } else {
-        segmentRowCountDistribution.addRowCountToDistribution(numOfRows);
-      }
-    }
-
-    private void removeSegment(DataSegment segment, long numOfRows)
-    {
-      totalSegmentSize -= segment.getSize();
-      numSegments--;
-      rowCount -= numOfRows;
-      if (segment.isTombstone()) {
-        segmentRowCountDistribution.removeTombstoneFromDistribution();
-      } else {
-        segmentRowCountDistribution.removeRowCountFromDistribution(numOfRows);
-      }
-    }
-
-    public VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> getTimeline()
-    {
-      return timeline;
-    }
-
-    public ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> getTablesLookup()
-    {
-      return tablesLookup;
-    }
-
-    public long getAverageRowCount()
-    {
-      return numSegments == 0 ? 0 : rowCount / numSegments;
-    }
-
-    public long getTotalSegmentSize()
-    {
-      return totalSegmentSize;
-    }
-
-    public long getNumSegments()
-    {
-      return numSegments;
-    }
-
-    public boolean isEmpty()
-    {
-      return numSegments == 0;
-    }
-
-    private SegmentRowCountDistribution getSegmentRowCountDistribution()
-    {
-      return segmentRowCountDistribution;
-    }
-  }
-
   @Inject
   public SegmentManager(SegmentCacheManager cacheManager)
   {
@@ -151,6 +77,11 @@ public class SegmentManager
   Map<String, DataSourceState> getDataSources()
   {
     return dataSources;
+  }
+
+  public Set<String> getDataSourceNames()
+  {
+    return dataSources.keySet();
   }
 
   /**
@@ -172,11 +103,6 @@ public class SegmentManager
   public Map<String, SegmentRowCountDistribution> getRowCountDistribution()
   {
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getSegmentRowCountDistribution);
-  }
-
-  public Set<String> getDataSourceNames()
-  {
-    return dataSources.keySet();
   }
 
   /**
@@ -256,7 +182,7 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCacheOnBootstrap);
+    loadSegmentInternal(dataSegment, segment, cacheManager::loadSegmentIntoPageCacheOnBootstrap);
   }
 
   /**
@@ -286,10 +212,10 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCache);
+    loadSegmentInternal(dataSegment, segment, cacheManager::loadSegmentIntoPageCache);
   }
 
-  public void loadSegment(
+  private void loadSegmentInternal(
       final DataSegment dataSegment,
       final ReferenceCountedSegmentProvider segment,
       final Consumer<DataSegment> pageCacheLoadFunction
@@ -441,5 +367,80 @@ public class SegmentManager
   public void shutdownBootstrap()
   {
     cacheManager.shutdownBootstrap();
+  }
+
+
+  /**
+   * Represent the state of a data source including the timeline, total segment size, and number of segments.
+   */
+  public static class DataSourceState
+  {
+    private final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline =
+        new VersionedIntervalTimeline<>(Ordering.natural());
+
+    private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
+    private long totalSegmentSize;
+    private long numSegments;
+    private long rowCount;
+    private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
+
+    private void addSegment(DataSegment segment, long numOfRows)
+    {
+      totalSegmentSize += segment.getSize();
+      numSegments++;
+      rowCount += (numOfRows);
+      if (segment.isTombstone()) {
+        segmentRowCountDistribution.addTombstoneToDistribution();
+      } else {
+        segmentRowCountDistribution.addRowCountToDistribution(numOfRows);
+      }
+    }
+
+    private void removeSegment(DataSegment segment, long numOfRows)
+    {
+      totalSegmentSize -= segment.getSize();
+      numSegments--;
+      rowCount -= numOfRows;
+      if (segment.isTombstone()) {
+        segmentRowCountDistribution.removeTombstoneFromDistribution();
+      } else {
+        segmentRowCountDistribution.removeRowCountFromDistribution(numOfRows);
+      }
+    }
+
+    public VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> getTimeline()
+    {
+      return timeline;
+    }
+
+    public ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> getTablesLookup()
+    {
+      return tablesLookup;
+    }
+
+    public long getAverageRowCount()
+    {
+      return numSegments == 0 ? 0 : rowCount / numSegments;
+    }
+
+    public long getTotalSegmentSize()
+    {
+      return totalSegmentSize;
+    }
+
+    public long getNumSegments()
+    {
+      return numSegments;
+    }
+
+    public boolean isEmpty()
+    {
+      return numSegments == 0;
+    }
+
+    private SegmentRowCountDistribution getSegmentRowCountDistribution()
+    {
+      return segmentRowCountDistribution;
+    }
   }
 }

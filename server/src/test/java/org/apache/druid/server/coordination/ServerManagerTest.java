@@ -590,7 +590,7 @@ public class ServerManagerTest
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final List<SegmentDescriptor> descriptors = Collections.singletonList(new SegmentDescriptor(interval, "1", 0));
     Query<?> query = Druids.newTimeBoundaryQueryBuilder()
-                           .dataSource("random-ds")
+                           .dataSource("test")
                            .intervals(interval.toString())
                            .build();
     // We only have QueryRunnerFactory for SearchQuery in test.
