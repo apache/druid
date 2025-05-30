@@ -99,7 +99,7 @@ public interface DimensionDictionarySelector
    *
    * The returned buffer may point to the original data, so callers must take care not to use it outside the valid
    * lifetime of this selector. In particular, if the original data came from a reference-counted segment, callers must
-   * not use the returned ByteBuffer after releasing their reference to the relevant {@link ReferenceCountingSegment}.
+   * not use the returned ByteBuffer after releasing their reference to the relevant {@link ReferenceCountedSegmentProvider}.
    *
    * Performance note: if you want UTF-8 bytes, and {@link #supportsLookupNameUtf8()} returns true, always use this
    * method. It will be at least as fast as calling {@link #lookupName} and encoding the bytes. However, if you want a

@@ -22,7 +22,7 @@ package org.apache.druid.test.utils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.MapUtils;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
@@ -84,26 +84,26 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public ReferenceCountedSegmentProvider getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     observedBootstrapSegments.add(segment);
     return getSegmentInternal(segment);
   }
 
   @Override
-  public ReferenceCountingSegment getSegment(final DataSegment segment)
+  public ReferenceCountedSegmentProvider getSegment(final DataSegment segment)
   {
     observedSegments.add(segment);
     return getSegmentInternal(segment);
   }
 
-  private ReferenceCountingSegment getSegmentInternal(final DataSegment segment)
+  private ReferenceCountedSegmentProvider getSegmentInternal(final DataSegment segment)
   {
     if (segment.isTombstone()) {
-      return ReferenceCountingSegment
+      return ReferenceCountedSegmentProvider
           .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
     } else {
-      return ReferenceCountingSegment.wrapSegment(
+      return ReferenceCountedSegmentProvider.wrapSegment(
           new TestSegmentUtils.SegmentForTesting(
               segment.getDataSource(),
               (Interval) segment.getLoadSpec().get("interval"),

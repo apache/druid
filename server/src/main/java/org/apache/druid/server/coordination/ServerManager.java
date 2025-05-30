@@ -57,8 +57,9 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.server.SegmentManager;
@@ -67,13 +68,13 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 /**
  * Query handler for Historical processes (see CliHistorical).
@@ -125,8 +126,8 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
+    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline;
+    final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> maybeTimeline =
         segmentManager.getTimeline(ExecutionVertex.of(query).getBaseTableDataSource());
 
     if (maybeTimeline.isPresent()) {
@@ -182,9 +183,9 @@ public class ServerManager implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
+    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline;
     ExecutionVertex ev = ExecutionVertex.of(newQuery);
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
+    final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> maybeTimeline =
         segmentManager.getTimeline(ev.getBaseTableDataSource());
 
     // Make sure this query type can handle the subquery, if present.
@@ -198,7 +199,7 @@ public class ServerManager implements QuerySegmentWalker
     } else {
       return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
     }
-    final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
+    final SegmentMapFunction segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
         () -> ev.createSegmentMapFunction(policyEnforcer)
     );
@@ -242,13 +243,13 @@ public class ServerManager implements QuerySegmentWalker
       final SegmentDescriptor descriptor,
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      final SegmentMapFunction segmentMapFn,
       final AtomicLong cpuTimeAccumulator,
       Optional<byte[]> cacheKeyPrefix
   )
   {
-    final PartitionChunk<ReferenceCountingSegment> chunk = timeline.findChunk(
+    final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
         descriptor.getInterval(),
         descriptor.getVersion(),
         descriptor.getPartitionNumber()
@@ -258,11 +259,12 @@ public class ServerManager implements QuerySegmentWalker
       return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
     }
 
-    final ReferenceCountingSegment segment = chunk.getObject();
+    final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
     return buildAndDecorateQueryRunner(
         factory,
         toolChest,
-        segmentMapFn.apply(segment),
+        referenceCounter,
+        segmentMapFn,
         cacheKeyPrefix,
         descriptor,
         cpuTimeAccumulator
@@ -272,7 +274,8 @@ public class ServerManager implements QuerySegmentWalker
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final SegmentReference segment,
+      final ReferenceCountedSegmentProvider segmentProvider,
+      final SegmentMapFunction segmentMapFn,
       final Optional<byte[]> cacheKeyPrefix,
       final SegmentDescriptor segmentDescriptor,
       final AtomicLong cpuTimeAccumulator
@@ -280,38 +283,47 @@ public class ServerManager implements QuerySegmentWalker
   {
     // Short-circuit when the index comes from a tombstone (it has no data by definition),
     // check for null also since no all segments (higher level ones) will have QueryableIndex...
-    if (segment.isTombstone()) {
-      return new NoopQueryRunner<>();
-    }
 
-    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
-    final SegmentId segmentId = segment.getId();
-    final Interval segmentInterval = segment.getDataInterval();
-    // ReferenceCountingSegment can return null for ID or interval if it's already closed.
-    // Here, we check one more time if the segment is closed.
-    // If the segment is closed after this line, ReferenceCountingSegmentQueryRunner will handle and do the right thing.
-    if (segmentId == null || segmentInterval == null) {
+    // we don't acquire references to base segment here because we are only using methods that are safe to use even if
+    // the segment is dropped
+    final Segment baseSegment = segmentProvider.getBaseSegment();
+    if (baseSegment == null) {
       return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
     }
 
+    if (baseSegment.isTombstone()) {
+      return new NoopQueryRunner<>();
+    }
+
+    final SegmentId segmentId = baseSegment.getId();
+    final Interval segmentInterval = baseSegment.getDataInterval();
     String segmentIdString = segmentId.toString();
 
+    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
-        new ReferenceCountingSegmentQueryRunner<>(factory, segment, segmentDescriptor),
+        new ReferenceCountingSegmentQueryRunner<>(factory, segmentProvider, segmentMapFn, segmentDescriptor),
         QueryMetrics::reportSegmentTime,
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
-    final Interval cacheKeyInterval =
-        timeBoundaryInspector != null ? timeBoundaryInspector.getMinMaxInterval() : segmentInterval;
+    final Optional<Interval> cacheKeyInterval = segmentMapFn.apply(segmentProvider).map(segment -> {
+      final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+      final Interval dataInterval = timeBoundaryInspector != null ? timeBoundaryInspector.getMinMaxInterval() : segmentInterval;
+      CloseableUtils.closeAndWrapExceptions(segment);
+      return dataInterval;
+    });
+
+    if (cacheKeyInterval.isEmpty()) {
+      // if we could not get a reference to get the TimeBoundaryInspector then the segment has been dropped
+      return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
+    }
     CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
         cacheKeyPrefix,
         segmentDescriptor,
-        cacheKeyInterval,
+        cacheKeyInterval.get(),
         objectMapper,
         cache,
         toolChest,
