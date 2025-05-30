@@ -732,6 +732,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return false;
   }
 
+  protected boolean hasTypeInformation()
+  {
+    return !testName.contains("rowBasedWithoutTypeSignature");
+  }
+
   protected boolean canTestArrayColumns()
   {
     if (testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature")) {
@@ -805,6 +810,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
       final List<String> values = new ArrayList<>();
 
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
+        cursor.advance();
+      }
+      cursor.reset();
       while (!cursor.isDone()) {
         IndexedInts row = selector.getRow();
         Preconditions.checkState(row.size() == 1);
@@ -919,6 +930,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       while (!cursor.isDone()) {
         IndexedInts row = selector.getRow();
         Preconditions.checkState(row.size() == 1);
+        cursor.advance();
+      }
+      cursor.reset();
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
         values.add(selector.lookupName(row.get(0)));
         cursor.advance();
       }
@@ -977,6 +994,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> values = new ArrayList<>();
 
       while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
+      while (!cursor.isDone()) {
         final int[] rowVector = selector.getRowVector();
         for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
           values.add(selector.lookupName(rowVector[i]));
@@ -1001,6 +1022,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
       final List<String> values = new ArrayList<>();
 
+      while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
       while (!cursor.isDone()) {
         final int[] rowVector = selector.getRowVector();
         for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {

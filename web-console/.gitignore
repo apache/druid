@@ -5,6 +5,7 @@ public/
 private/
 lib/*.css
 coverage/
+.claude/
 
 coordinator-console/
 pages/
