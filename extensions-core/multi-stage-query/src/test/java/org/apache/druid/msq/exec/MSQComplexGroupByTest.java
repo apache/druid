@@ -49,6 +49,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.StructuredData;
@@ -72,6 +73,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MSQComplexGroupByTest extends MSQTestBase
@@ -283,72 +285,14 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          new Object[]{
                              0L,
                              StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 500,
-                                     "b", ImmutableMap.of(
-                                         "x", "e",
-                                         "z", ImmutableList.of(1, 2, 3, 4)
-                                     ),
-                                     "v", "a"
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 100,
-                                     "b", ImmutableMap.of(
-                                         "x", "a",
-                                         "y", 1.1,
-                                         "z", ImmutableList.of(1, 2, 3, 4)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 700,
-                                     "b", ImmutableMap.of(
-                                         "x", "g",
-                                         "y", 1.1,
-                                         "z", Arrays.asList(9, null, 9, 9)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 200,
-                                     "b", ImmutableMap.of(
-                                         "x", "b",
-                                         "y", 1.1,
-                                         "z", ImmutableList.of(2, 4, 6)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
+                                 Map.of(
                                      "a", 600,
-                                     "b", ImmutableMap.of(
+                                     "b", Map.of(
                                          "x", "f",
                                          "y", 1.1,
-                                         "z", ImmutableList.of(6, 7, 8, 9)
+                                         "z", List.of(6, 7, 8, 9)
                                      ),
+                                     "c", 12.3,
                                      "v", "b"
                                  )
                              ),
@@ -357,13 +301,14 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          new Object[]{
                              0L,
                              StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 400,
-                                     "b", ImmutableMap.of(
-                                         "x", "d",
+                                 Map.of(
+                                     "a", 100,
+                                     "b", Map.of(
+                                         "x", "a",
                                          "y", 1.1,
-                                         "z", ImmutableList.of(3, 4)
+                                         "z", List.of(1, 2, 3, 4)
                                      ),
+                                     "c", 100,
                                      "v", Collections.emptyList()
                                  )
                              ),
@@ -371,7 +316,70 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          },
                          new Object[]{
                              0L,
-                             StructuredData.wrap(ImmutableMap.of("a", 300)),
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 200,
+                                     "b", Map.of(
+                                         "x", "b",
+                                         "y", 1.1,
+                                         "z", List.of(2, 4, 6)
+                                     ),
+                                     "c", List.of("a", "b"),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 400,
+                                     "b", Map.of(
+                                         "x", "d",
+                                         "y", 1.1,
+                                         "z", List.of(3, 4)
+                                     ),
+                                     "c", Map.of("a", 1),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 500,
+                                     "b", Map.of(
+                                         "x", "e",
+                                         "z", List.of(1, 2, 3, 4)
+                                     ),
+                                     "c", "hello",
+                                     "v", "a"
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 TestHelper.makeMap(
+                                     "a", 700,
+                                     "b", Map.of(
+                                         "x", "g",
+                                         "y", 1.1,
+                                         "z", Arrays.asList(9, null, 9, 9)
+                                     ),
+                                     "c", null,
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(Map.of("a", 300)),
                              1L
                          }
                      ))
