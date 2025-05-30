@@ -7344,4 +7344,46 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .build()
     );
   }
+
+  @Test
+  public void testCountPathWithArraysReturning()
+  {
+    /*
+    "obj":{... "c": 100, ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING VARCHAR ARRAY)) "
+        + "FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING_ARRAY))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
 }
