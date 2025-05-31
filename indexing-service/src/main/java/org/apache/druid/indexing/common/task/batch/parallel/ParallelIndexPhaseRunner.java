@@ -29,6 +29,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.MonitorEntry;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
@@ -123,7 +124,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     taskMonitor = new TaskMonitor<>(
         toolbox.getOverlordClient(),
         tuningConfig.getMaxRetry(),
-        estimateTotalNumSubTasks()
+        estimateTotalNumSubTasks(),
+        getSubtaskTimeoutMillisFromContext()
     );
     TaskState state = TaskState.RUNNING;
 
@@ -471,5 +473,19 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   int getAndIncrementNextSpecId()
   {
     return nextSpecId++;
+  }
+
+  private long getSubtaskTimeoutMillisFromContext()
+  {
+    if (context.isEmpty()) {
+      return Tasks.DEFAULT_SUB_TASK_TIMEOUT_MILLIS;
+    }
+
+    Object raw = context.getOrDefault(
+            Tasks.SUB_TASK_TIMEOUT_KEY,
+            Tasks.DEFAULT_SUB_TASK_TIMEOUT_MILLIS
+    );
+
+    return (raw instanceof Number) ? ((Number) raw).longValue() : Tasks.DEFAULT_SUB_TASK_TIMEOUT_MILLIS;
   }
 }
