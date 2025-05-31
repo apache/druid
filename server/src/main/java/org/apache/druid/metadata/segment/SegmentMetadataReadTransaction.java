@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata.segment;
 
+import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.skife.jdbi.v2.Handle;
 
 import java.io.Closeable;
@@ -35,6 +36,11 @@ public interface SegmentMetadataReadTransaction
    * @return The JDBI handle used in this transaction
    */
   Handle getHandle();
+
+  /**
+   * @return SQL tool to read or update the metadata store directly.
+   */
+  SqlSegmentsMetadataQuery noCacheSql();
 
   /**
    * Completes the transaction by either committing it or rolling it back.

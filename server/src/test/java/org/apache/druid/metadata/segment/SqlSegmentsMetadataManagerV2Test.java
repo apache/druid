@@ -88,7 +88,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     segmentMetadataCacheExec = new BlockingExecutorService("test");
     SegmentMetadataCache segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         jsonMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode, null)),
         Suppliers.ofInstance(storageConfig),
         useSchemaCache ? new SegmentSchemaCache() : new NoopSegmentSchemaCache(),
         connector,

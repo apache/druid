@@ -23,16 +23,21 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestDruidLeaderSelector implements DruidLeaderSelector
 {
+  private final AtomicInteger localTerm = new AtomicInteger(0);
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private volatile Listener listener;
 
   public void becomeLeader()
   {
-    if (isLeader.compareAndSet(false, true) && listener != null) {
-      listener.becomeLeader();
+    if (isLeader.compareAndSet(false, true)) {
+      if (listener != null) {
+        listener.becomeLeader();
+      }
+      localTerm.incrementAndGet();
     }
   }
 
@@ -59,7 +64,7 @@ public class TestDruidLeaderSelector implements DruidLeaderSelector
   @Override
   public int localTerm()
   {
-    return 0;
+    return localTerm.get();
   }
 
   @Override

@@ -468,12 +468,17 @@ public class CliPeon extends GuiceRunnable
   static void bindPeonDataSegmentHandlers(Binder binder)
   {
     // Build it to make it bind even if nothing binds to it.
-    Binders.dataSegmentKillerBinder(binder);
-    binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
+    bindDataSegmentKiller(binder);
     Binders.dataSegmentMoverBinder(binder);
     binder.bind(DataSegmentMover.class).to(OmniDataSegmentMover.class).in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder);
     binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
+  }
+
+  static void bindDataSegmentKiller(Binder binder)
+  {
+    Binders.dataSegmentKillerBinder(binder);
+    binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
   }
 
   private static void configureTaskActionClient(Binder binder)

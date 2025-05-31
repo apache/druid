@@ -67,10 +67,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * The datasources to be killed during each cycle are selected from {@link #datasourceCircularKillList}. This state is
  * refreshed in a run if the set of datasources to be killed changes. Consecutive duplicate datasources are avoided
  * across runs, provided there are other datasources to be killed.
- * </p>
- * <p>
- * See {@link org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}.
- * </p>
+ *
+ * @see org.apache.druid.indexing.common.task.KillUnusedSegmentsTask for details
+ * of the actual kill task and {@code UnusedSegmentKiller} to run embedded kill
+ * tasks on the Overlord.
  */
 public class KillUnusedSegments implements CoordinatorDuty
 {

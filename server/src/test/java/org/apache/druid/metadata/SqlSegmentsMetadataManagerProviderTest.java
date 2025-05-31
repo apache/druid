@@ -46,7 +46,7 @@ public class SqlSegmentsMetadataManagerProviderTest
   public void testLifecycleStartCreatesSegmentTables() throws Exception
   {
     final TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(null, null);
+    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(null, null, null);
     final Lifecycle lifecycle = new Lifecycle();
     final SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache();
     SqlSegmentsMetadataManagerProvider provider = new SqlSegmentsMetadataManagerProvider(

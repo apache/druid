@@ -36,11 +36,11 @@ public class OverlordDutyExecutorTest
   {
     OverlordDuty testDuty1 = Mockito.mock(OverlordDuty.class);
     Mockito.when(testDuty1.isEnabled()).thenReturn(true);
-    Mockito.when(testDuty1.getSchedule()).thenReturn(new DutySchedule(0, 0));
+    Mockito.when(testDuty1.getSchedule()).thenReturn(new DutySchedule(1, 0));
 
     OverlordDuty testDuty2 = Mockito.mock(OverlordDuty.class);
     Mockito.when(testDuty2.isEnabled()).thenReturn(true);
-    Mockito.when(testDuty2.getSchedule()).thenReturn(new DutySchedule(0, 0));
+    Mockito.when(testDuty2.getSchedule()).thenReturn(new DutySchedule(1, 0));
 
     ScheduledExecutorFactory executorFactory = Mockito.mock(ScheduledExecutorFactory.class);
     ScheduledExecutorService executorService = Mockito.mock(ScheduledExecutorService.class);
