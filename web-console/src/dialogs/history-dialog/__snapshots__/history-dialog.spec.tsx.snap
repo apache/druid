@@ -85,11 +85,12 @@ exports[`HistoryDialog matches snapshot 1`] = `
                 aria-selected="true"
                 class="bp5-tab"
                 data-tab-id="0"
+                data-tooltip="2025-04-03 02:01:00"
                 id="bp5-tab-title_undefined_0"
                 role="tab"
                 tabindex="0"
               >
-                test @ 
+                test @ 2025-04-03 02:01:00
               </div>
               <div
                 aria-controls="bp5-tab-panel_undefined_1"
@@ -98,11 +99,12 @@ exports[`HistoryDialog matches snapshot 1`] = `
                 aria-selected="false"
                 class="bp5-tab"
                 data-tab-id="1"
+                data-tooltip="2025-04-03 01:01:00"
                 id="bp5-tab-title_undefined_1"
                 role="tab"
                 tabindex="-1"
               >
-                test @ 
+                test @ 2025-04-03 01:01:00
               </div>
               <div
                 class="bp5-flex-expander"

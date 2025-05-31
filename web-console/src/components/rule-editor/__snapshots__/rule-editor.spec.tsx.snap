@@ -169,7 +169,7 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
             class="bp5-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp5-control-group tiered-replicant"
               role="group"
             >
               <button
@@ -184,46 +184,51 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                 </span>
               </button>
               <div
-                class="bp5-html-select bp5-fill"
+                class="formatted-input suggestible-input"
               >
-                <select>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                <div
+                  class="bp5-input-group bp5-fill"
                 >
-                  <svg
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
+                  <input
+                    aria-disabled="false"
+                    class="bp5-input"
+                    style="padding-right: 0px;"
+                    type="text"
+                    value="test1"
+                  />
+                  <span
+                    class="bp5-input-action"
                   >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
-                </span>
+                    <span
+                      class="bp5-popover-target"
+                    >
+                      <button
+                        aria-expanded="false"
+                        aria-haspopup="menu"
+                        class="bp5-button bp5-minimal"
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          class="bp5-icon bp5-icon-caret-down"
+                        >
+                          <svg
+                            data-icon="caret-down"
+                            height="16"
+                            role="img"
+                            viewBox="0 0 16 16"
+                            width="16"
+                          >
+                            <path
+                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                              fill-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  </span>
+                </div>
               </div>
               <button
                 class="bp5-button bp5-minimal"
@@ -738,7 +743,7 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
             class="bp5-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp5-control-group tiered-replicant"
               role="group"
             >
               <button
@@ -753,46 +758,51 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 </span>
               </button>
               <div
-                class="bp5-html-select bp5-fill"
+                class="formatted-input suggestible-input"
               >
-                <select>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                <div
+                  class="bp5-input-group bp5-fill"
                 >
-                  <svg
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
+                  <input
+                    aria-disabled="false"
+                    class="bp5-input"
+                    style="padding-right: 0px;"
+                    type="text"
+                    value="test1"
+                  />
+                  <span
+                    class="bp5-input-action"
                   >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
-                </span>
+                    <span
+                      class="bp5-popover-target"
+                    >
+                      <button
+                        aria-expanded="false"
+                        aria-haspopup="menu"
+                        class="bp5-button bp5-minimal"
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          class="bp5-icon bp5-icon-caret-down"
+                        >
+                          <svg
+                            data-icon="caret-down"
+                            height="16"
+                            role="img"
+                            viewBox="0 0 16 16"
+                            width="16"
+                          >
+                            <path
+                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                              fill-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  </span>
+                </div>
               </div>
               <button
                 class="bp5-button bp5-minimal"
@@ -908,7 +918,7 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
               </button>
             </div>
             <div
-              class="bp5-control-group"
+              class="bp5-control-group tiered-replicant"
               role="group"
             >
               <button
@@ -923,46 +933,51 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 </span>
               </button>
               <div
-                class="bp5-html-select bp5-fill"
+                class="formatted-input suggestible-input"
               >
-                <select>
-                  <option
-                    value="nonexist"
-                  >
-                    nonexist
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                <div
+                  class="bp5-input-group bp5-fill"
                 >
-                  <svg
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
+                  <input
+                    aria-disabled="false"
+                    class="bp5-input"
+                    style="padding-right: 0px;"
+                    type="text"
+                    value="nonexist"
+                  />
+                  <span
+                    class="bp5-input-action"
                   >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
-                </span>
+                    <span
+                      class="bp5-popover-target"
+                    >
+                      <button
+                        aria-expanded="false"
+                        aria-haspopup="menu"
+                        class="bp5-button bp5-minimal"
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          class="bp5-icon bp5-icon-caret-down"
+                        >
+                          <svg
+                            data-icon="caret-down"
+                            height="16"
+                            role="img"
+                            viewBox="0 0 16 16"
+                            width="16"
+                          >
+                            <path
+                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                              fill-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  </span>
+                </div>
               </div>
               <button
                 class="bp5-button bp5-minimal"
@@ -1299,7 +1314,7 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
             class="bp5-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp5-control-group tiered-replicant"
               role="group"
             >
               <button
@@ -1314,46 +1329,51 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                 </span>
               </button>
               <div
-                class="bp5-html-select bp5-fill"
+                class="formatted-input suggestible-input"
               >
-                <select>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                <div
+                  class="bp5-input-group bp5-fill"
                 >
-                  <svg
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
+                  <input
+                    aria-disabled="false"
+                    class="bp5-input"
+                    style="padding-right: 0px;"
+                    type="text"
+                    value="test1"
+                  />
+                  <span
+                    class="bp5-input-action"
                   >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
-                </span>
+                    <span
+                      class="bp5-popover-target"
+                    >
+                      <button
+                        aria-expanded="false"
+                        aria-haspopup="menu"
+                        class="bp5-button bp5-minimal"
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          class="bp5-icon bp5-icon-caret-down"
+                        >
+                          <svg
+                            data-icon="caret-down"
+                            height="16"
+                            role="img"
+                            viewBox="0 0 16 16"
+                            width="16"
+                          >
+                            <path
+                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                              fill-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  </span>
+                </div>
               </div>
               <button
                 class="bp5-button bp5-minimal"
@@ -1690,7 +1710,7 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
             class="bp5-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp5-control-group tiered-replicant"
               role="group"
             >
               <button
@@ -1705,51 +1725,51 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                 </span>
               </button>
               <div
-                class="bp5-html-select bp5-fill"
+                class="formatted-input suggestible-input"
               >
-                <select>
-                  <option
-                    value="nonexist"
-                  >
-                    nonexist
-                  </option>
-                  <option
-                    value="test1"
-                  >
-                    test1
-                  </option>
-                  <option
-                    value="test2"
-                  >
-                    test2
-                  </option>
-                  <option
-                    value="test3"
-                  >
-                    test3
-                  </option>
-                </select>
-                <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                <div
+                  class="bp5-input-group bp5-fill"
                 >
-                  <svg
-                    data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
+                  <input
+                    aria-disabled="false"
+                    class="bp5-input"
+                    style="padding-right: 0px;"
+                    type="text"
+                    value="nonexist"
+                  />
+                  <span
+                    class="bp5-input-action"
                   >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
-                </span>
+                    <span
+                      class="bp5-popover-target"
+                    >
+                      <button
+                        aria-expanded="false"
+                        aria-haspopup="menu"
+                        class="bp5-button bp5-minimal"
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          class="bp5-icon bp5-icon-caret-down"
+                        >
+                          <svg
+                            data-icon="caret-down"
+                            height="16"
+                            role="img"
+                            viewBox="0 0 16 16"
+                            width="16"
+                          >
+                            <path
+                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                              fill-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  </span>
+                </div>
               </div>
               <button
                 class="bp5-button bp5-minimal"

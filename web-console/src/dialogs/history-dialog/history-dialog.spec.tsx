@@ -28,12 +28,12 @@ describe('HistoryDialog', () => {
         title="History"
         historyRecords={[
           {
-            auditTime: 'test',
+            auditTime: '2025-04-03T02:01:00.000Z',
             auditInfo: { comment: 'test' },
             payload: JSONBig.stringify({ name: 'test' }),
           },
           {
-            auditTime: 'test',
+            auditTime: '2025-04-03T01:01:00.000Z',
             auditInfo: { comment: 'test' },
             payload: JSONBig.stringify({ name: 'test' }),
           },

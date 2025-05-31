@@ -64,6 +64,7 @@ export const SuggestionMenu = React.memo(function SuggestionMenu(props: Suggesti
           );
         }
       })}
+      {suggestions.length === 0 && <MenuItem text="(empty)" disabled />}
     </Menu>
   );
 });
