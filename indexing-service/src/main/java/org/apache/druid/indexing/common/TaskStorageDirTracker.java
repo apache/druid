@@ -148,8 +148,8 @@ public class TaskStorageDirTracker
       final int currIncrement = Math.abs(iterationCounter.getAndIncrement() % slots.length);
       final StorageSlot candidateSlot = slots[currIncrement % slots.length];
       if (candidateSlot.runningTaskId == null) {
-        candidateSlot.runningTaskId = taskId;
         ++numUsedSlots;
+        candidateSlot.runningTaskId = taskId;
         return candidateSlot;
       }
     }
@@ -159,8 +159,8 @@ public class TaskStorageDirTracker
   public synchronized void returnStorageSlot(StorageSlot slot)
   {
     if (slot.getParentRef() == this) {
-      slot.runningTaskId = null;
       --numUsedSlots;
+      slot.runningTaskId = null;
     } else {
       throw new IAE("Cannot return storage slot for task [%s] that I don't own.", slot.runningTaskId);
     }
@@ -268,6 +268,10 @@ public class TaskStorageDirTracker
     }
   }
 
+  /**
+   * Retrieves the number of currently used storage slots.
+   * @return the number of storage slots currently in use.
+   */
   public synchronized long getNumUsedSlots()
   {
     return numUsedSlots;
