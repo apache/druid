@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
@@ -50,7 +51,6 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -161,11 +161,21 @@ public class SqlResource
 
   @POST
   @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
   @Nullable
   public Response doPost(
+      @Context final HttpServletRequest req,
+      @Context final HttpContext httpContext
+  )
+  {
+    return doPost(SqlQuery.from(httpContext), req);
+  }
+
+  /**
+   * This method is defined as public so that tests can access it
+   */
+  public Response doPost(
       final SqlQuery sqlQuery,
-      @Context final HttpServletRequest req
+      final HttpServletRequest req
   )
   {
     final String engineName = sqlQuery.queryContext().getEngine();

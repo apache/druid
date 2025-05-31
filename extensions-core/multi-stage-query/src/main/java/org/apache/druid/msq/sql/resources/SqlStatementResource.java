@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
@@ -96,7 +97,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -167,8 +167,15 @@ public class SqlStatementResource
 
   @POST
   @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response doPost(final SqlQuery sqlQuery, @Context final HttpServletRequest req)
+  public Response doPost(@Context final HttpServletRequest req,
+                         @Context final HttpContext httpContext)
+  {
+    return doPost(SqlQuery.from(httpContext), req);
+  }
+
+  @VisibleForTesting
+  Response doPost(final SqlQuery sqlQuery,
+                  final HttpServletRequest req)
   {
     SqlQuery modifiedQuery = createModifiedSqlQuery(sqlQuery);
 

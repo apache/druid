@@ -1047,7 +1047,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             i,
             types.get(i),
             expectedCell,
-            resultCell);
+            resultCell
+        );
       }
     }
   }
