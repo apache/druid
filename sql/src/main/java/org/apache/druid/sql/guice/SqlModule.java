@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -44,6 +45,7 @@ import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
@@ -124,6 +126,12 @@ public class SqlModule implements Module
 
     // Default do-nothing catalog resolver
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+
+    // Bind the engine
+    Multibinder.newSetBinder(binder, SqlEngine.class)
+               .addBinding()
+               .to(NativeSqlEngine.class)
+               .in(LazySingleton.class);
   }
 
   private boolean isEnabled()

@@ -278,9 +278,8 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter = new StubServiceEmitter("test", "test");
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     final SqlToolbox sqlToolbox = new SqlToolbox(
-        engine,
+        null,
         plannerFactory,
         stubServiceEmitter,
         testRequestLogger,
@@ -297,7 +296,7 @@ public class SqlResourceTest extends CalciteTestBase
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
-            sqlToolbox,
+            sqlToolbox.withEngine(engine),
             sqlQuery,
             req,
             validateAndAuthorizeLatchSupplier,
@@ -323,12 +322,13 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig(),
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -400,6 +400,14 @@ public class SqlResourceTest extends CalciteTestBase
     );
     checkSqlRequestLog(true);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void test_getEnabled()
+  {
+    Response response = resource.getSupportedEngines(req);
+    Set<EngineInfo> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getEngines();
+    Assert.assertTrue(supportedEngines.contains(new EngineInfo(NativeSqlEngine.NAME)));
   }
 
   @Test
@@ -1632,8 +1640,6 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig()
         {
           @Override
@@ -1648,6 +1654,8 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );

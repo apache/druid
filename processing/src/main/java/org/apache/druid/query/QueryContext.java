@@ -471,6 +471,15 @@ public class QueryContext
     return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   }
 
+  public String getEngine()
+  {
+    return QueryContexts.parseString(
+        context,
+        QueryContexts.ENGINE,
+        QueryContexts.DEFAULT_ENGINE
+    );
+  }
+
   public boolean hasTimeout()
   {
     return getTimeout() != QueryContexts.NO_TIMEOUT;

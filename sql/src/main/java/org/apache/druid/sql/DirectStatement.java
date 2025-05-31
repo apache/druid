@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.QueryResponse;
@@ -36,7 +35,6 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Lifecycle for direct SQL statement execution, which means that the query
@@ -68,8 +66,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class DirectStatement extends AbstractStatement implements Cancelable
 {
-  private static final Logger log = new Logger(DirectStatement.class);
-
   /**
    * Represents the execution plan for a query with the ability to run
    * that plan (once).
@@ -302,12 +298,9 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       return;
     }
     state = State.CANCELLED;
-    final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
 
-    for (String nativeQueryId : nativeQueryIds) {
-      log.debug("Canceling native query [%s]", nativeQueryId);
-      sqlToolbox.queryScheduler.cancelQuery(nativeQueryId);
-    }
+    // Give control to the engine to do engine specific things.
+    sqlToolbox.engine.cancelQuery(plannerContext, sqlToolbox.queryScheduler);
   }
 
   @Override

@@ -27,6 +27,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.CalciteScanSignatureTest.ScanSignatureComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -180,6 +181,12 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
 
       @Override
       public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public SqlStatementFactory getSqlStatementFactory()
       {
         throw new UnsupportedOperationException();
       }
