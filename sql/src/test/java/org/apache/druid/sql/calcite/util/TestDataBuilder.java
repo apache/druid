@@ -118,6 +118,7 @@ public class TestDataBuilder
 
   public static final String TIMESTAMP_COLUMN = "t";
   public static final GlobalTableDataSource CUSTOM_TABLE = new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE);
+  public static final GlobalTableDataSource CUSTOM_TABLE2 = new GlobalTableDataSource(CalciteTests.RESTRICTED_BROADCAST_DATASOURCE);
 
   public static QueryableIndex QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = null;
 
@@ -126,7 +127,7 @@ public class TestDataBuilder
     @Override
     public boolean isDirectlyJoinable(DataSource dataSource)
     {
-      return CUSTOM_TABLE.equals(dataSource);
+      return ImmutableSet.of(CUSTOM_TABLE, CUSTOM_TABLE2).contains(dataSource);
     }
 
     @Override
@@ -895,6 +896,9 @@ public class TestDataBuilder
         someXDatasourceIndex
     ).add(
         TestDataSet.BROADCAST,
+        new File(tmpDir, "3a")
+    ).add(
+        TestDataSet.RESTRICTED_BROADCAST,
         new File(tmpDir, "3a")
     ).add(
         DataSegment.builder()

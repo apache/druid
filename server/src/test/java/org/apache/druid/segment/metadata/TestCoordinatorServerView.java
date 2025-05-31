@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
@@ -81,7 +82,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
       0
   );
 
-  private final Map<DataSource, VersionedIntervalTimeline<String, SegmentLoadInfo>> timelines;
+  private final Map<String, VersionedIntervalTimeline<String, SegmentLoadInfo>> timelines;
   private Map<Pair<DataSegment, ServerType>, Pair<DruidServerMetadata, SegmentLoadInfo>> segmentInfo;
   private List<DataSegment> segments = new ArrayList<>();
   private List<DataSegment> realtimeSegments = new ArrayList<>();
@@ -137,8 +138,8 @@ public class TestCoordinatorServerView extends CoordinatorServerView
     segmentInfo.put(Pair.of(dataSegment, druidServer.getType()), Pair.of(druidServer.getMetadata(), segmentLoadInfo));
 
     TableDataSource tableDataSource = new TableDataSource(dataSegment.getDataSource());
-    timelines.computeIfAbsent(tableDataSource, value -> new VersionedIntervalTimeline<>(Comparator.naturalOrder()));
-    VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = timelines.get(tableDataSource);
+    timelines.computeIfAbsent(tableDataSource.getName(), value -> new VersionedIntervalTimeline<>(Comparator.naturalOrder()));
+    VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = timelines.get(tableDataSource.getName());
     final ShardSpec shardSpec = new SingleDimensionShardSpec("dimAll", null, null, 0, 1);
     timeline.add(dataSegment.getInterval(), segmentDescriptor.getVersion(), shardSpec.createChunk(segmentLoadInfo));
   }
@@ -152,7 +153,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
   @Override
   public VersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource)
   {
-    return timelines.get(dataSource);
+    return timelines.get(Iterables.getOnlyElement(dataSource.getTableNames()));
   }
 
   @Override
@@ -198,7 +199,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
     segmentInfo.remove(key);
 
     if (null != info) {
-      timelines.get(new TableDataSource(segment.getDataSource())).remove(
+      timelines.get(segment.getDataSource()).remove(
           segment.getInterval(),
           "0",
           new SingleDimensionShardSpec("dimAll", null, null, 0, 1)

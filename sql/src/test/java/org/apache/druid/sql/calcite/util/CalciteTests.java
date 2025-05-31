@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -121,6 +122,7 @@ public class CalciteTests
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
   public static final String RESTRICTED_DATASOURCE = "restrictedDatasource_m1_is_6";
+  public static final String RESTRICTED_BROADCAST_DATASOURCE = "restrictedBroadcastDatasource_m1_is_6";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
@@ -145,7 +147,8 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
+        boolean readRestrictedTable = ImmutableSet.of(RESTRICTED_DATASOURCE, RESTRICTED_BROADCAST_DATASOURCE)
+                                                  .contains(resource.getName()) && action.equals(Action.READ);
 
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
           return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
@@ -189,7 +192,8 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
+        boolean readRestrictedTable = ImmutableSet.of(RESTRICTED_DATASOURCE, RESTRICTED_BROADCAST_DATASOURCE)
+                                                  .contains(resource.getName()) && action.equals(Action.READ);
 
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
           return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;

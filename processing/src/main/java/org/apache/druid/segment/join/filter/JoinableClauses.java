@@ -57,7 +57,7 @@ public class JoinableClauses
 
     List<JoinableClause> joinableClauses = preClauses.stream().map(preJoinableClause -> {
       final Optional<Joinable> joinable = joinableFactory.build(
-          preJoinableClause.getDataSource(),
+          preJoinableClause.maybeUnwrapRestrictedDataSource(),
           preJoinableClause.getCondition()
       );
 

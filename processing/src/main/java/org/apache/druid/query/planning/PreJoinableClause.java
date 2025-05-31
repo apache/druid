@@ -20,10 +20,14 @@
 package org.apache.druid.query.planning;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
@@ -62,6 +66,29 @@ public class PreJoinableClause
   public DataSource getDataSource()
   {
     return dataSource;
+  }
+
+  /**
+   * If the data source is a {@link RestrictedDataSource} with a {@link NoRestrictionPolicy}, unwraps it to a table and return.
+   * <p>
+   * This is a temporary workaround to allow the planner to work with {@link RestrictedDataSource} as the right-side join.
+   */
+  public DataSource maybeUnwrapRestrictedDataSource()
+  {
+    if (dataSource instanceof RestrictedDataSource) {
+      RestrictedDataSource restricted = (RestrictedDataSource) dataSource;
+      if (restricted.getPolicy() instanceof NoRestrictionPolicy) {
+        return restricted.getBase();
+      } else {
+        throw new QueryUnsupportedException(StringUtils.format(
+            "Restricted data source [%s] with policy [%s] is not supported",
+            restricted.getBase(),
+            restricted.getPolicy()
+        ));
+      }
+    } else {
+      return dataSource;
+    }
   }
 
   public JoinType getJoinType()
