@@ -180,6 +180,7 @@
       },
       "querying/querying",
       "querying/query-processing",
+      "querying/projections",      
       "querying/query-execution",
       "querying/troubleshooting",
       {
