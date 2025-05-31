@@ -22,24 +22,40 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Set;
+import java.util.Objects;
 
-/**
- * Class returned by {@link SqlResource#getSupportedEngines}, the supported engines API.
- */
-public class SupportedEnginesResponse
+public class EngineInfo
 {
-  private final Set<EngineInfo> engines;
+  private final String name;
 
   @JsonCreator
-  public SupportedEnginesResponse(@JsonProperty("engines") Set<EngineInfo> engines)
+  public EngineInfo(@JsonProperty("name") String name)
   {
-    this.engines = engines;
+    this.name = name;
   }
 
   @JsonProperty
-  public Set<EngineInfo> getEngines()
+  public String getName()
   {
-    return engines;
+    return name;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    EngineInfo that = (EngineInfo) o;
+    return Objects.equals(name, that.name);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(name);
   }
 }

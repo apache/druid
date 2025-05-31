@@ -51,7 +51,6 @@ public class DartSqlClientImpl implements DartSqlClient
   {
     try {
       URIBuilder builder = new URIBuilder("/queries");
-      builder.addParameter("engine", DartSqlEngine.NAME);
       if (selfOnly) {
         builder.addParameter("selfOnly", null);
       }

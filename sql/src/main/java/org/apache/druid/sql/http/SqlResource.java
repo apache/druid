@@ -64,6 +64,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -117,14 +119,17 @@ public class SqlResource
   public Response getSupportedEngines(@Context final HttpServletRequest request)
   {
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
-    return Response.ok(new SupportedEnginesResponse(sqlEngineRegistry.getSupportedEngines())).build();
+    Set<EngineInfo> engines = sqlEngineRegistry.getSupportedEngines()
+                                               .stream()
+                                               .map(EngineInfo::new)
+                                               .collect(Collectors.toSet());
+    return Response.ok(new SupportedEnginesResponse(engines)).build();
   }
 
   /**
-   * API to list all running queries, for an engine that supports such listings.
+   * API to list all running queries, for all engines that supports such listings.
    *
    * @param selfOnly if true, return queries running on this server. If false, return queries running on all servers.
-   * @param engine engine name.
    * @param request  http request.
    */
   @GET
@@ -132,7 +137,6 @@ public class SqlResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetRunningQueries(
       @QueryParam("selfOnly") final String selfOnly,
-      @QueryParam("engine") @Nullable final String engine,
       @Context final HttpServletRequest request
   )
   {
@@ -143,9 +147,13 @@ public class SqlResource
         authorizerMapper
     );
 
-    final SqlEngine sqlEngine = sqlEngineRegistry.getEngine(engine);
-    final List<QueryInfo> queries = sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess);
+    final Collection<SqlEngine> engines = sqlEngineRegistry.getAllEngines();
+    final List<QueryInfo> queries = new ArrayList<>();
 
+    // Get running queries from all engines that support it.
+    for (SqlEngine sqlEngine : engines) {
+      queries.addAll(sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess));
+    }
 
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
     return Response.ok().entity(new GetQueriesResponse(queries)).build();

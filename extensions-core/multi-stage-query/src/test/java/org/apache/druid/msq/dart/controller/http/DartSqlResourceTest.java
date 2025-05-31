@@ -82,6 +82,7 @@ import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
+import org.apache.druid.sql.http.EngineInfo;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlEngineRegistry;
@@ -89,7 +90,6 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.sql.http.SupportedEnginesResponse;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -291,8 +291,8 @@ public class DartSqlResourceTest extends MSQTestBase
   public void test_getEnabled()
   {
     Response response = sqlResource.getSupportedEngines(httpServletRequest);
-    Set<String> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getSupportedEngines();
-    Assert.assertTrue(supportedEngines.contains(DartSqlEngine.NAME));
+    Set<EngineInfo> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getEngines();
+    Assertions.assertTrue(supportedEngines.contains(new EngineInfo(DartSqlEngine.NAME)));
   }
 
   /**
@@ -308,7 +308,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals(
         new GetQueriesResponse(Collections.singletonList(DartQueryInfo.fromControllerHolder(holder))),
-        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -332,7 +332,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries("", DartSqlEngine.NAME, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);
@@ -373,7 +373,7 @@ public class DartSqlResourceTest extends MSQTestBase
                 remoteQueryInfo
             )
         ),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -400,7 +400,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // were able to fetch.)
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -437,7 +437,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertEquals(
         new GetQueriesResponse(
             ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(localHolder);
@@ -473,7 +473,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(remoteQueryInfo.withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, DartSqlEngine.NAME, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
     controllerRegistry.deregister(holder);

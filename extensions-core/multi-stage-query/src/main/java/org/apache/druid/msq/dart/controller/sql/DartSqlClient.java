@@ -36,7 +36,7 @@ public interface DartSqlClient
    * @param selfOnly true if only queries from this server should be returned; false if queries from all servers
    *                 should be returned
    *
-   * @see SqlResource#doGetRunningQueries(String, String, HttpServletRequest) the server side
+   * @see SqlResource#doGetRunningQueries(String, HttpServletRequest) the server side
    */
   ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly);
 }

@@ -23,6 +23,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -129,7 +130,8 @@ public interface SqlEngine
   SqlStatementFactory getSqlStatementFactory();
 
   /**
-   * Returns a list of {@link QueryInfo} containing the currently running queries using this engine.
+   * Returns a list of {@link QueryInfo} containing the currently running queries using this engine. Returns an empty
+   * list if the operation is not supported.
    */
   default List<QueryInfo> getRunningQueries(
       boolean selfOnly,
@@ -137,7 +139,7 @@ public interface SqlEngine
       AuthorizationResult authorizationResult
   )
   {
-    throw new UnsupportedOperationException();
+    return List.of();
   }
 
   /**
@@ -145,6 +147,8 @@ public interface SqlEngine
    */
   default void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
-    throw new UnsupportedOperationException();
+    throw DruidException.forPersona(DruidException.Persona.USER)
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("Engine[%s] does not support canceling queries", name());
   }
 }

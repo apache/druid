@@ -25,6 +25,7 @@ import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.validation.constraints.NotNull;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -53,5 +54,10 @@ public class SqlEngineRegistry
   public Set<String> getSupportedEngines()
   {
     return engines.keySet();
+  }
+
+  public Collection<SqlEngine> getAllEngines()
+  {
+    return engines.values();
   }
 }
