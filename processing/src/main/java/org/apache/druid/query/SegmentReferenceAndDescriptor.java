@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -53,7 +54,7 @@ public class SegmentReferenceAndDescriptor
    */
   public static SegmentReferenceAndDescriptor acquireReference(
       SegmentDescriptor descriptor,
-      ReferenceCountedSegmentProvider provider,
+      ReferenceCountedObjectProvider<Segment> provider,
       SegmentMapFunction mapFunction,
       Closer closer
   )

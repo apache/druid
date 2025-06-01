@@ -21,7 +21,9 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -40,22 +42,21 @@ class SegmentReferenceAndDescriptorTest extends InitializedNullHandlingTest
         TestIndex.getMMappedTestIndex(), SegmentId.dummy("test")
     );
 
-    try (ReferenceCountedSegmentProvider ref = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment)) {
-      final SegmentDescriptor descriptor = new SegmentDescriptor(
-          segment.getDataInterval(),
-          segment.getId().getVersion(),
-          segment.getId().getPartitionNum()
-      );
-      Closer closer = Closer.create();
-      final SegmentReferenceAndDescriptor refAndDescriptor = SegmentReferenceAndDescriptor.acquireReference(
-          descriptor,
-          ref,
-          SegmentMapFunction.IDENTITY,
-          closer
-      );
-      Assertions.assertEquals(descriptor, refAndDescriptor.getDescriptor());
-      Assertions.assertNotNull(refAndDescriptor.getReference());
-      closer.close();
-    }
+    final ReferenceCountedSegmentProvider ref = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment);
+    final SegmentDescriptor descriptor = new SegmentDescriptor(
+        segment.getDataInterval(),
+        segment.getId().getVersion(),
+        segment.getId().getPartitionNum()
+    );
+    Closer closer = Closer.create();
+    final SegmentReferenceAndDescriptor refAndDescriptor = SegmentReferenceAndDescriptor.acquireReference(
+        descriptor,
+        ref,
+        SegmentMapFunction.IDENTITY,
+        closer
+    );
+    Assertions.assertEquals(descriptor, refAndDescriptor.getDescriptor());
+    Assertions.assertNotNull(refAndDescriptor.getReference());
+    closer.close();
   }
 }
