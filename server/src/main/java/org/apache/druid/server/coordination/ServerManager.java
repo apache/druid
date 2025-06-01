@@ -54,6 +54,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.SegmentReferenceAndDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -74,7 +75,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -186,39 +187,34 @@ public class ServerManager implements QuerySegmentWalker
   /**
    * For each {@link SegmentDescriptor}, we try to fetch a {@link ReferenceCountedSegmentProvider} from the supplied
    * {@link VersionedIntervalTimeline} and apply {@link SegmentMapFunction} to acquire a reference and transform the
-   * segment as appropriate for query processing, returning a {@link SegmentReference} wrapper. The wrapper contains the
-   * {@link SegmentDescriptor} and an {@link Optional<Segment>}, which if present the {@link Segment} will be registered
-   * to the {@link Closer}, and will be empty if the segment was not actually in the timeline, or if unable to apply
-   * the reference
+   * segment as appropriate for query processing, returning a {@link SegmentReferenceAndDescriptor} wrapper. The wrapper
+   * contains the {@link SegmentDescriptor} and an {@link Optional<Segment>}, which if present the {@link Segment} will
+   * be registered to the {@link Closer}, and will be empty if the segment was not actually in the timeline, or if
+   * unable to apply the reference
    */
-  protected List<SegmentReference> acquireAllSegments(
+  protected ArrayList<SegmentReferenceAndDescriptor> acquireAllSegments(
       VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFn,
       Closer closer
   )
   {
-    // materialize to list to acquire all of the references
-    return Lists.newArrayList(
-        FunctionalIterable
-            .create(segments)
-            .transform(
-                descriptor -> {
-                  final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
-                      descriptor.getInterval(),
-                      descriptor.getVersion(),
-                      descriptor.getPartitionNumber()
-                  );
+    // materialize to list to acquire all the references
+    final ArrayList<SegmentReferenceAndDescriptor> refs = new ArrayList<>();
+    for (SegmentDescriptor descriptor : segments) {
+      final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
+          descriptor.getInterval(),
+          descriptor.getVersion(),
+          descriptor.getPartitionNumber()
+      );
 
-                  if (chunk == null) {
-                    return new SegmentReference(descriptor, Optional.empty());
-                  }
-
-                  final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
-                  return new SegmentReference(descriptor, segmentMapFn.apply(referenceCounter).map(closer::register));
-                }
-            )
-    );
+      if (chunk == null) {
+        refs.add(SegmentReferenceAndDescriptor.empty(descriptor));
+      } else {
+        refs.add(SegmentReferenceAndDescriptor.acquireReference(descriptor, chunk.getObject(), segmentMapFn, closer));
+      }
+    }
+    return refs;
   }
 
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
@@ -237,10 +233,10 @@ public class ServerManager implements QuerySegmentWalker
         .create(acquireAllSegments(timeline, specs, segmentMapFn, closer))
         .transform(
             ref ->
-                ref.getSegmentReference()
+                ref.getReference()
                    .map(segment ->
                             buildQueryRunnerForSegment(
-                                ref.getSegmentDescriptor(),
+                                ref.getDescriptor(),
                                 segment,
                                 factory,
                                 toolChest,
@@ -248,7 +244,7 @@ public class ServerManager implements QuerySegmentWalker
                                 cacheKeyPrefix
                             )
                    ).orElse(
-                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
+                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getDescriptor())
                    )
         );
   }
@@ -436,32 +432,6 @@ public class ServerManager implements QuerySegmentWalker
       catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, closer);
       }
-    }
-  }
-
-  /**
-   * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}, the latter being created by a
-   * {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}.
-   */
-  public static final class SegmentReference
-  {
-    private final SegmentDescriptor segmentDescriptor;
-    private final Optional<Segment> segmentReference;
-
-    public SegmentReference(SegmentDescriptor segmentDescriptor, Optional<Segment> segmentReference)
-    {
-      this.segmentDescriptor = segmentDescriptor;
-      this.segmentReference = segmentReference;
-    }
-
-    public SegmentDescriptor getSegmentDescriptor()
-    {
-      return segmentDescriptor;
-    }
-
-    public Optional<Segment> getSegmentReference()
-    {
-      return segmentReference;
     }
   }
 }

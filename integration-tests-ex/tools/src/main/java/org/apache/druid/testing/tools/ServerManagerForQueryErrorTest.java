@@ -133,7 +133,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         .create(acquireAllSegments(timeline, specs, segmentMapFn, closer))
         .transform(
             ref ->
-                ref.getSegmentReference()
+                ref.getReference()
                    .map(segment -> {
                           final QueryContext queryContext = query.context();
                           if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
@@ -145,7 +145,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                                     ignoredSegments = new HashSet<>();
                                   }
                                   if (ignoredSegments.size() < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
-                                    ignoredSegments.add(ref.getSegmentDescriptor());
+                                    ignoredSegments.add(ref.getDescriptor());
                                     isIgnoreSegment.setTrue();
                                   }
                                   return ignoredSegments;
@@ -153,8 +153,8 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                             );
 
                             if (isIgnoreSegment.isTrue()) {
-                              LOG.info("Pretending I don't have segment [%s]", ref.getSegmentReference());
-                              return new ReportTimelineMissingSegmentQueryRunner<T>(ref.getSegmentDescriptor());
+                              LOG.info("Pretending I don't have segment [%s]", ref.getReference());
+                              return new ReportTimelineMissingSegmentQueryRunner<T>(ref.getDescriptor());
                             }
                           } else if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
@@ -250,7 +250,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                             };
                           }
                           return buildQueryRunnerForSegment(
-                              ref.getSegmentDescriptor(),
+                              ref.getDescriptor(),
                               segment,
                               factory,
                               toolChest,
@@ -259,7 +259,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                           );
                         }
                    ).orElse(
-                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
+                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getDescriptor())
                    )
         );
   }
