@@ -84,6 +84,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -455,6 +456,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NullValueIndex sNulls = sIndexSupplier.as(NullValueIndex.class);
 
     final List<NestedPathPart> sElementPath = NestedPathFinder.parseJsonPath("$.s[1]");
+    Assert.assertEquals(Set.of(ColumnType.STRING), column.getFieldTypes(sElementPath));
+    Assert.assertEquals(ColumnType.STRING, column.getFieldLogicalType(sElementPath));
     ColumnValueSelector<?> sElementSelector = column.makeColumnValueSelector(sElementPath, offset);
     VectorObjectSelector sElementVectorSelector = column.makeVectorObjectSelector(sElementPath, vectorOffset);
     VectorObjectSelector sElementFilteredVectorSelector = column.makeVectorObjectSelector(
@@ -480,6 +483,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NullValueIndex lNulls = lIndexSupplier.as(NullValueIndex.class);
 
     final List<NestedPathPart> lElementPath = NestedPathFinder.parseJsonPath("$.l[1]");
+    Assert.assertEquals(Set.of(ColumnType.LONG), column.getFieldTypes(lElementPath));
+    Assert.assertEquals(ColumnType.LONG, column.getFieldLogicalType(lElementPath));
     ColumnValueSelector<?> lElementSelector = column.makeColumnValueSelector(lElementPath, offset);
     VectorValueSelector lElementVectorSelector = column.makeVectorValueSelector(lElementPath, vectorOffset);
     VectorObjectSelector lElementVectorObjectSelector = column.makeVectorObjectSelector(lElementPath, vectorOffset);
@@ -506,6 +511,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NullValueIndex dNulls = dIndexSupplier.as(NullValueIndex.class);
 
     final List<NestedPathPart> dElementPath = NestedPathFinder.parseJsonPath("$.d[1]");
+    Assert.assertEquals(Set.of(ColumnType.DOUBLE), column.getFieldTypes(dElementPath));
+    Assert.assertEquals(ColumnType.DOUBLE, column.getFieldLogicalType(dElementPath));
     ColumnValueSelector<?> dElementSelector = column.makeColumnValueSelector(dElementPath, offset);
     VectorValueSelector dElementVectorSelector = column.makeVectorValueSelector(dElementPath, vectorOffset);
     VectorObjectSelector dElementVectorObjectSelector = column.makeVectorObjectSelector(dElementPath, vectorOffset);
