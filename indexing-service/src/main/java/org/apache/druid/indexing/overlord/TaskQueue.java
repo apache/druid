@@ -104,6 +104,7 @@ public class TaskQueue
 {
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
+  private static final String CALLBACK_STATUS_CHANGE_MSG = "notified status change from task";
 
   // 60 MB warning threshold since 64 MB is the default max_allowed_packet size in MySQL 8+
   private static final long TASK_SIZE_WARNING_THRESHOLD = 1024 * 1024 * 60;
@@ -397,14 +398,17 @@ public class TaskQueue
     final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = new HashMap<>();
     for (final TaskRunnerWorkItem workItem : List.copyOf(taskRunner.getKnownTasks())) {
       final String taskId = workItem.getTaskId();
-      updateTaskEntry(taskId, entry -> {
-        if (entry == null) {
-          unknownTaskIds.add(taskId);
-          shutdownUnknownTaskOnRunner(taskId);
-        } else {
-          runnerTaskFutures.put(taskId, workItem.getResult());
-        }
-      });
+      updateTaskEntry(
+          taskId,
+          entry -> {
+            if (entry == null) {
+              unknownTaskIds.add(taskId);
+              shutdownUnknownTaskOnRunner(taskId);
+            } else {
+              runnerTaskFutures.put(taskId, workItem.getResult());
+            }
+          }
+      );
     }
     log.info("Cleaned up [%,d] tasks on task runner with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
 
@@ -443,8 +447,13 @@ public class TaskQueue
                   e.getMessage()
               );
             }
+            statusUpdatesInQueue.incrementAndGet();
+
             TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
-            notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
+            notifyCompletedStatus(entry, taskStatus, taskStatus.getErrorMsg());
+
+            statusUpdatesInQueue.decrementAndGet();
+            handledStatusUpdates.incrementAndGet();
             return;
           }
           if (taskIsReady) {
@@ -489,7 +498,6 @@ public class TaskQueue
    * Adds some work to the queue and the underlying task storage facility with a generic "running" status.
    *
    * @param task task to add
-   *
    * @return true
    */
   public boolean add(final Task task)
@@ -607,54 +615,31 @@ public class TaskQueue
   /**
    * Shuts down a task if it has not yet finished.
    *
-   * @param taskId task to kill
+   * @param taskId       task to kill
    * @param reasonFormat A format string indicating the shutdown reason
-   * @param args arguments for reasonFormat
+   * @param args         arguments for reasonFormat
    */
   public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
     Preconditions.checkNotNull(taskId, "taskId");
-    startStopLock.readLock().lock();
-    try {
-      updateTaskEntry(
-          taskId,
-          entry -> notifyStatus(
-              entry,
-              TaskStatus.failure(taskId, StringUtils.format(reasonFormat, args)),
-              reasonFormat,
-              args
-          )
-      );
-    }
-    finally {
-      startStopLock.readLock().unlock();
-    }
+    handleStatusWrapper(taskId, TaskStatus.failure(taskId, StringUtils.format(reasonFormat, args)), reasonFormat, args);
   }
 
   /**
    * Shuts down a task, but records the task status as a success, unike {@link #shutdown(String, String, Object...)}
    *
-   * @param taskId task to shut down
+   * @param taskId       task to shut down
    * @param reasonFormat A format string indicating the shutdown reason
-   * @param args arguments for reasonFormat
+   * @param args         arguments for reasonFormat
    */
   public void shutdownWithSuccess(final String taskId, String reasonFormat, Object... args)
   {
     Preconditions.checkNotNull(taskId, "taskId");
-    startStopLock.readLock().lock();
-    try {
-      updateTaskEntry(
-          taskId,
-          entry -> notifyStatus(entry, TaskStatus.success(taskId), reasonFormat, args)
-      );
-    }
-    finally {
-      startStopLock.readLock().unlock();
-    }
+    handleStatusWrapper(taskId, TaskStatus.success(taskId), reasonFormat, args);
   }
 
   /**
-   * Notifies this queue that the given task has an updated status. If this update
+   * Notifies this queue that the given task has an updated completed status. If this update
    * is valid and task is now complete, the following operations are performed:
    * <ul>
    * <li>Mark task as completed to prevent re-launching it</li>
@@ -663,23 +648,32 @@ public class TaskQueue
    * <li>Request {@link #taskRunner} to shutdown task (synchronously)</li>
    * <li>Remove all locks for task from metadata storage</li>
    * <li>Request task management</li>
+   * <li>Perform Task accounting metrics/logs</li>
    * </ul>
    * This method does not remove the task from {@link #activeTasks} to avoid
    * race conditions with {@link #syncFromStorage()}.
    * <p>
-   * Since this operation involves DB updates and synchronous remote calls, it
-   * must be invoked on a dedicated executor so that task runner and worker sync
-   * is not blocked.
+   * Since this operation is intended to be performed under one of activeTasks hash segment locks, involves DB updates
+   * and synchronous remote calls, it must be invoked on a dedicated executor so that task runner and worker sync
+   * are not blocked.
    *
    * @throws NullPointerException     if task or status is null
    * @throws IllegalArgumentException if the task ID does not match the status ID
    * @throws IllegalStateException    if this queue is currently shut down
    * @see #removeTaskInternal
    */
-  private void notifyStatus(final TaskEntry entry, final TaskStatus taskStatus, String reasonFormat, Object... args)
+  private void notifyCompletedStatus(
+      final TaskEntry entry,
+      final TaskStatus taskStatus,
+      String reasonFormat,
+      Object... args
+  )
   {
     // Don't do anything if the task has no entry in activeTasks
     if (entry == null) {
+      return;
+    } else if (entry.isComplete) {
+      // A callback() or shutdown() beat us to updating the status and has already cleaned up this task
       return;
     }
 
@@ -707,10 +701,10 @@ public class TaskQueue
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {
-      //The code block is only called when a task completes,
-      //and we need to check to make sure the metadata store has the correct status stored.
+      // The code block is only called when a task completes,
+      // and we need to check to make sure the metadata store has the correct status stored.
       final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
-      if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
+      if (!previousStatus.isPresent() || previousStatus.get().isComplete()) {
         log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
       } else {
         taskStorage.setStatus(taskStatus.withLocation(taskLocation));
@@ -730,13 +724,66 @@ public class TaskQueue
       taskRunner.shutdown(task.getId(), reasonFormat, args);
     }
     catch (Throwable e) {
-      // If task runner shutdown fails, continue with the task shutdown routine. We'll come back and try to
-      // shut it down again later in manageInternalPostCritical, once it's removed from the "tasks" map.
+      // If task runner shutdown fails, continue with the task shutdown routine.
       log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
     }
 
     removeTaskLock(task);
     requestManagement();
+
+    // Emit event and log
+    final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
+    IndexTaskUtils.setTaskStatusDimensions(builder, taskStatus);
+    emitter.emit(builder.setMetric("task/run/time", taskStatus.getDuration()));
+
+    log.info(
+        "Completed task[%s] with status[%s] in [%d]ms.",
+        task.getId(), taskStatus.getStatusCode(), taskStatus.getDuration()
+    );
+
+    if (taskStatus.isSuccess()) {
+      Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
+    } else {
+      Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
+    }
+  }
+
+  /**
+   * Handles updating a task's status and incrementing/decrementing the status update accounting metrics
+   */
+  private void handleStatusWrapper(
+      final String taskId,
+      final TaskStatus status,
+      final String reasonFormat,
+      final Object... args
+  )
+  {
+    statusUpdatesInQueue.incrementAndGet();
+    startStopLock.readLock().lock();
+    try {
+      // If we're not supposed to be running anymore, don't do anything. Somewhat racey if the flag gets set
+      // after we check and before we commit the database transaction, but better than nothing.
+      if (!active) {
+        log.info("Abandoning task [%s] due to shutdown.", taskId);
+        return;
+      }
+
+      updateTaskEntry(
+          taskId,
+          entry -> notifyCompletedStatus(entry, status, reasonFormat, args)
+      );
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Failed to handle task status")
+         .addData("task", taskId)
+         .addData("statusCode", status.getStatusCode())
+         .emit();
+    }
+    finally {
+      startStopLock.readLock().unlock();
+      statusUpdatesInQueue.decrementAndGet();
+      handledStatusUpdates.incrementAndGet();
+    }
   }
 
   /**
@@ -763,8 +810,11 @@ public class TaskQueue
           public void onSuccess(final TaskStatus status)
           {
             log.info("Received status[%s] for task[%s].", status.getStatusCode(), status.getId());
-            statusUpdatesInQueue.incrementAndGet();
-            taskCompleteCallbackExecutor.execute(() -> handleStatus(status));
+            taskCompleteCallbackExecutor.execute(() -> handleStatusWrapper(
+                task.getId(),
+                status,
+                CALLBACK_STATUS_CHANGE_MSG
+            ));
           }
 
           @Override
@@ -775,56 +825,15 @@ public class TaskQueue
                .addData("type", task.getType())
                .addData("dataSource", task.getDataSource())
                .emit();
-            statusUpdatesInQueue.incrementAndGet();
             TaskStatus status = TaskStatus.failure(
                 task.getId(),
                 "Failed to run task. See overlord logs for more details."
             );
-            taskCompleteCallbackExecutor.execute(() -> handleStatus(status));
-          }
-
-          private void handleStatus(final TaskStatus status)
-          {
-            try {
-              // If we're not supposed to be running anymore, don't do anything. Somewhat racey if the flag gets set
-              // after we check and before we commit the database transaction, but better than nothing.
-              if (!active) {
-                log.info("Abandoning task [%s] due to shutdown.", task.getId());
-                return;
-              }
-
-              updateTaskEntry(
-                  task.getId(),
-                  entry -> notifyStatus(entry, status, "notified status change from task")
-              );
-
-              // Emit event and log, if the task is done
-              if (status.isComplete()) {
-                IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
-                emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
-
-                log.info(
-                    "Completed task[%s] with status[%s] in [%d]ms.",
-                    task.getId(), status.getStatusCode(), status.getDuration()
-                );
-
-                if (status.isSuccess()) {
-                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
-                } else {
-                  Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
-                }
-              }
-            }
-            catch (Exception e) {
-              log.makeAlert(e, "Failed to handle task status")
-                 .addData("task", task.getId())
-                 .addData("statusCode", status.getStatusCode())
-                 .emit();
-            }
-            finally {
-              statusUpdatesInQueue.decrementAndGet();
-              handledStatusUpdates.incrementAndGet();
-            }
+            taskCompleteCallbackExecutor.execute(() -> handleStatusWrapper(
+                task.getId(),
+                status,
+                CALLBACK_STATUS_CHANGE_MSG
+            ));
           }
         },
         // Use direct executor to track metrics for in-flight updates immediately
@@ -1058,15 +1067,17 @@ public class TaskQueue
       String payload = passwordRedactingMapper.writeValueAsString(task);
       if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
         throw InvalidInput.exception(
-                "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
-                    "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
-                task.getId(), payload.length(), config.getMaxTaskPayloadSize()
-            );
+            "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
+            "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+            task.getId(), payload.length(), config.getMaxTaskPayloadSize()
+        );
       } else if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
         log.warn(
-            "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
-                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
-                "Such tasks may be rejected by the Overlord in future Druid versions.",
+            "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. "
+            +
+            "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store."
+            +
+            "Such tasks may be rejected by the Overlord in future Druid versions.",
             task.getId(),
             task.getDataSource(),
             payload.length(),
