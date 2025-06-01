@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -50,7 +51,6 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -100,6 +100,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   protected List<DruidServer> servers;
 
   private SegmentGenerator segmentGenerator;
+  protected StubServiceEmitter emitter = new StubServiceEmitter();
 
   protected QueryRunnerBasedOnClusteredClientTestBase()
   {
@@ -121,6 +122,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
     segmentGenerator = new SegmentGenerator();
     httpClient = new TestHttpClient(objectMapper);
     simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
+    emitter.flush();
     cachingClusteredClient = new CachingClusteredClient(
         conglomerate,
         simpleServerView,
@@ -132,7 +134,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         QueryStackTests.getParallelMergeConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter()
+        emitter
     );
     servers = new ArrayList<>();
   }
