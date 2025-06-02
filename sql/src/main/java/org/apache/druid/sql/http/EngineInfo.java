@@ -19,23 +19,43 @@
 
 package org.apache.druid.sql.http;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.multibindings.Multibinder;
-import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.sql.calcite.run.SqlEngine;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * The Module responsible for providing bindings to the SQL http endpoint
- */
-public class SqlHttpModule implements Module
+import java.util.Objects;
+
+public class EngineInfo
 {
-  @Override
-  public void configure(Binder binder)
+  private final String name;
+
+  @JsonCreator
+  public EngineInfo(@JsonProperty("name") String name)
   {
-    binder.bind(SqlResource.class).in(LazySingleton.class);
-    Multibinder.newSetBinder(binder, SqlEngine.class);
-    Jerseys.addResource(binder, SqlResource.class);
+    this.name = name;
+  }
+
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    EngineInfo that = (EngineInfo) o;
+    return Objects.equals(name, that.name);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(name);
   }
 }
