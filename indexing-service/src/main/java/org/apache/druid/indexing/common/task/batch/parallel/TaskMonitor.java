@@ -144,13 +144,8 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
                           overlordClient.taskStatus(taskId), true).getStatus();
                   reportsMap.remove(taskId);
                   incrementNumFailedTasks();
-
-                  if (monitorEntry.numTries() < maxRetry) {
-                    retry(specId, monitorEntry, cancelledTaskStatus);
-                  } else {
-                    monitorEntry.setLastStatus(cancelledTaskStatus);
-                    iterator.remove();
-                  }
+                  monitorEntry.setLastStatus(cancelledTaskStatus);
+                  iterator.remove();
                   continue;
                 }
 
