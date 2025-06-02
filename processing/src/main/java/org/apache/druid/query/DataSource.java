@@ -25,14 +25,13 @@ import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -104,7 +103,7 @@ public interface DataSource extends Cacheable
   /**
    * Returns a segment function on to how to segment should be modified.
    */
-  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
+  SegmentMapFunction createSegmentMapFunction(Query query);
 
   /**
    * Returns an updated datasource based on the policy restrictions on tables.

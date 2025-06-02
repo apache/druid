@@ -21,6 +21,8 @@ package org.apache.druid.segment;
 
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataResultValue;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -81,8 +83,27 @@ public interface Segment extends Closeable
     return false;
   }
 
-  default String asString()
+  /**
+   * Developer friendly string suitable to use in internal error messages and provide some additional information about
+   * what kind of segment was involved in a problem
+   */
+  default String getDebugString()
   {
     return getClass().toString();
+  }
+
+  /**
+   * Validates if the segment complies with the policy restrictions on tables.
+   * <p>
+   * This should be called right before the segment is about to be processed by the query stack, and after
+   * {@link org.apache.druid.query.planning.ExecutionVertex#createSegmentMapFunction(PolicyEnforcer)}.
+   */
+  default void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  {
+    // For testing purposes, we allow the NoopPolicyEnforcer to pass through.
+    if (policyEnforcer instanceof NoopPolicyEnforcer) {
+      return;
+    }
+    throw new UnsupportedOperationException("validateOrElseThrow is not supported");
   }
 }

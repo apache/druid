@@ -254,8 +254,11 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
-    return Optional.empty();
+    // this is wrong, we should have a reference to the reference counted segment instead of the direct segment so that
+    // we can use reference counting correctly to ensure the segment doesn't get dropped. this probably means
+    // segmentizer factory needs to change to spit out the reference instead of the raw segment...
+    return Optional.of(() -> {});
   }
 }

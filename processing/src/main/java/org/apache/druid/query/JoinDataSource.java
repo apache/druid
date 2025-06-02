@@ -34,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -43,7 +44,8 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.HashJoinSegment;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -56,15 +58,17 @@ import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -367,7 +371,7 @@ public class JoinDataSource implements DataSource
    * @param query
    */
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
     JoinDataSourceAnalysis joinAnalysis = getJoinAnalysisForDataSource();
     List<PreJoinableClause> clauses = joinAnalysis.getPreJoinableClauses();
@@ -419,25 +423,79 @@ public class JoinDataSource implements DataSource
                 .orElse(null)
         )
     );
-    final Function<SegmentReference, SegmentReference> baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
-    return baseSegment -> createHashJoinSegment(
-        baseMapFn.apply(baseSegment),
-        baseFilterToUse,
-        clausesToUse,
-        joinFilterPreAnalysis
-    );
+
+    final SegmentMapFunction baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
+
+    return createSegmentMapFunction(clausesToUse, baseFilterToUse, joinFilterPreAnalysis, baseMapFn);
   }
 
-  private SegmentReference createHashJoinSegment(
-      SegmentReference sourceSegment,
+  public static SegmentMapFunction createSegmentMapFunction(
+      List<JoinableClause> clausesToUse,
+      Filter baseFilterToUse,
+      JoinFilterPreAnalysis joinFilterPreAnalysis,
+      SegmentMapFunction baseMapFn
+  )
+  {
+    return baseSegmentReference -> {
+      final Optional<Segment> maybeBaseSegment = baseMapFn.apply(baseSegmentReference);
+      if (maybeBaseSegment.isPresent()) {
+        final Segment baseSegment = maybeBaseSegment.get();
+        Closer closer = Closer.create();
+        // this could be a bit cleaner if joinables get reference returned a closeable joinable (to be consistent with
+        // segment) then we could build a new list of closeable joinables and just close them like we do the base
+        // segment in HashJoinSegment
+        try {
+          boolean acquireFailed = false;
+
+          for (JoinableClause joinClause : clausesToUse) {
+            if (acquireFailed) {
+              break;
+            }
+            acquireFailed = joinClause.acquireReference().map(closeable -> {
+              closer.register(closeable);
+              return false;
+            }).orElse(true);
+          }
+          if (acquireFailed) {
+            CloseableUtils.closeAndWrapExceptions(closer);
+            CloseableUtils.closeAndWrapExceptions(baseSegment);
+            return Optional.empty();
+          } else {
+            return Optional.of(
+                createHashJoinSegment(
+                    baseSegment,
+                    baseFilterToUse,
+                    clausesToUse,
+                    joinFilterPreAnalysis,
+                    closer
+                )
+            );
+          }
+        }
+        catch (Throwable e) {
+          // acquireReferences is not permitted to throw exceptions.
+          CloseableUtils.closeAndSuppressExceptions(closer, e::addSuppressed);
+          CloseableUtils.closeAndSuppressExceptions(baseSegment, e::addSuppressed);
+          log.warn(e, "Exception encountered while trying to acquire reference");
+          return Optional.empty();
+        }
+      }
+      return Optional.empty();
+    };
+  }
+
+  private static Segment createHashJoinSegment(
+      Segment sourceSegment,
       Filter baseFilterToUse,
       List<JoinableClause> clausesToUse,
-      JoinFilterPreAnalysis joinFilterPreAnalysis)
+      JoinFilterPreAnalysis joinFilterPreAnalysis,
+      Closeable closeable
+  )
   {
     if (clausesToUse.isEmpty() && baseFilterToUse == null) {
       return sourceSegment;
     }
-    return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
+    return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis, closeable);
   }
 
   /**

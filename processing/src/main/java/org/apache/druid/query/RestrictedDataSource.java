@@ -28,14 +28,13 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.RestrictedSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Reperesents a TableDataSource with policy restriction.
@@ -123,10 +122,9 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
-    return baseSegment -> new RestrictedSegment(segmentMapFn.apply(baseSegment), policy);
+    return base.createSegmentMapFunction(query).thenMap(segment -> new RestrictedSegment(segment, policy));
   }
 
   @Override
