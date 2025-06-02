@@ -159,8 +159,8 @@ public class TaskStorageDirTracker
   public synchronized void returnStorageSlot(StorageSlot slot)
   {
     if (slot.getParentRef() == this) {
-      --numUsedSlots;
       slot.runningTaskId = null;
+      --numUsedSlots;
     } else {
       throw new IAE("Cannot return storage slot for task [%s] that I don't own.", slot.runningTaskId);
     }
@@ -195,8 +195,8 @@ public class TaskStorageDirTracker
       if (candidateSlot == null) {
         missingIds.add(taskId);
       } else {
-        candidateSlot.runningTaskId = taskId;
         ++numUsedSlots;
+        candidateSlot.runningTaskId = taskId;
         retVal.put(taskId, candidateSlot);
       }
     }

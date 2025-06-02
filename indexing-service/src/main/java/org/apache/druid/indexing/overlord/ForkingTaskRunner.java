@@ -713,13 +713,13 @@ public class ForkingTaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), getWorkerTotalTaskSlotCount());
+    return Map.of(workerConfig.getCategory(), getWorkerTotalTaskSlotCount());
   }
 
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return ImmutableMap.of(
+    return Map.of(
         workerConfig.getCategory(),
         Math.max(getWorkerTotalTaskSlotCount() - getWorkerUsedTaskSlotCount(), 0)
     );
