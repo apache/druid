@@ -850,6 +850,27 @@ public class LookupReferencesManagerTest
   }
 
   @Test
+  public void testAddWithLoadingSpec() throws Exception
+  {
+    LookupLoadingSpec loadingSpec = LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1"));
+    Map<String, LookupExtractorFactoryContainer> lookupMap =
+        getLookupMapForSelectiveLoadingOfLookups(loadingSpec);
+
+    LookupExtractorFactoryContainer container2 = new LookupExtractorFactoryContainer(
+        "0",
+        new MapLookupExtractorFactory(ImmutableMap.of("key2", "value2"), true
+        )
+    );
+    EasyMock.reset(config);
+    EasyMock.expect(config.getLookupLoadingSpec()).andReturn(loadingSpec);
+    EasyMock.replay(config);
+    lookupReferencesManager.add("testLookup2", container2);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(ImmutableSet.of("testLookup1"), lookupReferencesManager.getAllLookupNames());
+  }
+
+  @Test
   public void testLoadLookupOnCoordinatorFailure() throws Exception
   {
     LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFolder().getAbsolutePath())
