@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
 import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.servlets.QoSFilter;
+import org.eclipse.jetty.ee8.servlets.QoSFilter;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;

@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import org.apache.commons.lang3.CharUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.eclipse.jetty.client.api.Response;
+import org.eclipse.jetty.client.Response;
 
 import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
@@ -66,7 +66,7 @@ public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
    * Remove any standard headers in proxyResponse if they were also set in the origin response, serverResponse.
    * This prevents duplicates headers from appearing in proxy responses.
    *
-   * Used by implementations of {@link org.eclipse.jetty.proxy.AsyncProxyServlet}.
+   * Used by implementations of {@link org.eclipse.jetty.ee8.proxy.AsyncProxyServlet}.
    */
   public static void deduplicateHeadersInProxyServlet(
       final HttpServletResponse proxyResponse,
@@ -75,7 +75,7 @@ public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
   {
     for (final String headerName : StandardResponseHeaderFilterHolder.STANDARD_HEADERS) {
       if (serverResponse.getHeaders().contains(headerName) && proxyResponse.containsHeader(headerName)) {
-        ((org.eclipse.jetty.server.Response) proxyResponse).getHttpFields().remove(headerName);
+        ((org.eclipse.jetty.server.Response) proxyResponse).getHeaders().remove(headerName);
       }
     }
   }

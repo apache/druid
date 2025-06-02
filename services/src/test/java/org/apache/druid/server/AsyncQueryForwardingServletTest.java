@@ -82,18 +82,18 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.HttpResponse;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.client.api.Result;
+import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.client.Response;
+import org.eclipse.jetty.client.Result;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -119,6 +119,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Deflater;
@@ -628,8 +629,32 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     final AtomicLong didService = new AtomicLong();
     final Request proxyRequestMock = Mockito.spy(Request.class);
-    HttpResponse response = new HttpResponse(proxyRequestMock, ImmutableList.of())
+    Response response = new Response()
     {
+      @Override
+      public Request getRequest()
+      {
+        return null;
+      }
+
+      @Override
+      public HttpVersion getVersion()
+      {
+        return null;
+      }
+
+      @Override
+      public int getStatus()
+      {
+        return 0;
+      }
+
+      @Override
+      public String getReason()
+      {
+        return "";
+      }
+
       @Override
       public HttpFields getHeaders()
       {
@@ -640,6 +665,18 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "dummy"));
         }
         return httpFields;
+      }
+
+      @Override
+      public HttpFields getTrailers()
+      {
+        return null;
+      }
+
+      @Override
+      public CompletableFuture<Boolean> abort(Throwable throwable)
+      {
+        return null;
       }
     };
     final Result result = new Result(proxyRequestMock, response);
@@ -696,8 +733,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   private static Server makeTestDeleteServer(int port, final CountDownLatch latch)
   {
     Server server = new Server(port);
-    ServletHandler handler = new ServletHandler();
-    handler.addServletWithMapping(new ServletHolder(new HttpServlet()
+    ServletContextHandler servletContextHandler = new ServletContextHandler();
+    servletContextHandler.addServlet(new ServletHolder(new HttpServlet()
     {
       @Override
       protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
@@ -707,7 +744,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     }), "/default/*");
 
-    server.setHandler(handler);
+    server.setHandler(servletContextHandler);
     return server;
   }
 
@@ -789,15 +826,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);
 
-      final HandlerList handlerList = new HandlerList();
+      final Handler.Sequence handlerList = new Handler.Sequence();
       handlerList.setHandlers(
-          new Handler[]{
-              JettyServerInitUtils.wrapWithDefaultGzipHandler(
-                  root,
-                  ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
-                  Deflater.DEFAULT_COMPRESSION
-              )
-          }
+          JettyServerInitUtils.wrapWithDefaultGzipHandler(
+              root,
+              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
+              Deflater.DEFAULT_COMPRESSION
+          )
       );
       server.setHandler(handlerList);
     }

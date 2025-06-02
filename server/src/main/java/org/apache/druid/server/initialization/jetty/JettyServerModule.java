@@ -64,11 +64,13 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ErrorHandler;
+import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -466,21 +468,14 @@ public class JettyServerModule extends JerseyServletModule
       server.setErrorHandler(new ErrorHandler()
       {
         @Override
-        public boolean isShowServlet()
-        {
-          return false;
-        }
-
-        @Override
-        public void handle(
-            String target,
+        public boolean handle(
             Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response
-        ) throws IOException, ServletException
+            Response response,
+            Callback callback
+        ) throws Exception
         {
-          request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
-          super.handle(target, baseRequest, request, response);
+          baseRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
+          return super.handle(baseRequest, response, callback);
         }
       });
     }

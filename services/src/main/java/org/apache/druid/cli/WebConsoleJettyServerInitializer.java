@@ -24,8 +24,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.eclipse.jetty.rewrite.handler.RedirectPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
-import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.resource.Resource;
+import org.eclipse.jetty.util.resource.ResourceFactory;
 
 import java.util.List;
 
@@ -50,7 +51,7 @@ class WebConsoleJettyServerInitializer
     root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
     root.setWelcomeFiles(new String[]{WEB_CONSOLE_ROOT_DOCUMENT});
 
-    root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
+    root.setBaseResource(ResourceFactory.root().newClassLoaderResource("org/apache/druid/console", false));
 
     AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS_FOR_UI);
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNAUTHORIZED_PATHS_FOR_UI);

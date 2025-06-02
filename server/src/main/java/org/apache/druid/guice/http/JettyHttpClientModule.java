@@ -28,7 +28,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.dynamic.HttpClientTransportDynamic;
+import org.eclipse.jetty.client.transport.HttpClientTransportDynamic;
 import org.eclipse.jetty.io.ClientConnector;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;

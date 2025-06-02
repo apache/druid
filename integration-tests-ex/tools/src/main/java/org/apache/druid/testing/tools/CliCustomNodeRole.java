@@ -45,11 +45,10 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 
 import java.util.List;
 import java.util.Properties;
@@ -147,13 +146,11 @@ public class CliCustomNodeRole extends ServerRunnable
 
       root.addFilter(GuiceFilter.class, "/*", null);
 
-      final HandlerList handlerList = new HandlerList();
+      final Handler.Sequence handlerList = new Handler.Sequence();
       // Do not change the order of the handlers that have already been added
       for (Handler handler : server.getHandlers()) {
         handlerList.addHandler(handler);
       }
-
-      handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
 
       // Add Gzip handler at the very end
       handlerList.addHandler(

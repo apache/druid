@@ -42,12 +42,11 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 
 import java.util.Collections;
 import java.util.List;
@@ -149,13 +148,9 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     root.addFilter(GuiceFilter.class, "/*", null);
 
-    final HandlerList handlerList = new HandlerList();
-    // Do not change the order of the handlers that have already been added
-    for (Handler handler : server.getHandlers()) {
-      handlerList.addHandler(handler);
-    }
-
-    handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
+    final Handler.Sequence handlerList = new Handler.Sequence(
+        server.getHandlers()
+    );
 
     // Add all extension handlers
     for (Handler handler : extensionHandlers) {

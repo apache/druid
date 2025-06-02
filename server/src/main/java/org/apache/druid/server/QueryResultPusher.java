@@ -153,8 +153,8 @@ public abstract class QueryResultPusher
       if (response instanceof org.eclipse.jetty.server.Response) {
         org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
 
-        jettyResponse.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
-        jettyResponse.setTrailers(() -> trailerFields);
+        jettyResponse.getHeaders().put(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+        jettyResponse.setTrailersSupplier(() -> trailerFields);
 
         // Start with complete status
 
@@ -444,7 +444,7 @@ public abstract class QueryResultPusher
 
         if (response instanceof org.eclipse.jetty.server.Response) {
           org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
-          jettyResponse.setTrailers(() -> trailerFields);
+          jettyResponse.setTrailersSupplier(() -> trailerFields);
         }
 
         try {

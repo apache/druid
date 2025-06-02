@@ -45,12 +45,10 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.easymock.EasyMock;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -290,9 +288,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
       root.addFilter(GuiceFilter.class, "/*", null);
 
-      final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{root});
-      server.setHandler(handlerList);
+      server.setHandler(root);
     }
   }
 

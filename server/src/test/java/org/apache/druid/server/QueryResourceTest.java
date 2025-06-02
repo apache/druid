@@ -92,8 +92,6 @@ import org.apache.http.HttpStatus;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
-import org.eclipse.jetty.server.HttpChannel;
-import org.eclipse.jetty.server.HttpOutput;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
@@ -473,10 +471,10 @@ public class QueryResourceTest
                                            null /*pretty*/,
                                            testServletRequest
     ));
-    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
-    Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
+    Assert.assertTrue(response.getHeaders().contains(HttpHeader.TRAILER.toString()));
+    Assert.assertEquals(response.getHeaders().get(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
 
-    final HttpFields fields = response.getTrailers().get();
+    final HttpFields fields = response.getTrailersSupplier().get();
     Assert.assertTrue(fields.contains(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
     Assert.assertEquals(
         fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
@@ -519,9 +517,9 @@ public class QueryResourceTest
                                            null /*pretty*/,
                                            testServletRequest
     ));
-    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertTrue(response.getHeaders().contains(HttpHeader.TRAILER.toString()));
 
-    final HttpFields fields = response.getTrailers().get();
+    final HttpFields fields = response.getTrailersSupplier().get();
     Assert.assertFalse(fields.contains(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
 
     Assert.assertTrue(fields.contains(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
@@ -1617,26 +1615,15 @@ public class QueryResourceTest
 
   private org.eclipse.jetty.server.Response jettyResponseforRequest(MockHttpServletRequest req) throws IOException
   {
-    HttpChannel channelMock = EasyMock.mock(HttpChannel.class);
-    HttpOutput outputMock = EasyMock.mock(HttpOutput.class);
-    org.eclipse.jetty.server.Response response = new org.eclipse.jetty.server.Response(channelMock, outputMock);
+    org.eclipse.jetty.server.Response responseMock = EasyMock.mock(org.eclipse.jetty.server.Response.class);
 
-    EasyMock.expect(channelMock.isSendError()).andReturn(false);
-    EasyMock.expect(channelMock.isCommitted()).andReturn(true);
-
-    outputMock.close();
-    EasyMock.expectLastCall().andVoid();
-
-    outputMock.write(EasyMock.anyObject(byte[].class), EasyMock.anyInt(), EasyMock.anyInt());
-    EasyMock.expectLastCall().andVoid();
-
-    EasyMock.replay(outputMock, channelMock);
+    EasyMock.expect(responseMock.isCommitted()).andReturn(true);
 
     req.newAsyncContext(() -> {
       final MockAsyncContext retVal = new MockAsyncContext();
-      retVal.response = response;
+      retVal.response = (javax.servlet.ServletResponse) responseMock;
       return retVal;
     });
-    return response;
+    return responseMock;
   }
 }

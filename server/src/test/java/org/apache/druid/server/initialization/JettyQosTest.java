@@ -46,7 +46,7 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlets.QoSFilter;
+import org.eclipse.jetty.ee8.servlets.QoSFilter;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;

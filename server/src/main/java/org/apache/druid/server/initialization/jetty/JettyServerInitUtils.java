@@ -25,15 +25,14 @@ import com.google.inject.TypeLiteral;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AllowHttpMethodsResourceFilter;
+import org.eclipse.jetty.ee8.nested.ContextHandler;
 import org.eclipse.jetty.rewrite.handler.HeaderPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.FilterMapping;
-import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.FilterMapping;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.compression.CompressionPool;
 import org.eclipse.jetty.util.compression.DeflaterPool;
 import org.eclipse.jetty.util.compression.InflaterPool;
@@ -48,7 +47,7 @@ public class JettyServerInitUtils
 {
   private static final String[] GZIP_METHODS = new String[]{HttpMethod.GET, HttpMethod.POST};
 
-  public static GzipHandler wrapWithDefaultGzipHandler(final Handler handler, int inflateBufferSize, int compressionLevel)
+  public static GzipHandler wrapWithDefaultGzipHandler(final ContextHandler handler, int inflateBufferSize, int compressionLevel)
   {
     GzipHandler gzipHandler = new GzipHandler();
     gzipHandler.setMinGzipSize(0);
@@ -111,15 +110,6 @@ public class JettyServerInitUtils
     }
   }
 
-  public static Handler getJettyRequestLogHandler()
-  {
-    // Ref: http://www.eclipse.org/jetty/documentation/9.2.6.v20141205/configuring-jetty-request-logs.html
-    RequestLogHandler requestLogHandler = new RequestLogHandler();
-    requestLogHandler.setRequestLog(new JettyRequestLog());
-
-    return requestLogHandler;
-  }
-
   public static void addAllowHttpMethodsFilter(ServletContextHandler root, List<String> allowedHttpMethods)
   {
     FilterHolder holder = new FilterHolder(new AllowHttpMethodsResourceFilter(allowedHttpMethods));
@@ -137,7 +127,7 @@ public class JettyServerInitUtils
     }
   }
 
-  public static void maybeAddHSTSRewriteHandler(ServerConfig serverConfig, HandlerList handlerList)
+  public static void maybeAddHSTSRewriteHandler(ServerConfig serverConfig, Handler.Sequence handlerList)
   {
     if (serverConfig.isEnableHSTS()) {
       RewriteHandler rewriteHandler = new RewriteHandler();

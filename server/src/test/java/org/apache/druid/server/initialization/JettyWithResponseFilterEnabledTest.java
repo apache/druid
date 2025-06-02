@@ -31,12 +31,4 @@ public class JettyWithResponseFilterEnabledTest extends JettyTest
     super.setProperties();
     System.setProperty("druid.server.http.showDetailedJettyErrors", "false");
   }
-
-  @Test
-  @Override
-  public void testJettyErrorHandlerWithFilter()
-  {
-    // Response filter is enabled by config hence we do not show servlet information
-    Assert.assertFalse(server.getErrorHandler().isShowServlet());
-  }
 }
