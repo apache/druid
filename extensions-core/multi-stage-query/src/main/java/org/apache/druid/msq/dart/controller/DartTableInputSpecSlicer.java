@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.msq.dart.worker.DartQueryableSegment;
 import org.apache.druid.msq.dart.worker.WorkerId;
-import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
@@ -42,7 +41,6 @@ import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
@@ -274,22 +272,6 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   static boolean shouldIncludeSegment(final ServerSelector serverSelector)
   {
-    if (serverSelector.getSegment().isTombstone()) {
-      return false;
-    }
-
-    int numRealtimeServers = 0;
-    int numOtherServers = 0;
-
-    // Currently, Dart does not support clone query modes, all servers can be queried.
-    for (final DruidServerMetadata server : serverSelector.getAllServers(CloneQueryMode.INCLUDECLONES)) {
-      if (SegmentSource.REALTIME.getUsedServerTypes().contains(server.getType())) {
-        numRealtimeServers++;
-      } else {
-        numOtherServers++;
-      }
-    }
-
-    return numOtherServers > 0 || (numOtherServers + numRealtimeServers == 0);
+    return !serverSelector.getSegment().isTombstone();
   }
 }

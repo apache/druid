@@ -72,6 +72,6 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
         cnt++;
       }
     }
-    return cnt;
+    return Math.max(1, cnt);
   }
 }

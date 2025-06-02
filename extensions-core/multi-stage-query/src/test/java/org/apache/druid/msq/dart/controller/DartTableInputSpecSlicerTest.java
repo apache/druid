@@ -157,7 +157,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   );
 
   /**
-   * Segment that should be ignored (for now) because it's realtime-only.
+   * Segment that's realtime-only.
    */
   private static final DataSegment SEGMENT5 = new DataSegment(
       DATASOURCE,
