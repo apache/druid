@@ -853,8 +853,7 @@ public class LookupReferencesManagerTest
   public void testAddWithLoadingSpec() throws Exception
   {
     LookupLoadingSpec loadingSpec = LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1"));
-    Map<String, LookupExtractorFactoryContainer> lookupMap =
-        getLookupMapForSelectiveLoadingOfLookups(loadingSpec);
+    getLookupMapForSelectiveLoadingOfLookups(loadingSpec);
 
     LookupExtractorFactoryContainer container2 = new LookupExtractorFactoryContainer(
         "0",
