@@ -670,6 +670,7 @@ WHERE client_ip IN ('107.13.54.103',
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
   "sort" : true
 } ]
 !msqPlan
@@ -1328,6 +1329,7 @@ WHERE client_ip IN ('107.13.54.103',
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
   "sort" : true
 } ]
 !msqPlan
@@ -1962,6 +1964,7 @@ GROUP BY server_ip,
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
   "sort" : true
 } ]
 !msqPlan
@@ -2139,6 +2142,7 @@ GROUP BY server_ip,
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
   "sort" : true
 }, {
   "stageNumber" : 1,

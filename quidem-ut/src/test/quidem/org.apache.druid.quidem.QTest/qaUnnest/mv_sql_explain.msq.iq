@@ -294,6 +294,7 @@ FROM
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
   "sort" : true
 } ]
 !msqPlan
@@ -479,6 +480,7 @@ GROUP BY c;
   "partitionCount" : 1,
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
 } ]
 !msqPlan
 
