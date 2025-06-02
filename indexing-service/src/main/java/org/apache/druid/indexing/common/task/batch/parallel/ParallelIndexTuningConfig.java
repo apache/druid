@@ -48,7 +48,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   private static final int DEFAULT_MAX_NUM_SEGMENTS_TO_MERGE = 100;
   private static final int DEFAULT_TOTAL_NUM_MERGE_TASKS = 10;
   private static final int DEFAULT_MAX_ALLOWED_LOCK_COUNT = -1;
-  private static final int DEFAULT_SUBTASK_TIMEOUT = 0;
 
   private final SplitHintSpec splitHintSpec;
 

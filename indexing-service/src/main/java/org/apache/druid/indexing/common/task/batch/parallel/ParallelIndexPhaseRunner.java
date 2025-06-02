@@ -477,15 +477,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
 
   private long getSubtaskTimeoutMillisFromContext()
   {
-    if (context.isEmpty()) {
-      return Tasks.DEFAULT_SUB_TASK_TIMEOUT_MILLIS;
-    }
-
-    Object raw = context.getOrDefault(
-            Tasks.SUB_TASK_TIMEOUT_KEY,
-            Tasks.DEFAULT_SUB_TASK_TIMEOUT_MILLIS
-    );
-
-    return (raw instanceof Number) ? ((Number) raw).longValue() : Tasks.DEFAULT_SUB_TASK_TIMEOUT_MILLIS;
+    return ((Number) context.getOrDefault(Tasks.SUB_TASK_TIMEOUT_KEY,
+            Tasks.DEFAULT_SUB_TASK_TIMEOUT_MILLIS)).longValue();
   }
 }
