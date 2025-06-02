@@ -191,9 +191,9 @@ curl --location 'http://localhost:8888/druid/v2/sql/' \
 
 The response you get back is an empty response cause there are no records on the Historicals that match the query.
 
-You can also use `Set` command to enable `executionMode` of the given query. However, the results depends on where you set `executionMode`.
+You can also use Set command to enable `executionMode` of the given query. However, the results depends on where you set `executionMode`.
 
-When using the **Druid UI Console**, you can use the `SET` command directly in your query string to set executionMode. For instance, this query runs successfully:
+When using the **Druid UI Console**, you can use the SET command directly to set executionMode. For instance, this query runs successfully:
 
 ```sql
 SET executionMode='ASYNC';
@@ -209,6 +209,7 @@ However, if you submit the same query as a JSON payload to the **`/druid/v2/sql/
 ```
 
 You'll receive an error message: "Execution mode is not provided to the SQL statement API. Please set `executionMode` to `ASYNC` in the query context." This is because `executionMode` isn't a parameter you can set within the SQL query itself for this API. Instead, you must define it in the request's top-level `context`.
+
 ## Get query status
 
 Replace `:queryId` with the ID for your query and run the following curl command to get your query status:

@@ -109,7 +109,6 @@ The following example shows a query that fetches data from an external JSON sour
 
 <TabItem value="4" label="HTTP">
 
-
 ```HTTP
 POST /druid/v2/sql/task HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT

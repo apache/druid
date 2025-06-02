@@ -111,11 +111,11 @@ s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-par
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
 - Only `CSV` format is supported as an export format.
-- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with EXTERN statements.
+- Partitioning (PARTITIONED BY) and clustering (CLUSTERED BY) aren't supported with EXTERN statements.
 - You can export to Amazon S3, Google GCS, or local storage.
 - The destination provided should contain no other files or directories.
 
-When you export data, use `SET` to restrict `rowsPerPage` to control the size of exported files. For example: 
+When you export data, use SET to restrict `rowsPerPage` to control the size of exported files. For example: 
 
 ```sql
 SET rowsPerPage=<number_of_rows>;
@@ -129,7 +129,7 @@ FROM <table>
 ```
 
 When the number of rows in the result set exceeds the value of the parameter, Druid splits the output into multiple files.
-For details about `SET`, see [SET statements](../querying/sql.md#set-statements).
+For details about SET, see [SET statements](../querying/sql.md#set-statements).
 
 
 ##### S3 - Amazon S3
@@ -506,7 +506,7 @@ When using the sort-merge algorithm, keep the following in mind:
 
 - All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
 
-The following example shows a single sort-merge join stage where it explicitly set `sqlJoinAlgorithm` to `sortMerge` using the `SET` command. This query also takes `eventstream` (partitioned on `user_id`) and `users` (partitioned on id) as `inputs`, with no limit on the size of either input.
+The following example shows a single sort-merge join stage where it explicitly set `sqlJoinAlgorithm` to `sortMerge` using the SET command. This query also takes `eventstream` (partitioned on `user_id`) and `users` (partitioned on id) as `inputs`, with no limit on the size of either input.
 
 ```sql
 SET sqlJoinAlgorithm='sortMerge';
