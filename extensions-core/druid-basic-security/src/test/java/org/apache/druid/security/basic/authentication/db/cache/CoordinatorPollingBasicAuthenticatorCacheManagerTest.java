@@ -32,7 +32,9 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.Map;
@@ -40,6 +42,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
   public void test_stop_interruptsPollingThread() throws InterruptedException, IOException
   {
@@ -86,7 +91,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
     final int numRetries = 10;
     final CoordinatorPollingBasicAuthenticatorCacheManager manager = new CoordinatorPollingBasicAuthenticatorCacheManager(
         injector,
-        new BasicAuthCommonCacheConfig(0L, 1L, "test-dir", numRetries),
+        new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         TestHelper.JSON_MAPPER,
         leaderClient
     );

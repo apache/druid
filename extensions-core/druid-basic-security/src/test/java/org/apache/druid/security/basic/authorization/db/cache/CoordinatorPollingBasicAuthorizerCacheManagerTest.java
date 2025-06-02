@@ -40,7 +40,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.Map;
@@ -48,6 +50,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
 
   @Test
@@ -105,7 +110,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     final int numRetries = 10;
     final CoordinatorPollingBasicAuthorizerCacheManager manager = new CoordinatorPollingBasicAuthorizerCacheManager(
         injector,
-        new BasicAuthCommonCacheConfig(0L, 1L, "test-dir", numRetries),
+        new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         MAPPER,
         leaderClient
     );
