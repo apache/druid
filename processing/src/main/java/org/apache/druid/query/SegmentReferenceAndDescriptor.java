@@ -35,7 +35,7 @@ import java.util.Optional;
  * If the {@link #segmentReference} is empty, it means that either the {@link ReferenceCountedSegmentProvider} was not
  * present in the timeline (e.g. the segment was dropped prior to fetching providers from the timeline) or that a
  * reference could not be acquired from
- * {@link #acquireReference(SegmentDescriptor, ReferenceCountedSegmentProvider, SegmentMapFunction, Closer)}, or if
+ * {@link #acquireReference(SegmentDescriptor, ReferenceCountedObjectProvider, SegmentMapFunction, Closer)}, or if
  * built externally, then from {@link SegmentMapFunction} or {@link ReferenceCountedSegmentProvider#acquireReference()}.
  */
 public class SegmentReferenceAndDescriptor
