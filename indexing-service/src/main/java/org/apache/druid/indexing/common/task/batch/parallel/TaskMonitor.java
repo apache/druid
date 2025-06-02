@@ -116,7 +116,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
     this.maxRetry = maxRetry;
     this.estimatedNumSucceededTasks = estimatedNumSucceededTasks;
     this.taskTimeoutMillis = taskTimeoutMillis;
-    log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d]", estimatedNumSucceededTasks);
+    log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d] and sub-task timeout[%d millis].", estimatedNumSucceededTasks, taskTimeoutMillis);
   }
 
   public void start(long taskStatusCheckingPeriod)
@@ -136,10 +136,9 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
                 final MonitorEntry monitorEntry = entry.getValue();
                 final String taskId = monitorEntry.runningTask.getId();
 
-                final long timeout = taskTimeoutMillis;
                 final long elapsed = monitorEntry.getStopwatch().millisElapsed();
-                if (timeout > 0 && elapsed > timeout) {
-                  log.warn("task[%s] timed out after %s ms, cancelling...", taskId, elapsed);
+                if (taskTimeoutMillis > 0 && elapsed > taskTimeoutMillis) {
+                  log.warn("Cancelling task[%s] as it has already run for [%d] millis (taskTimeoutMillis=[%d]).", taskId, elapsed, taskTimeoutMillis);
                   FutureUtils.getUnchecked(overlordClient.cancelTask(taskId), true);
                   final TaskStatusPlus cancelledTaskStatus = FutureUtils.getUnchecked(
                           overlordClient.taskStatus(taskId), true).getStatus();

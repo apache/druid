@@ -275,7 +275,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     return maxAllowedLockCount;
   }
 
-
   @Override
   public boolean equals(Object o)
   {
