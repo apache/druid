@@ -413,7 +413,6 @@ FROM test_json_cols;
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
-  "duration" : __DURATION__
   "sort" : true
 } ]
 !msqPlan
