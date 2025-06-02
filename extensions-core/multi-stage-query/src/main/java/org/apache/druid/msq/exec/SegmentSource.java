@@ -30,9 +30,11 @@ import java.util.Set;
 public enum SegmentSource
 {
   /**
+   * TODO: correct these docs, this won't be accurate for DART
    * Include only segments from deep storage.
    */
   NONE(ImmutableSet.of()),
+
   /**
    * Include segments from realtime tasks as well as segments from deep storage.
    */

@@ -83,6 +83,7 @@ public class DartControllerContext implements ControllerContext
   private final DartWorkerClient workerClient;
   private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
+  private final QueryContext context;
   private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
 
@@ -93,7 +94,8 @@ public class DartControllerContext implements ControllerContext
       final DartWorkerClient workerClient,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final QueryContext context
   )
   {
     this.injector = injector;
@@ -102,6 +104,7 @@ public class DartControllerContext implements ControllerContext
     this.workerClient = workerClient;
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
+    this.context = context;
     this.metricBuilder = new ServiceMetricEvent.Builder();
     this.emitter = emitter;
   }
@@ -180,7 +183,7 @@ public class DartControllerContext implements ControllerContext
   @Override
   public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
   {
-    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView);
+    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView, context);
   }
 
   @Override
