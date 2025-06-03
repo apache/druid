@@ -24,15 +24,14 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.name.Names;
 import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.IAE;
@@ -95,10 +94,7 @@ public class MetricsModule implements Module
 
     binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
-    // Instantiate eagerly so that we get everything registered and put into the Lifecycle
-    binder.bind(Key.get(MonitorScheduler.class, Names.named("ForTheEagerness")))
-          .to(MonitorScheduler.class)
-          .asEagerSingleton();
+    LifecycleModule.register(binder, MonitorScheduler.class);
   }
 
   @Provides

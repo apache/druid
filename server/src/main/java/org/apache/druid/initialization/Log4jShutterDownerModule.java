@@ -20,11 +20,10 @@
 package org.apache.druid.initialization;
 
 import com.google.inject.Binder;
-import com.google.inject.Key;
+import com.google.inject.Inject;
 import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.name.Names;
 import org.apache.druid.common.config.Log4jShutdown;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycleInit;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -74,29 +73,19 @@ public class Log4jShutterDownerModule implements Module
         return;
       }
       binder.bind(Log4jShutdown.class).toInstance((Log4jShutdown) registry);
-      binder.bind(Key.get(Log4jShutterDowner.class, Names.named("ForTheEagerness")))
-            .to(Log4jShutterDowner.class)
-            .asEagerSingleton();
+      binder.bind(Log4jShutterDowner.class).in(ManageLifecycleInit.class);
+      LifecycleModule.register(binder, Log4jShutterDowner.class);
     }
     catch (ClassNotFoundException | ClassCastException | LinkageError e) {
       log.warn(e, "Not registering log4j shutdown hooks. Not using log4j?");
     }
   }
 
-
-  @ManageLifecycleInit
-  @Provides
-  public Log4jShutterDowner getShutterDowner(
-      Log4jShutdown log4jShutdown
-  )
-  {
-    return new Log4jShutterDowner(log4jShutdown);
-  }
-
   public static class Log4jShutterDowner
   {
     private final Log4jShutdown log4jShutdown;
 
+    @Inject
     public Log4jShutterDowner(Log4jShutdown log4jShutdown)
     {
       this.log4jShutdown = log4jShutdown;
