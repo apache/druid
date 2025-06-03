@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -77,7 +77,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
           @Override
           public ListenableFuture<TaskStatus> run(Task task)
           {
-            return Futures.immediateFuture(TaskStatus.success(task.getId()));
+            return SettableFuture.create();
           }
         },
         createActionClientFactory(),

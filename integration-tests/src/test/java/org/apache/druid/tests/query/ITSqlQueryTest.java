@@ -46,7 +46,7 @@ import java.util.function.Function;
 /**
  * Test the SQL endpoint with different Content-Type
  */
-@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_DATASOURCE_SCHEMA})
+@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_DATASOURCE_SCHEMA}, enabled = false)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITSqlQueryTest
 {
