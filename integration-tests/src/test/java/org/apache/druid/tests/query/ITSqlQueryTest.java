@@ -33,6 +33,7 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -109,8 +110,7 @@ public class ITSqlQueryTest
 
       StatusResponseHolder response = httpClient.go(request, StatusResponseHandler.getInstance())
                                                 .get();
-
-      assertNotNull(response);
+      Assert.assertNotNull(response);
 
       onResponse.on(
           response.getStatus().getCode(),
@@ -121,29 +121,8 @@ public class ITSqlQueryTest
     // Send query to broker to exeucte
     executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getBrokerUrl()), contentType, executable);
 
-    // Send a query to router to execute
+    // Send query to router to execute
     executeWithRetry(StringUtils.format("%s/druid/v2/sql/", config.getRouterUrl()), contentType, executable);
-  }
-
-  private void assertEquals(String expected, String actual)
-  {
-    if (!expected.equals(actual)) {
-      throw new ISE("Expected [%s] but got [%s]", expected, actual);
-    }
-  }
-
-  private void assertEquals(int expected, int actual, String message)
-  {
-    if (expected != actual) {
-      throw new ISE("Expected [%d] but got [%d]: %s", expected, actual, message);
-    }
-  }
-
-  private void assertNotNull(Object object)
-  {
-    if (object == null) {
-      throw new ISE("Expected not null");
-    }
   }
 
   private void assertStringCompare(String expected, String actual, Function<String, Boolean> predicate)
@@ -162,7 +141,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), statusCode, responseBody);
+          Assert.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), responseBody);
           assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
         }
     );
@@ -177,7 +156,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), statusCode, responseBody);
+          Assert.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), responseBody);
           assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
         }
     );
@@ -192,8 +171,8 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(200, statusCode, responseBody);
-          assertEquals("[{\"EXPR$0\":1}]", responseBody);
+          Assert.assertEquals(statusCode, 200, responseBody);
+          Assert.assertEquals(responseBody, "[{\"EXPR$0\":1}]");
         }
     );
   }
@@ -207,8 +186,8 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(200, statusCode, responseBody);
-          assertEquals("[{\"EXPR$0\":\"x % y\"}]", responseBody);
+          Assert.assertEquals(statusCode, 200, responseBody);
+          Assert.assertEquals(responseBody, "[{\"EXPR$0\":\"x % y\"}]");
         }
     );
   }
@@ -222,7 +201,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(400, statusCode, responseBody);
+          Assert.assertEquals(statusCode, 400, responseBody);
           assertStringCompare("Unable to decode", responseBody, responseBody::contains);
         }
     );
@@ -237,8 +216,8 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(200, statusCode, responseBody);
-          assertEquals("[{\"EXPR$0\":567}]", responseBody);
+          Assert.assertEquals(statusCode, 200, responseBody);
+          Assert.assertEquals(responseBody, "[{\"EXPR$0\":567}]");
         }
     );
   }
@@ -252,7 +231,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(400, statusCode, responseBody);
+          Assert.assertEquals(statusCode, 400, responseBody);
           assertStringCompare("Malformed SQL query", responseBody, responseBody::contains);
         }
     );
@@ -267,7 +246,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(400, statusCode, responseBody);
+          Assert.assertEquals(statusCode, 400, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
     );
@@ -282,7 +261,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(400, statusCode, responseBody);
+          Assert.assertEquals(statusCode, 400, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
     );
@@ -297,7 +276,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(400, statusCode, responseBody);
+          Assert.assertEquals(statusCode, 400, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
     );
@@ -312,7 +291,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          assertEquals(400, statusCode, responseBody);
+          Assert.assertEquals(statusCode, 400, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
     );
@@ -332,8 +311,8 @@ public class ITSqlQueryTest
           request.addHeader("Content-Type", MediaType.APPLICATION_JSON);
         },
         (statusCode, responseBody) -> {
-          assertEquals(200, statusCode, responseBody);
-          assertEquals("[{\"EXPR$0\":1}]", responseBody);
+          Assert.assertEquals(statusCode, 200, responseBody);
+          Assert.assertEquals(responseBody, "[{\"EXPR$0\":1}]");
         }
     );
   }
