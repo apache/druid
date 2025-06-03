@@ -181,7 +181,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         segmentMetadataCache,
         segmentSchemaCache,
         derbyConnectorRule.getConnector(),
-        () -> new SegmentsMetadataManagerConfig(null, null),
+        () -> new SegmentsMetadataManagerConfig(null, null, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         CentralizedDatasourceSchemaConfig::create,
         NoopServiceEmitter.instance(),
@@ -323,7 +323,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
           : SegmentMetadataCache.UsageMode.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode, null)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         segmentSchemaCache,
         derbyConnectorRule.getConnector(),

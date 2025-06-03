@@ -32,6 +32,12 @@ public class Tasks
   public static final int DEFAULT_BATCH_INDEX_TASK_PRIORITY = 50;
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
 
+  /**
+   * Priority of embedded kill tasks. Kept lower than batch and realtime tasks
+   * to allow them to preempt embbedded kill tasks.
+   */
+  public static final int DEFAULT_EMBEDDED_KILL_TASK_PRIORITY = 25;
+
   static {
     Verify.verify(DEFAULT_MERGE_TASK_PRIORITY == DataSourceCompactionConfig.DEFAULT_COMPACTION_TASK_PRIORITY);
   }
