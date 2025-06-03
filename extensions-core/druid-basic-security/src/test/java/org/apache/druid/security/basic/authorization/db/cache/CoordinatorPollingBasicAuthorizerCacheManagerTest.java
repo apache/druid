@@ -35,11 +35,13 @@ import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
+import org.easymock.IAnswer;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -50,70 +52,78 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 {
+  private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
+  // Mocks
+  private Request request;
+  private Injector injector;
+  private DruidLeaderClient leaderClient;
 
-  @Test
-  public void test_stop_interruptsPollingThread() throws InterruptedException, IOException
+  private CoordinatorPollingBasicAuthorizerCacheManager manager;
+
+  @Before
+  public void setup() throws IOException
   {
     EmittingLogger.registerEmitter(new StubServiceEmitter());
 
     final BasicRoleBasedAuthorizer authorizer = EasyMock.createStrictMock(BasicRoleBasedAuthorizer.class);
-    final Injector injector = EasyMock.createStrictMock(Injector.class);
+    injector = EasyMock.createStrictMock(Injector.class);
     EasyMock.expect(injector.getInstance(AuthorizerMapper.class))
             .andReturn(new AuthorizerMapper(Map.of("test-basic-auth", authorizer))).once();
 
-    // Create a mock leader client and request
-    final DruidLeaderClient leaderClient = EasyMock.createStrictMock(DruidLeaderClient.class);
-    final Request request = EasyMock.createStrictMock(Request.class);
-
-    // Return the first set of requests immediately
-    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    final BytesFullResponseHolder userResponseHolder = new BytesFullResponseHolder(response);
-    userResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new UserAndRoleMap(Map.of(), Map.of())));
-    EasyMock.expect(leaderClient.makeRequest(EasyMock.anyObject(), EasyMock.anyString()))
-            .andReturn(request).once();
-    EasyMock.expect(
-        leaderClient.go(EasyMock.anyObject(), EasyMock.anyObject(BytesFullResponseHandler.class))
-    ).andReturn(userResponseHolder).once();
-
-    final BytesFullResponseHolder groupResponseHolder = new BytesFullResponseHolder(response);
-    groupResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new GroupMappingAndRoleMap(Map.of(), Map.of())));
-    EasyMock.expect(leaderClient.makeRequest(EasyMock.anyObject(), EasyMock.anyString()))
-            .andReturn(request).once();
-    EasyMock.expect(
-        leaderClient.go(EasyMock.anyObject(), EasyMock.anyObject(BytesFullResponseHandler.class))
-    ).andReturn(groupResponseHolder).once();
-
-    // Block the second set of requests so that the polling thread can be interrupted by stop()
-    final AtomicBoolean isInterrupted = new AtomicBoolean(false);
-
-    EasyMock.expect(leaderClient.makeRequest(EasyMock.anyObject(), EasyMock.anyString()))
-            .andReturn(request).once();
-    EasyMock.expect(
-        leaderClient.go(EasyMock.anyObject(), EasyMock.anyObject(BytesFullResponseHandler.class))
-    ).andAnswer(() -> {
-      try {
-        Thread.sleep(10_000);
-        return null;
-      }
-      catch (InterruptedException e) {
-        isInterrupted.set(true);
-        throw e;
-      }
-    }).once();
-
-    EasyMock.replay(injector, leaderClient);
+    request = EasyMock.createStrictMock(Request.class);
+    leaderClient = EasyMock.createStrictMock(DruidLeaderClient.class);
 
     final int numRetries = 10;
-    final CoordinatorPollingBasicAuthorizerCacheManager manager = new CoordinatorPollingBasicAuthorizerCacheManager(
+    manager = new CoordinatorPollingBasicAuthorizerCacheManager(
         injector,
         new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         MAPPER,
         leaderClient
     );
+  }
+
+  private void replayAll()
+  {
+    EasyMock.replay(injector, leaderClient);
+  }
+
+  private void verifyAll()
+  {
+    EasyMock.verify(injector, leaderClient);
+  }
+
+  @Test
+  public void test_stop_interruptsPollingThread_whileFetchingUserRoleMap() throws InterruptedException
+  {
+    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    final BytesFullResponseHolder userResponseHolder = new BytesFullResponseHolder(response);
+    userResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new UserAndRoleMap(Map.of(), Map.of())));
+
+    final BytesFullResponseHolder groupResponseHolder = new BytesFullResponseHolder(response);
+    groupResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new GroupMappingAndRoleMap(Map.of(), Map.of())));
+
+    // Return the first set of requests immediately
+    expectHttpRequestAndAnswer(() -> userResponseHolder);
+    expectHttpRequestAndAnswer(() -> groupResponseHolder);
+
+    // Block the second user request so that it can be interrupted by stop()
+    final AtomicBoolean isInterrupted = new AtomicBoolean(false);
+    expectHttpRequestAndAnswer(() -> {
+      try {
+        Thread.sleep(10_000);
+        return userResponseHolder;
+      }
+      catch (InterruptedException e) {
+        isInterrupted.set(true);
+        throw e;
+      }
+    });
+
+    replayAll();
 
     // Start the manager and wait for a while to ensure that polling has started
     manager.start();
@@ -123,6 +133,67 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     manager.stop();
     Assert.assertTrue(isInterrupted.get());
 
-    EasyMock.verify(injector, leaderClient);
+    verifyAll();
+  }
+
+  @Test
+  public void test_stop_interruptsPollingThread_whileFetchingGroupRoleMap() throws InterruptedException
+  {
+    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    final BytesFullResponseHolder userResponseHolder = new BytesFullResponseHolder(response);
+    userResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new UserAndRoleMap(Map.of(), Map.of())));
+
+    final BytesFullResponseHolder groupResponseHolder = new BytesFullResponseHolder(response);
+    groupResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new GroupMappingAndRoleMap(Map.of(), Map.of())));
+
+    // Return the first set of requests immediately
+    expectHttpRequestAndAnswer(() -> userResponseHolder);
+    expectHttpRequestAndAnswer(() -> groupResponseHolder);
+
+    // Return the second user request immediately
+    expectHttpRequestAndAnswer(() -> userResponseHolder);
+
+    // Block the second group request so that it can be interrupted by stop()
+    final AtomicBoolean isInterrupted = new AtomicBoolean(false);
+    expectHttpRequestAndAnswer(() -> {
+      try {
+        Thread.sleep(10_000);
+        return groupResponseHolder;
+      }
+      catch (InterruptedException e) {
+        isInterrupted.set(true);
+        throw e;
+      }
+    });
+
+    replayAll();
+
+    // Start the manager and wait for a while to ensure that polling has started
+    manager.start();
+    Thread.sleep(10);
+
+    // Stop the manager and verify that the polling thread has been interrupted
+    manager.stop();
+    Assert.assertTrue(isInterrupted.get());
+
+    verifyAll();
+  }
+
+  private void expectHttpRequestAndAnswer(IAnswer<BytesFullResponseHolder> responseHolder)
+  {
+    try {
+      EasyMock.expect(
+          leaderClient.makeRequest(EasyMock.anyObject(), EasyMock.anyString())
+      ).andReturn(request).once();
+      EasyMock.expect(
+          leaderClient.go(
+              EasyMock.anyObject(),
+              EasyMock.anyObject(BytesFullResponseHandler.class)
+          )
+      ).andAnswer(responseHolder).once();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }
