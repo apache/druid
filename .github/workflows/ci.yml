@@ -58,12 +58,30 @@ jobs:
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"
     needs: run-unit-tests
-    uses: ./.github/workflows/worker.yml
-    if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
-    with:
-      script: .github/scripts/create-jacoco-coverage-report.sh
-      artifacts_to_download: "unit-test-reports-*"
-      key: "coverage-jacoco"
+    steps:
+      - name: Check if PR has 'jacoco:skip' label
+        id: check-skip-jacoco-coverage-label
+        run: |
+          if [ ${{ github.event.action != 'labeled' || !contains(github.event.label.name, 'jacoco:skip') }} ]; then
+            echo "skipCoverage=false" >> $GITHUB_ENV
+          else
+            echo "skipCoverage=true" >> $GITHUB_ENV
+          fi
+
+      - name: Verify (DO NOT SUBMIT)
+        id: verify
+        if: ${{ env.skipCoverage != 'true' }}
+        run: |
+          echo "about to run Jacoco coverage report"
+
+      - name: Report Jacoco Coverage Failures
+        id: report-jacoco-coverage-failures
+        if: ${{ env.skipCoverage != 'true' }}
+        uses: ./.github/workflows/worker.yml
+        with:
+          script: .github/scripts/create-jacoco-coverage-report.sh
+          artifacts_to_download: "unit-test-reports-*"
+          key: "coverage-jacoco"
 
   run-unit-tests-all-jdk:
     needs: test-report
