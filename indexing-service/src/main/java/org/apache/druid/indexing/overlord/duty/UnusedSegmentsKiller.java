@@ -233,6 +233,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       killQueue.clear();
       if (!leaderSelector.isLeader()) {
         log.info("Not rebuilding kill queue as we are not leader anymore.");
+        return;
       }
 
       final Set<String> dataSources = storageCoordinator.retrieveAllDatasourceNames();

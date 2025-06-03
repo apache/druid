@@ -152,7 +152,16 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Retrieves unused segments from the metadata store that match the given
-   * interval exactly.
+   * interval exactly. There is no guarantee on the order of segments in the list
+   * or on whether the limited list contains the highest or lowest segment IDs
+   * in the interval.
+   *
+   * @param interval       Returned segments must exactly match this interval.
+   * @param maxUpdatedTime Returned segments must have a {@code used_status_last_updated}
+   *                       which is either null or earlier than this value.
+   * @param limit          Maximum number of segments to return.
+   *
+   * @return Unsorted list of unused segments that match the given parameters.
    */
   List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
       String dataSource,

@@ -85,12 +85,11 @@ public class SegmentNukeAction implements TaskAction<Void>
           ).build()
       );
 
-      final Set<Interval> sampleIntervals = intervals.stream().limit(5).collect(Collectors.toSet());
       log.info(
           "Deleted [%d] segments from metadata store out of requested[%d],"
-          + " across [%d] intervals[sample=%s], for task[%s] of datasource[%s].",
+          + " across [%d] intervals[%s], for task[%s] of datasource[%s].",
           numDeletedSegments, segments.size(),
-          intervals.size(), sampleIntervals,
+          intervals.size(), intervals,
           task.getId(), task.getDataSource()
       );
     }
