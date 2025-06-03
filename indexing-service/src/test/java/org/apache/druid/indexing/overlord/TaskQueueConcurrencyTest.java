@@ -20,8 +20,9 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -60,6 +61,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
   private Map<String, UpdateAction> threadToUpdateAction;
 
+  final ExecutorService taskExecutor = Execs.multiThreaded(2, "TaskQueueConcurrencyTest-TaskExecutor-%s");
+
   @Override
   public void setUpIngestionTestBase() throws IOException
   {
@@ -77,7 +80,20 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
           @Override
           public ListenableFuture<TaskStatus> run(Task task)
           {
-            return Futures.immediateFuture(TaskStatus.success(task.getId()));
+            // Skip the initialization; we just need to simulate a delayed future
+            Preconditions.checkArgument(task instanceof NoopTask, "task must be an instance of NoopTask");
+            final SettableFuture<TaskStatus> future = SettableFuture.create();
+
+            taskExecutor.submit(() -> {
+              try {
+                TaskStatus status = ((NoopTask) task).runTask(null);
+                future.set(status);
+              }
+              catch (Exception e) {
+                future.setException(e);
+              }
+            });
+            return future;
           }
         },
         createActionClientFactory(),

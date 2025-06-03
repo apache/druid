@@ -173,6 +173,15 @@ public class TaskQueueTest extends IngestionTestBase
     // Now task2 should run.
     taskQueue.manageQueuedTasks();
     Assert.assertTrue(task2.isDone());
+
+    // Sleep to allow all metrics to be emitted
+    Thread.sleep(100);
+
+    serviceEmitter.verifyEmitted("task/run/time", 2);
+    // handledCount={task3=shutdown,callback, task2=callback}
+    verifyStatusUpdateCounts(taskQueue, 0, 3);
+    // success=[t2,t3]
+    verifyTaskStatusCounts(taskQueue, 2, 0);
   }
 
   @Test
@@ -200,6 +209,11 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
     Assert.assertNotNull(statusOptional.get().getErrorMsg());
     Assert.assertEquals("Shutdown Task test", statusOptional.get().getErrorMsg());
+
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+    // handledCount=1 since no callbacks registered
+    verifyStatusUpdateCounts(taskQueue, 0, 1);
+    verifyTaskStatusCounts(taskQueue, 0, 1);
   }
 
   @Test
@@ -387,6 +401,10 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertTrue(
         statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
+
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+    verifyStatusUpdateCounts(taskQueue, 0, 1);
+    verifyTaskStatusCounts(taskQueue, 0, 1);
   }
 
   @Test
@@ -443,9 +461,8 @@ public class TaskQueueTest extends IngestionTestBase
 
     // Verify that metrics are emitted on receiving announcement
     serviceEmitter.verifyEmitted("task/run/time", 1);
-    CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
-    Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    verifyTaskStatusCounts(taskQueue, 0, 1);
+    verifyStatusUpdateCounts(taskQueue, 0, 2);
   }
 
   @Test
@@ -621,6 +638,25 @@ public class TaskQueueTest extends IngestionTestBase
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
     );
+  }
+
+  private static void verifyTaskStatusCounts(final TaskQueue taskQueue, int successCount, int failureCount)
+  {
+    Assert.assertEquals(
+        successCount,
+        taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+    Assert.assertEquals(
+        failureCount,
+        taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+  }
+
+  private static void verifyStatusUpdateCounts(final TaskQueue taskQueue, long pendingCount, long handledCount)
+  {
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(pendingCount, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
+    Assert.assertEquals(handledCount, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
   }
 
   private static class TestTask extends AbstractBatchIndexTask
