@@ -5136,7 +5136,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
-  public void testJoinOnRestricted(Map<String, Object> queryContext)
+  public void testJoinOnRestrictedBroadcast(Map<String, Object> queryContext)
   {
     String sql = "SELECT druid.restrictedBroadcastDatasource_m1_is_6.dim4, COUNT(*)\n"
                  + "FROM druid.numfoo\n"
@@ -5184,7 +5184,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    System.out.println(e.getMessage());
     Assert.assertTrue(e.getMessage()
                        .contains(
                            "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"));
