@@ -164,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     outputs:
-      runIts: ${{ steps.check.outputs.isApproved }}
+      runIts: ${{ steps.check.outputs.runIts }}
     steps:
       - name: Check if Triggered by a PR
         id: determine-trigger
