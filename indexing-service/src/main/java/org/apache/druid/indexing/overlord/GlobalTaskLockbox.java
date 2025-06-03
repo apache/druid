@@ -56,7 +56,7 @@ public class GlobalTaskLockbox
 
   private final TaskStorage taskStorage;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final ConcurrentHashMap<String, TaskLockbox> datasourceLocks = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, TaskLockbox> datasourceToLockbox = new ConcurrentHashMap<>();
 
   private final AtomicBoolean syncComplete = new AtomicBoolean(false);
 
@@ -79,10 +79,10 @@ public class GlobalTaskLockbox
   {
     // Verify that sync is complete
     if (!syncComplete.get()) {
-      throw new ISE("Cannot get TaskLockbox for datasource[%s]. Sync with storage is not complete yet", datasource);
+      throw new ISE("Cannot get TaskLockbox for datasource[%s]. Sync with storage is not complete yet.", datasource);
     }
 
-    return datasourceLocks.computeIfAbsent(
+    return datasourceToLockbox.computeIfAbsent(
         datasource,
         ds -> new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
     );
@@ -110,12 +110,14 @@ public class GlobalTaskLockbox
     final Map<String, DatasourceSync> datasourceSyncs = new HashMap<>();
     int activeTaskCount = 0;
     int totalLockCount = 0;
-    for (final Task task : taskStorage.getActiveTasks()) {
+    for (Task task : taskStorage.getActiveTasks()) {
       ++activeTaskCount;
-      final DatasourceSync sync = datasourceSyncs
-          .computeIfAbsent(task.getDataSource(), ds -> new DatasourceSync());
+      final DatasourceSync sync = datasourceSyncs.computeIfAbsent(
+          task.getDataSource(),
+          ds -> new DatasourceSync()
+      );
       sync.storedActiveTasks.add(task);
-      for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
+      for (TaskLock taskLock : taskStorage.getLocks(task.getId())) {
         ++totalLockCount;
         sync.storedLocks.add(Pair.of(task, taskLock));
       }
@@ -125,7 +127,7 @@ public class GlobalTaskLockbox
     final Set<Task> tasksToFail = new HashSet<>();
     int taskLockCount = 0;
 
-    datasourceLocks.clear();
+    datasourceToLockbox.clear();
     for (String dataSource : datasourceSyncs.keySet()) {
       final DatasourceSync sync = datasourceSyncs.get(dataSource);
       final TaskLockboxSyncResult result = getDatasourceLockbox(dataSource)
@@ -136,9 +138,7 @@ public class GlobalTaskLockbox
 
     log.info(
         "Synced [%,d] locks for [%,d] activeTasks from storage ([%,d] locks ignored).",
-        taskLockCount,
-        activeTaskCount,
-        totalLockCount - taskLockCount
+        taskLockCount, activeTaskCount, totalLockCount - taskLockCount
     );
 
     syncComplete.set(true);
@@ -337,7 +337,8 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Release all locks for a task and remove task from set of active tasks. Does nothing if the task is not currently locked or not an active task.
+   * Release all locks for a task and remove task from set of active tasks.
+   * Does nothing if the task is not currently locked or not an active task.
    *
    * @param task task to unlock
    */
@@ -356,7 +357,7 @@ public class GlobalTaskLockbox
   Set<String> getActiveTasks()
   {
     final Set<String> allActiveTasks = new HashSet<>();
-    datasourceLocks.values().forEach(lockbox -> allActiveTasks.addAll(lockbox.getActiveTasks()));
+    datasourceToLockbox.values().forEach(lockbox -> allActiveTasks.addAll(lockbox.getActiveTasks()));
 
     return allActiveTasks;
   }
@@ -367,7 +368,7 @@ public class GlobalTaskLockbox
     final Map<String, NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>>
         allLocks = new HashMap<>();
 
-    datasourceLocks.forEach((datasource, lockbox) -> {
+    datasourceToLockbox.forEach((datasource, lockbox) -> {
       final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>
           locks = lockbox.getAllLocks();
       if (!locks.isEmpty()) {
