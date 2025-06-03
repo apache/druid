@@ -459,9 +459,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         new Object[]{"def", 1L},
         new Object[]{"abc", 1L}
     );
+    final Map<String, Object> context =
+        QueryContexts.override(OUTER_LIMIT_CONTEXT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC",
-        OUTER_LIMIT_CONTEXT,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -474,7 +476,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)
                     )
                 )
-                .context(OUTER_LIMIT_CONTEXT)
+                .context(context)
                 .build()
         ),
         expected
@@ -2842,6 +2844,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTopNWithSelectProjections()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT\n"
         + "  dim1,"
@@ -2849,6 +2853,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM druid.foo\n"
         + "GROUP BY dim1\n"
         + "LIMIT 10",
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -2858,7 +2863,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .postAggregators(expressionPostAgg("s0", "substring(\"d0\", 1, -1)", ColumnType.STRING))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(context)
                 .build()
         ),
         ImmutableList.of(
@@ -3426,9 +3431,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         new Object[]{1.0, 1L},
         new Object[]{0.0, 1L}
     );
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT dbl1, COUNT(*) FROM druid.numfoo GROUP BY dbl1 ORDER BY dbl1 DESC LIMIT 10",
-        QUERY_CONTEXT_DEFAULT,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -3441,7 +3448,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
                     )
                 )
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(context)
                 .build()
         ),
         expected
@@ -3459,9 +3466,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         new Object[]{0.1f, 1L},
         new Object[]{0.0f, 1L}
     );
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT f1, COUNT(*) FROM druid.numfoo GROUP BY f1 ORDER BY f1 DESC LIMIT 10",
-        QUERY_CONTEXT_DEFAULT,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -3474,7 +3483,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
                     )
                 )
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(context)
                 .build()
         ),
         expected
@@ -3492,9 +3501,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         new Object[]{7L, 1L},
         new Object[]{0L, 1L}
     );
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT l1, COUNT(*) FROM druid.numfoo GROUP BY l1 ORDER BY l1 DESC LIMIT 10",
-        QUERY_CONTEXT_DEFAULT,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -3507,7 +3518,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
                     )
                 )
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(context)
                 .build()
         ),
         expected
@@ -6243,10 +6254,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByNullType()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         // Order on subquery, since the native engine doesn't currently support ordering when selecting directly
         // from a table.
         "SELECT dim1, NULL as nullcol FROM (SELECT DISTINCT dim1 FROM druid.foo LIMIT 1) ORDER BY 2",
+        context,
         ImmutableList.of(
             WindowOperatorQueryBuilder
                 .builder()
@@ -6258,7 +6272,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .threshold(1)
                         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                         .postAggregators(expressionPostAgg("s0", "null", ColumnType.STRING))
-                        .context(QUERY_CONTEXT_DEFAULT)
+                        .context(context)
                         .build()
                 )
                 .setSignature(
@@ -11789,8 +11803,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByAlongWithAliasOrderByTimeGroupByOneCol()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "select __time as bug from druid.foo group by 1 order by 1 limit 1",
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -11801,7 +11818,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .threshold(1)
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(context)
                 .build()
         ),
         ImmutableList.of(
@@ -12068,6 +12085,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPostAggWithTopN()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT "
         + "  AVG(m2), "
@@ -12079,6 +12098,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "GROUP BY m1 "
         + "ORDER BY m1 "
         + "LIMIT 5",
+        context,
         Collections.singletonList(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -12110,7 +12130,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(5)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(context)
                 .build()
         ),
         ImmutableList.of(
@@ -13033,6 +13053,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqIncompatible();
     Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 4);
+    outerLimitContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
 
     TopNQueryBuilder baseBuilder = new TopNQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE1)
@@ -14331,6 +14352,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCommonVirtualExpressionWithDifferentValueType()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "select\n"
         + " dim1,\n"
@@ -14340,6 +14363,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "where dim1 = 'none'\n"
         + "group by dim1\n"
         + "limit 1",
+        context,
         ImmutableList.of(new TopNQueryBuilder()
                              .dataSource(CalciteTests.DATASOURCE1)
                              .intervals(querySegmentSpec(Filtration.eternity()))
@@ -14358,7 +14382,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                      new LongSumAggregatorFactory("a0", "v1", null, ExprMacroTable.nil()),
                                      new DoubleSumAggregatorFactory("a1", "v2", null, ExprMacroTable.nil())
                                  ))
-                             .context(QUERY_CONTEXT_DEFAULT)
+                             .context(context)
                              .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                              .threshold(1)
                              .build()),
@@ -15149,6 +15173,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByLimitOutGroupByOrderBy()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testBuilder()
         .sql(
             "with t AS (SELECT m2, COUNT(m1) as trend_score\n"
@@ -15161,6 +15187,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 + "GROUP BY 1 \n"
                 + "ORDER BY 2 DESC"
         )
+        .queryContext(context)
         .expectedQuery(
             WindowOperatorQueryBuilder.builder()
                 .setDataSource(
@@ -15178,7 +15205,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
-                        .context(OUTER_LIMIT_CONTEXT)
+                        .context(context)
                         .build()
                 )
                 .setSignature(

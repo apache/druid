@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -71,6 +72,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -534,42 +536,43 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testTopNPath()
-  {
-    testQuery(
-        "SELECT "
-        + "JSON_VALUE(nest, '$.x'), "
-        + "SUM(cnt) "
-        + "FROM druid.nested GROUP BY 1 LIMIT 10",
-        ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(DATA_SOURCE)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .virtualColumns(
-                    new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
-                )
-                .dimension(
-                    new DefaultDimensionSpec("v0", "d0")
-                )
-                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                .threshold(10)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null, 4L},
-            new Object[]{"100", 2L},
-            new Object[]{"200", 1L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
-  }
+   @Test
+   public void testTopNPath()
+   {
+     testQuery(
+         "SELECT "
+         + "JSON_VALUE(nest, '$.x'), "
+         + "SUM(cnt) "
+         + "FROM druid.nested GROUP BY 1 LIMIT 10",
+         QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true),
+         ImmutableList.of(
+             new TopNQueryBuilder()
+                 .dataSource(DATA_SOURCE)
+                 .intervals(querySegmentSpec(Filtration.eternity()))
+                 .granularity(Granularities.ALL)
+                 .virtualColumns(
+                     new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
+                 )
+                 .dimension(
+                     new DefaultDimensionSpec("v0", "d0")
+                 )
+                 .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                 .threshold(10)
+                 .context(QueryContexts.override(
+                     QUERY_CONTEXT_DEFAULT,
+                     PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN,
+                     true
+                 ))
+                 .build()
+         ),
+         ImmutableList.of(
+             new Object[]{null, 4L},
+             new Object[]{"100", 2L},
+             new Object[]{"200", 1L}
+         )
+     );
+   }
 
   @Test
   public void testGroupByOnNestedColumn()
