@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -484,7 +485,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       byte[] bytes = objectMapper.writeValueAsBytes(content);
       proxyRequest.content(new BytesContentProvider(bytes));
       proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
-      proxyRequest.getHeaders().put(HttpHeader.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+      proxyRequest.getHeaders().put(HttpHeader.CONTENT_TYPE, objectMapper.getFactory() instanceof SmileFactory ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
