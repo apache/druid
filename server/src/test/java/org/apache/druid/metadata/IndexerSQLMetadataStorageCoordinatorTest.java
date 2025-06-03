@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -153,6 +153,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, cacheMode),
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        new NoopSegmentSchemaCache(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
             nameFormat,
@@ -177,7 +178,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
         segmentMetadataCache,
         emitter
     )
@@ -997,7 +997,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testRetrieveSegmentForId()
   {
     coordinator.commitSegments(Set.of(defaultSegment), null);
-    markAllSegmentsUnused(ImmutableSet.of(defaultSegment), DateTimes.nowUtc());
+    coordinator.markSegmentAsUnused(defaultSegment.getId());
     Assert.assertEquals(
         defaultSegment,
         coordinator.retrieveSegmentForId(defaultSegment.getId())
@@ -2613,8 +2613,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(1, identifier3.getShardSpec().getNumCorePartitions());
 
     // now drop the used segment previously loaded:
-    markAllSegmentsUnused(ImmutableSet.of(segment), DateTimes.nowUtc());
-    refreshCache();
+    coordinator.markSegmentAsUnused(segment.getId());
 
     // and final load, this reproduces an issue that could happen with multiple streaming appends,
     // followed by a reindex, followed by a drop, and more streaming data coming in for same interval
@@ -2784,8 +2783,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // 5) reverted compaction (by marking B_0 as unused)
     // Revert compaction a manual metadata update which is basically the following two steps:
-    markAllSegmentsUnused(ImmutableSet.of(compactedSegment), DateTimes.nowUtc()); // <- drop compacted segment
-    refreshCache();
+    coordinator.markSegmentAsUnused(compactedSegment.getId());
     //        pending: version = A, id = 0,1,2
     //                 version = B, id = 1
     //
@@ -3638,8 +3636,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertTrue(coordinator.commitSegments(dataSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(dataSegments));
 
     // Mark the tombstone as unused
-    markAllSegmentsUnused(tombstones, DateTimes.nowUtc());
-    refreshCache();
+    coordinator.markSegmentAsUnused(tombstoneSegment.getId());
 
     final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
         TestDataSource.WIKI,

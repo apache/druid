@@ -62,9 +62,9 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
@@ -85,7 +85,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -337,6 +336,9 @@ public class StreamAppenderator implements Appenderator
       throw e;
     }
 
+    final long currTs = System.currentTimeMillis();
+    metrics.reportMessageGap(currTs - row.getTimestampFromEpoch());
+
     if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
@@ -360,11 +362,11 @@ public class StreamAppenderator implements Appenderator
       persist = true;
       persistReasons.add("No more rows can be appended to sink");
     }
-    if (System.currentTimeMillis() > nextFlush) {
+    if (currTs > nextFlush) {
       persist = true;
       persistReasons.add(StringUtils.format(
           "current time[%d] is greater than nextFlush[%d]",
-          System.currentTimeMillis(),
+          currTs,
           nextFlush
       ));
     }
@@ -944,11 +946,11 @@ public class StreamAppenderator implements Appenderator
       Closer closer = Closer.create();
       try {
         for (FireHydrant fireHydrant : sink) {
-          Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.as(QueryableIndex.class);
+          final Segment segment = fireHydrant.acquireSegment();
+          final QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
-          closer.register(segmentAndCloseable.rhs);
+          closer.register(segment);
         }
 
         mergedFile = indexMerger.mergeQueryableIndex(

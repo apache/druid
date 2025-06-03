@@ -64,7 +64,8 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.sink.Sink;
@@ -90,7 +91,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.function.ObjLongConsumer;
 import java.util.stream.Collectors;
 
@@ -206,7 +206,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
+    final SegmentMapFunction segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
         () -> ev.createSegmentMapFunction(policyEnforcer)
     );
@@ -273,7 +273,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                     // 1) Only use caching if data is immutable
                     // 2) Hydrants are not the same between replicas, make sure cache is local
                     if (segmentReference.isImmutable() && cache.isLocal()) {
-                      final SegmentReference segment = segmentReference.getSegment();
+                      final Segment segment = segmentReference.getSegment();
                       final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
                       final Interval cacheKeyInterval;
 

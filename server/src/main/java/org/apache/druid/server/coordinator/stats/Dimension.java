@@ -25,6 +25,7 @@ package org.apache.druid.server.coordinator.stats;
 public enum Dimension
 {
   TIER("tier"),
+  TASK_TYPE("taskType"),
   DATASOURCE("dataSource"),
   DUTY("duty"),
   DUTY_GROUP("dutyGroup"),

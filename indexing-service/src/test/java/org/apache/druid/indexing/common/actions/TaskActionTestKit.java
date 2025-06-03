@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
@@ -40,6 +39,7 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
@@ -48,8 +48,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.rules.ExternalResource;
-
-import java.util.Set;
 
 public class TaskActionTestKit extends ExternalResource
 {
@@ -172,10 +170,12 @@ public class TaskActionTestKit extends ExternalResource
         = useSegmentMetadataCache
           ? SegmentMetadataCache.UsageMode.ALWAYS
           : SegmentMetadataCache.UsageMode.NEVER;
+
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
+        new NoopSegmentSchemaCache(),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
         NoopServiceEmitter.instance()
@@ -189,7 +189,6 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector,
         leaderSelector,
-        Set.of(NodeRole.OVERLORD),
         segmentMetadataCache,
         NoopServiceEmitter.instance()
     )

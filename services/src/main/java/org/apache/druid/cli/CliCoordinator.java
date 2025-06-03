@@ -47,6 +47,8 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MetadataConfigModule;
+import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentSchemaCacheModule;
 import org.apache.druid.guice.SupervisorCleanupModule;
@@ -61,12 +63,8 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataRuleManagerProvider;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
-import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
@@ -74,7 +72,6 @@ import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
@@ -145,7 +142,7 @@ public class CliCoordinator extends ServerRunnable
   {
     this.properties = properties;
     beOverlord = isOverlord(properties);
-    isSegmentSchemaCacheEnabled = isSegmentSchemaCacheEnabled(properties);
+    isSegmentSchemaCacheEnabled = MetadataConfigModule.isSegmentSchemaCacheEnabled(properties);
 
     if (beOverlord) {
       log.info("Coordinator is configured to act as Overlord as well (%s = true).", AS_OVERLORD_PROPERTY);
@@ -167,6 +164,7 @@ public class CliCoordinator extends ServerRunnable
     List<Module> modules = new ArrayList<>();
 
     modules.add(JettyHttpClientModule.global());
+    modules.add(new MetadataManagerModule());
 
     if (isSegmentSchemaCacheEnabled) {
       validateCentralizedDatasourceSchemaConfig(properties);
@@ -213,19 +211,9 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(DirectDruidClientFactory.class).toProvider(Providers.of(null));
             }
 
-            binder.bind(SegmentsMetadataManager.class)
-                  .toProvider(SegmentsMetadataManagerProvider.class)
-                  .in(ManageLifecycle.class);
-
-            binder.bind(MetadataRuleManager.class)
-                  .toProvider(MetadataRuleManagerProvider.class)
-                  .in(ManageLifecycle.class);
-
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(CloneStatusManager.class).in(LazySingleton.class);
 
-            binder.bind(CoordinatorConfigManager.class);
-            binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
             binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
 

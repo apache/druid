@@ -279,6 +279,9 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/handoff/count`|Number of handoffs that happened.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies. Generally greater than 0 once every segment granular period if cluster operating normally.|
 |`ingest/sink/count`|Number of sinks not handed off.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|1~3|
 |`ingest/events/messageGap`|Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission. If the value is increasing but lag is low, Druid may not be receiving new data. This metric is reset as new tasks spawn up.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Greater than 0, depends on the time carried in event.|
+|`ingest/events/maxMessageGap`|Maximum seen time gap in milliseconds between each ingested event timestamp and the current system timestamp of metrics emission. This metric is reset every emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Greater than 0, depends on the time carried in event.|
+|`ingest/events/minMessageGap`|Minimum seen time gap in milliseconds between each ingested event timestamp and the current system timestamp of metrics emission. This metric is reset every emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Greater than 0, depends on the time carried in event.|
+|`ingest/events/avgMessageGap`|Average time gap in milliseconds between each ingested event timestamp and the current system timestamp of metrics emission. This metric is reset every emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Greater than 0, depends on the time carried in event.|
 |`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator.|`dataSource`, `tags`|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
@@ -306,11 +309,11 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
-|`task/success/count`|Number of successful tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.| `dataSource`|Varies|
-|`task/failed/count`|Number of failed tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`task/running/count`|Number of current running tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`task/pending/count`|Number of current pending tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`task/waiting/count`|Number of current waiting tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`task/success/count`|Number of successful tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`|Varies|
+|`task/failed/count`|Number of failed tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`task/running/count`|Number of current running tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`task/pending/count`|Number of current pending tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`task/waiting/count`|Number of current waiting tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
 |`taskSlot/total/count`|Number of total task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
 |`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
 |`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|

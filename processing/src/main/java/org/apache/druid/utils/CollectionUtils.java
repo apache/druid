@@ -39,6 +39,7 @@ import java.util.Spliterator;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class CollectionUtils
@@ -122,6 +123,15 @@ public final class CollectionUtils
       }
     });
     return result;
+  }
+
+  /**
+   * Creates an immutable map by mapping each entry in the given collection to
+   * a key and a value.
+   */
+  public static <E, K, V> Map<K, V> toMap(Collection<E> collection, Function<E, K> keyMapper, Function<E, V> valueMapper)
+  {
+    return collection.stream().collect(Collectors.toMap(keyMapper, valueMapper));
   }
 
   /**

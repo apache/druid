@@ -20,7 +20,6 @@
 package org.apache.druid.metadata;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -79,7 +78,6 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         new TestDruidLeaderSelector(),
-        Set.of(NodeRole.OVERLORD),
         NoopSegmentMetadataCache.instance(),
         NoopServiceEmitter.instance()
     )

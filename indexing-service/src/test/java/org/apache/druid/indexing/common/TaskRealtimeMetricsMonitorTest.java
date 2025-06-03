@@ -52,9 +52,8 @@ public class TaskRealtimeMetricsMonitorTest
   );
 
   private static final Map<String, Object> TAGS = ImmutableMap.of("author", "Author Name", "version", 10);
-
-  @Mock(answer = Answers.RETURNS_MOCKS)
   private SegmentGenerationMetrics segmentGenerationMetrics;
+
   @Mock(answer = Answers.RETURNS_MOCKS)
   private RowIngestionMeters rowIngestionMeters;
   @Mock
@@ -66,6 +65,7 @@ public class TaskRealtimeMetricsMonitorTest
   public void setUp()
   {
     emittedEvents = new HashMap<>();
+    segmentGenerationMetrics = new SegmentGenerationMetrics();
     Mockito.doCallRealMethod().when(emitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
     Mockito
         .doAnswer(invocation -> {
@@ -93,5 +93,24 @@ public class TaskRealtimeMetricsMonitorTest
     for (ServiceMetricEvent sme : emittedEvents.values()) {
       Assert.assertFalse(sme.getUserDims().containsKey(DruidMetrics.TAGS));
     }
+  }
+
+  @Test
+  public void testMessageGapAggStats()
+  {
+    target = new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, DIMENSIONS, null);
+
+    target.doMonitor(emitter);
+    Assert.assertFalse(emittedEvents.containsKey("ingest/events/minMessageGap"));
+    Assert.assertFalse(emittedEvents.containsKey("ingest/events/maxMessageGap"));
+    Assert.assertFalse(emittedEvents.containsKey("ingest/events/avgMessageGap"));
+
+    emittedEvents.clear();
+    segmentGenerationMetrics.reportMessageGap(1);
+    target.doMonitor(emitter);
+
+    Assert.assertTrue(emittedEvents.containsKey("ingest/events/minMessageGap"));
+    Assert.assertTrue(emittedEvents.containsKey("ingest/events/maxMessageGap"));
+    Assert.assertTrue(emittedEvents.containsKey("ingest/events/avgMessageGap"));
   }
 }

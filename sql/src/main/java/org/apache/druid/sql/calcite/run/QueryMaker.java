@@ -45,7 +45,7 @@ public interface QueryMaker
    * In case {@link QueryMaker} implements this interface - this approach will
    * be preferred to execute the query in {@link QueryHandler}.
    */
-  public interface FromDruidLogical
+  interface FromDruidLogical
   {
     /**
      * Runs the query represented by {@link DruidLogicalNode}.

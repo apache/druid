@@ -34,9 +34,9 @@ import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
-import org.skife.jdbi.v2.TransactionCallback;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -154,7 +154,8 @@ public class SegmentSchemaManager
       final int version
   )
   {
-    connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
+    connector.retryTransaction((handle, status) -> {
+      final DateTime updateTime = DateTimes.nowUtc();
       Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
 
       for (SegmentSchemaMetadataPlus segmentSchema : segmentSchemas) {
@@ -163,8 +164,8 @@ public class SegmentSchemaManager
             segmentSchema.getSegmentSchemaMetadata().getSchemaPayload()
         );
       }
-      persistSegmentSchema(handle, dataSource, version, schemaPayloadMap);
-      updateSegmentWithSchemaInformation(handle, segmentSchemas);
+      persistSegmentSchema(handle, dataSource, version, schemaPayloadMap, updateTime);
+      updateSegmentWithSchemaInformation(handle, segmentSchemas, updateTime);
 
       return null;
     }, 1, 3);
@@ -177,7 +178,8 @@ public class SegmentSchemaManager
       final Handle handle,
       final String dataSource,
       final int version,
-      final Map<String, SchemaPayload> fingerprintSchemaPayloadMap
+      final Map<String, SchemaPayload> fingerprintSchemaPayloadMap,
+      final DateTime updateTime
   ) throws JsonProcessingException
   {
     if (fingerprintSchemaPayloadMap.isEmpty()) {
@@ -244,7 +246,7 @@ public class SegmentSchemaManager
     PreparedBatch schemaInsertBatch = handle.prepareBatch(insertSql);
     for (List<String> partition : partitionedFingerprints) {
       for (String fingerprint : partition) {
-        final String now = DateTimes.nowUtc().toString();
+        final String now = updateTime.toString();
         schemaInsertBatch.add()
                          .bind("created_date", now)
                          .bind("datasource", dataSource)
@@ -280,7 +282,8 @@ public class SegmentSchemaManager
    */
   public void updateSegmentWithSchemaInformation(
       final Handle handle,
-      final List<SegmentSchemaMetadataPlus> batch
+      final List<SegmentSchemaMetadataPlus> batch,
+      final DateTime updateTime
   )
   {
     log.debug("Updating segment with schemaFingerprint and numRows information: [%s].", batch);
@@ -288,7 +291,11 @@ public class SegmentSchemaManager
     // update schemaFingerprint and numRows in segments table
     String updateSql =
         StringUtils.format(
-            "UPDATE %s SET schema_fingerprint = :schema_fingerprint, num_rows = :num_rows WHERE id = :id",
+            "UPDATE %s"
+            + " SET schema_fingerprint = :schema_fingerprint,"
+            + " num_rows = :num_rows,"
+            + " used_status_last_updated = :last_updated"
+            + " WHERE id = :id",
             dbTables.getSegmentsTable()
         );
 
@@ -304,7 +311,8 @@ public class SegmentSchemaManager
         segmentUpdateBatch.add()
                           .bind("id", segmentSchema.getSegmentId().toString())
                           .bind("schema_fingerprint", fingerprint)
-                          .bind("num_rows", segmentSchema.getSegmentSchemaMetadata().getNumRows());
+                          .bind("num_rows", segmentSchema.getSegmentSchemaMetadata().getNumRows())
+                          .bind("last_updated", updateTime.toString());
       }
 
       final int[] affectedRows = segmentUpdateBatch.execute();

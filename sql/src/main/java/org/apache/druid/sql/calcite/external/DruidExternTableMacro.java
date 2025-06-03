@@ -25,10 +25,8 @@ import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.util.NlsString;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.validation.constraints.NotNull;
@@ -58,7 +56,7 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
     try {
       InputSource inputSource = ((DruidTableMacro) macro).getJsonMapper().readValue(inputSourceStr, InputSource.class);
       return inputSource.getTypes().stream()
-          .map(inputSourceType -> new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ))
+          .map(AuthorizationUtils::createExternalResourceReadAction)
           .collect(Collectors.toSet());
     }
     catch (JsonProcessingException e) {
@@ -71,7 +69,7 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
   private String getInputSourceArgument(final SqlCall call)
   {
     // this covers case where parameters are used positionally
-    if (call.getOperandList().size() > 0) {
+    if (!call.getOperandList().isEmpty()) {
       if (call.getOperandList().get(0) instanceof SqlCharStringLiteral) {
         return ((SqlCharStringLiteral) call.getOperandList().get(0)).toValue();
       }

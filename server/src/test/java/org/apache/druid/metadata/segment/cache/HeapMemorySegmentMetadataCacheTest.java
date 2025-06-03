@@ -32,8 +32,16 @@ import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -52,13 +60,14 @@ import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class HeapMemorySegmentMetadataCacheTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
-      = new TestDerbyConnector.DerbyConnectorRule();
+      = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private BlockingExecutorService pollExecutor;
   private ScheduledExecutorFactory executorFactory;
@@ -66,6 +75,8 @@ public class HeapMemorySegmentMetadataCacheTest
   private StubServiceEmitter serviceEmitter;
 
   private HeapMemorySegmentMetadataCache cache;
+  private SegmentSchemaCache schemaCache;
+  private SegmentSchemaTestUtils schemaTestUtils;
 
   @Before
   public void setup()
@@ -76,8 +87,10 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter = new StubServiceEmitter();
 
     derbyConnector.createSegmentTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createPendingSegmentsTable();
 
+    schemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, TestHelper.JSON_MAPPER);
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
@@ -90,24 +103,39 @@ public class HeapMemorySegmentMetadataCacheTest
     }
   }
 
+  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode)
+  {
+    setupTargetWithCaching(cacheMode, false);
+  }
+
   /**
    * Creates the target {@link #cache} to be tested in the current test.
    */
-  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode)
+  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode, boolean useSchemaCache)
   {
     if (cache != null) {
       throw new ISE("Test target has already been initialized with caching[%s]", cache.isEnabled());
     }
     final SegmentsMetadataManagerConfig metadataManagerConfig
         = new SegmentsMetadataManagerConfig(null, cacheMode);
+    schemaCache = useSchemaCache ? new SegmentSchemaCache() : new NoopSegmentSchemaCache();
     cache = new HeapMemorySegmentMetadataCache(
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        schemaCache,
         derbyConnector,
         executorFactory,
         serviceEmitter
     );
+  }
+
+  private void setupAndSyncCacheWithSchema()
+  {
+    setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS, true);
+    cache.start();
+    cache.becomeLeader();
+    syncCacheAfterBecomingLeader();
   }
 
   private void setupAndSyncCache()
@@ -692,10 +720,141 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyValue(Metric.DELETED_DATASOURCES, 1L);
   }
 
+  @Test
+  public void test_sync_addsUsedSegmentSchema_ifNotPresentInCache()
+  {
+    setupAndSyncCacheWithSchema();
+
+    Assert.assertTrue(
+        schemaCache.getPublishedSchemaPayloadMap().isEmpty()
+    );
+
+    final SchemaPayload payload = new SchemaPayload(
+        RowSignature.builder().add("col1", null).build()
+    );
+    final String fingerprint = getSchemaFingerprint(payload);
+    schemaTestUtils.insertSegmentSchema(
+        TestDataSource.WIKI,
+        Map.of(fingerprint, payload),
+        Set.of(fingerprint)
+    );
+
+    syncCache();
+    serviceEmitter.verifyValue("segment/schemaCache/usedFingerprint/count", 1L);
+
+    Assert.assertEquals(
+        Map.of(fingerprint, payload),
+        schemaCache.getPublishedSchemaPayloadMap()
+    );
+  }
+
+  @Test
+  public void test_sync_removesUsedSegmentSchema_ifNotPresentInMetadataStore()
+  {
+    setupAndSyncCacheWithSchema();
+
+    final SchemaPayload payload = new SchemaPayload(
+        RowSignature.builder().add("col1", null).build()
+    );
+    final String fingerprint = getSchemaFingerprint(payload);
+
+    schemaCache.resetSchemaForPublishedSegments(
+        Map.of(),
+        Map.of(fingerprint, payload)
+    );
+    Assert.assertEquals(
+        Map.of(fingerprint, payload),
+        schemaCache.getPublishedSchemaPayloadMap()
+    );
+
+    syncCache();
+    serviceEmitter.verifyValue("segment/schemaCache/usedFingerprint/count", 0L);
+
+    Assert.assertTrue(
+        schemaCache.getPublishedSchemaPayloadMap().isEmpty()
+    );
+  }
+
+  @Test
+  public void test_sync_addsUsedSegmentMetadata_ifNotPresentInCache()
+  {
+    setupAndSyncCacheWithSchema();
+
+    Assert.assertTrue(
+        schemaCache.getPublishedSegmentMetadataMap().isEmpty()
+    );
+
+    final SchemaPayload payload = new SchemaPayload(
+        RowSignature.builder().add("col1", null).build()
+    );
+    final String fingerprint = getSchemaFingerprint(payload);
+
+    final DataSegmentPlus usedSegmentPlus
+        = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                            .withNumRows(10L).withSchemaFingerprint(fingerprint)
+                            .updatedNow().markUsed().asPlus();
+    insertSegmentsInMetadataStoreWithSchema(usedSegmentPlus);
+
+    syncCache();
+    serviceEmitter.verifyValue(Metric.PERSISTED_USED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.CACHED_USED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.UPDATED_USED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue("segment/schemaCache/used/count", 1L);
+
+    Assert.assertEquals(
+        Map.of(usedSegmentPlus.getDataSegment().getId(), new SegmentMetadata(10L, fingerprint)),
+        schemaCache.getPublishedSegmentMetadataMap()
+    );
+  }
+
+  @Test
+  public void test_sync_removesUsedSegmentMetadata_ifNotPresentInMetadataStore()
+  {
+    setupAndSyncCacheWithSchema();
+
+    final SchemaPayload payload = new SchemaPayload(
+        RowSignature.builder().add("col1", null).build()
+    );
+    final String fingerprint = getSchemaFingerprint(payload);
+    final SegmentId segmentId = SegmentId.dummy(TestDataSource.WIKI);
+    final SegmentMetadata metadata = new SegmentMetadata(10L, fingerprint);
+
+    schemaCache.resetSchemaForPublishedSegments(
+        Map.of(segmentId, metadata),
+        Map.of()
+    );
+    Assert.assertEquals(
+        Map.of(segmentId, metadata),
+        schemaCache.getPublishedSegmentMetadataMap()
+    );
+
+    syncCache();
+    serviceEmitter.verifyValue("segment/schemaCache/used/count", 0L);
+
+    Assert.assertTrue(
+        schemaCache.getPublishedSegmentMetadataMap().isEmpty()
+    );
+  }
+
+  private static String getSchemaFingerprint(SchemaPayload payload)
+  {
+    return new FingerprintGenerator(TestHelper.JSON_MAPPER).generateFingerprint(
+        payload,
+        TestDataSource.WIKI,
+        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+    );
+  }
+
   private void insertSegmentsInMetadataStore(Set<DataSegmentPlus> segments)
   {
     IndexerSqlMetadataStorageCoordinatorTestBase
-        .insertSegments(segments, derbyConnectorRule, TestHelper.JSON_MAPPER);
+        .insertSegments(segments, false, derbyConnectorRule, TestHelper.JSON_MAPPER);
+  }
+
+  private void insertSegmentsInMetadataStoreWithSchema(DataSegmentPlus... segments)
+  {
+    IndexerSqlMetadataStorageCoordinatorTestBase
+        .insertSegments(Set.of(segments), true, derbyConnectorRule, TestHelper.JSON_MAPPER);
   }
 
   private void updateSegmentInMetadataStore(DataSegmentPlus segment)

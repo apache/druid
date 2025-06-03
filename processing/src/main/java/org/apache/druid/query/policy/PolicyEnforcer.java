@@ -25,8 +25,9 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.timeline.SegmentId;
 
 /**
  * Interface for enforcing policies on data sources and segments in Druid queries.
@@ -65,26 +66,30 @@ public interface PolicyEnforcer
   }
 
   /**
-   * Validates a {@link SegmentReference} against the policy enforcer. Prior to query execution, the {@link SegmentReference} tree is walked.
-   * This method is invoked once for each {@link org.apache.druid.segment.RestrictedSegment} and once for each {@link ReferenceCountingSegment}
+   * Validates a {@link Segment} against the policy enforcer. Prior to query execution, the {@link Segment} tree is walked.
+   * This method is invoked once for each {@link org.apache.druid.segment.RestrictedSegment} and once for each {@link ReferenceCountedSegmentProvider}
    * that is not wrapped inside a {@link org.apache.druid.segment.RestrictedSegment}.
    * <p>
-   * Direct invocation of this method is discouraged; use {@link SegmentReference#validateOrElseThrow(PolicyEnforcer)} instead.
+   * Direct invocation of this method is discouraged; use {@link Segment#validateOrElseThrow(PolicyEnforcer)} instead.
    *
    * @param segment the segment to validate
    * @param policy  the policy on the segment, {@link org.apache.druid.segment.RestrictedSegment#policy} or null for other
    * @throws DruidException if the segment does not comply with the policy
    */
-  default void validateOrElseThrow(ReferenceCountingSegment segment, Policy policy) throws DruidException
+  default void validateOrElseThrow(Segment segment, Policy policy) throws DruidException
   {
-    // Validation will always fail on lookups, external, and inline segments, because they will not have policies applied (except for NoopPolicyEnforcer).
-    // This is a temporary solution since we don't have a perfect way to identify segments that are backed by a regular table yet.
+    SegmentId segmentId = segment.getId();
+    // SegmentId is null if the segment is not table based
+    if (segmentId == null) {
+      return;
+    }
+
     if (validate(policy)) {
       return;
     }
     throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                         .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build("Failed security validation with segment [%s]", segment.getId());
+                        .build("Failed security validation with segment [%s]", segmentId);
   }
 
   /**
