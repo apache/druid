@@ -23,22 +23,22 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.tests.TestNGGroup;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.util.EntityUtils;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
@@ -55,19 +55,23 @@ public class ITSqlQueryTest
   @Inject
   IntegrationTestingConfig config;
 
+  @Inject
+  @TestClient
+  HttpClient httpClient;
+
   interface IExecutable
   {
-    void execute(String endpoint) throws IOException;
+    void execute(String endpoint) throws Exception;
   }
 
   interface OnRequest
   {
-    void on(HttpPost request) throws IOException;
+    void on(Request request) throws IOException;
   }
 
   interface OnResponse
   {
-    void on(int statusCode, HttpEntity response) throws IOException;
+    void on(int statusCode, String response) throws IOException;
   }
 
   private void executeWithRetry(String endpoint, String contentType, IExecutable executable)
@@ -79,7 +83,7 @@ public class ITSqlQueryTest
         executable.execute(endpoint);
         return;
       }
-      catch (IOException e) {
+      catch (Exception e) {
         // Only catch IOException
         lastException = e;
       }
@@ -95,28 +99,34 @@ public class ITSqlQueryTest
 
   private void executeQuery(
       String contentType,
+      String query,
       OnRequest onRequest,
       OnResponse onResponse
   )
   {
     IExecutable executable = (endpoint) -> {
-      try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-        HttpPost request = new HttpPost(endpoint);
-        if (contentType != null) {
-          request.addHeader("Content-Type", contentType);
-        }
-        onRequest.on(request);
-
-        try (CloseableHttpResponse response = client.execute(request)) {
-          HttpEntity responseEntity = response.getEntity();
-          assertNotNull(responseEntity);
-
-          onResponse.on(
-              response.getStatusLine().getStatusCode(),
-              responseEntity
-          );
-        }
+      Request request = new Request(HttpMethod.POST, new URL(endpoint));
+      if (contentType != null) {
+        request.addHeader("Content-Type", contentType);
       }
+      
+      if (query != null) {
+        request.setContent(query.getBytes(StandardCharsets.UTF_8));
+      }
+      
+      if (onRequest != null) {
+        onRequest.on(request);
+      }
+
+      StatusResponseHolder response = httpClient.go(request, StatusResponseHandler.getInstance())
+                                                .get();
+      
+      assertNotNull(response);
+      
+      onResponse.on(
+          response.getStatus().getCode(),
+          response.getContent().trim()
+      );
     };
 
     // Send query to broker to exeucte
@@ -159,11 +169,10 @@ public class ITSqlQueryTest
   {
     executeQuery(
         null,
-        (request) -> request.setEntity(new StringEntity("select 1")),
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
-          assertEquals(HttpStatus.SC_UNSUPPORTED_MEDIA_TYPE, statusCode, responseBody);
+        "select 1",
+        (request) -> {},
+        (statusCode, responseBody) -> {
+          assertEquals(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), statusCode, responseBody);
           assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
         }
     );
@@ -174,11 +183,10 @@ public class ITSqlQueryTest
   {
     executeQuery(
         "application/xml",
-        (request) -> request.setEntity(new StringEntity("select 1")),
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
-          assertEquals(HttpStatus.SC_UNSUPPORTED_MEDIA_TYPE, statusCode, responseBody);
+        "select 1",
+        (request) -> {},
+        (statusCode, responseBody) -> {
+          assertEquals(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), statusCode, responseBody);
           assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
         }
     );
@@ -189,10 +197,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.TEXT_PLAIN,
-        (request) -> request.setEntity(new StringEntity("select \n1")),
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        "select \n1",
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(200, statusCode, responseBody);
           assertEquals("[{\"EXPR$0\":1}]", responseBody);
         }
@@ -204,10 +211,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.APPLICATION_FORM_URLENCODED,
-        (request) -> request.setEntity(new StringEntity(URLEncoder.encode("select 'x % y'", StandardCharsets.UTF_8))),
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        URLEncoder.encode("select 'x % y'", StandardCharsets.UTF_8),
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(200, statusCode, responseBody);
           assertEquals("[{\"EXPR$0\":\"x % y\"}]", responseBody);
         }
@@ -219,12 +225,11 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.APPLICATION_FORM_URLENCODED,
-        (request) -> request.setEntity(new StringEntity("select 'x % y'")),
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        "select 'x % y'",
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(400, statusCode, responseBody);
-          assertStringCompare("Unable to decoded", responseBody, responseBody::contains);
+          assertStringCompare("Unable to decode", responseBody, responseBody::contains);
         }
     );
   }
@@ -234,10 +239,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.APPLICATION_JSON,
-        (request) -> request.setEntity(new StringEntity(StringUtils.format("{\"query\":\"select 567\"}"))),
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        "{\"query\":\"select 567\"}",
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(200, statusCode, responseBody);
           assertEquals("[{\"EXPR$0\":567}]", responseBody);
         }
@@ -249,10 +253,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.APPLICATION_JSON,
-        (request) -> request.setEntity(new StringEntity(StringUtils.format("{\"query\":select 567}"))),
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        "{\"query\":select 567}",
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(400, statusCode, responseBody);
           assertStringCompare("Malformed SQL query", responseBody, responseBody::contains);
         }
@@ -264,12 +267,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.TEXT_PLAIN,
-        (request) -> {
-          // Empty query, DO NOTHING
-        },
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        null,
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(400, statusCode, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
@@ -281,12 +281,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.APPLICATION_FORM_URLENCODED,
-        (request) -> {
-          // Empty query, DO NOTHING
-        },
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        null,
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(400, statusCode, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
@@ -298,13 +295,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.TEXT_PLAIN,
-        (request) -> {
-          // a query with blank characters
-          request.setEntity(new StringEntity("     "));
-        },
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        "     ",
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(400, statusCode, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
@@ -316,12 +309,9 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.APPLICATION_JSON,
-        (request) -> {
-          // Empty query, DO NOTHING
-        },
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        null,
+        (request) -> {},
+        (statusCode, responseBody) -> {
           assertEquals(400, statusCode, responseBody);
           assertStringCompare("Empty query", responseBody, responseBody::contains);
         }
@@ -336,14 +326,12 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.TEXT_PLAIN,
+        "SELECT 1",
         (request) -> {
           // Add one more Content-Type header
           request.addHeader("Content-Type", MediaType.APPLICATION_JSON);
-          request.setEntity(new StringEntity(StringUtils.format("SELECT 1")));
         },
-        (statusCode, responseEntity) -> {
-          String responseBody = EntityUtils.toString(responseEntity).trim();
-
+        (statusCode, responseBody) -> {
           assertEquals(200, statusCode, responseBody);
           assertEquals("[{\"EXPR$0\":1}]", responseBody);
         }
