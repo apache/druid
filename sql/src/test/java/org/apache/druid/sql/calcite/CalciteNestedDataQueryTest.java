@@ -536,43 +536,43 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-   @Test
-   public void testTopNPath()
-   {
-     testQuery(
-         "SELECT "
-         + "JSON_VALUE(nest, '$.x'), "
-         + "SUM(cnt) "
-         + "FROM druid.nested GROUP BY 1 LIMIT 10",
-         QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true),
-         ImmutableList.of(
-             new TopNQueryBuilder()
-                 .dataSource(DATA_SOURCE)
-                 .intervals(querySegmentSpec(Filtration.eternity()))
-                 .granularity(Granularities.ALL)
-                 .virtualColumns(
-                     new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
-                 )
-                 .dimension(
-                     new DefaultDimensionSpec("v0", "d0")
-                 )
-                 .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                 .threshold(10)
-                 .context(QueryContexts.override(
-                     QUERY_CONTEXT_DEFAULT,
-                     PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN,
-                     true
-                 ))
-                 .build()
-         ),
-         ImmutableList.of(
-             new Object[]{null, 4L},
-             new Object[]{"100", 2L},
-             new Object[]{"200", 1L}
-         )
-     );
-   }
+  @Test
+  public void testTopNPath()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1 LIMIT 10",
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true),
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .virtualColumns(
+                    new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
+                )
+                .dimension(
+                    new DefaultDimensionSpec("v0", "d0")
+                )
+                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(10)
+                .context(QueryContexts.override(
+                    QUERY_CONTEXT_DEFAULT,
+                    PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN,
+                    true
+                ))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"100", 2L},
+            new Object[]{"200", 1L}
+        )
+    );
+  }
 
   @Test
   public void testGroupByOnNestedColumn()
