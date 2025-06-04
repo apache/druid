@@ -506,7 +506,12 @@ When using the sort-merge algorithm, keep the following in mind:
 
 - All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
 
-The following example shows a single sort-merge join stage where it explicitly set `sqlJoinAlgorithm` to `sortMerge` using the SET command. This query also takes `eventstream` (partitioned on `user_id`) and `users` (partitioned on id) as `inputs`, with no limit on the size of either input.
+The following query runs a single sort-merge join stage that takes the following inputs:
+* `eventstream` partitioned on `user_id`
+* `users` partitioned on `id`
+
+There is no limit on the size of either input.
+The SET command assigns the `sqlJoinAlgorithm` context parameter so that Druid uses the sort-merge join algorithm for the query.
 
 ```sql
 SET sqlJoinAlgorithm='sortMerge';
