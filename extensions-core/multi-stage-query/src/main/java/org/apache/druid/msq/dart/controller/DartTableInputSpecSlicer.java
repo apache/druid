@@ -164,8 +164,9 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
       assignments.get(worker).addSegments(segment);
     }
 
-    for (DruidServerMetadata server : serverRequestMap.keySet()) {
+    for (Map.Entry<DruidServerMetadata, List<DartQueryableSegment>> entry : serverRequestMap.entrySet()) {
       final int worker;
+      DruidServerMetadata server = entry.getKey();
       worker = nextRoundRobinWorker;
       nextRoundRobinWorker = (nextRoundRobinWorker + 1) % maxNumSlices;
       List<RichSegmentDescriptor> descriptors = serverRequestMap.get(server).stream()
@@ -238,8 +239,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
                                     final DataSegment dataSegment = serverSelector.getSegment();
                                     final int worker = toWorkersFunction.applyAsInt(serverSelector);
                                     DruidServerMetadata realtimeServer;
-                                    if (serverSelector.isLoadedOnHistorical() || serverSelector.isEmpty()) {
-                                      // Don't query realtime servers for this if it's loaded already on a historical.
+                                    if (!serverSelector.isRealtime()) {
                                       realtimeServer = null;
                                     } else {
                                       final Set<DruidServerMetadata> queryableServer = serverSelector.getAllServers(cloneQueryMode)
@@ -247,7 +247,12 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
                                                                                                      .filter(druidServerMetadata -> segmentSource.getUsedServerTypes()
                                                                                                                                                  .contains(druidServerMetadata.getType()))
                                                                                                      .collect(Collectors.toSet());
-                                      realtimeServer = DataServerSelector.RANDOM.getSelectServerFunction().apply(queryableServer);
+                                      if (queryableServer.isEmpty()) {
+                                        realtimeServer = null;
+                                      } else {
+                                        realtimeServer = DataServerSelector.RANDOM.getSelectServerFunction()
+                                                                                  .apply(queryableServer);
+                                      }
                                     }
                                     return new DartQueryableSegment(dataSegment, holder.getInterval(), worker, realtimeServer);
                                   })
@@ -318,8 +323,20 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    * Whether to include a segment from the timeline. Segments are included if they are not tombstones, and are also not
    * purely realtime segments.
    */
-  static boolean shouldIncludeSegment(final ServerSelector serverSelector)
+  private boolean shouldIncludeSegment(final ServerSelector serverSelector)
   {
-    return !serverSelector.getSegment().isTombstone();
+    if (serverSelector.getSegment().isTombstone()) {
+      return false;
+    }
+
+    if (serverSelector.isRealtime()) {
+      final Set<DruidServerMetadata> queryableServer = serverSelector.getAllServers(cloneQueryMode)
+                                                                     .stream()
+                                                                     .filter(druidServerMetadata -> segmentSource.getUsedServerTypes()
+                                                                                                                 .contains(druidServerMetadata.getType()))
+                                                                     .collect(Collectors.toSet());
+      return !queryableServer.isEmpty();
+    }
+    return true;
   }
 }

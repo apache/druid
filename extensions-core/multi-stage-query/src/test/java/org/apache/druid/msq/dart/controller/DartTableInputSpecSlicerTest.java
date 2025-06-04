@@ -34,11 +34,14 @@ import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.dart.worker.WorkerId;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.NilInputSlice;
+import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -483,6 +486,65 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                     )
                 ),
                 ImmutableList.of()
+            )
+        ),
+        inputSlices
+    );
+  }
+
+  @Test
+  void test_realTime_twoSlices()
+  {
+    final QueryContext queryContext = QueryContext.of(Map.of(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.toString()));
+    slicer = DartTableInputSpecSlicer.createFromWorkerIds(WORKER_IDS, serverView, queryContext);
+
+    // When 2 slices are requested, we assign segments to the servers that have those segments.
+
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 2);
+    Assertions.assertEquals(
+        ImmutableList.of(
+            new SegmentsInputSlice(
+                DATASOURCE,
+                ImmutableList.of(
+                    new RichSegmentDescriptor(
+                        SEGMENT1.getInterval(),
+                        SEGMENT1.getInterval(),
+                        SEGMENT1.getVersion(),
+                        SEGMENT1.getShardSpec().getPartitionNum()
+                    ),
+                    new RichSegmentDescriptor(
+                        SEGMENT3.getInterval(),
+                        SEGMENT3.getInterval(),
+                        SEGMENT3.getVersion(),
+                        SEGMENT3.getShardSpec().getPartitionNum()
+                    )
+                ),
+                ImmutableList.of()
+            ),
+            new SegmentsInputSlice(
+                DATASOURCE,
+                ImmutableList.of(
+                    new RichSegmentDescriptor(
+                        SEGMENT2.getInterval(),
+                        SEGMENT2.getInterval(),
+                        SEGMENT2.getVersion(),
+                        SEGMENT2.getShardSpec().getPartitionNum()
+                    )
+                ),
+                ImmutableList.of(
+                    new DataServerRequestDescriptor(
+                        SERVERS.get(2),
+                        ImmutableList.of(
+                            new RichSegmentDescriptor(
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getVersion(),
+                                SEGMENT5.getShardSpec().getPartitionNum()
+                            )
+                        )
+                    )
+                )
             )
         ),
         inputSlices
