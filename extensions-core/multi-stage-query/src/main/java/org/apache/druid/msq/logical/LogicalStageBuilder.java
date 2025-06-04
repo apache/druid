@@ -79,12 +79,12 @@ public class LogicalStageBuilder
 
   public static class FrameProcessorStage implements DagStage
   {
-    private final List<InputSpec> inputs;
+    private final List<DagInputSpec> inputs;
     private final FrameProcessorFactory<?,?,?> scanProcessorFactory;
     private RowSignature signature;
 
     public FrameProcessorStage(
-        List<InputSpec> inputs,
+        List<DagInputSpec> inputs,
         RowSignature signature,
         FrameProcessorFactory<?,?,?> scanProcessorFactory)
     {
@@ -97,7 +97,7 @@ public class LogicalStageBuilder
     public StageDefinitionBuilder buildStages(StageMaker stageMaker)
     {
       StageDefinitionBuilder sdb = StageDefinition.builder(stageMaker.getNextStageId())
-          .inputs(inputs)
+          .inputs(Lists.transform(inputs, DagInputSpec::toInputSpec))
           .processorFactory(scanProcessorFactory)
           .signature(signature);
 
@@ -108,7 +108,6 @@ public class LogicalStageBuilder
 
   public static class ShuffleStage implements DagStage
   {
-
     private DagStage inputStage;
     private RowSignature signature;
     private List<KeyColumn> keyColumns;
@@ -124,6 +123,7 @@ public class LogicalStageBuilder
     public StageDefinitionBuilder buildStages(StageMaker stageMaker)
     {
       StageDefinitionBuilder sdb = inputStage.buildStages(stageMaker);
+      sdb.signature(signature);
       sdb.shuffleSpec(stageMaker.shuffleFor(keyColumns));
       return sdb;
     }
@@ -174,7 +174,7 @@ public class LogicalStageBuilder
     Stack<DagStage> stack = new Stack<>();
 
     public void pushFrameProcessorStage(
-        List<InputSpec> inputs,
+        List<DagInputSpec> inputs,
         RowSignature signature,
         FrameProcessorFactory<?, ?, ?> processorFactory)
     {
@@ -244,15 +244,18 @@ public class LogicalStageBuilder
 
   public abstract class AbstractLogicalStage implements LogicalStage
   {
-    protected final List<InputSpec> inputSpecs;
+    protected final List<DagInputSpec> inputSpecs;
     protected final RowSignature signature;
-    protected final List<LogicalStage> inputStages;
 
-    public AbstractLogicalStage(RowSignature signature, List<InputSpec> inputs, List<LogicalStage> inputVertices)
+    public AbstractLogicalStage(RowSignature signature, DagInputSpec input)
+    {
+      this(signature, Collections.singletonList(input));
+    }
+
+    public AbstractLogicalStage(RowSignature signature, List<DagInputSpec> inputs)
     {
       this.inputSpecs = inputs;
       this.signature = signature;
-      this.inputStages = inputVertices;
     }
 
     @Override
@@ -271,12 +274,15 @@ public class LogicalStageBuilder
     public final List<StageDefinition> buildStageDefinitions(StageMaker stageMaker)
     {
       List<StageDefinition> ret = new ArrayList<>();
-      if (!inputStages.isEmpty()) {
-        throw DruidException.defensive("Not yet supported");
-      }
       buildCurrentStage(stageMaker);
       ret.add(stageMaker.build1());
       return ret;
+    }
+
+    @Override
+    public RowSignature getLogicalRowSignature()
+    {
+      return signature;
     }
   }
 
@@ -285,9 +291,9 @@ public class LogicalStageBuilder
    */
   public class ReadStage extends AbstractLogicalStage
   {
-    public ReadStage(RowSignature signature, List<InputSpec> inputSpecs)
+    public ReadStage(RowSignature signature, DagInputSpec inputSpecs)
     {
-      super(signature, inputSpecs, Collections.emptyList());
+      super(signature, inputSpecs);
     }
 
     /**
@@ -295,7 +301,7 @@ public class LogicalStageBuilder
      */
     public ReadStage(ReadStage readStage, RowSignature newSignature)
     {
-      super(newSignature, readStage.inputSpecs, readStage.inputStages);
+      super(newSignature, readStage.inputSpecs);
     }
 
     @Override
@@ -438,13 +444,18 @@ public class LogicalStageBuilder
     }
   }
 
-  class SortStage extends ProjectStage
+  class SortStage extends AbstractLogicalStage
   {
-    private List<KeyColumn> keyColumns;
+    protected List<KeyColumn> keyColumns;
+    private LogicalStage inputStage;
 
-    public SortStage(ProjectStage root, List<KeyColumn> keyColumns)
+    public SortStage(LogicalStage inputStage, List<KeyColumn> keyColumns)
     {
-      super(root, QueryKitUtils.sortableSignature(root.signature, keyColumns));
+      super(
+          QueryKitUtils.sortableSignature(inputStage.getLogicalRowSignature(), keyColumns),
+          DagInputSpec.of(inputStage)
+      );
+      this.inputStage = inputStage;
       this.keyColumns = keyColumns;
     }
 
@@ -457,15 +468,21 @@ public class LogicalStageBuilder
     @Override
     public StageDefinition buildCurrentStage(StageMaker stageMaker)
     {
-      super.buildCurrentStage(stageMaker);
+      inputStage.buildCurrentStage(stageMaker);
       stageMaker.pushSortStage(signature, keyColumns);
       return null;
+    }
+
+    @Override
+    public RowSignature getLogicalRowSignature()
+    {
+      return inputStage.getLogicalRowSignature();
     }
   }
 
   private static final String IRRELEVANT = "irrelevant";
 
-  public ReadStage makeReadStage(RowSignature rowSignature, List<InputSpec> isp)
+  public ReadStage makeReadStage(RowSignature rowSignature, DagInputSpec isp)
   {
     return new ReadStage(rowSignature, isp);
   }

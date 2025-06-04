@@ -25,6 +25,7 @@ import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.logical.DruidLogicalToQueryDefinitionTranslator;
+import org.apache.druid.msq.logical.LogicalStage;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -65,9 +66,10 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
       throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
     }
     DruidLogicalToQueryDefinitionTranslator qdt = new DruidLogicalToQueryDefinitionTranslator(plannerContext);
-    QueryDefinition queryDef = qdt.translate(rootRel);
+    LogicalStage q1 = qdt.translate(rootRel);
+    QueryDefinition queryDef = q1.build();
     QueryContext context = plannerContext.queryContext();
-    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(dartQueryMaker.fieldMapping, queryDef.getOutputRowSignature());
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(dartQueryMaker.fieldMapping, q1.getLogicalRowSignature());
     QueryDefMSQSpec querySpec = MSQTaskQueryMaker.makeQueryDefMSQSpec(
         null,
         context,

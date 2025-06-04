@@ -22,6 +22,7 @@ package org.apache.druid.msq.logical;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
 import javax.annotation.Nullable;
@@ -60,6 +61,11 @@ public interface LogicalStage
    * Internal method to build the stage definitions.
    */
   List<StageDefinition> buildStageDefinitions(StageMaker stageMaker);
+
+  /**
+   * Logical row signature this node supposed to produce.
+   */
+  RowSignature getLogicalRowSignature();
 
 
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.logical;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
@@ -64,12 +63,12 @@ public class DruidLogicalToQueryDefinitionTranslator
   /**
    * Executes the translation of the logical plan into a query definition.
    */
-  public QueryDefinition translate(DruidLogicalNode relRoot)
+  public LogicalStage translate(DruidLogicalNode relRoot)
   {
     DruidNodeStack stack = new DruidNodeStack();
     stack.push(relRoot);
     LogicalStage logicalStage = buildStageFor(stack);
-    return logicalStage.build();
+    return logicalStage;
   }
 
   /**
@@ -127,7 +126,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     TableDataSource ids = (TableDataSource) sd.dataSource;
     TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, ImmutableList.of(inputSpec));
+    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, DagInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 
@@ -136,7 +135,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     InlineDataSource ids = (InlineDataSource) sd.dataSource;
     InlineInputSpec inputSpec = new InlineInputSpec(ids);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, ImmutableList.of(inputSpec));
+    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, DagInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 }
