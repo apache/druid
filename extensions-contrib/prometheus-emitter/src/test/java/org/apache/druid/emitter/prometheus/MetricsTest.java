@@ -20,7 +20,6 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.Histogram;
-import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -110,10 +109,9 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithUnSupportedType()
   {
-    ISE iseException = Assert.assertThrows(ISE.class, () -> {
-      new Metrics("test_5", "src/test/resources/defaultInvalidMetricsTest.json", true, true, null);
-    });
-    Assert.assertEquals("Failed to parse metric configuration", iseException.getMessage());
+    //
+    Metrics metrics = new Metrics("test_5", "src/test/resources/defaultInvalidMetricsTest.json", true, true, null);
+    Assert.assertTrue(metrics.getRegisteredMetrics().get("query/nonExistent").getCollector() instanceof io.prometheus.client.Counter);
   }
 
   @Test

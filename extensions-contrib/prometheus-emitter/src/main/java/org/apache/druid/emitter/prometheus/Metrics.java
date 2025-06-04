@@ -20,8 +20,10 @@
 package org.apache.druid.emitter.prometheus;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import io.prometheus.client.Counter;
@@ -48,7 +50,7 @@ public class Metrics
 
   private static final Logger log = new Logger(Metrics.class);
   private final Map<String, DimensionsAndCollector> registeredMetrics;
-  private final ObjectMapper mapper = new ObjectMapper();
+  private final ObjectMapper mapper = new ObjectMapper().enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE);
   public static final Pattern PATTERN = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
   private static final String TAG_HOSTNAME = "host_name";
@@ -178,7 +180,7 @@ public class Metrics
 
     public enum Type
     {
-      count, gauge, timer
+      @JsonEnumDefaultValue count, gauge, timer
     }
   }
 }
