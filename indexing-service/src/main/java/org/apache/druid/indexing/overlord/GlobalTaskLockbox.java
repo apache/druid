@@ -249,6 +249,15 @@ public class GlobalTaskLockbox
   }
 
   /**
+   * Cleans up pending segments associated with the given task, if any.
+   */
+  @VisibleForTesting
+  protected void cleanupPendingSegments(Task task)
+  {
+    getDatasourceLockbox(task.getDataSource()).cleanupPendingSegments(task);
+  }
+
+  /**
    * Return the currently-active locks for some task.
    *
    * @param task task for which to locate locks
