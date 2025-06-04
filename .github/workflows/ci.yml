@@ -21,7 +21,6 @@ on:
 jobs:
   run-unit-tests:
     name: "unit tests(main)"
-    if: ${{ github.event.action != 'labeled' && github.event.action != 'unlabeled' }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,19 +55,11 @@ jobs:
           check_retries: true
           truncate_stack_traces: false
 
-  check-labels:
-    name: "coverage-jacoco-do-not-submit"
-    # Skip coverage test if PR has 'jacoco:skip' label
-    if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels, 'jacoco:skip') }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "labels are ${{ toJson(github.event.pull_request.labels) }}"
-
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"
-    # Skip coverage test if PR has 'jacoco:skip' label
-    if: ${{ github.event_name != 'pull_request' || !contains(github.event.label.name, 'jacoco:skip') }}
+    needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
+    if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"
