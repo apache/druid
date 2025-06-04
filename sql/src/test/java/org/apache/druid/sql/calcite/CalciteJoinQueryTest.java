@@ -46,6 +46,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -114,7 +115,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 {
   /**
    * Used by MSQ subclasses.
-   *
+   * <p>
    * Necessary because results come in a different order when using sort-based join.
    */
   public boolean isSortBasedJoin()
@@ -1205,7 +1206,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .limit(100)
                 .filters(equality("j0.v", "xa", ColumnType.STRING))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
+                .columnTypes(
+                    ColumnType.LONG,
+                    ColumnType.LONG,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.FLOAT,
+                    ColumnType.DOUBLE,
+                    ColumnType.ofComplex("hyperUnique")
+                )
                 .context(queryContext)
                 .build()
         ),
@@ -1248,7 +1258,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(equality("j0.v", "xa", ColumnType.STRING))
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
+                .columnTypes(
+                    ColumnType.LONG,
+                    ColumnType.LONG,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.FLOAT,
+                    ColumnType.DOUBLE,
+                    ColumnType.ofComplex("hyperUnique")
+                )
                 .context(queryContext)
                 .build()
         ),
@@ -1933,7 +1952,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v0", "null", ColumnType.STRING)
                 )
                 .columns("__time", "v0", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
-                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
+                .columnTypes(
+                    ColumnType.LONG,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.LONG,
+                    ColumnType.FLOAT,
+                    ColumnType.DOUBLE,
+                    ColumnType.ofComplex("hyperUnique")
+                )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -2413,7 +2441,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim1", "dim2", "j0.v", "_j0.v", "__j0.v")
-                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .columnTypes(
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.STRING,
+                    ColumnType.STRING
+                )
                 .context(queryContext)
                 .build()
         ),
@@ -4236,17 +4270,17 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 )
                 .setLimitSpec(
                     queryFramework().engine().featureAvailable(EngineFeature.GROUPBY_IMPLICITLY_SORTS)
-                        ? NoopLimitSpec.instance()
-                        : new DefaultLimitSpec(
-                            ImmutableList.of(
-                                new OrderByColumnSpec(
-                                    "d0",
-                                    Direction.ASCENDING,
-                                    StringComparators.NUMERIC
-                                )
-                            ),
-                            Integer.MAX_VALUE
-                        )
+                    ? NoopLimitSpec.instance()
+                    : new DefaultLimitSpec(
+                        ImmutableList.of(
+                            new OrderByColumnSpec(
+                                "d0",
+                                Direction.ASCENDING,
+                                StringComparators.NUMERIC
+                            )
+                        ),
+                        Integer.MAX_VALUE
+                    )
                 )
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -4291,7 +4325,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     if (!isRewriteJoinToFilter(queryContext)) {
       cannotVectorize();
     }
-
 
 
     testQuery(
@@ -5050,7 +5083,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .build();
 
     QueryLifecycle ql = queryFramework().queryLifecycle();
-    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, AuthorizationResult.ALLOW_NO_RESTRICTION).getResults();
+    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, AuthorizationResult.ALLOW_NO_RESTRICTION)
+                     .getResults();
     List<Object> results = seq.toList();
     Assert.assertEquals(
         ImmutableList.of(ResultRow.of("def")),
@@ -5098,6 +5132,61 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"10.1"}
         )
     );
+  }
+
+  @MethodSource("provideQueryContexts")
+  @ParameterizedTest(name = "{0}")
+  public void testJoinOnRestrictedBroadcast(Map<String, Object> queryContext)
+  {
+    String sql = "SELECT druid.restrictedBroadcastDatasource_m1_is_6.dim4, COUNT(*)\n"
+                 + "FROM druid.numfoo\n"
+                 + "INNER JOIN druid.restrictedBroadcastDatasource_m1_is_6 ON numfoo.dim4 = restrictedBroadcastDatasource_m1_is_6.dim4\n"
+                 + "GROUP BY 1 ORDER BY 2 LIMIT 4";
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        sql,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        RestrictedDataSource.create(
+                            new GlobalTableDataSource(CalciteTests.RESTRICTED_BROADCAST_DATASOURCE),
+                            CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER
+                        ),
+                        "j0.",
+                        equalsCondition(makeColumnExpression("dim4"), makeColumnExpression("j0.dim4")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("j0.dim4", "d0", ColumnType.STRING))
+                .threshold(4)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .context(queryContext)
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 9L},
+            new Object[]{"b", 9L} // superuser can see all records
+        )
+    );
+
+    Exception e = Assert.assertThrows(
+        Exception.class,
+        () -> testQuery(
+            PLANNER_CONFIG_DEFAULT,
+            sql,
+            CalciteTests.REGULAR_USER_AUTH_RESULT,
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertTrue(e.getMessage()
+                       .contains(
+                           "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"));
   }
 
   @MethodSource("provideQueryContexts")
@@ -6010,9 +6099,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         sortIfSortBased(
             ImmutableList.of(
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"", "", ""}
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"", "", ""}
             ),
             0
         )
@@ -6065,9 +6154,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         sortIfSortBased(
             ImmutableList.of(
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"", "", ""}
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"", "", ""}
             ), 0
         )
     );
@@ -6131,12 +6220,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         sortIfSortBased(
             ImmutableList.of(
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"", "", ""},
-                new Object[] {"", "", ""}
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"", "", ""},
+                new Object[]{"", "", ""}
             ), 0
         )
     );
@@ -6188,14 +6277,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         sortIfSortBased(
             ImmutableList.of(
-                new Object[] {"[\"a\",\"b\"]", "a", "a"},
-                new Object[] {"[\"a\",\"b\"]", "b", "a"},
-                new Object[] {"[\"a\",\"b\"]", "b", null},
-                new Object[] {"[\"b\",\"c\"]", "b", "a"},
-                new Object[] {"[\"b\",\"c\"]", "b", null},
-                new Object[] {"[\"b\",\"c\"]", "c", null},
-                new Object[] {"d", "d", ""},
-                new Object[] {"", "", "a"}
+                new Object[]{"[\"a\",\"b\"]", "a", "a"},
+                new Object[]{"[\"a\",\"b\"]", "b", "a"},
+                new Object[]{"[\"a\",\"b\"]", "b", null},
+                new Object[]{"[\"b\",\"c\"]", "b", "a"},
+                new Object[]{"[\"b\",\"c\"]", "b", null},
+                new Object[]{"[\"b\",\"c\"]", "c", null},
+                new Object[]{"d", "d", ""},
+                new Object[]{"", "", "a"}
             ), 0
         )
     );

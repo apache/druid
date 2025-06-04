@@ -518,13 +518,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
         return new RawFieldVectorObjectSelector(complexColumn.makeVectorObjectSelector(offset), fieldSpec.parts);
       }
-      Set<ColumnType> types = complexColumn.getColumnTypes(fieldSpec.parts);
-      ColumnType leastRestrictiveType = null;
-      if (types != null) {
-        for (ColumnType type : types) {
-          leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
-        }
-      }
+      final ColumnType leastRestrictiveType = complexColumn.getFieldLogicalType(fieldSpec.parts);
       if (leastRestrictiveType != null && leastRestrictiveType.isNumeric() && !Types.isNumeric(fieldSpec.expectedType)) {
         return ExpressionVectorSelectors.castValueSelectorToObject(
             offset,
@@ -651,8 +645,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
     BaseColumn theColumn = holder.getColumn();
     if (!(theColumn instanceof NestedDataComplexColumn)) {
-
+      // not a nested column, but we can still try to coerce the values to the expected type of value selector if the
+      // path is the root path
       if (fieldSpec.parts.isEmpty()) {
+        // coerce string columns (a bit presumptuous in general, but in practice these are going to be string columns
+        // ... revisit this if that ever changes)
         if (theColumn instanceof DictionaryEncodedColumn) {
           final VectorObjectSelector delegate = theColumn.makeVectorObjectSelector(offset);
           if (fieldSpec.expectedType != null && fieldSpec.expectedType.is(ValueType.LONG)) {
@@ -791,8 +788,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             };
           }
         }
+        // otherwise, just use the columns native vector value selector (this might explode if not natively numeric)
         return theColumn.makeVectorValueSelector(offset);
       }
+      // array columns can also be handled if the path is a root level array element accessor
       if (fieldSpec.parts.size() == 1 && fieldSpec.parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
         final VariantColumn<?> arrayColumn = (VariantColumn<?>) theColumn;
         VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
@@ -1018,7 +1017,20 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return column.makeVectorValueSelector(fieldSpec.parts, offset);
     }
 
-    final VectorObjectSelector objectSelector = column.makeVectorObjectSelector(fieldSpec.parts, offset);
+    final ColumnType leastRestrictiveType = column.getFieldLogicalType(fieldSpec.parts);
+    final VectorObjectSelector fieldSelector = column.makeVectorObjectSelector(fieldSpec.parts, offset);
+    final VectorObjectSelector objectSelector;
+    // if the field has array types, wrap the object selector in the array to scalar value coercer
+    if (leastRestrictiveType != null && leastRestrictiveType.isArray()) {
+      objectSelector = makeVectorArrayToScalarObjectSelector(
+          offset,
+          fieldSelector,
+          ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType()),
+          ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType)
+      );
+    } else {
+      objectSelector = fieldSelector;
+    }
     if (fieldSpec.expectedType.is(ValueType.LONG)) {
       return new BaseLongVectorValueSelector(offset)
       {
@@ -1175,7 +1187,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         return NoIndexesColumnIndexSupplier.getInstance();
       }
       if (fieldSpec.expectedType != null) {
-        final Set<ColumnType> types = nestedColumn.getColumnTypes(fieldSpec.parts);
+        final Set<ColumnType> types = nestedColumn.getFieldTypes(fieldSpec.parts);
         // if the expected output type is numeric but not all of the input types are numeric, we might have additional
         // null values than what the null value bitmap is tracking, fall back to not using indexes
         if (fieldSpec.expectedType.isNumeric() && (types == null || types.stream().anyMatch(t -> !t.isNumeric()))) {

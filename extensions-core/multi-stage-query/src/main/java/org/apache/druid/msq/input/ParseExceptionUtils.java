@@ -48,7 +48,7 @@ public class ParseExceptionUtils
     } else if (segment.getId() != null) {
       return StringUtils.format("table input source: %s", segment.getId().getDataSource());
     } else if (segment instanceof LookupSegment) {
-      return StringUtils.format("lookup input source: %s", segment.asString());
+      return StringUtils.format("lookup input source: %s", segment.getDebugString());
     }
     return null;
   }

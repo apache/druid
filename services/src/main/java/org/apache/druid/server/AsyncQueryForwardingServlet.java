@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -47,6 +48,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.HttpException;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -273,7 +275,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
     } else if (isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
       try {
-        SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
+        SqlQuery inputSqlQuery = SqlQuery.from(request, objectMapper);
         inputSqlQuery = buildSqlQueryWithId(inputSqlQuery);
         request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
         if (routeSqlByStrategy) {
@@ -283,8 +285,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         }
         LOG.debug("Forwarding SQL query to broker [%s]", targetServer.getHost());
       }
-      catch (IOException e) {
-        handleQueryParseException(request, response, objectMapper, e, false);
+      catch (HttpException e) {
+        handleQueryParseException(request, response, e.getStatusCode().getStatusCode(), objectMapper, e, false);
         return;
       }
       catch (Exception e) {
@@ -334,7 +336,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       // issue async requests
       Response.CompleteListener completeListener = result -> {
         if (result.isFailed()) {
-          LOG.noStackTrace().warn(
+          LOG.noStackTrace().info(
               result.getFailure(),
               "Failed to forward cancellation request to [%s]",
               server.getHost()
@@ -359,7 +361,20 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       HttpServletRequest request,
       HttpServletResponse response,
       ObjectMapper objectMapper,
-      IOException parseException,
+      Throwable parseException,
+      boolean isNativeQuery
+  ) throws IOException
+  {
+    handleQueryParseException(request, response, HttpServletResponse.SC_BAD_REQUEST, objectMapper, parseException, isNativeQuery);
+  }
+
+  private void handleQueryParseException(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      int httpStatusCode,
+      ObjectMapper objectMapper,
+      Throwable parseException,
+
       boolean isNativeQuery
   ) throws IOException
   {
@@ -394,7 +409,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     }
 
     // Write to the response
-    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    response.setStatus(httpStatusCode);
     response.setContentType(MediaType.APPLICATION_JSON);
     objectMapper.writeValue(
         response.getOutputStream(),
@@ -470,6 +485,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       byte[] bytes = objectMapper.writeValueAsBytes(content);
       proxyRequest.content(new BytesContentProvider(bytes));
       proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
+      proxyRequest.getHeaders().put(HttpHeader.CONTENT_TYPE, objectMapper.getFactory() instanceof SmileFactory ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

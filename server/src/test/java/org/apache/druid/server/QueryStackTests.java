@@ -85,7 +85,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.query.union.UnionQueryLogic;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
@@ -192,7 +192,7 @@ public class QueryStackTests
   }
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+      Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
       Injector injector

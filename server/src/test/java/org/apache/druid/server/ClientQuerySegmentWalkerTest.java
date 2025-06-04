@@ -73,7 +73,7 @@ import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
@@ -1694,7 +1694,7 @@ public class ClientQuerySegmentWalkerTest
         injector,
         new CapturingWalker(
             QueryStackTests.createClusterQuerySegmentWalker(
-                ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>builder()
+                ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>>builder()
                     .put(FOO, makeTimeline(FOO, FOO_INLINE))
                     .put(BAR, makeTimeline(BAR, BAR_INLINE))
                     .put(MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE))
@@ -1841,19 +1841,19 @@ public class ClientQuerySegmentWalkerTest
     }
   }
 
-  private static VersionedIntervalTimeline<String, ReferenceCountingSegment> makeTimeline(
+  private static VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> makeTimeline(
       final String name,
       final InlineDataSource dataSource
   )
   {
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline =
+    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline =
         new VersionedIntervalTimeline<>(Comparator.naturalOrder());
 
     timeline.add(
         INTERVAL,
         VERSION,
         SHARD_SPEC.createChunk(
-            ReferenceCountingSegment.wrapSegment(
+            ReferenceCountedSegmentProvider.wrapSegment(
                 new RowBasedSegment<>(
                     Sequences.simple(dataSource.getRows()),
                     dataSource.rowAdapter(),

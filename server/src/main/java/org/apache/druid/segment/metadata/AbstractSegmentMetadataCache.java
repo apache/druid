@@ -50,6 +50,7 @@ import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -971,8 +972,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     return queryLifecycleFactory
         .factorize()
-        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), AuthorizationResult.ALLOW_NO_RESTRICTION)
-        .getResults();
+        .runSimple(
+            segmentMetadataQuery,
+            escalator.createEscalatedAuthenticationResult(),
+            AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                dataSource,
+                Optional.of(NoRestrictionPolicy.instance())
+            ))
+        ).getResults();
   }
 
   @VisibleForTesting

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.controller.http;
+package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,20 +26,20 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Class returned by {@link DartSqlResource#doGetRunningQueries}, the "list all queries" API.
+ * Class returned by {@link SqlResource#doGetRunningQueries}, the "list all queries" API.
  */
 public class GetQueriesResponse
 {
-  private final List<DartQueryInfo> queries;
+  private final List<QueryInfo> queries;
 
   @JsonCreator
-  public GetQueriesResponse(@JsonProperty("queries") List<DartQueryInfo> queries)
+  public GetQueriesResponse(@JsonProperty("queries") List<QueryInfo> queries)
   {
     this.queries = queries;
   }
 
   @JsonProperty
-  public List<DartQueryInfo> getQueries()
+  public List<QueryInfo> getQueries()
   {
     return queries;
   }

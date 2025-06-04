@@ -20,12 +20,13 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-@ExtendWith(NotYetSupportedProcessor.class)
 public class DecoupledPlanningCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
 {
+  @RegisterExtension
+  NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(NotYetSupported.Scope.DECOUPLED);
+
   @RegisterExtension
   DecoupledExtension decoupledExtension = new DecoupledExtension(this);
 

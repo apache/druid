@@ -55,6 +55,7 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
@@ -68,7 +69,6 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 
 public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 {
@@ -119,7 +119,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
                 new RichSegmentDescriptor(queryableIndex.getDataInterval(), queryableIndex.getDataInterval(), "dummy_version", 0)
             )
         ),
-        Function.identity(),
+        SegmentMapFunction.IDENTITY,
         new ResourceHolder<>()
         {
           @Override
@@ -213,7 +213,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         null,
         new DefaultObjectMapper(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
-        Function.identity(),
+        SegmentMapFunction.IDENTITY,
         new ResourceHolder<>()
         {
           @Override

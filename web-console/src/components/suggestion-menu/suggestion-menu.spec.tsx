@@ -21,7 +21,14 @@ import { render } from '@testing-library/react';
 import { SuggestionMenu } from './suggestion-menu';
 
 describe('SuggestionMenu', () => {
-  it('matches snapshot', () => {
+  it('matches snapshot when empty', () => {
+    const arrayInput = <SuggestionMenu suggestions={[]} onSuggest={() => {}} />;
+
+    const { container } = render(arrayInput);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with something', () => {
     const arrayInput = (
       <SuggestionMenu
         suggestions={[

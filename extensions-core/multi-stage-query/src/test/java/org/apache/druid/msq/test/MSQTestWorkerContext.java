@@ -55,6 +55,8 @@ import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
+  private static final StupidPool<ByteBuffer> BUFFER_POOL = new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000));
+
   private final String workerId;
   private final Controller controller;
   private final ObjectMapper mapper;
@@ -263,7 +265,7 @@ public class MSQTestWorkerContext implements WorkerContext
     public ProcessingBuffers processingBuffers()
     {
       return new ProcessingBuffers(
-          new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000)),
+          BUFFER_POOL,
           new Bouncer(1)
       );
     }

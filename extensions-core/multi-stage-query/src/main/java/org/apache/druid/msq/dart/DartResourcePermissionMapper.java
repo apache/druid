@@ -20,13 +20,13 @@
 package org.apache.druid.msq.dart;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.msq.rpc.WorkerResource;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.http.SqlResource;
 
 import java.util.List;
 
@@ -34,7 +34,7 @@ public class DartResourcePermissionMapper implements ResourcePermissionMapper
 {
   /**
    * Permissions for admin APIs in {@link DartWorkerResource} and {@link WorkerResource}. Note that queries from
-   * end users go through {@link DartSqlResource}, which wouldn't use these mappings.
+   * end users go through {@link SqlResource}, which wouldn't use these mappings.
    */
   @Override
   public List<ResourceAction> getAdminPermissions()
@@ -47,7 +47,7 @@ public class DartResourcePermissionMapper implements ResourcePermissionMapper
 
   /**
    * Permissions for per-query APIs in {@link DartWorkerResource} and {@link WorkerResource}. Note that queries from
-   * end users go through {@link DartSqlResource}, which wouldn't use these mappings.
+   * end users go through {@link SqlResource}, which wouldn't use these mappings.
    */
   @Override
   public List<ResourceAction> getQueryPermissions(String queryId)

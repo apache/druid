@@ -24,13 +24,13 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.sql.http.SqlResource;
 
 /**
  * Production implementation of {@link DartSqlClientFactory}.
@@ -55,7 +55,7 @@ public class DartSqlClientFactoryImpl implements DartSqlClientFactory
   {
     final ServiceClient client = clientFactory.makeClient(
         StringUtils.format("%s[dart-sql]", node.getHostAndPortToUse()),
-        new FixedServiceLocator(ServiceLocation.fromDruidNode(node).withBasePath(DartSqlResource.PATH)),
+        new FixedServiceLocator(ServiceLocation.fromDruidNode(node).withBasePath(SqlResource.PATH)),
         StandardRetryPolicy.noRetries()
     );
 
