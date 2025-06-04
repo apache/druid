@@ -106,6 +106,34 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExactCountOnStringColumnShouldFail()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT BITMAP64_EXACT_COUNT(l1) FROM " + DATA_SOURCE,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      ImmutableList.of(
+                          new Bitmap64ExactCountBuildAggregatorFactory(
+                              "a0",
+                              "dim1"
+                          )
+                      )
+                  )
+                  .context(Collections.emptyMap())
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L} // l1 values: 7, 325323, 0 (distinct count = 3)
+        )
+    );
+  }
+
+  @Test
   public void testExactCountOnLongColumn()
   {
     cannotVectorize();

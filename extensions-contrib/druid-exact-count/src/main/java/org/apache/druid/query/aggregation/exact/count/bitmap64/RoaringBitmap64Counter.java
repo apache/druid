@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
@@ -88,17 +87,27 @@ public class RoaringBitmap64Counter implements Bitmap64
     return this;
   }
 
-  @Override
-  public ByteBuffer toByteBuffer()
-  {
+  private ExposedByteArrayOutputStream toOutputStream() {
     bitmap.runOptimize();
     try {
-      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      final ExposedByteArrayOutputStream out = new ExposedByteArrayOutputStream();
       bitmap.serialize(new DataOutputStream(out));
-      return ByteBuffer.wrap(out.toByteArray());
+      return out;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public ByteBuffer toByteBuffer()
+  {
+    return ByteBuffer.wrap(toOutputStream().toByteArray());
+  }
+
+  public ByteArrayInputStream toJsonSerializableInputStream()
+  {
+    final byte[] byteArray = toOutputStream().getBuffer();
+    return new ByteArrayInputStream(byteArray);
   }
 }
