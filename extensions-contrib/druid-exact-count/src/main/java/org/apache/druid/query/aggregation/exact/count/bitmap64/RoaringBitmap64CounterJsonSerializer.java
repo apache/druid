@@ -38,5 +38,4 @@ public class RoaringBitmap64CounterJsonSerializer extends JsonSerializer<Roaring
   {
     jgen.writeBinary(bitmap64Counter.toByteBuffer().array());
   }
-
 }

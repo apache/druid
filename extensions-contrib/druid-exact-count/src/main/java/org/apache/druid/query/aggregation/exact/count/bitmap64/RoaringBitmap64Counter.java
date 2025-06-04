@@ -44,10 +44,9 @@ public class RoaringBitmap64Counter implements Bitmap64
     this.bitmap = bitmap;
   }
 
-  public static RoaringBitmap64Counter fromBytes(byte[] bytes)
+  public static RoaringBitmap64Counter fromInputStream(ByteArrayInputStream byteIn)
   {
     try {
-      ByteArrayInputStream byteIn = new ByteArrayInputStream(bytes);
       DataInputStream in = new DataInputStream(byteIn);
       Roaring64NavigableMap bitmap = new Roaring64NavigableMap();
       bitmap.deserialize(in);
@@ -60,6 +59,11 @@ public class RoaringBitmap64Counter implements Bitmap64
           e
       );
     }
+  }
+
+  public static RoaringBitmap64Counter fromBytes(byte[] bytes)
+  {
+    return fromInputStream(new ByteArrayInputStream(bytes));
   }
 
   @Override

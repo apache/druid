@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.exact.count.bitmap64;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
@@ -46,9 +47,8 @@ public class Bitmap64ExactCountObjectStrategy implements ObjectStrategy<Bitmap64
       throw new BufferUnderflowException();
     }
 
-    byte[] bytes = new byte[numBytes];
-    readOnlyBuffer.get(bytes, 0, numBytes);
-    return RoaringBitmap64Counter.fromBytes(bytes);
+    ByteArrayInputStream inputStream = new ByteArrayInputStream(readOnlyBuffer.array(), 0, numBytes);
+    return RoaringBitmap64Counter.fromInputStream(inputStream);
   }
 
   @Nullable
