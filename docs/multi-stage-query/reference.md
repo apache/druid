@@ -120,7 +120,6 @@ The following statement shows the format of a SQL query using EXTERN to export r
 
 ```sql
 SET rowsPerPage=<number_of_rows>;
-
 INSERT INTO
   EXTERN(<destination function>)
 AS CSV
