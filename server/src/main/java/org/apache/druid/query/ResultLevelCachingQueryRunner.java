@@ -144,21 +144,32 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
                     resultLevelCachePopulator,
                     "ResultLevelCachePopulator cannot be null during cache population"
                 );
-                if (thrown != null) {
-                  log.error(
-                      thrown,
-                      "Error while preparing for result level caching for query %s with error %s ",
-                      query.getId(),
-                      thrown.getMessage()
-                  );
-                } else if (resultLevelCachePopulator.isShouldPopulate()) {
-                  // The resultset identifier and its length is cached along with the resultset
-                  resultLevelCachePopulator.populateResults();
-                  log.debug("Cache population complete for query %s", query.getId());
-                } else { // thrown == null && !resultLevelCachePopulator.isShouldPopulate()
-                  log.error("Failed (gracefully) to populate result level cache for query %s", query.getId());
+                try {
+                  if (thrown != null) {
+                    log.error(
+                        thrown,
+                        "Error while preparing for result level caching for query %s with error %s ",
+                        query.getId(),
+                        thrown.getMessage()
+                    );
+                  } else if (resultLevelCachePopulator.isShouldPopulate()) {
+                    // The resultset identifier and its length is cached along with the resultset
+                    resultLevelCachePopulator.populateResults();
+                    log.debug("Cache population complete for query %s", query.getId());
+                  } else { // thrown == null && !resultLevelCachePopulator.isShouldPopulate()
+                    log.error("Failed (gracefully) to prepare result level cache entry for query %s", query.getId());
+                  }
                 }
-                resultLevelCachePopulator.stopPopulating();
+                catch (Exception e) {
+                  log.error(
+                      "Failed to populate result level cache for query %s with error %s",
+                      query.getId(),
+                      e.getMessage()
+                  );
+                }
+                finally {
+                  resultLevelCachePopulator.stopPopulating();
+                }
               }
             }
         );

@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * ReferenceCountingCloseableObject implements something like automatic reference count-based resource management,
  * backed by a {@link Phaser}.
- *
+ * <p>
  * ReferenceCountingCloseableObject allows consumers to call {@link #close()} before some other "users", which called
  * {@link #increment()} or {@link #incrementReferenceAndDecrementOnceCloseable()}, but have not called
  * {@link #decrement()} yet or the closer for {@link #incrementReferenceAndDecrementOnceCloseable()}, and the wrapped

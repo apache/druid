@@ -27,6 +27,7 @@ import com.google.inject.Inject;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.commons.lang3.RegExUtils;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.report.MSQResultsReport.ColumnAndType;
@@ -48,6 +49,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+@LazySingleton
 public class MSQDruidMeta extends DruidMeta
 {
   protected final MSQTestOverlordServiceClient overlordClient;

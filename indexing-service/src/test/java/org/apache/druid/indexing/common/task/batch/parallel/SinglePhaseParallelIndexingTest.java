@@ -630,9 +630,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask task = newTask(interval, Granularities.DAY, true, true);
     final ParallelIndexSupervisorTask task2 = newTask(interval, Granularities.DAY, true, true);
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    task.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task.addToContext(Tasks.USE_CONCURRENT_LOCKS, true);
     task2.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    task2.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task2.addToContext(Tasks.USE_CONCURRENT_LOCKS, true);
     getIndexingServiceClient().runTask(task.getId(), task);
     getIndexingServiceClient().runTask(task2.getId(), task2);
 

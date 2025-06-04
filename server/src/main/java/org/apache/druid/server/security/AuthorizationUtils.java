@@ -488,6 +488,18 @@ public class AuthorizationUtils
   }
 
   /**
+   * Creates a {@link ResourceAction} to {@link Action#READ read} an
+   * {@link ResourceType#EXTERNAL external} resource.
+   */
+  public static ResourceAction createExternalResourceReadAction(String resourceName)
+  {
+    return new ResourceAction(
+        new Resource(resourceName, ResourceType.EXTERNAL),
+        Action.READ
+    );
+  }
+
+  /**
    * This method constructs a 'superuser' set of permissions composed of {@link Action#READ} and {@link Action#WRITE}
    * permissions for all known {@link ResourceType#knownTypes()} for any {@link Authorizer} implementation which is
    * built on pattern matching with a regex.

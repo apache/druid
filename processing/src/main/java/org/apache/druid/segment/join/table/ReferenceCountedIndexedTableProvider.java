@@ -26,10 +26,10 @@ import java.io.Closeable;
 import java.util.Optional;
 import java.util.Set;
 
-public class ReferenceCountingIndexedTable extends ReferenceCountingCloseableObject<IndexedTable>
+public class ReferenceCountedIndexedTableProvider extends ReferenceCountingCloseableObject<IndexedTable>
     implements IndexedTable
 {
-  public ReferenceCountingIndexedTable(IndexedTable indexedTable)
+  public ReferenceCountedIndexedTableProvider(IndexedTable indexedTable)
   {
     super(indexedTable);
   }
@@ -71,7 +71,7 @@ public class ReferenceCountingIndexedTable extends ReferenceCountingCloseableObj
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
     return incrementReferenceAndDecrementOnceCloseable();
   }

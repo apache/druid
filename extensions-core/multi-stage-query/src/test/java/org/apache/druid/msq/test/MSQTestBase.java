@@ -217,7 +217,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -581,7 +580,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
         new SegmentGenerationTerminalStageSpecFactory(),
-        injector.getInstance(MSQTaskQueryKitSpecFactory.class)
+        injector.getInstance(MSQTaskQueryKitSpecFactory.class),
+        null
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(

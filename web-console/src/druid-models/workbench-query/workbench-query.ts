@@ -286,13 +286,19 @@ export class WorkbenchQuery {
   }
 
   public changeQueryStringContext(queryContext: QueryContext): WorkbenchQuery {
-    const { queryString } = this;
-    return this.changeQueryString(SqlSetStatement.setContextInText(queryString, queryContext));
+    if (this.isJsonLike()) {
+      // JSON query: set the inner context instead of modifying the query string
+      return this.changeQueryContext(queryContext);
+    }
+    return this.changeQueryString(SqlSetStatement.setContextInText(this.queryString, queryContext));
   }
 
   public getQueryStringContext(): QueryContext {
-    const { queryString } = this;
-    return SqlSetStatement.getContextFromText(queryString);
+    if (this.isJsonLike()) {
+      // JSON query: return the inner context for symmetry with changeQueryStringContext
+      return this.queryContext;
+    }
+    return SqlSetStatement.getContextFromText(this.queryString);
   }
 
   public changeQueryContext(queryContext: QueryContext): WorkbenchQuery {
@@ -560,6 +566,7 @@ export class WorkbenchQuery {
     }
 
     if (engine === 'sql-msq-dart') {
+      apiQuery.context.engine = 'msq-dart';
       apiQuery.context.fullReport ??= true;
     }
 
