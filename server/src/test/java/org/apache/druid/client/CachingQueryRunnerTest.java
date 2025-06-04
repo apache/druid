@@ -37,6 +37,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.CacheStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -92,6 +93,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RunWith(Parameterized.class)
 public class CachingQueryRunnerTest
 {
+
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Parameterized.Parameters(name = "numBackgroundThreads={0}")
   public static Iterable<Object[]> constructorFeeder()
   {

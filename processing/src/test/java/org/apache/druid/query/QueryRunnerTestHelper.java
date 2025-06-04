@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -89,6 +90,10 @@ import java.util.stream.Stream;
  */
 public class QueryRunnerTestHelper
 {
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {
   };

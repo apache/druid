@@ -2,7 +2,7 @@ version: v1.0
 name: Apache Druid
 agent:
   machine:
-    type: s1-prod-ubuntu24-04-amd64-1
+    type: s1-prod-ubuntu24-04-amd64-3
 execution_time_limit:
   hours: 3
 blocks:
@@ -36,7 +36,8 @@ blocks:
           commands:
             # This is a change meant to validate semaphore public builds
             # so thus removing configurations for Confluent's internal CodeArtifact
-            - rm ~/.m2/settings.xml
+            - rm -rf ~/.m2/
+            - cache clear
             - >
               MAVEN_OPTS="${MAVEN_OPTS} -Xmx3000m" ${MVN} clean install
               -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
@@ -57,7 +58,7 @@ blocks:
           - tar zxf cache-post-install.tgz
           # This is a change meant to validate semaphore public builds
           # so thus removing configurations for Confluent's internal CodeArtifact
-          - rm ~/.m2/settings.xml
+          - rm -rf ~/.m2/
       jobs:
         - name: "animal sniffer checks"
           commands:
