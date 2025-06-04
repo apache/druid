@@ -154,23 +154,6 @@ public class LogicalStageBuilder
       return sdb.build(getIdForBuilder());
     }
 
-    StageDefinition makeScanStage2(
-        VirtualColumns virtualColumns,
-        RowSignature signature,
-        List<InputSpec> inputs,
-        DimFilter dimFilter)
-    {
-      ScanQueryFrameProcessorFactory scanProcessorFactory = makeScanFrameProcessor(
-          virtualColumns, signature, dimFilter
-      );
-      StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
-          .inputs(inputs)
-          .processorFactory(scanProcessorFactory)
-          .signature(signature);
-
-      return sdb.build(getIdForBuilder());
-    }
-
     Stack<DagStage> stack = new Stack<>();
 
     public void pushFrameProcessorStage(
