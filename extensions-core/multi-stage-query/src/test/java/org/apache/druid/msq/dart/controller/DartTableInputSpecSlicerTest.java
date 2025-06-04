@@ -39,6 +39,7 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.column.ColumnType;
@@ -206,7 +207,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   void setUp()
   {
     mockCloser = MockitoAnnotations.openMocks(this);
-    slicer = DartTableInputSpecSlicer.createFromWorkerIds(WORKER_IDS, serverView);
+    slicer = DartTableInputSpecSlicer.createFromWorkerIds(WORKER_IDS, serverView, QueryContext.empty());
 
     // Add all segments to the timeline, round-robin across the two servers.
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());

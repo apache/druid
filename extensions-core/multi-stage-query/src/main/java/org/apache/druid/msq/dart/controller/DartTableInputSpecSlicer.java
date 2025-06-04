@@ -20,7 +20,6 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.QueryableDruidServer;
@@ -30,17 +29,23 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.msq.dart.worker.DartQueryableSegment;
 import org.apache.druid.msq.dart.worker.WorkerId;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
+import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
+import org.apache.druid.msq.input.table.DataServerSelector;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.CloneQueryMode;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilterUtils;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
@@ -48,8 +53,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.ToIntFunction;
+import java.util.stream.Collectors;
 
 /**
  * Slices {@link TableInputSpec} into {@link SegmentsInputSlice} for persistent servers using
@@ -69,15 +76,32 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   private final TimelineServerView serverView;
 
-  DartTableInputSpecSlicer(final Object2IntMap<String> workerIdToNumber, final TimelineServerView serverView)
+  /**
+   * TODO: add
+   */
+  private final SegmentSource segmentSource;
+
+  /**
+   *
+   */
+  private final CloneQueryMode cloneQueryMode;
+
+  DartTableInputSpecSlicer(
+      final Object2IntMap<String> workerIdToNumber,
+      final TimelineServerView serverView,
+      final QueryContext queryContext
+  )
   {
     this.workerIdToNumber = workerIdToNumber;
     this.serverView = serverView;
+    this.segmentSource = MultiStageQueryContext.getSegmentSources(queryContext);
+    this.cloneQueryMode = queryContext.getCloneQueryMode();
   }
 
   public static DartTableInputSpecSlicer createFromWorkerIds(
       final List<String> workerIds,
-      final TimelineServerView serverView
+      final TimelineServerView serverView,
+      final QueryContext queryContext
   )
   {
     final Object2IntMap<String> reverseWorkers = new Object2IntOpenHashMap<>();
@@ -87,7 +111,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
       reverseWorkers.put(WorkerId.fromString(workerIds.get(i)).getHostAndPort(), i);
     }
 
-    return new DartTableInputSpecSlicer(reverseWorkers, serverView);
+    return new DartTableInputSpecSlicer(reverseWorkers, serverView, queryContext);
   }
 
   @Override
@@ -114,14 +138,19 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
             serverSelector -> findWorkerForServerSelector(serverSelector, maxNumSlices)
         );
 
-    final List<List<DartQueryableSegment>> assignments = new ArrayList<>(maxNumSlices);
+    final List<ServerAssignment> assignments = new ArrayList<>(maxNumSlices);
     while (assignments.size() < maxNumSlices) {
-      assignments.add(null);
+      assignments.add(ServerAssignment.empty());
     }
 
     int nextRoundRobinWorker = 0;
+    final Map<DruidServerMetadata, List<DartQueryableSegment>> serverRequestMap = new HashMap<>();
     for (final DartQueryableSegment segment : prunedSegments) {
       final int worker;
+      if (segment.isRealtime()) {
+        serverRequestMap.computeIfAbsent(segment.getRealtimeServer(), s -> new ArrayList<>()).add(segment);
+        continue;
+      }
       if (segment.getWorkerNumber() == UNKNOWN) {
         // Segment is not available on any worker. Assign to some worker, round-robin. Today, that server will throw
         // an error about the segment not being findable, but perhaps one day, it will be able to load the segment
@@ -132,11 +161,17 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
         worker = segment.getWorkerNumber();
       }
 
-      if (assignments.get(worker) == null) {
-        assignments.set(worker, new ArrayList<>());
-      }
+      assignments.get(worker).addSegments(segment);
+    }
 
-      assignments.get(worker).add(segment);
+    for (DruidServerMetadata server : serverRequestMap.keySet()) {
+      final int worker;
+      worker = nextRoundRobinWorker;
+      nextRoundRobinWorker = (nextRoundRobinWorker + 1) % maxNumSlices;
+      List<RichSegmentDescriptor> descriptors = serverRequestMap.get(server).stream()
+                                                                .map(DartTableInputSpecSlicer::toRichSegmentDescriptor)
+                                                                .collect(Collectors.toList());
+      assignments.get(worker).addRequest(new DataServerRequestDescriptor(server, descriptors));
     }
 
     return makeSegmentSlices(tableInputSpec.getDataSource(), assignments);
@@ -162,7 +197,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
     // Currently, Dart does not support clone query modes, all servers can be queried.
-    final QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.INCLUDECLONES);
+    final QueryableDruidServer server = serverSelector.pick(null, cloneQueryMode);
 
     if (server == null) {
       return UNKNOWN;
@@ -184,7 +219,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    * Pull the list of {@link DataSegment} that we should query, along with a clipping interval for each one, and
    * a worker to get it from.
    */
-  static Set<DartQueryableSegment> findQueryableDataSegments(
+  private Set<DartQueryableSegment> findQueryableDataSegments(
       final TableInputSpec tableInputSpec,
       final TimelineLookup<?, ServerSelector> timeline,
       final ToIntFunction<ServerSelector> toWorkersFunction
@@ -202,7 +237,19 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
                                     final ServerSelector serverSelector = chunk.getObject();
                                     final DataSegment dataSegment = serverSelector.getSegment();
                                     final int worker = toWorkersFunction.applyAsInt(serverSelector);
-                                    return new DartQueryableSegment(dataSegment, holder.getInterval(), worker);
+                                    DruidServerMetadata realtimeServer;
+                                    if (serverSelector.isLoadedOnHistorical() || serverSelector.isEmpty()) {
+                                      // Don't query realtime servers for this if it's loaded already on a historical.
+                                      realtimeServer = null;
+                                    } else {
+                                      final Set<DruidServerMetadata> queryableServer = serverSelector.getAllServers(cloneQueryMode)
+                                                                                                     .stream()
+                                                                                                     .filter(druidServerMetadata -> segmentSource.getUsedServerTypes()
+                                                                                                                                                 .contains(druidServerMetadata.getType()))
+                                                                                                     .collect(Collectors.toSet());
+                                      realtimeServer = DataServerSelector.RANDOM.getSelectServerFunction().apply(queryableServer);
+                                    }
+                                    return new DartQueryableSegment(dataSegment, holder.getInterval(), worker, realtimeServer);
                                   })
                                   .filter(segment -> !segment.getSegment().isTombstone())
                       );
@@ -226,27 +273,28 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    *
    * @throws IllegalStateException if any provided segments do not match the provided datasource
    */
-  static List<InputSlice> makeSegmentSlices(
+  private List<InputSlice> makeSegmentSlices(
       final String dataSource,
-      final List<List<DartQueryableSegment>> assignments
+      final List<ServerAssignment> assignments
   )
   {
     final List<InputSlice> retVal = new ArrayList<>(assignments.size());
 
-    for (final List<DartQueryableSegment> assignment : assignments) {
+    for (final ServerAssignment assignment : assignments) {
       if (assignment == null || assignment.isEmpty()) {
         retVal.add(NilInputSlice.INSTANCE);
       } else {
-        final List<RichSegmentDescriptor> descriptors = new ArrayList<>();
-        for (final DartQueryableSegment segment : assignment) {
-          if (!dataSource.equals(segment.getSegment().getDataSource())) {
-            throw new ISE("Expected dataSource[%s] but got[%s]", dataSource, segment.getSegment().getDataSource());
-          }
-
-          descriptors.add(toRichSegmentDescriptor(segment));
-        }
-
-        retVal.add(new SegmentsInputSlice(dataSource, descriptors, ImmutableList.of()));
+        final List<RichSegmentDescriptor> descriptors = assignment.getDartQueryableSegments()
+                                                                  .stream()
+                                                                  .map(segment -> {
+                                                                    if (!dataSource.equals(segment.getSegment().getDataSource())) {
+                                                                      throw new ISE("Expected dataSource[%s] but got[%s]", dataSource, segment.getSegment().getDataSource());
+                                                                    }
+                                                                    return toRichSegmentDescriptor(segment);
+                                                                  })
+                                                                  .collect(Collectors.toList());
+        final List<DataServerRequestDescriptor> queryableDruidServers = assignment.getDataServerRequestDescriptor();
+        retVal.add(new SegmentsInputSlice(dataSource, descriptors, queryableDruidServers));
       }
     }
 

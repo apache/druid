@@ -229,4 +229,11 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   {
     return segment.get().hasData();
   }
+
+  public boolean isLoadedOnHistorical()
+  {
+    synchronized (this) {
+      return !historicalServers.isEmpty();
+    }
+  }
 }
