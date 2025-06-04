@@ -116,6 +116,7 @@ Keep the following in mind when using EXTERN to export rows:
 - The destination provided should contain no other files or directories.
 
 When you export data, use SET to restrict `rowsPerPage` to control the size of exported files. For example: 
+The following statement shows the format of a SQL query using EXTERN to export rows:
 
 ```sql
 SET rowsPerPage=<number_of_rows>;
