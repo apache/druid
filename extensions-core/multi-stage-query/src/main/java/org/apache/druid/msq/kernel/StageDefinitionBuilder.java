@@ -23,7 +23,6 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.RowSignature2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +38,7 @@ public class StageDefinitionBuilder
   private final IntSet broadcastInputNumbers = new IntRBTreeSet();
   @SuppressWarnings("rawtypes")
   private FrameProcessorFactory processorFactory;
-  private RowSignature2 signature = RowSignature2.empty();
+  private RowSignature signature = RowSignature.empty();
   private int maxWorkerCount = 1;
   private ShuffleSpec shuffleSpec = null;
   private boolean shuffleCheckHasMultipleValues = false;
@@ -96,7 +95,7 @@ public class StageDefinitionBuilder
 
   public StageDefinitionBuilder signature(final RowSignature signature)
   {
-    this.signature = RowSignature2.of(signature);
+    this.signature = signature;
     return this;
   }
 

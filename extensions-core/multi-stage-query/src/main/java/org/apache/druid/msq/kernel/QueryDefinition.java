@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.RowSignature2;
 
 import javax.annotation.Nullable;
 
@@ -215,12 +214,5 @@ public class QueryDefinition
   public QueryDefinition withOverriddenContext(Map<String, Object> contextOverride)
   {
     return new QueryDefinition(stageDefinitions, finalStage, context.override(contextOverride));
-  }
-
-  public RowSignature getLogicalRowSignature()
-  {
-    RowSignature2 signature = stageDefinitions.get(finalStage).getSignature();
-
-    return signature;
   }
 }

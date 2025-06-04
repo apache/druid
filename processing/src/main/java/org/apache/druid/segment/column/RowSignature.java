@@ -62,7 +62,7 @@ public class RowSignature implements ColumnInspector
    */
   private final int hashCode;
 
-  public RowSignature(final List<ColumnSignature> columnTypeList)
+  private RowSignature(final List<ColumnSignature> columnTypeList)
   {
     this.columnPositions.defaultReturnValue(-1);
 
@@ -188,7 +188,7 @@ public class RowSignature implements ColumnInspector
   }
 
   @JsonValue
-  protected List<ColumnSignature> asColumnSignatures()
+  private List<ColumnSignature> asColumnSignatures()
   {
     final List<ColumnSignature> retVal = new ArrayList<>();
 

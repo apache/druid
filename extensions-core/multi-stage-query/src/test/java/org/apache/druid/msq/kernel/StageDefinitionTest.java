@@ -31,7 +31,6 @@ import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.RowSignature2;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -54,7 +53,7 @@ public class StageDefinitionTest
         ImmutableList.of(new StageInputSpec(0)),
         ImmutableSet.of(),
         new OffsetLimitFrameProcessorFactory(0, 1L),
-        RowSignature2.empty(),
+        RowSignature.empty(),
         null,
         0,
         false
@@ -71,7 +70,7 @@ public class StageDefinitionTest
         ImmutableList.of(new StageInputSpec(0)),
         ImmutableSet.of(),
         new OffsetLimitFrameProcessorFactory(0, 1L),
-        RowSignature2.empty(),
+        RowSignature.empty(),
         new GlobalSortMaxCountShuffleSpec(
             new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
             2,
@@ -93,7 +92,7 @@ public class StageDefinitionTest
         ImmutableList.of(new StageInputSpec(0)),
         ImmutableSet.of(),
         new OffsetLimitFrameProcessorFactory(0, 1L),
-        RowSignature2.empty(),
+        RowSignature.empty(),
         new GlobalSortMaxCountShuffleSpec(
             new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
             1,

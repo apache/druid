@@ -108,6 +108,7 @@ public class LogicalStageBuilder
 
   public static class ShuffleStage implements DagStage
   {
+
     private DagStage inputStage;
     private RowSignature signature;
     private List<KeyColumn> keyColumns;
