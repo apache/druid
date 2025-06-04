@@ -32,7 +32,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.druid.discovery.DataServerResponse;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
@@ -122,6 +121,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -628,8 +628,10 @@ public class QueryResourceTest
     final HttpFields observedFields = response.getTrailers().get();
 
     Assert.assertTrue(response.containsHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
-    final DataServerResponse expectedResponse = new DataServerResponse(ImmutableList.of(missingSegDesc));
-    Assert.assertEquals(jsonMapper.writeValueAsString(expectedResponse), response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
+    Assert.assertEquals(
+        jsonMapper.writeValueAsString(ImmutableMap.of("missingSegments", ImmutableList.of(missingSegDesc))),
+        response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT)
+    );
 
     Assert.assertTrue(observedFields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
     Assert.assertEquals("true", observedFields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));

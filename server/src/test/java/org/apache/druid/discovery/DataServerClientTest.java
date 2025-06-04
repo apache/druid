@@ -19,6 +19,8 @@
 
 package org.apache.druid.discovery;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -48,6 +50,7 @@ import org.junit.Test;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.util.Collections;
+import java.util.List;
 
 import static org.apache.druid.query.Druids.newScanQueryBuilder;
 import static org.mockito.Mockito.mock;
@@ -169,5 +172,22 @@ public class DataServerClientTest
             Closer.create()
         ).toList()
     );
+  }
+
+  private static class DataServerResponse
+  {
+    List<SegmentDescriptor> missingSegments;
+
+    @JsonCreator
+    public DataServerResponse(@JsonProperty("missingSegments") List<SegmentDescriptor> missingSegments)
+    {
+      this.missingSegments = missingSegments;
+    }
+
+    @JsonProperty("missingSegments")
+    public List<SegmentDescriptor> getMissingSegments()
+    {
+      return missingSegments;
+    }
   }
 }
