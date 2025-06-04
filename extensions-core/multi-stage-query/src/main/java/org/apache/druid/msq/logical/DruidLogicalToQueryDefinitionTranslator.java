@@ -94,6 +94,10 @@ public class DruidLogicalToQueryDefinitionTranslator
       if (newStage != null) {
         return newStage;
       }
+      newStage = stageBuilder.makeReadStage(inputStage.getLogicalRowSignature(), DagInputSpec.of(inputStage)).extendWith(stack);
+      if(newStage != null) {
+        return newStage;
+      }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
   }

@@ -241,7 +241,6 @@ public class LogicalStageBuilder
       return plannerContext.getSqlQueryId();
     }
   }
-
   public abstract class AbstractLogicalStage implements LogicalStage
   {
     protected final List<DagInputSpec> inputSpecs;
@@ -276,9 +275,9 @@ public class LogicalStageBuilder
       List<StageDefinition> ret = new ArrayList<>();
       buildCurrentStage(stageMaker);
       ret.add(stageMaker.build1());
+
       return ret;
     }
-
     @Override
     public RowSignature getLogicalRowSignature()
     {
