@@ -41,6 +41,7 @@ on:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
       - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+    types: [ opened, reopened, labeled, unlabeled ]
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
@@ -76,6 +77,7 @@ jobs:
   build:
     needs: set-env-var
     name: "build (jdk${{ matrix.jdk }})"
+    if: ${{ github.event.action != 'labeled' && github.event.action != 'unlabeled' }}
     strategy:
       fail-fast: false
       matrix:
