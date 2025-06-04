@@ -113,11 +113,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   )
   {
     this.types = types;
-    ColumnType leastRestrictive = null;
-    for (ColumnType type : FieldTypeInfo.convertToSet(types.getByteValue())) {
-      leastRestrictive = ColumnType.leastRestrictiveType(leastRestrictive, type);
-    }
-    this.logicalType = leastRestrictive;
+    this.logicalType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue()));
     this.logicalExpressionType = ExpressionType.fromColumnTypeStrict(logicalType);
     this.singleType = types.getSingleType();
     this.longsColumn = longsColumn;
@@ -163,12 +159,17 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   public String lookupName(int id)
   {
     final int globalId = dictionary.get(id);
-    if (globalId < globalDictionary.size()) {
+    if (globalId < adjustLongId) {
       return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
-    } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
+    } else if (globalId < adjustDoubleId) {
       return String.valueOf(globalLongDictionary.get(globalId - adjustLongId));
-    } else if (globalId < globalDictionary.size() + globalLongDictionary.size() + globalDoubleDictionary.size()) {
+    } else if (globalId < adjustArrayId) {
       return String.valueOf(globalDoubleDictionary.get(globalId - adjustDoubleId));
+    } else if (globalId < adjustArrayId + globalArrayDictionary.size()) {
+      final int[] array = globalArrayDictionary.get(globalId - adjustArrayId);
+      if (array != null && array.length == 1) {
+        return String.valueOf(lookupGlobalScalarObject(array[0]));
+      }
     }
     return null;
   }

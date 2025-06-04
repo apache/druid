@@ -73,56 +73,7 @@ public class ExpressionSelectors
   {
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
 
-    return new ColumnValueSelector()
-    {
-      @Override
-      public double getDouble()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getDouble();
-      }
-
-      @Override
-      public float getFloat()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getFloat();
-      }
-
-      @Override
-      public long getLong()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getLong();
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return baseSelector.isNull();
-      }
-
-      @Nullable
-      @Override
-      public Object getObject()
-      {
-        // No need for null check on getObject() since baseSelector impls will never return null.
-        ExprEval eval = baseSelector.getObject();
-        return eval.valueOrDefault();
-      }
-
-      @Override
-      public Class classOfObject()
-      {
-        return Object.class;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
-      }
-    };
+    return new EvalUnwrappingColumnValueSelector(baseSelector);
   }
 
   public static ColumnValueSelector makeStringColumnValueSelector(
@@ -132,35 +83,8 @@ public class ExpressionSelectors
   {
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
 
-    return new ColumnValueSelector()
+    return new EvalUnwrappingColumnValueSelector(baseSelector)
     {
-      @Override
-      public double getDouble()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getDouble();
-      }
-
-      @Override
-      public float getFloat()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getFloat();
-      }
-
-      @Override
-      public long getLong()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getLong();
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return baseSelector.isNull();
-      }
-
       @Nullable
       @Override
       public Object getObject()
@@ -169,19 +93,28 @@ public class ExpressionSelectors
         ExprEval eval = baseSelector.getObject();
         return coerceEvalToObjectOrList(eval);
       }
+    };
+  }
 
+  public static ColumnValueSelector castColumnValueSelector(
+      RowIdSupplier rowIdSupplier,
+      ColumnValueSelector delegate,
+      ColumnType delegateType,
+      ColumnType castToType
+  )
+  {
+    final ExpressionType fromType = ExpressionType.fromColumnTypeStrict(delegateType);
+    final ExpressionType toType = ExpressionType.fromColumnTypeStrict(castToType);
+    final ColumnValueSelector<ExprEval> cast = new BaseExpressionColumnValueSelector(rowIdSupplier)
+    {
       @Override
-      public Class classOfObject()
+      protected ExprEval<?> eval()
       {
-        return Object.class;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
+        return ExprEval.ofType(fromType, delegate.getObject()).castTo(toType);
       }
     };
+
+    return new EvalUnwrappingColumnValueSelector(cast);
   }
 
   /**
@@ -533,5 +466,63 @@ public class ExpressionSelectors
       return Arrays.stream(asArray).collect(Collectors.toList());
     }
     return eval.valueOrDefault();
+  }
+
+  private static class EvalUnwrappingColumnValueSelector implements ColumnValueSelector
+  {
+    private final ColumnValueSelector<ExprEval> baseSelector;
+
+    public EvalUnwrappingColumnValueSelector(ColumnValueSelector<ExprEval> baseSelector)
+    {
+      this.baseSelector = baseSelector;
+    }
+
+    @Override
+    public double getDouble()
+    {
+      // No Assert for null handling as baseSelector already have it.
+      return baseSelector.getDouble();
+    }
+
+    @Override
+    public float getFloat()
+    {
+      // No Assert for null handling as baseSelector already have it.
+      return baseSelector.getFloat();
+    }
+
+    @Override
+    public long getLong()
+    {
+      // No Assert for null handling as baseSelector already have it.
+      return baseSelector.getLong();
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return baseSelector.isNull();
+    }
+
+    @Nullable
+    @Override
+    public Object getObject()
+    {
+      // No need for null check on getObject() since baseSelector impls will never return null.
+      ExprEval eval = baseSelector.getObject();
+      return eval.valueOrDefault();
+    }
+
+    @Override
+    public Class classOfObject()
+    {
+      return Object.class;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("baseSelector", baseSelector);
+    }
   }
 }

@@ -6078,7 +6078,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "1",
                 "1",
                 "1",
-                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"c\":100,\"v\":[]}",
+                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"c\":[100],\"v\":[]}",
                 "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
                 "[\"a\",\"b\"]",
                 "[\"a\",\"b\"]",
@@ -6804,44 +6804,93 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArray()
   {
-    // The data set has empty arrays, however MSQ returns nulls. The root cause of the issue is the incorrect
-    // capabilities returned by NestedFieldVirtualColumn when planning which causes MSQ to treat the nested path
-    // as STRING, even though it is an array.
-    msqIncompatible();
-    // test for regression
     skipVectorize();
-    testQuery(
-        "SELECT json_value(cObj, '$.z.d') FROM druid.all_auto",
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(DATA_SOURCE_ALL)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("v0")
-                  .columnTypes(ColumnType.STRING)
-                  .virtualColumns(
-                      new NestedFieldVirtualColumn(
-                          "cObj",
-                          "$.z.d",
-                          "v0",
-                          ColumnType.STRING
+    testBuilder()
+        .sql("SELECT json_value(cObj, '$.z.d') FROM druid.all_auto")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ALL)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("v0")
+                      .columnTypes(ColumnType.STRING)
+                      .virtualColumns(
+                          new NestedFieldVirtualColumn(
+                              "cObj",
+                              "$.z.d",
+                              "v0",
+                              ColumnType.STRING
+                          )
                       )
-                  )
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .build()
-    );
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testJsonValueNestedEmptyArrayReturning()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT json_value(cObj, '$.z.d' returning varchar array) FROM druid.all_auto")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ALL)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("v0")
+                      .columnTypes(ColumnType.STRING_ARRAY)
+                      .virtualColumns(
+                          new NestedFieldVirtualColumn(
+                              "cObj",
+                              "$.z.d",
+                              "v0",
+                              ColumnType.STRING_ARRAY
+                          )
+                      )
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING_ARRAY)
+                        .build()
+        )
+        .run();
   }
 
   @Test
@@ -7268,7 +7317,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testSumPathWithArrays()
   {
     /*
-    "obj":{... "c": 100, ...}
+    "obj":{... "c": [100], ...}
     "obj":{... "c": ["a", "b"], ...}
     "obj":{...}
     "obj":{... "c": {"a": 1}, ...},
@@ -7303,7 +7352,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testCountPathWithArrays()
   {
     /*
-    "obj":{... "c": 100, ...}
+    "obj":{... "c": [100], ...}
     "obj":{... "c": ["a", "b"], ...}
     "obj":{...}
     "obj":{... "c": {"a": 1}, ...},
@@ -7315,6 +7364,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     // would mean that the virtual column would need to plan as ARRAY<STRING> expected type instead of STRING
     // ... you might notice there are actually 5 non-null obj.c values, however json_value only returns primitive
     // values, so the object row is rightfully skipped
+    skipVectorize();
     testQuery(
         "SELECT "
         + "COUNT(JSON_VALUE(obj, '$.c')) "
@@ -7346,10 +7396,52 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountPathWithArraysReturningNumber()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING DOUBLE)) "
+        + "FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.DOUBLE))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testCountPathWithArraysReturning()
   {
     /*
-    "obj":{... "c": 100, ...}
+    "obj":{... "c": [100], ...}
     "obj":{... "c": ["a", "b"], ...}
     "obj":{...}
     "obj":{... "c": {"a": 1}, ...},
