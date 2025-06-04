@@ -278,7 +278,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               void cancelToken.promise
                 .then(cancel => {
                   if (cancel.message === QueryManager.TERMINATION_MESSAGE) return;
-                  return Api.instance.delete(`/druid/v2/sql/dart/${Api.encodePath(cancelQueryId)}`);
+                  return Api.instance.delete(`/druid/v2/sql/${Api.encodePath(cancelQueryId)}`);
                 })
                 .catch(() => {});
             }
@@ -286,7 +286,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             onQueryChange(props.query.changeLastExecution(undefined));
 
             const executionPromise = Api.instance
-              .post(`/druid/v2/sql/dart`, query, {
+              .post(`/druid/v2/sql`, query, {
                 cancelToken: new axios.CancelToken(cancelFn => {
                   nativeQueryCancelFnRef.current = cancelFn;
                 }),
