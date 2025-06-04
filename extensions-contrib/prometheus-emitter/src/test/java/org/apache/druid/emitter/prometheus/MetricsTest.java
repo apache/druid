@@ -109,7 +109,6 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithUnSupportedType()
   {
-    //
     Metrics metrics = new Metrics("test_5", "src/test/resources/defaultInvalidMetricsTest.json", true, true, null);
     Assert.assertTrue(metrics.getRegisteredMetrics().get("query/nonExistent").getCollector() instanceof io.prometheus.client.Counter);
   }
