@@ -58,6 +58,7 @@ jobs:
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"
     needs: run-unit-tests
+    runs-on: ubuntu-latest
     steps:
       - name: Check if PR has 'jacoco:skip' label
         id: check-skip-jacoco-coverage-label
