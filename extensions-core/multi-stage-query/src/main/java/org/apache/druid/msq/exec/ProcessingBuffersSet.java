@@ -59,6 +59,9 @@ public class ProcessingBuffersSet
     );
   }
 
+  /**
+   * Acquire buffers if a particular stages needs them; otherwise, returns null.
+   */
   @Nullable
   public ResourceHolder<ProcessingBuffers> acquireForStage(final StageDefinition stageDef)
   {
@@ -66,6 +69,15 @@ public class ProcessingBuffersSet
       return null;
     }
 
+    return acquire();
+  }
+
+  /**
+   * Acquire buffers unconditionally. In production, it is expected that callers will use
+   * {@link #acquireForStage(StageDefinition)}.
+   */
+  public ResourceHolder<ProcessingBuffers> acquire()
+  {
     final ProcessingBuffers buffers = pool.poll();
 
     if (buffers == null) {
