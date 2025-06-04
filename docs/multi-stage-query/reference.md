@@ -510,7 +510,6 @@ The following example shows a single sort-merge join stage where it explicitly s
 
 ```sql
 SET sqlJoinAlgorithm='sortMerge';
-
 REPLACE INTO eventstream_enriched
 OVERWRITE ALL
 SELECT
