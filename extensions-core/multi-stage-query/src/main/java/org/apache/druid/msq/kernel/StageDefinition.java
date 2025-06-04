@@ -44,7 +44,7 @@ import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
-import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature2;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -89,7 +89,7 @@ public class StageDefinition
   private final IntSet broadcastInputNumbers;
   @SuppressWarnings("rawtypes")
   private final FrameProcessorFactory processorFactory;
-  private final RowSignature signature;
+  private final RowSignature2 signature;
   private final int maxWorkerCount;
   private final boolean shuffleCheckHasMultipleValues;
 
@@ -105,7 +105,7 @@ public class StageDefinition
       @JsonProperty("input") final List<InputSpec> inputSpecs,
       @JsonProperty("broadcast") final Set<Integer> broadcastInputNumbers,
       @SuppressWarnings("rawtypes") @JsonProperty("processor") final FrameProcessorFactory processorFactory,
-      @JsonProperty("signature") final RowSignature signature,
+      @JsonProperty("signature") final RowSignature2 signature,
       @Nullable @JsonProperty("shuffleSpec") final ShuffleSpec shuffleSpec,
       @JsonProperty("maxWorkerCount") final int maxWorkerCount,
       @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues
@@ -208,7 +208,7 @@ public class StageDefinition
   }
 
   @JsonProperty
-  public RowSignature getSignature()
+  public RowSignature2 getSignature()
   {
     return signature;
   }

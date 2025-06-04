@@ -337,6 +337,15 @@ public class MSQTaskQueryMaker implements QueryMaker
       types.add(Pair.of(sqlTypeName, columnType));
     }
 
+    types.clear();
+    for (final Entry<Integer, String> entry : fieldMapping) {
+      final String queryColumn = outputRowSignature.getColumnName(entry.getKey());
+      final SqlTypeName sqlTypeName = rowType.getFieldList().get(entry.getKey()).getType().getSqlTypeName();
+      final ColumnType columnType = outputRowSignature.getColumnType(queryColumn).orElse(ColumnType.STRING);
+      types.add(Pair.of(sqlTypeName, columnType));
+    }
+
+
     ResultsContext resultsContext = new ResultsContext(
         types.stream().map(p -> p.lhs).collect(Collectors.toList()),
         SqlResults.Context.fromPlannerContext(plannerContext)
