@@ -63,6 +63,9 @@ public class K8sDiscoveryConfig
   @JsonProperty
   private final Duration terminatingStateCheckDuration;
 
+  @JsonProperty
+  private final Duration periodicListInterval;
+
   @JsonCreator
   public K8sDiscoveryConfig(
       @JsonProperty("clusterIdentifier") String clusterIdentifier,
@@ -73,7 +76,8 @@ public class K8sDiscoveryConfig
       @JsonProperty("leaseDuration") Duration leaseDuration,
       @JsonProperty("renewDeadline") Duration renewDeadline,
       @JsonProperty("retryPeriod") Duration retryPeriod,
-      @JsonProperty("terminatingStateCheckDuration") Duration terminatingStateCheckDuration
+      @JsonProperty("terminatingStateCheckDuration") Duration terminatingStateCheckDuration,
+      @JsonProperty("periodicListInterval") Duration periodicListInterval
   )
   {
     Preconditions.checkArgument(clusterIdentifier != null && !clusterIdentifier.isEmpty(), "null/empty clusterIdentifier");
@@ -102,6 +106,7 @@ public class K8sDiscoveryConfig
     this.renewDeadline = renewDeadline == null ? Duration.millis(17000) : renewDeadline;
     this.retryPeriod = retryPeriod == null ? Duration.millis(5000) : retryPeriod;
     this.terminatingStateCheckDuration = terminatingStateCheckDuration == null ? Duration.standardSeconds(30) : terminatingStateCheckDuration;
+    this.periodicListInterval = periodicListInterval == null ? Duration.standardMinutes(1) : periodicListInterval;
   }
 
   @JsonProperty
@@ -158,6 +163,12 @@ public class K8sDiscoveryConfig
     return terminatingStateCheckDuration;
   }
 
+  @JsonProperty
+  public Duration getPeriodicListInterval()
+  {
+    return periodicListInterval;
+  }
+
   @Override
   public String toString()
   {
@@ -171,6 +182,7 @@ public class K8sDiscoveryConfig
            ", renewDeadline=" + renewDeadline +
            ", retryPeriod=" + retryPeriod +
            ", terminatingStateCheckDuration=" + terminatingStateCheckDuration +
+           ", periodicListInterval=" + periodicListInterval +
            '}';
   }
 
@@ -198,7 +210,8 @@ public class K8sDiscoveryConfig
            Objects.equals(leaseDuration, that.leaseDuration) &&
            Objects.equals(renewDeadline, that.renewDeadline) &&
            Objects.equals(retryPeriod, that.retryPeriod) &&
-           Objects.equals(terminatingStateCheckDuration, that.terminatingStateCheckDuration);
+           Objects.equals(terminatingStateCheckDuration, that.terminatingStateCheckDuration) &&
+           Objects.equals(periodicListInterval, that.periodicListInterval);
   }
 
   @Override
@@ -213,7 +226,8 @@ public class K8sDiscoveryConfig
         leaseDuration,
         renewDeadline,
         retryPeriod,
-        terminatingStateCheckDuration
+        terminatingStateCheckDuration,
+        periodicListInterval
     );
   }
 }

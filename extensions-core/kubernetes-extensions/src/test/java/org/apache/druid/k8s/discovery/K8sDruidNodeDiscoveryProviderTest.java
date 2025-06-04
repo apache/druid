@@ -77,7 +77,7 @@ public class K8sDruidNodeDiscoveryProviderTest
 
   private final PodInfo podInfo = new PodInfo("testpod", "testns");
 
-  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null, null);
+  private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null, null, null, null, null, null, null, null);
 
   @Test(timeout = 60_000)
   public void testGetForNodeRole() throws Exception

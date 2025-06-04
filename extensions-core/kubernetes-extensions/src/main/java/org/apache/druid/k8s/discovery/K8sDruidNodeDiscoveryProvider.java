@@ -246,7 +246,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         catch (Throwable ex) {
           LOGGER.error(ex, "Error during periodic pod listing for NodeRole [%s]", nodeRole);
         }
-      }, 2, 1, TimeUnit.MINUTES);
+      }, 120000, discoveryConfig.getPeriodicListInterval().getMillis(), TimeUnit.MILLISECONDS);
 
       while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
         try {
