@@ -27,7 +27,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -56,14 +57,18 @@ public class Bitmap64ExactCountSqlAggregator implements SqlAggregator
 {
 
   private static final String NAME = "BITMAP64_EXACT_COUNT";
-  private static final SqlAggFunction FUNCTION_INSTANCE = OperatorConversions.aggregatorBuilder(NAME)
-                                                                             .operandNames("column")
-                                                                             .operandTypes(SqlTypeFamily.ANY)
-                                                                             .operandTypeInference(InferTypes.VARCHAR_1024)
-                                                                             .requiredOperandCount(1)
-                                                                             .returnTypeNonNull(SqlTypeName.BIGINT)
-                                                                             .functionCategory(SqlFunctionCategory.NUMERIC)
-                                                                             .build();
+  private static final SqlAggFunction FUNCTION_INSTANCE
+      = OperatorConversions.aggregatorBuilder(NAME)
+                           .operandNames("column")
+                           .requiredOperandCount(1)
+                           .operandTypeInference(InferTypes.VARCHAR_1024)
+                           .operandTypeChecker(OperandTypes.or(
+                               OperandTypes.NUMERIC,
+                               RowSignatures.complexTypeChecker(Bitmap64ExactCountBuildAggregatorFactory.TYPE)
+                           ))
+                           .returnTypeNonNull(SqlTypeName.BIGINT)
+                           .functionCategory(SqlFunctionCategory.NUMERIC)
+                           .build();
 
   @Override
   public SqlAggFunction calciteFunction()
