@@ -62,8 +62,6 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.dimension.ExtractionDimensionSpec;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
@@ -1535,13 +1533,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .setDataSource(new LookupDataSource("lookyloo"))
                                 .setInterval(querySegmentSpec(Filtration.eternity()))
                                 .setGranularity(Granularities.ALL)
-                                .setDimensions(
-                                    new ExtractionDimensionSpec(
-                                        "k",
-                                        "d0",
-                                        new SubstringDimExtractionFn(0, 1)
+                                .setVirtualColumns(
+                                    expressionVirtualColumn(
+                                        "v0",
+                                        "substring(\"k\", 0, 1)",
+                                        ColumnType.STRING
                                     )
                                 )
+                                .setDimensions(new DefaultDimensionSpec("v0", "d0"))
                                 .setAggregatorSpecs(new StringAnyAggregatorFactory("a0", "v", 10, true))
                                 .build()
                         ),
@@ -2765,19 +2764,17 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                 .setDataSource(CalciteTests.DATASOURCE1)
                                                 .setInterval(querySegmentSpec(Filtration.eternity()))
                                                 .setGranularity(Granularities.ALL)
+                                                .setVirtualColumns(
+                                                    expressionVirtualColumn(
+                                                        "v0",
+                                                        "substring(\"dim1\", 0, 1)",
+                                                        ColumnType.STRING
+                                                    )
+                                                )
                                                 .setDimFilter(
                                                     not(equality("dim1", "", ColumnType.STRING))
                                                 )
-                                                .setDimensions(
-                                                    dimensions(new ExtractionDimensionSpec(
-                                                        "dim1",
-                                                        "d0",
-                                                        new SubstringDimExtractionFn(
-                                                            0,
-                                                            1
-                                                        )
-                                                    ))
-                                                )
+                                                .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0")))
                                                 .setContext(QUERY_CONTEXT_DEFAULT)
                                                 .build()
                                 ),
@@ -4570,16 +4567,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new ExtractionDimensionSpec(
-                                    "dim1",
-                                    "d0",
-                                    ColumnType.STRING,
-                                    new SubstringDimExtractionFn(0, 10)
-                                )
-                            )
-                        )
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "substring(\"dim1\", 0, 10)", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(queryContext)
                         .build()

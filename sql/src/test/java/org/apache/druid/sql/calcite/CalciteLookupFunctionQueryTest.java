@@ -47,6 +47,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -74,11 +75,18 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                   .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 1)
                   .build();
 
+  /**
+   * For tests that use the lookup extraction function rather than expressions.
+   */
+  private static final Map<String, Object> QUERY_CONTEXT_WITH_EXTRACTION_FNS =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(QUERY_CONTEXT)
+                  .put(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+                  .build();
+
+  private static final String LOOKUP_EXPRESSION = "lookup(\"dim1\",'lookyloo')";
   private static final ExtractionFn EXTRACTION_FN =
       new RegisteredLookupExtractionFn(null, "lookyloo", false, null, null, false);
-
-  private static final ExtractionFn EXTRACTION_FN_121 =
-      new RegisteredLookupExtractionFn(null, "lookyloo121", false, null, null, false);
 
   @Test
   public void testFilterEquals()
@@ -432,7 +440,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')"),
         queryContext,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             in("v0", ImmutableList.of("nonexistent", "x6", "xabc"))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -456,7 +464,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc' OR LOOKUP(dim1, 'lookyloo') = 'x6'"),
         queryContext,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             in("v0", ImmutableList.of("x6", "xabc"))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -473,7 +481,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             "LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent') OR LOOKUP(dim1, 'lookyloo') IS NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             or(
                 in("dim1", Arrays.asList("6", "abc")),
                 isNull("v0")
@@ -496,7 +504,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             "LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent') AND LOOKUP(dim1, 'lookyloo') IS NOT NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(
                 in("dim1", ImmutableList.of("6", "abc")),
                 not(isNull("v0"))
@@ -532,7 +540,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             "LOOKUP(dim1, 'lookyloo') NOT IN ('x6', 'nonexistent') AND LOOKUP(dim1, 'lookyloo') IS NOT NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(
                 not(equality("v0", "x6", ColumnType.STRING)),
                 not(equality("v0", "nonexistent", ColumnType.STRING)),
@@ -554,7 +562,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             + "AND LOOKUP(dim1, 'lookyloo') IS NOT NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(
                 not(istrue(in("dim1", ImmutableList.of("6", "abc")))),
                 notNull("v0")
@@ -594,7 +602,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             "LOOKUP(dim1, 'lookyloo') NOT IN ('x6', 'nonexistent') OR LOOKUP(dim1, 'lookyloo') IS NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             or(
                 and(
                     not(equality("v0", "x6", ColumnType.STRING)),
@@ -620,7 +628,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             "(LOOKUP(dim1, 'lookyloo') IN ('x6', 'nonexistent')) IS NOT TRUE OR LOOKUP(dim1, 'lookyloo') IS NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             or(
                 not(istrue(equality("dim1", "6", ColumnType.STRING))),
                 isNull("v0")
@@ -642,7 +650,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') NOT IN ('x6', 'nonexistent')"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(not(equality("v0", "x6", ColumnType.STRING)), not(equality("v0", "nonexistent", ColumnType.STRING)))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -768,7 +776,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent', NULL])"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            in("dim1", Arrays.asList(null, "nonexistent", "x6", "xabc"), EXTRACTION_FN)
+            expressionFilter("mv_overlap(lookup(\"dim1\",'lookyloo'),array('xabc','x6','nonexistent',null))")
         ),
         ImmutableList.of(
             new Object[]{null, 5L},
@@ -801,10 +809,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("NOT MV_CONTAINS(lookup(dim1, 'lookyloo'), 'xabc')"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
-            not(equality("v0", "xabc", ColumnType.STRING))
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
+            not(expressionFilter("mv_contains(lookup(\"dim1\",'lookyloo'),'xabc')"))
         ),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{null, 5L}
+        )
     );
   }
 
@@ -845,7 +855,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("NOT MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent'])"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            not(in("dim1", ImmutableList.of("nonexistent", "x6", "xabc"), EXTRACTION_FN))
+            not(expressionFilter("mv_overlap(lookup(\"dim1\",'lookyloo'),array('xabc','x6','nonexistent'))"))
         ),
         Collections.emptyList()
     );
@@ -921,7 +931,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             isNull("v0")
         ),
         ImmutableList.of(new Object[]{null, 5L})
@@ -950,7 +960,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS NOT NULL"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             not(isNull("v0"))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -984,7 +994,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') <> 'x6'"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             not(equality("v0", "x6", ColumnType.STRING))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -1060,9 +1070,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
-    final RegisteredLookupExtractionFn extractionFn =
-        new RegisteredLookupExtractionFn(null, "lookyloo", false, "x6", null, false);
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo', 'x6') IS DISTINCT FROM 'x6'"),
         QUERY_CONTEXT,
@@ -1083,7 +1090,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("NOT (LOOKUP(dim1, 'lookyloo') = 'x6' OR cnt = 2)"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(
                 not(equality("v0", "x6", ColumnType.STRING)),
                 not(equality("cnt", 2L, ColumnType.LONG))
@@ -1167,9 +1174,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
-    final RegisteredLookupExtractionFn extractionFn =
-        new RegisteredLookupExtractionFn(null, "lookyloo", false, "x6", null, false);
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6') IN ('xa', 'xabc', 'x6')"),
         QUERY_CONTEXT,
@@ -1204,15 +1208,11 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
-    final RegisteredLookupExtractionFn extractionFn =
-        new RegisteredLookupExtractionFn(null, "lookyloo", false, "x6", null, false);
-
     testQuery(
         buildFilterTestSql("MV_CONTAINS(COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6'), 'x6')"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo','x6')", ColumnType.STRING),
-            equality("v0", "x6", ColumnType.STRING)
+            expressionFilter("mv_contains(lookup(\"dim1\",'lookyloo','x6'),'x6')")
         ),
         ImmutableList.of(new Object[]{null, 5L})
     );
@@ -1223,14 +1223,17 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
-    final RegisteredLookupExtractionFn extractionFn =
-        new RegisteredLookupExtractionFn(null, "lookyloo", false, "x6", null, false);
-
     testQuery(
         buildFilterTestSql("MV_OVERLAP(COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6'), ARRAY['xabc', 'x6', 'nonexistent'])"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(in("dim1", ImmutableList.of("xabc", "x6", "nonexistent"), extractionFn)),
-        ImmutableList.of(new Object[]{null, 5L}, new Object[]{"xabc", 1L})
+        buildFilterTestExpectedQuery(
+
+            expressionFilter("mv_overlap(lookup(\"dim1\",'lookyloo','x6'),array('xabc','x6','nonexistent'))")
+        ),
+        ImmutableList.of(
+            new Object[]{null, 5L},
+            new Object[]{"xabc", 1L}
+        )
     );
   }
 
@@ -1238,9 +1241,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   public void testFilterCoalesceSameLiteralNotEquals()
   {
     cannotVectorize();
-
-    final RegisteredLookupExtractionFn extractionFn =
-        new RegisteredLookupExtractionFn(null, "lookyloo", false, "x6", null, false);
 
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6') <> 'x6'"),
@@ -1465,6 +1465,52 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLookupReplaceMissingValueWith()
   {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "  LOOKUP(dim1, 'lookyloo', 'Missing_Value'),\n"
+        + "  COALESCE(LOOKUP(dim1, 'lookyloo'), 'Missing_Value'), -- converted to the first form\n"
+        + "  LOOKUP(dim1, 'lookyloo', null) as rmvNull,\n"
+        + "  COUNT(*)\n"
+        + "FROM foo\n"
+        + "GROUP BY 1,2,3",
+        QUERY_CONTEXT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "lookup(\"dim1\",'lookyloo','Missing_Value')",
+                                ColumnType.STRING
+                            ),
+                            expressionVirtualColumn("v1", "lookup(\"dim1\",'lookyloo',null)", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.STRING),
+                                new DefaultDimensionSpec("v1", "d2", ColumnType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"Missing_Value", "Missing_Value", null, 5L},
+            new Object[]{"xabc", "xabc", "xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testLookupReplaceMissingValueWithExtractionFns()
+  {
     // Cannot vectorize due to extraction dimension specs.
     cannotVectorize();
 
@@ -1478,7 +1524,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         + "  COUNT(*)\n"
         + "FROM foo\n"
         + "GROUP BY 1,2,3",
-        QUERY_CONTEXT,
+        QUERY_CONTEXT_WITH_EXTRACTION_FNS,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1507,7 +1553,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(QUERY_CONTEXT_WITH_EXTRACTION_FNS)
                         .build()
         ),
         ImmutableList.of(
@@ -1520,7 +1566,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfLookup()
   {
-    // Cannot vectorize due to extraction dimension spec.
+    // Cannot vectorize due to virtual columns.
     cannotVectorize();
 
     testQuery(
@@ -1531,11 +1577,14 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING)
+                  )
                   .aggregators(aggregators(
                       new CardinalityAggregatorFactory(
                           "a0",
                           null,
-                          ImmutableList.of(new ExtractionDimensionSpec("dim1", null, EXTRACTION_FN)),
+                          ImmutableList.of(new DefaultDimensionSpec("v0", "v0", ColumnType.STRING)),
                           false,
                           true
                       )
@@ -1636,13 +1685,15 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                                             .setDataSource(CalciteTests.DATASOURCE1)
                                             .setInterval(querySegmentSpec(Filtration.eternity()))
                                             .setGranularity(Granularities.ALL)
+                                            .setVirtualColumns(
+                                                expressionVirtualColumn(
+                                                    "v0",
+                                                    LOOKUP_EXPRESSION,
+                                                    ColumnType.STRING
+                                                )
+                                            )
                                             .setDimensions(dimensions(
-                                                new ExtractionDimensionSpec(
-                                                    "dim1",
-                                                    "d0",
-                                                    ColumnType.STRING,
-                                                    EXTRACTION_FN
-                                                ),
+                                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING),
                                                 new DefaultDimensionSpec("dim2", "d1", ColumnType.STRING)
                                             ))
                                             .setAggregatorSpecs(
@@ -1650,7 +1701,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                                                     new LongSumAggregatorFactory("a0", "cnt"),
                                                     new GroupingAggregatorFactory(
                                                         "a1",
-                                                        Arrays.asList("dim1", "dim2")
+                                                        Arrays.asList("v0", "dim2")
                                                     )
                                                 )
                                             )
@@ -1757,15 +1808,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new VirtualColumn[]{
-                                expressionVirtualColumn(
-                                    "v0",
-                                    "lookup(\"dim1\",'lookyloo121')",
-                                    ColumnType.STRING
-                                )
-                            }
+                            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo121')", ColumnType.STRING)
                         )
-                        .setDimensions(dimensions(new ExtractionDimensionSpec("dim1", "d0", EXTRACTION_FN_121)))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
@@ -1859,8 +1904,11 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING)
+                        )
                         .setDimensions(dimensions(
-                            new ExtractionDimensionSpec("dim1", "d0", EXTRACTION_FN),
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.STRING),
                             new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
                         ))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
@@ -1892,16 +1940,39 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
       @Nullable final DimFilter expectedFilter
   )
   {
+    final VirtualColumns virtualColumns;
+    final String groupByDimension;
+
+    if (expectedVirtualColumn != null) {
+      // The filter uses a specified virtual column. GROUP BY always uses a virtual column for LOOKUP(dim1, 'lookyloo').
+      // Determine if they are the same.
+      if (expectedVirtualColumn instanceof ExpressionVirtualColumn &&
+          LOOKUP_EXPRESSION.equals(((ExpressionVirtualColumn) expectedVirtualColumn).getExpression())) {
+        // Only need one virtual column. GROUP BY will reuse the filter's expectedVirtualColumn.
+        groupByDimension = expectedVirtualColumn.getOutputName();
+        virtualColumns = VirtualColumns.create(expectedVirtualColumn);
+      } else {
+        // Need both virtual columns: one for the filter, one for the GROUP BY.
+        groupByDimension = "v1";
+        virtualColumns = VirtualColumns.create(
+            expectedVirtualColumn,
+            expressionVirtualColumn(groupByDimension, LOOKUP_EXPRESSION, ColumnType.STRING)
+        );
+      }
+    } else {
+      // The filter does not need its own virtual column.
+      groupByDimension = "v0";
+      virtualColumns = VirtualColumns.create(expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING));
+    }
+
     return ImmutableList.of(
         GroupByQuery.builder()
                     .setDataSource(CalciteTests.DATASOURCE1)
                     .setInterval(querySegmentSpec(Intervals.of("2000/3000")))
-                    .setVirtualColumns(expectedVirtualColumn != null
-                                       ? VirtualColumns.create(expectedVirtualColumn)
-                                       : VirtualColumns.EMPTY)
+                    .setVirtualColumns(virtualColumns)
                     .setGranularity(Granularities.ALL)
                     .setDimFilter(expectedFilter)
-                    .setDimensions(new ExtractionDimensionSpec("dim1", "d0", ColumnType.STRING, EXTRACTION_FN))
+                    .setDimensions(new DefaultDimensionSpec(groupByDimension, "d0", ColumnType.STRING))
                     .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                     .setContext(QUERY_CONTEXT)
                     .build()
