@@ -463,7 +463,7 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-ranger-security</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-exact-cardinality</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-exact-count</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

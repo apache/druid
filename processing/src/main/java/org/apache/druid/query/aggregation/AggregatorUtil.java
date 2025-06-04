@@ -168,8 +168,8 @@ public class AggregatorUtil
   public static final byte DDSKETCH_CACHE_TYPE_ID = 0x50;
 
   // Bitmap64 exact cardinality aggregator
-  public static final byte BITMAP64_EXACT_CARDINALITY_BUILD_CACHE_TYPE_ID = 0x60;
-  public static final byte BITMAP64_EXACT_CARDINALITY_MERGE_CACHE_TYPE_ID = 0x61;
+  public static final byte BITMAP64_EXACT_COUNT_BUILD_CACHE_TYPE_ID = 0x60;
+  public static final byte BITMAP64_EXACT_COUNT_MERGE_CACHE_TYPE_ID = 0x61;
 
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators

@@ -2435,9 +2435,9 @@ quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
 
-- ../docs/development/extensions-contrib/druid-exact-cardinality.md
-Bitmap64ExactCardinalityBuild
-Bitmap64ExactCardinalityMerge
+- ../docs/development/extensions-contrib/druid-exact-count.md
+Bitmap64ExactCountBuild
+Bitmap64ExactCountMerge
 
 - ../docs/development/extensions-core/catalog.md
 ColumnSpec

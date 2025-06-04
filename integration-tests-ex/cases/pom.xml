@@ -261,7 +261,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions.contrib</groupId>
-            <artifactId>druid-exact-cardinality</artifactId>
+            <artifactId>druid-exact-count</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -564,12 +564,12 @@
             </properties>
         </profile>
         <profile>
-            <id>IT-DruidExactCardinality</id>
+            <id>IT-DruidExactCount</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <it.category>DruidExactCardinality</it.category>
+                <it.category>DruidExactCount</it.category>
             </properties>
         </profile>
     </profiles>
