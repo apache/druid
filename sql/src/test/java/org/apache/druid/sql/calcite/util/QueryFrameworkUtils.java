@@ -292,7 +292,7 @@ public class QueryFrameworkUtils
               @Override
               public Set<String> getDataSourceNames()
               {
-                return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
+                return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE, CalciteTests.RESTRICTED_BROADCAST_DATASOURCE);
               }
             }
         ),
