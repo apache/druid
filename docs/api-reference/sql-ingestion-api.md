@@ -102,7 +102,7 @@ The `/druid/v2/sql/task` endpoint accepts the following:
 
 The following example shows a query that fetches data from an external JSON source and inserts it into a table named `wikipedia`. It specifies two query context parameters:
 - `maxNumTasks=3`: This limits the maximum number of parallel tasks to 3.
-- `finalizeAggregations=false`: This prevents Druid from performing final data aggregation during loading. It's useful if you want to work with intermediate data states or control aggregation later. For more information about Rollup, see [Rollup](../multi-stage-query/concepts/#rollup).
+- `finalizeAggregations=false`: This prevents Druid from performing final data aggregation during loading. It's useful if you want to work with intermediate data states or control aggregation later. For more information, see [Rollup](../multi-stage-query/concepts/#rollup).
 
 
 <Tabs>
