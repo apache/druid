@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.StandardRetryPolicy;
@@ -88,6 +89,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
   private final OverlordClient overlordClient;
   private final int maxRetry;
   private final int estimatedNumSucceededTasks;
+  private final long taskTimeoutMillis;
 
   @GuardedBy("taskCountLock")
   private int numRunningTasks;
@@ -106,15 +108,15 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
   @GuardedBy("startStopLock")
   private boolean running = false;
 
-  TaskMonitor(OverlordClient overlordClient, int maxRetry, int estimatedNumSucceededTasks)
+  TaskMonitor(OverlordClient overlordClient, int maxRetry, int estimatedNumSucceededTasks, long taskTimeoutMillis)
   {
     // Unlimited retries for Overlord APIs: if it goes away, we'll wait indefinitely for it to come back.
     this.overlordClient = Preconditions.checkNotNull(overlordClient, "overlordClient")
                                        .withRetryPolicy(StandardRetryPolicy.unlimited());
     this.maxRetry = maxRetry;
     this.estimatedNumSucceededTasks = estimatedNumSucceededTasks;
-
-    log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d]", estimatedNumSucceededTasks);
+    this.taskTimeoutMillis = taskTimeoutMillis;
+    log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d] and sub-task timeout[%d millis].", estimatedNumSucceededTasks, taskTimeoutMillis);
   }
 
   public void start(long taskStatusCheckingPeriod)
@@ -133,6 +135,19 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
                 final String specId = entry.getKey();
                 final MonitorEntry monitorEntry = entry.getValue();
                 final String taskId = monitorEntry.runningTask.getId();
+
+                final long elapsed = monitorEntry.getStopwatch().millisElapsed();
+                if (taskTimeoutMillis > 0 && elapsed > taskTimeoutMillis) {
+                  log.warn("Cancelling task[%s] as it has already run for [%d] millis (taskTimeoutMillis=[%d]).", taskId, elapsed, taskTimeoutMillis);
+                  FutureUtils.getUnchecked(overlordClient.cancelTask(taskId), true);
+                  final TaskStatusPlus cancelledTaskStatus = FutureUtils.getUnchecked(
+                          overlordClient.taskStatus(taskId), true).getStatus();
+                  reportsMap.remove(taskId);
+                  incrementNumFailedTasks();
+                  monitorEntry.setLastStatus(cancelledTaskStatus);
+                  iterator.remove();
+                  continue;
+                }
 
                 // Could improve this by switching to the bulk taskStatuses API.
                 final TaskStatusResponse taskStatusResponse =
@@ -441,6 +456,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
     // old tasks to recent tasks. running task is not included
     private final CopyOnWriteArrayList<TaskStatusPlus> taskHistory;
     private final SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture;
+    private final Stopwatch stopwatch;
 
     /**
      * This variable is updated inside of the {@link java.util.concurrent.Callable} executed by
@@ -472,6 +488,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
       this.runningStatus = runningStatus;
       this.taskHistory = taskHistory;
       this.completeEventFuture = completeEventFuture;
+      this.stopwatch = Stopwatch.createStarted();
     }
 
     MonitorEntry withNewRunningTask(T newTask, @Nullable TaskStatusPlus newStatus, TaskStatusPlus statusOfLastTask)
@@ -533,6 +550,11 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
     List<TaskStatusPlus> getTaskHistory()
     {
       return taskHistory;
+    }
+
+    Stopwatch getStopwatch()
+    {
+      return stopwatch;
     }
   }
 

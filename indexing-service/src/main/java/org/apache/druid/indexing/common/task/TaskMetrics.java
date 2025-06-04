@@ -17,22 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.extension.RegisterExtension;
-
-public class DecoupledPlanningCalciteCorrelatedQueryTest extends CalciteCorrelatedQueryTest
+/**
+ * Task-related metrics emitted by the Druid cluster.
+ */
+public class TaskMetrics
 {
-  @RegisterExtension
-  NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(NotYetSupported.Scope.DECOUPLED);
-
-  @RegisterExtension
-  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
-
-  @Override
-  protected QueryTestBuilder testBuilder()
+  private TaskMetrics()
   {
-    return decoupledExtension.testBuilder();
+    // no instantiation
   }
+
+  public static final String RUN_DURATION = "task/run/time";
+
+  public static final String SEGMENTS_DELETED_FROM_METADATA_STORE = "segment/killed/metadataStore/count";
+  public static final String SEGMENTS_DELETED_FROM_DEEPSTORE = "segment/killed/deepStorage/count";
+  public static final String FILES_DELETED_FROM_DEEPSTORE = "segment/killed/deepStorageFile/count";
 }

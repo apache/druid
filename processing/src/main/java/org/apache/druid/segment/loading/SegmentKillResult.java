@@ -17,22 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.segment.loading;
 
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import java.util.List;
 
-public class DecoupledPlanningCalciteCorrelatedQueryTest extends CalciteCorrelatedQueryTest
+/**
+ * Result of killing data segments using {@link DataSegmentKiller}.
+ */
+public class SegmentKillResult
 {
-  @RegisterExtension
-  NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(NotYetSupported.Scope.DECOUPLED);
+  private static final SegmentKillResult EMPTY_INSTANCE = new SegmentKillResult(List.of());
 
-  @RegisterExtension
-  DecoupledExtension decoupledExtension = new DecoupledExtension(this);
-
-  @Override
-  protected QueryTestBuilder testBuilder()
+  public static SegmentKillResult empty()
   {
-    return decoupledExtension.testBuilder();
+    return EMPTY_INSTANCE;
+  }
+
+  private final List<String> deletedPaths;
+
+  public SegmentKillResult(
+      List<String> deletedPaths
+  )
+  {
+    this.deletedPaths = deletedPaths;
+  }
+
+  public List<String> getDeletedPaths()
+  {
+    return deletedPaths;
   }
 }
