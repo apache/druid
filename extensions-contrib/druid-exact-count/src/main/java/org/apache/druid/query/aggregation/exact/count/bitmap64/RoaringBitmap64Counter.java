@@ -87,7 +87,8 @@ public class RoaringBitmap64Counter implements Bitmap64
     return this;
   }
 
-  private ExposedByteArrayOutputStream toOutputStream() {
+  private ExposedByteArrayOutputStream toOutputStream()
+  {
     bitmap.runOptimize();
     try {
       final ExposedByteArrayOutputStream out = new ExposedByteArrayOutputStream();
